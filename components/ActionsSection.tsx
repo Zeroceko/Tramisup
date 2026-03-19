@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 
-interface Action {
+interface Task {
   id: string;
   title: string;
   dueDate: Date | null;
-  completed: boolean;
-  completedAt: Date | null;
+  status: "TODO" | "IN_PROGRESS" | "DONE";
   priority: "LOW" | "MEDIUM" | "HIGH";
 }
 
@@ -20,11 +19,11 @@ const priorityColors = {
 };
 
 export default function ActionsSection({
-  actions,
-  projectId,
+  tasks,
+  productId,
 }: {
-  actions: Action[];
-  projectId: string;
+  tasks: Task[];
+  productId: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -35,23 +34,23 @@ export default function ActionsSection({
     priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH",
   });
 
-  const toggleAction = async (actionId: string, completed: boolean) => {
-    setLoading(actionId);
+  const toggleTask = async (taskId: string, currentStatus: string) => {
+    setLoading(taskId);
     try {
-      await fetch(`/api/actions/${actionId}`, {
+      await fetch(`/api/actions/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !completed }),
+        body: JSON.stringify({ status: currentStatus === "DONE" ? "TODO" : "DONE" }),
       });
       router.refresh();
     } catch (error) {
-      console.error("Failed to update action:", error);
+      console.error("Failed to update task:", error);
     } finally {
       setLoading(null);
     }
   };
 
-  const addAction = async (e: React.FormEvent) => {
+  const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading("new");
     try {
@@ -60,7 +59,7 @@ export default function ActionsSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...newAction,
-          projectId,
+          productId,
           dueDate: newAction.dueDate || null,
         }),
       });
@@ -68,14 +67,14 @@ export default function ActionsSection({
       setShowAddForm(false);
       router.refresh();
     } catch (error) {
-      console.error("Failed to add action:", error);
+      console.error("Failed to add task:", error);
     } finally {
       setLoading(null);
     }
   };
 
-  const pendingActions = actions.filter(a => !a.completed);
-  const completedActions = actions.filter(a => a.completed);
+  const pendingTasks = tasks.filter(a => a.status !== "DONE");
+  const completedTasks = tasks.filter(a => a.status === "DONE");
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -90,7 +89,7 @@ export default function ActionsSection({
       </div>
 
       {showAddForm && (
-        <form onSubmit={addAction} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3">
+        <form onSubmit={addTask} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3">
           <div>
             <input
               type="text"
@@ -125,38 +124,38 @@ export default function ActionsSection({
             disabled={loading === "new"}
             className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
-            {loading === "new" ? "Adding..." : "Add Action"}
+            {loading === "new" ? "Adding..." : "Add Task"}
           </button>
         </form>
       )}
 
       <div className="space-y-4">
-        {pendingActions.length === 0 && !showAddForm && (
-          <p className="text-center text-gray-500 py-8">No pending actions</p>
+        {pendingTasks.length === 0 && !showAddForm && (
+          <p className="text-center text-gray-500 py-8">No pending tasks</p>
         )}
 
-        {pendingActions.map((action) => (
+        {pendingTasks.map((task) => (
           <div
-            key={action.id}
+            key={task.id}
             className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-start space-x-3">
               <input
                 type="checkbox"
-                checked={action.completed}
-                onChange={() => toggleAction(action.id, action.completed)}
-                disabled={loading === action.id}
+                checked={task.status === "DONE"}
+                onChange={() => toggleTask(task.id, task.status)}
+                disabled={loading === task.id}
                 className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
               />
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{action.title}</p>
+                <p className="font-medium text-gray-900">{task.title}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className={`px-2 py-0.5 text-xs rounded border ${priorityColors[action.priority]}`}>
-                    {action.priority}
+                  <span className={`px-2 py-0.5 text-xs rounded border ${priorityColors[task.priority]}`}>
+                    {task.priority}
                   </span>
-                  {action.dueDate && (
+                  {task.dueDate && (
                     <span className="text-xs text-gray-600">
-                      Due: {format(new Date(action.dueDate), "MMM d, yyyy")}
+                      Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
                     </span>
                   )}
                 </div>
@@ -165,20 +164,20 @@ export default function ActionsSection({
           </div>
         ))}
 
-        {completedActions.length > 0 && (
+        {completedTasks.length > 0 && (
           <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm font-medium text-gray-500 mb-3">Completed ({completedActions.length})</p>
+            <p className="text-sm font-medium text-gray-500 mb-3">Completed ({completedTasks.length})</p>
             <div className="space-y-2">
-              {completedActions.map((action) => (
-                <div key={action.id} className="flex items-center space-x-3 p-2">
+              {completedTasks.map((task) => (
+                <div key={task.id} className="flex items-center space-x-3 p-2">
                   <input
                     type="checkbox"
-                    checked={action.completed}
-                    onChange={() => toggleAction(action.id, action.completed)}
-                    disabled={loading === action.id}
+                    checked={true}
+                    onChange={() => toggleTask(task.id, task.status)}
+                    disabled={loading === task.id}
                     className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
-                  <p className="text-sm text-gray-400 line-through flex-1">{action.title}</p>
+                  <p className="text-sm text-gray-400 line-through flex-1">{task.title}</p>
                 </div>
               ))}
             </div>

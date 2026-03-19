@@ -11,15 +11,14 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get("projectId");
+    const productId = searchParams.get("productId");
 
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+    if (!productId) {
+      return NextResponse.json({ error: "Product ID required" }, { status: 400 });
     }
 
-    // Get latest funnel data (most recent date)
     const latestDate = await prisma.activationFunnel.findFirst({
-      where: { projectId },
+      where: { productId },
       orderBy: { date: "desc" },
       select: { date: true },
     });
@@ -30,7 +29,7 @@ export async function GET(request: Request) {
 
     const funnelData = await prisma.activationFunnel.findMany({
       where: {
-        projectId,
+        productId,
         date: latestDate.date,
       },
       orderBy: { step: "asc" },

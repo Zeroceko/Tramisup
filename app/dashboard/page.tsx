@@ -8,13 +8,13 @@ import StatCard from "@/components/StatCard";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
-  const project = await prisma.project.findUnique({
+  const product = await prisma.product.findFirst({
     where: { userId: session?.user?.id },
     include: {
       _count: {
         select: {
-          checklists: true,
-          actions: true,
+          launchChecklists: true,
+          tasks: true,
           metrics: true,
           goals: true,
           integrations: { where: { status: "CONNECTED" } },
@@ -23,15 +23,15 @@ export default async function DashboardPage() {
     },
   });
 
-  const completedChecklists = await prisma.preLaunchChecklist.count({
-    where: { projectId: project?.id, completed: true },
+  const completedChecklists = await prisma.launchChecklist.count({
+    where: { productId: product?.id, completed: true },
   });
 
-  const totalChecklists = project?._count.checklists || 0;
+  const totalChecklists = product?._count.launchChecklists || 0;
   const readinessScore = totalChecklists > 0 ? Math.round((completedChecklists / totalChecklists) * 100) : 0;
 
   const recentMetrics = await prisma.metric.findMany({
-    where: { projectId: project?.id },
+    where: { productId: product?.id },
     orderBy: { date: "desc" },
     take: 1,
   });
@@ -64,8 +64,8 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Project status"
-          value={project?.status.replace("_", " ") ?? "No project"}
+          label="Product status"
+          value={product?.status.replace("_", " ") ?? "No product"}
           hint="Current operating phase"
           accent="blue"
         />
@@ -106,17 +106,17 @@ export default async function DashboardPage() {
               {
                 href: "/pre-launch",
                 title: "Review pre-launch checklist",
-                description: `${project?._count.actions ?? 0} pending actions still open`,
+                description: `${product?._count.tasks ?? 0} pending tasks still open`,
               },
               {
                 href: "/metrics",
-                title: "Enter today’s metrics",
+                title: "Enter today's metrics",
                 description: "Keep DAU, MRR, and activation current before the next review.",
               },
               {
                 href: "/integrations",
                 title: "Connect integrations",
-                description: `${project?._count.integrations ?? 0} active connectors, more ready to map.`,
+                description: `${product?._count.integrations ?? 0} active connectors, more ready to map.`,
               },
             ].map((item) => (
               <Link
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Goal pulse</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">Active growth goals</h2>
 
-          {project?._count.goals === 0 ? (
+          {product?._count.goals === 0 ? (
             <div className="mt-8 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
               <p className="text-base font-medium text-slate-900">No active goals yet</p>
               <p className="mt-2 text-sm text-slate-600">
@@ -150,9 +150,9 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="mt-8 rounded-[24px] border border-slate-200 bg-white px-5 py-5">
-              <p className="text-4xl font-semibold tracking-[-0.05em] text-slate-950">{project?._count.goals}</p>
+              <p className="text-4xl font-semibold tracking-[-0.05em] text-slate-950">{product?._count.goals}</p>
               <p className="mt-2 text-sm text-slate-600">
-                Active goal{project?._count.goals !== 1 ? "s" : ""} currently tracked in the growth workspace.
+                Active goal{product?._count.goals !== 1 ? "s" : ""} currently tracked in the growth workspace.
               </p>
               <Link href="/growth" className="mt-5 inline-flex text-sm font-semibold text-blue-700 hover:text-blue-800">
                 Open goals →

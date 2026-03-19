@@ -10,24 +10,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, projectName, launchDate, status } = await request.json();
+    const { name, productName, launchDate, status } = await request.json();
 
-    // Update user
     await prisma.user.update({
       where: { id: session.user.id },
       data: { name },
     });
 
-    // Update project
-    const project = await prisma.project.findUnique({
+    const product = await prisma.product.findFirst({
       where: { userId: session.user.id },
     });
 
-    if (project) {
-      await prisma.project.update({
-        where: { id: project.id },
+    if (product) {
+      await prisma.product.update({
+        where: { id: product.id },
         data: {
-          name: projectName,
+          name: productName,
           launchDate: launchDate ? new Date(launchDate) : null,
           status,
         },

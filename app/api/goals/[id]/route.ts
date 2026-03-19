@@ -37,7 +37,7 @@ export async function PATCH(
     if (completed && !goal.completed) {
       await prisma.timelineEvent.create({
         data: {
-          projectId: goal.projectId,
+          productId: goal.productId,
           eventType: "GOAL_COMPLETED",
           title: `Goal achieved: ${goal.title}`,
           description: `Reached ${goal.targetValue} ${goal.unit}`,

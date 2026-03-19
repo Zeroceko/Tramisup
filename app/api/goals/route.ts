@@ -10,11 +10,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { projectId, title, targetValue, unit, startDate, endDate } = await request.json();
+    const { productId, title, targetValue, unit, startDate, endDate } = await request.json();
 
     const goal = await prisma.goal.create({
       data: {
-        projectId,
+        productId,
         title,
         targetValue,
         unit,

@@ -15,10 +15,10 @@ interface LatestMetric {
 }
 
 export default function MetricEntryForm({
-  projectId,
+  productId,
   latestMetric,
 }: {
-  projectId: string;
+  productId: string;
   latestMetric: LatestMetric | null;
 }) {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function MetricEntryForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId,
+          productId,
           date: formData.date,
           dau: formData.dau ? parseInt(formData.dau) : null,
           mau: formData.mau ? parseInt(formData.mau) : null,

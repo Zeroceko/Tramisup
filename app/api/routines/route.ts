@@ -10,11 +10,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { projectId, title, description, frequency } = await request.json();
+    const { productId, title, description, frequency } = await request.json();
 
     const routine = await prisma.growthRoutine.create({
       data: {
-        projectId,
+        productId,
         title,
         description,
         frequency,

@@ -8,7 +8,7 @@ interface User {
   id: string;
   name: string | null;
   email: string;
-  project: {
+  product: {
     id: string;
     name: string;
     launchDate: Date | null;
@@ -24,11 +24,11 @@ export default function SettingsForm({ user }: { user: User | null }) {
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
-    projectName: user?.project?.name || "",
-    launchDate: user?.project?.launchDate
-      ? format(new Date(user.project.launchDate), "yyyy-MM-dd")
+    projectName: user?.product?.name || "",
+    launchDate: user?.product?.launchDate
+      ? format(new Date(user.product.launchDate), "yyyy-MM-dd")
       : "",
-    status: user?.project?.status || "PRE_LAUNCH",
+    status: user?.product?.status || "PRE_LAUNCH",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,22 +10,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { projectId, title, dueDate, priority } = await request.json();
+    const { productId, title, dueDate, priority } = await request.json();
 
-    const action = await prisma.preLaunchAction.create({
+    const task = await prisma.task.create({
       data: {
-        projectId,
+        productId,
         title,
         dueDate: dueDate ? new Date(dueDate) : null,
         priority,
       },
     });
 
-    return NextResponse.json(action, { status: 201 });
+    return NextResponse.json(task, { status: 201 });
   } catch (error) {
-    console.error("Error creating action:", error);
+    console.error("Error creating task:", error);
     return NextResponse.json(
-      { error: "Failed to create action" },
+      { error: "Failed to create task" },
       { status: 500 }
     );
   }

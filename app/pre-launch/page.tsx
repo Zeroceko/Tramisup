@@ -6,18 +6,18 @@ import ActionsSection from "@/components/ActionsSection";
 
 export default async function PreLaunchPage() {
   const session = await getServerSession(authOptions);
-  
-  const project = await prisma.project.findUnique({
+
+  const product = await prisma.product.findFirst({
     where: { userId: session?.user?.id },
   });
 
-  const checklists = await prisma.preLaunchChecklist.findMany({
-    where: { projectId: project?.id },
+  const checklists = await prisma.launchChecklist.findMany({
+    where: { productId: product?.id },
     orderBy: [{ category: "asc" }, { order: "asc" }],
   });
 
-  const actions = await prisma.preLaunchAction.findMany({
-    where: { projectId: project?.id },
+  const tasks = await prisma.task.findMany({
+    where: { productId: product?.id, status: { not: "DONE" } },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 
@@ -25,7 +25,6 @@ export default async function PreLaunchPage() {
   const completedItems = checklists.filter(item => item.completed).length;
   const readinessScore = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
-  // Group checklists by category
   const checklistsByCategory = {
     PRODUCT: checklists.filter(c => c.category === "PRODUCT"),
     MARKETING: checklists.filter(c => c.category === "MARKETING"),
@@ -42,7 +41,6 @@ export default async function PreLaunchPage() {
         </p>
       </div>
 
-      {/* Readiness Score */}
       <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-8 mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -63,16 +61,16 @@ export default async function PreLaunchPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <ChecklistSection 
-            checklistsByCategory={checklistsByCategory} 
-            projectId={project?.id || ""} 
+          <ChecklistSection
+            checklistsByCategory={checklistsByCategory}
+            productId={product?.id || ""}
           />
         </div>
-        
+
         <div>
-          <ActionsSection 
-            actions={actions} 
-            projectId={project?.id || ""} 
+          <ActionsSection
+            tasks={tasks}
+            productId={product?.id || ""}
           />
         </div>
       </div>

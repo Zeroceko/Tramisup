@@ -6,10 +6,15 @@ import SettingsForm from "@/components/SettingsForm";
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
   
-  const user = await prisma.user.findUnique({
+  const userWithProducts = await prisma.user.findUnique({
     where: { id: session?.user?.id },
-    include: { project: true },
+    include: { products: { take: 1 } },
   });
+
+  const user = userWithProducts ? {
+    ...userWithProducts,
+    product: userWithProducts.products[0] || null,
+  } : null;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">

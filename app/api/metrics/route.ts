@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     const data = await request.json();
     const {
-      projectId,
+      productId,
       date,
       dau,
       mau,
@@ -23,11 +23,10 @@ export async function POST(request: Request) {
       activationRate,
     } = data;
 
-    // Upsert metric (update if exists for same date, create if not)
     const metric = await prisma.metric.upsert({
       where: {
-        projectId_date: {
-          projectId,
+        productId_date: {
+          productId,
           date: new Date(date),
         },
       },
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
         source: "MANUAL",
       },
       create: {
-        projectId,
+        productId,
         date: new Date(date),
         dau,
         mau,
@@ -73,14 +72,14 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get("projectId");
+    const productId = searchParams.get("productId");
 
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+    if (!productId) {
+      return NextResponse.json({ error: "Product ID required" }, { status: 400 });
     }
 
     const metrics = await prisma.metric.findMany({
-      where: { projectId },
+      where: { productId },
       orderBy: { date: "desc" },
       take: 30,
     });

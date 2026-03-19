@@ -1,15 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import type {
   ActivationStep,
-  ChecklistCategory,
+  LaunchCategory,
+  GrowthCategory,
   EventType,
   Frequency,
   MetricSource,
   Priority,
+  TaskStatus,
 } from "@prisma/client";
 
-export async function seedProjectData(projectId: string) {
-  const checklistItems: Array<{ category: ChecklistCategory; title: string; order: number }> = [
+export async function seedProductData(productId: string) {
+  // Launch checklist items
+  const launchItems: Array<{ category: LaunchCategory; title: string; order: number }> = [
     { category: "PRODUCT", title: "Ürün değer önerisi tanımla", order: 1 },
     { category: "PRODUCT", title: "MVP özellikleri geliştir", order: 2 },
     { category: "PRODUCT", title: "Kullanıcı testi tamamla", order: 3 },
@@ -27,10 +30,10 @@ export async function seedProjectData(projectId: string) {
     { category: "TECH", title: "Güvenlik denetimini tamamla", order: 4 },
   ];
 
-  for (const item of checklistItems) {
-    await prisma.preLaunchChecklist.create({
+  for (const item of launchItems) {
+    await prisma.launchChecklist.create({
       data: {
-        projectId,
+        productId,
         category: item.category,
         title: item.title,
         order: item.order,
@@ -39,19 +42,51 @@ export async function seedProjectData(projectId: string) {
     });
   }
 
-  const actions: Array<{ title: string; priority: Priority; dueDate: Date }> = [
-    { title: "Ürün demo görüşmeleri planla", priority: "HIGH", dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) },
-    { title: "Launch hakkında blog yazısı yaz", priority: "MEDIUM", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
-    { title: "Teknoloji gazetecileriyle iletişime geç", priority: "MEDIUM", dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
-    { title: "Yatırımcı güncellemesi hazırla", priority: "LOW", dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+  // Growth checklist items
+  const growthItems: Array<{ category: GrowthCategory; title: string; order: number }> = [
+    { category: "ACQUISITION", title: "SEO stratejisi oluştur", order: 1 },
+    { category: "ACQUISITION", title: "Paid ads kampanyası kur", order: 2 },
+    { category: "ACQUISITION", title: "Referral programı tasarla", order: 3 },
+    { category: "ACTIVATION", title: "Onboarding akışını optimize et", order: 1 },
+    { category: "ACTIVATION", title: "İlk değer anını hızlandır", order: 2 },
+    { category: "ACTIVATION", title: "Hoş geldin e-posta dizisi kur", order: 3 },
+    { category: "RETENTION", title: "Haftalık engagement e-postaları", order: 1 },
+    { category: "RETENTION", title: "Push notification stratejisi", order: 2 },
+    { category: "RETENTION", title: "Churn analizi ve önleme", order: 3 },
+    { category: "REVENUE", title: "Pricing sayfası A/B testi", order: 1 },
+    { category: "REVENUE", title: "Upsell fırsatlarını belirle", order: 2 },
+    { category: "REVENUE", title: "Annual plan indirimi kur", order: 3 },
   ];
 
-  for (const action of actions) {
-    await prisma.preLaunchAction.create({
-      data: { projectId, title: action.title, priority: action.priority, dueDate: action.dueDate },
+  for (const item of growthItems) {
+    await prisma.growthChecklist.create({
+      data: {
+        productId,
+        category: item.category,
+        title: item.title,
+        order: item.order,
+        completed: Math.random() > 0.7,
+      },
     });
   }
 
+  // Tasks (Kanban)
+  const tasks: Array<{ title: string; status: TaskStatus; priority: Priority; dueDate: Date }> = [
+    { title: "Ürün demo görüşmeleri planla", status: "TODO", priority: "HIGH", dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) },
+    { title: "Launch hakkında blog yazısı yaz", status: "TODO", priority: "MEDIUM", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    { title: "Teknoloji gazetecileriyle iletişime geç", status: "IN_PROGRESS", priority: "MEDIUM", dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
+    { title: "Yatırımcı güncellemesi hazırla", status: "IN_PROGRESS", priority: "LOW", dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+    { title: "Landing page kopyasını güncelle", status: "DONE", priority: "HIGH", dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+    { title: "Analytics entegrasyonu", status: "DONE", priority: "MEDIUM", dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+  ];
+
+  for (const task of tasks) {
+    await prisma.task.create({
+      data: { productId, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate },
+    });
+  }
+
+  // Metrics
   const manualSource: MetricSource = "MANUAL";
   for (let i = 30; i >= 0; i--) {
     const date = new Date();
@@ -60,7 +95,7 @@ export async function seedProjectData(projectId: string) {
     const mrr = 500 + (30 - i) * 50 + Math.floor(Math.random() * 100);
     await prisma.metric.create({
       data: {
-        projectId,
+        productId,
         date,
         dau,
         mau: dau * 10,
@@ -74,12 +109,13 @@ export async function seedProjectData(projectId: string) {
     });
   }
 
+  // Retention cohorts
   for (let i = 5; i >= 0; i--) {
     const cohortDate = new Date();
     cohortDate.setMonth(cohortDate.getMonth() - i);
     await prisma.retentionCohort.create({
       data: {
-        projectId,
+        productId,
         cohortDate,
         usersCount: 100 + i * 20,
         retentionDay1: 85 + Math.random() * 10,
@@ -91,6 +127,7 @@ export async function seedProjectData(projectId: string) {
     });
   }
 
+  // Activation funnel
   const funnelSteps: Array<{ step: ActivationStep; count: number; conversionRate: number }> = [
     { step: "SIGNUP", count: 1000, conversionRate: 100 },
     { step: "ONBOARDING", count: 850, conversionRate: 85 },
@@ -99,10 +136,11 @@ export async function seedProjectData(projectId: string) {
   ];
   for (const step of funnelSteps) {
     await prisma.activationFunnel.create({
-      data: { projectId, date: new Date(), step: step.step, count: step.count, conversionRate: step.conversionRate },
+      data: { productId, date: new Date(), step: step.step, count: step.count, conversionRate: step.conversionRate },
     });
   }
 
+  // Goals
   const goals = [
     {
       title: "1.000 aktif kullanıcıya ulaş",
@@ -122,24 +160,26 @@ export async function seedProjectData(projectId: string) {
     },
   ];
   for (const goal of goals) {
-    await prisma.goal.create({ data: { projectId, ...goal } });
+    await prisma.goal.create({ data: { productId, ...goal } });
   }
 
+  // Routines
   const routines: Array<{ title: string; description: string; frequency: Frequency }> = [
     { title: "Haftalık metrik incelemesi", description: "DAU, MAU ve dönüşüm oranlarını analiz et", frequency: "WEEKLY" },
     { title: "Aylık yatırımcı güncellemesi", description: "İlerleme raporu gönder", frequency: "MONTHLY" },
     { title: "Haftalık içerik paylaşımı", description: "Sosyal medyada güncellemeleri paylaş", frequency: "WEEKLY" },
   ];
   for (const routine of routines) {
-    await prisma.growthRoutine.create({ data: { projectId, ...routine } });
+    await prisma.growthRoutine.create({ data: { productId, ...routine } });
   }
 
+  // Timeline events
   const events: Array<{ eventType: EventType; title: string; date: Date }> = [
     { eventType: "MILESTONE", title: "İlk 100 kullanıcı", date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) },
     { eventType: "LAUNCH", title: "Ürün launch'u", date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     { eventType: "METRIC_THRESHOLD", title: "$1.000 MRR'a ulaşıldı", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
   ];
   for (const event of events) {
-    await prisma.timelineEvent.create({ data: { projectId, eventType: event.eventType, title: event.title, date: event.date } });
+    await prisma.timelineEvent.create({ data: { productId, eventType: event.eventType, title: event.title, date: event.date } });
   }
 }

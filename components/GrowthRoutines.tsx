@@ -13,10 +13,10 @@ interface Routine {
 
 export default function GrowthRoutines({
   routines,
-  projectId,
+  productId,
 }: {
   routines: Routine[];
-  projectId: string;
+  productId: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export default function GrowthRoutines({
       await fetch("/api/routines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newRoutine, projectId }),
+        body: JSON.stringify({ ...newRoutine, productId }),
       });
       setNewRoutine({ title: "", description: "", frequency: "WEEKLY" });
       setShowAddForm(false);

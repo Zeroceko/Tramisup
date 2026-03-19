@@ -14,21 +14,18 @@ export async function PATCH(
     }
 
     const { id } = await context.params;
-    const { completed } = await request.json();
+    const body = await request.json();
 
-    const action = await prisma.preLaunchAction.update({
+    const task = await prisma.task.update({
       where: { id },
-      data: {
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
+      data: body,
     });
 
-    return NextResponse.json(action);
+    return NextResponse.json(task);
   } catch (error) {
-    console.error("Error updating action:", error);
+    console.error("Error updating task:", error);
     return NextResponse.json(
-      { error: "Failed to update action" },
+      { error: "Failed to update task" },
       { status: 500 }
     );
   }

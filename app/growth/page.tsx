@@ -7,27 +7,27 @@ import TimelineFeed from "@/components/TimelineFeed";
 
 export default async function GrowthPage() {
   const session = await getServerSession(authOptions);
-  
-  const project = await prisma.project.findUnique({
+
+  const product = await prisma.product.findFirst({
     where: { userId: session?.user?.id },
   });
 
-  if (!project) {
-    return <div>Project not found</div>;
+  if (!product) {
+    return <div>Product not found</div>;
   }
 
   const routines = await prisma.growthRoutine.findMany({
-    where: { projectId: project.id },
+    where: { productId: product.id },
     orderBy: { createdAt: "desc" },
   });
 
   const goals = await prisma.goal.findMany({
-    where: { projectId: project.id },
+    where: { productId: product.id },
     orderBy: { endDate: "asc" },
   });
 
   const timelineEvents = await prisma.timelineEvent.findMany({
-    where: { projectId: project.id },
+    where: { productId: product.id },
     orderBy: { date: "desc" },
     take: 20,
   });
@@ -43,12 +43,12 @@ export default async function GrowthPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2 space-y-8">
-          <GoalsSection goals={goals} projectId={project.id} />
-          <GrowthRoutines routines={routines} projectId={project.id} />
+          <GoalsSection goals={goals} productId={product.id} />
+          <GrowthRoutines routines={routines} productId={product.id} />
         </div>
-        
+
         <div>
-          <TimelineFeed events={timelineEvents} projectId={project.id} />
+          <TimelineFeed events={timelineEvents} productId={product.id} />
         </div>
       </div>
     </div>

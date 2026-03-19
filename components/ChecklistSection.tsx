@@ -29,10 +29,10 @@ const categoryInfo = {
 
 export default function ChecklistSection({
   checklistsByCategory,
-  projectId,
+  productId,
 }: {
   checklistsByCategory: ChecklistsByCategory;
-  projectId: string;
+  productId: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);

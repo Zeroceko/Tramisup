@@ -16,7 +16,7 @@ export async function PATCH(
     const { id } = await context.params;
     const { completed } = await request.json();
 
-    const item = await prisma.preLaunchChecklist.update({
+    const item = await prisma.launchChecklist.update({
       where: { id },
       data: {
         completed,

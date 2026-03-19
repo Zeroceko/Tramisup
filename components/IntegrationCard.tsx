@@ -20,11 +20,11 @@ interface ExistingIntegration {
 export default function IntegrationCard({
   integration,
   existingIntegration,
-  projectId,
+  productId,
 }: {
   integration: Integration;
   existingIntegration?: ExistingIntegration;
-  projectId: string;
+  productId: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function IntegrationCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId,
+          productId,
           provider: integration.provider,
           apiKey,
         }),

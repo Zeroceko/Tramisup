@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { seedProjectData } from "@/lib/seed";
+import { seedProductData } from "@/lib/seed";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -35,12 +35,11 @@ export async function POST(request: Request) {
       data: { email, name: name || email.split("@")[0], passwordHash },
     });
 
-    const project = await prisma.project.create({
+    const product = await prisma.product.create({
       data: { userId: user.id, name: "Benim Startup'ım", status: "PRE_LAUNCH" },
     });
 
-    // Seed demo data so the user sees a functional dashboard immediately
-    await seedProjectData(project.id);
+    await seedProductData(product.id);
 
     return NextResponse.json(
       { message: "Hesap oluşturuldu" },

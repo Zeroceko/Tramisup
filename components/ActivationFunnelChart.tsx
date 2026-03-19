@@ -16,12 +16,12 @@ import {
 const FUNNEL_STEPS = ["SIGNUP", "ONBOARDING", "FIRST_ACTION", "ACTIVATED"];
 const STEP_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#10b981"];
 
-export default function ActivationFunnelChart({ projectId }: { projectId: string }) {
+export default function ActivationFunnelChart({ productId }: { productId: string }) {
   const [funnelData, setFunnelData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/metrics/activation-funnel?projectId=${projectId}`)
+    fetch(`/api/metrics/activation-funnel?productId=${productId}`)
       .then((res) => res.json())
       .then((data) => {
         const chartData = FUNNEL_STEPS.map((step) => {
@@ -36,7 +36,7 @@ export default function ActivationFunnelChart({ projectId }: { projectId: string
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [projectId]);
+  }, [productId]);
 
   if (loading) {
     return (

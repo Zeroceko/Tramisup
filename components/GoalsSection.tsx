@@ -17,10 +17,10 @@ interface Goal {
 
 export default function GoalsSection({
   goals,
-  projectId,
+  productId,
 }: {
   goals: Goal[];
-  projectId: string;
+  productId: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function GoalsSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...newGoal,
-          projectId,
+          productId,
           targetValue: parseFloat(newGoal.targetValue),
         }),
       });

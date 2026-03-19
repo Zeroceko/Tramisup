@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { seedProjectData } from "@/lib/seed";
+import { seedProductData } from "@/lib/seed";
 
 export async function POST() {
   try {
@@ -11,25 +11,26 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await prisma.project.findUnique({
+    const product = await prisma.product.findFirst({
       where: { userId: session.user.id },
     });
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
     // Clear existing demo data
-    await prisma.metric.deleteMany({ where: { projectId: project.id } });
-    await prisma.preLaunchChecklist.deleteMany({ where: { projectId: project.id } });
-    await prisma.preLaunchAction.deleteMany({ where: { projectId: project.id } });
-    await prisma.retentionCohort.deleteMany({ where: { projectId: project.id } });
-    await prisma.activationFunnel.deleteMany({ where: { projectId: project.id } });
-    await prisma.goal.deleteMany({ where: { projectId: project.id } });
-    await prisma.growthRoutine.deleteMany({ where: { projectId: project.id } });
-    await prisma.timelineEvent.deleteMany({ where: { projectId: project.id } });
+    await prisma.metric.deleteMany({ where: { productId: product.id } });
+    await prisma.launchChecklist.deleteMany({ where: { productId: product.id } });
+    await prisma.growthChecklist.deleteMany({ where: { productId: product.id } });
+    await prisma.task.deleteMany({ where: { productId: product.id } });
+    await prisma.retentionCohort.deleteMany({ where: { productId: product.id } });
+    await prisma.activationFunnel.deleteMany({ where: { productId: product.id } });
+    await prisma.goal.deleteMany({ where: { productId: product.id } });
+    await prisma.growthRoutine.deleteMany({ where: { productId: product.id } });
+    await prisma.timelineEvent.deleteMany({ where: { productId: product.id } });
 
-    await seedProjectData(project.id);
+    await seedProductData(product.id);
 
     return NextResponse.json({ message: "Demo data seeded successfully!" });
   } catch (error) {

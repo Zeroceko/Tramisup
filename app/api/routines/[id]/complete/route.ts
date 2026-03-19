@@ -24,7 +24,7 @@ export async function POST(
 
     await prisma.timelineEvent.create({
       data: {
-        projectId: routine.projectId,
+        productId: routine.productId,
         eventType: "CUSTOM",
         title: `Completed: ${routine.title}`,
         date: new Date(),

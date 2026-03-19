@@ -50,17 +50,17 @@ const AVAILABLE_INTEGRATIONS = [
 
 export default async function IntegrationsPage() {
   const session = await getServerSession(authOptions);
-  
-  const project = await prisma.project.findUnique({
+
+  const product = await prisma.product.findFirst({
     where: { userId: session?.user?.id },
   });
 
-  if (!project) {
-    return <div>Project not found</div>;
+  if (!product) {
+    return <div>Product not found</div>;
   }
 
   const existingIntegrations = await prisma.integration.findMany({
-    where: { projectId: project.id },
+    where: { productId: product.id },
   });
 
   const integrationMap = new Map(
@@ -82,8 +82,8 @@ export default async function IntegrationsPage() {
           <div>
             <h3 className="font-semibold text-blue-900 mb-1">Integration Foundation (v1)</h3>
             <p className="text-sm text-blue-800">
-              This version includes the integration architecture and connection UI. 
-              Actual data syncing will be implemented in future releases. 
+              This version includes the integration architecture and connection UI.
+              Actual data syncing will be implemented in future releases.
               You can test connections and see mock sync jobs.
             </p>
           </div>
@@ -98,7 +98,7 @@ export default async function IntegrationsPage() {
               key={integration.provider}
               integration={integration}
               existingIntegration={existing}
-              projectId={project.id}
+              productId={product.id}
             />
           );
         })}

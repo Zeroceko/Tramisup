@@ -21,10 +21,10 @@ const eventIcons: Record<string, string> = {
 
 export default function TimelineFeed({
   events,
-  projectId,
+  productId,
 }: {
   events: TimelineEvent[];
-  projectId: string;
+  productId: string;
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-4">

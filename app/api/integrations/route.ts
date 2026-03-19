@@ -10,32 +10,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { projectId, provider, apiKey } = await request.json();
+    const { productId, provider, apiKey } = await request.json();
 
-    // In production, encrypt apiKey before storing
     const integration = await prisma.integration.upsert({
       where: {
-        projectId_provider: {
-          projectId,
+        productId_provider: {
+          productId,
           provider,
         },
       },
       update: {
         status: "CONNECTED",
-        config: JSON.stringify({ apiKey }), // Should be encrypted
+        config: JSON.stringify({ apiKey }),
       },
       create: {
-        projectId,
+        productId,
         provider,
         status: "CONNECTED",
-        config: JSON.stringify({ apiKey }), // Should be encrypted
+        config: JSON.stringify({ apiKey }),
       },
     });
 
-    // Create timeline event
     await prisma.timelineEvent.create({
       data: {
-        projectId,
+        productId,
         eventType: "INTEGRATION_CONNECTED",
         title: `${provider} connected`,
         date: new Date(),

@@ -8,46 +8,35 @@ import ActivationFunnelChart from "@/components/ActivationFunnelChart";
 
 export default async function MetricsPage() {
   const session = await getServerSession(authOptions);
-  
-  const project = await prisma.project.findUnique({
+
+  const product = await prisma.product.findFirst({
     where: { userId: session?.user?.id },
   });
 
-  if (!project) {
-    return <div>Project not found</div>;
+  if (!product) {
+    return <div>Product not found</div>;
   }
 
-  // Get last 30 days of metrics
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const metrics = await prisma.metric.findMany({
     where: {
-      projectId: project.id,
-      date: {
-        gte: thirtyDaysAgo,
-      },
+      productId: product.id,
+      date: { gte: thirtyDaysAgo },
     },
     orderBy: { date: "asc" },
   });
 
   const retentionCohorts = await prisma.retentionCohort.findMany({
-    where: { projectId: project.id },
+    where: { productId: product.id },
     orderBy: { cohortDate: "desc" },
     take: 10,
   });
 
   const latestMetric = await prisma.metric.findFirst({
-    where: { projectId: project.id },
+    where: { productId: product.id },
     orderBy: { date: "desc" },
-  });
-
-  const activationFunnels = await prisma.activationFunnel.findMany({
-    where: {
-      projectId: project.id,
-    },
-    orderBy: { date: "desc" },
-    take: 1,
   });
 
   return (
@@ -64,12 +53,12 @@ export default async function MetricsPage() {
           <MetricsOverview metrics={metrics} />
         </div>
         <div>
-          <MetricEntryForm projectId={project.id} latestMetric={latestMetric} />
+          <MetricEntryForm productId={product.id} latestMetric={latestMetric} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <ActivationFunnelChart projectId={project.id} />
+        <ActivationFunnelChart productId={product.id} />
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h2>
           {latestMetric ? (
