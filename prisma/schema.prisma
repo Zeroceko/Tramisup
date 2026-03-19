@@ -1,0 +1,296 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core entities
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  project      Project?
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  userId     String        @unique
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name       String
+  launchDate DateTime?
+  status     ProjectStatus @default(PRE_LAUNCH)
+  
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  
+  // Relations
+  checklists       PreLaunchChecklist[]
+  actions          PreLaunchAction[]
+  metrics          Metric[]
+  retentionCohorts RetentionCohort[]
+  activationFunnels ActivationFunnel[]
+  routines         GrowthRoutine[]
+  goals            Goal[]
+  timelineEvents   TimelineEvent[]
+  integrations     Integration[]
+}
+
+enum ProjectStatus {
+  PRE_LAUNCH
+  LAUNCHED
+  GROWING
+}
+
+// Pre-launch module
+model PreLaunchChecklist {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  category    ChecklistCategory
+  title       String
+  description String?
+  completed   Boolean      @default(false)
+  completedAt DateTime?
+  order       Int          @default(0)
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([projectId])
+}
+
+enum ChecklistCategory {
+  PRODUCT
+  MARKETING
+  LEGAL
+  TECH
+}
+
+model PreLaunchAction {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  title       String
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  priority    Priority  @default(MEDIUM)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([projectId])
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// Metrics module
+model Metric {
+  id                  String       @id @default(cuid())
+  projectId           String
+  project             Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  date                DateTime
+  dau                 Int?
+  mau                 Int?
+  mrr                 Float?
+  activeSubscriptions Int?
+  newSignups          Int?
+  churnedUsers        Int?
+  activationRate      Float?
+  
+  source              MetricSource @default(MANUAL)
+  
+  createdAt           DateTime     @default(now())
+  
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+enum MetricSource {
+  MANUAL
+  INTEGRATION
+}
+
+model RetentionCohort {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  cohortDate  DateTime
+  usersCount  Int
+  
+  retentionDay1  Float?
+  retentionDay7  Float?
+  retentionDay30 Float?
+  retentionDay60 Float?
+  retentionDay90 Float?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([projectId, cohortDate])
+  @@index([projectId])
+}
+
+model ActivationFunnel {
+  id             String         @id @default(cuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  date           DateTime
+  step           ActivationStep
+  count          Int
+  conversionRate Float?
+  
+  createdAt      DateTime       @default(now())
+  
+  @@unique([projectId, date, step])
+  @@index([projectId, date])
+}
+
+enum ActivationStep {
+  SIGNUP
+  ONBOARDING
+  FIRST_ACTION
+  ACTIVATED
+}
+
+// Growth module
+model GrowthRoutine {
+  id              String    @id @default(cuid())
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?
+  frequency       Frequency
+  lastCompletedAt DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([projectId])
+}
+
+enum Frequency {
+  WEEKLY
+  MONTHLY
+}
+
+model Goal {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  title        String
+  targetValue  Float
+  currentValue Float    @default(0)
+  unit         String
+  
+  startDate    DateTime
+  endDate      DateTime
+  completed    Boolean  @default(false)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([projectId])
+}
+
+model TimelineEvent {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  eventType   EventType
+  title       String
+  description String?
+  date        DateTime
+  
+  createdAt   DateTime      @default(now())
+  
+  @@index([projectId, date])
+}
+
+enum EventType {
+  LAUNCH
+  MILESTONE
+  GOAL_COMPLETED
+  INTEGRATION_CONNECTED
+  METRIC_THRESHOLD
+  CUSTOM
+}
+
+// Integrations module
+model Integration {
+  id         String            @id @default(cuid())
+  projectId  String
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  provider   IntegrationProvider
+  status     IntegrationStatus @default(DISCONNECTED)
+  config     String?           // JSON encrypted: { apiKey, accountId, etc }
+  
+  lastSyncAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  
+  syncJobs   SyncJob[]
+  
+  @@unique([projectId, provider])
+  @@index([projectId])
+}
+
+enum IntegrationProvider {
+  STRIPE
+  GA4
+  MIXPANEL
+  SEGMENT
+  AMPLITUDE
+  POSTHOG
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+model SyncJob {
+  id            String    @id @default(cuid())
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  
+  status        SyncStatus
+  startedAt     DateTime   @default(now())
+  completedAt   DateTime?
+  error         String?
+  recordsSynced Int?
+  
+  @@index([integrationId])
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
