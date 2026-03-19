@@ -1,10 +1,11 @@
 {
   "claude.contextFiles": [
+    "gsd-skills.md",
     ".claud",
     ".cursorrules",
     "README.md"
   ],
-  "claude.customInstructions": "This project follows GSD conventions. Available skills: accessibility, agent-browser, code-optimizer, debug-like-expert, frontend-design, lint, review, test. Use @skillname to invoke.",
+  "claude.customInstructions": "IMPORTANT: This project uses GSD (Get Shit Done) framework. The file 'gsd-skills.md' contains all available commands and their implementations. When user types commands like /lint, /review, /test, /optimize, /debug, /design, /a11y, /browser - you MUST refer to gsd-skills.md for exact instructions. These are NOT native slash commands, but shorthand aliases for GSD skills that you should execute by following gsd-skills.md documentation.",
   "files.exclude": {
     "**/.gsd/sessions": true
   }

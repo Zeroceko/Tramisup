@@ -1,0 +1,76 @@
+{
+  "GSD Skills": {
+    "prefix": "/skills",
+    "body": [
+      "@accessibility - WCAG accessibility audit and improvements",
+      "@agent-browser - Browser automation for testing/scraping",
+      "@best-practices - Security and code quality review",
+      "@code-optimizer - Deep performance optimization audit",
+      "@core-web-vitals - LCP, INP, CLS optimization",
+      "@debug-like-expert - Systematic debugging for complex issues",
+      "@frontend-design - Create production-grade UI with high design quality",
+      "@lint - Auto-detect and run linters with fixes",
+      "@review - Code review for security, performance, bugs",
+      "@test - Generate or run tests",
+      "",
+      "Use @skillname to invoke a skill"
+    ],
+    "description": "List all available GSD skills"
+  },
+  "GSD Lint": {
+    "prefix": "/lint",
+    "body": [
+      "@lint ${1:path/to/file}"
+    ],
+    "description": "Run linter with auto-fix"
+  },
+  "GSD Review": {
+    "prefix": "/review",
+    "body": [
+      "@review ${1:--staged}"
+    ],
+    "description": "Review code changes"
+  },
+  "GSD Test": {
+    "prefix": "/test",
+    "body": [
+      "@test ${1:path/to/file}"
+    ],
+    "description": "Generate or run tests"
+  },
+  "GSD Code Optimizer": {
+    "prefix": "/optimize",
+    "body": [
+      "@code-optimizer - Run deep performance audit"
+    ],
+    "description": "Deep code optimization audit"
+  },
+  "GSD Debug": {
+    "prefix": "/debug",
+    "body": [
+      "@debug-like-expert - Systematic debugging protocol"
+    ],
+    "description": "Expert debugging mode"
+  },
+  "GSD Frontend Design": {
+    "prefix": "/design",
+    "body": [
+      "@frontend-design - Create ${1:component/page} with high design quality"
+    ],
+    "description": "Production-grade UI design"
+  },
+  "GSD Accessibility": {
+    "prefix": "/a11y",
+    "body": [
+      "@accessibility - WCAG audit for ${1:file/component}"
+    ],
+    "description": "Accessibility audit"
+  },
+  "GSD Browser": {
+    "prefix": "/browser",
+    "body": [
+      "@agent-browser ${1:task description}"
+    ],
+    "description": "Browser automation"
+  }
+}

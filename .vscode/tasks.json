@@ -2,15 +2,54 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Start GSD",
+      "label": "GSD: Lint",
       "type": "shell",
-      "command": "gsd",
-      "isBackground": true,
+      "command": "pi -m 'Run lint on current file'",
+      "problemMatcher": [],
       "presentation": {
         "reveal": "always",
-        "panel": "dedicated"
-      },
-      "problemMatcher": []
+        "panel": "new"
+      }
+    },
+    {
+      "label": "GSD: Review Changes",
+      "type": "shell",
+      "command": "pi -m 'Review staged changes for security, performance, and bugs'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "GSD: Run Tests",
+      "type": "shell",
+      "command": "pi -m 'Run test suite and analyze failures'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "GSD: Code Optimizer",
+      "type": "shell",
+      "command": "pi -m 'Run deep performance optimization audit'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "GSD: Debug Expert",
+      "type": "shell",
+      "command": "pi -m 'Activate systematic debugging protocol for current issue'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }
