@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,10 +13,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await context.params;
     const { currentValue } = await request.json();
 
     const goal = await prisma.goal.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!goal) {
@@ -26,14 +27,13 @@ export async function PATCH(
     const completed = currentValue >= goal.targetValue;
 
     const updatedGoal = await prisma.goal.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         currentValue,
         completed,
       },
     });
 
-    // Create timeline event if goal completed
     if (completed && !goal.completed) {
       await prisma.timelineEvent.create({
         data: {

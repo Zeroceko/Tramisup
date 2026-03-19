@@ -51,4 +51,8 @@ prisma/migrations/
 # docker
 docker-compose.override.yml
 
+# temp files
+.tmp/
+*.fig
+
 /app/generated/prisma

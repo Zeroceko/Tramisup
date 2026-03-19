@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import AppShell from "@/components/AppShell";
 
 export default async function MetricsLayout({
   children,
@@ -13,5 +14,5 @@ export default async function MetricsLayout({
     redirect("/login");
   }
 
-  return <>{children}</>;
+  return <AppShell>{children}</AppShell>;
 }

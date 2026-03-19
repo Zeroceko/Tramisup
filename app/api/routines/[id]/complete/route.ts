@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,14 +13,15 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await context.params;
+
     const routine = await prisma.growthRoutine.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         lastCompletedAt: new Date(),
       },
     });
 
-    // Create timeline event
     await prisma.timelineEvent.create({
       data: {
         projectId: routine.projectId,

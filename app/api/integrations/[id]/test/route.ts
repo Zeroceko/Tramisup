@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,28 +13,28 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await context.params;
+
     const integration = await prisma.integration.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!integration) {
       return NextResponse.json({ error: "Integration not found" }, { status: 404 });
     }
 
-    // Create mock sync job
     const syncJob = await prisma.syncJob.create({
       data: {
         integrationId: integration.id,
         status: "SUCCESS",
         startedAt: new Date(),
         completedAt: new Date(),
-        recordsSynced: 42, // Mock data
+        recordsSynced: 42,
       },
     });
 
-    // Update last sync time
     await prisma.integration.update({
-      where: { id: params.id },
+      where: { id },
       data: { lastSyncAt: new Date() },
     });
 

@@ -2,26 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #f6f6f6;
+    --surface: #ffffff;
+    --primary: #ffd7ef;
+    --primary-dark: #f5a8d4;
+    --teal: #95dbda;
+    --teal-dark: #8cb4b9;
+    --text: #0d0d12;
+    --text-sub: #666d80;
+    --text-muted: #5b5a64;
+    --border: #e8e8e8;
+    --green-accent: #75fc96;
+  }
+
+  html {
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+@layer components {
+  .card {
+    @apply bg-white rounded-[15px] overflow-hidden;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .nav-pill {
+    @apply bg-white flex items-center gap-1 p-2;
+    border-radius: 70px;
+  }
+
+  .nav-pill-item {
+    @apply flex items-center justify-center h-[34px] px-[14px] text-[12px] font-medium text-[#0d0d12] transition-colors whitespace-nowrap no-underline cursor-pointer;
+    border-radius: 26px;
+    font-family: 'Manrope', sans-serif;
+  }
+
+  .nav-pill-item:hover {
+    background: #fff0f8;
+  }
+
+  .nav-pill-item.active {
+    background: #ffd7ef;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-[15px] p-[20px_22px] flex flex-col gap-4;
+  }
+
+  .stat-count {
+    @apply text-[42px] font-bold leading-none text-black;
+  }
+
+  .stat-label {
+    @apply text-[16px] font-normal text-[#666d80];
+  }
+
+  .section-title {
+    @apply text-[16px] font-semibold text-[#0d0d12];
+  }
+
+  .tag-pink {
+    @apply inline-flex items-center gap-1 px-[14px] py-[6px] text-[12px] font-medium text-[#0d0d12];
+    background: #ffd7ef;
+    border-radius: 29px;
+  }
+
+  .tag-green {
+    @apply inline-flex items-center gap-[3px] px-[10px] py-[4px] text-[8px] font-semibold text-[#0d0d12];
+    background: #75fc96;
+    border-radius: 40px;
   }
 }

@@ -37,21 +37,21 @@ export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-6">Growth Trends (Last 30 Days)</h2>
-      
+
       <div className="mb-8">
         <h3 className="text-sm font-medium text-gray-700 mb-4">Daily & Monthly Active Users</h3>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '8px 12px'
-              }} 
+            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: "12px" }} />
+            <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "white",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                padding: "8px 12px",
+              }}
             />
             <Legend />
             <Line type="monotone" dataKey="DAU" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
@@ -65,16 +65,19 @@ export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '8px 12px'
+            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: "12px" }} />
+            <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "white",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                padding: "8px 12px",
               }}
-              formatter={(value: number) => `$${value.toLocaleString()}`}
+              formatter={(value) => {
+                const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+                return `$${numericValue.toLocaleString()}`;
+              }}
             />
             <Legend />
             <Line type="monotone" dataKey="MRR" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />

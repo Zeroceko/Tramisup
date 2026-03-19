@@ -1,0 +1,145 @@
+import { prisma } from "@/lib/prisma";
+import type {
+  ActivationStep,
+  ChecklistCategory,
+  EventType,
+  Frequency,
+  MetricSource,
+  Priority,
+} from "@prisma/client";
+
+export async function seedProjectData(projectId: string) {
+  const checklistItems: Array<{ category: ChecklistCategory; title: string; order: number }> = [
+    { category: "PRODUCT", title: "Ürün değer önerisi tanımla", order: 1 },
+    { category: "PRODUCT", title: "MVP özellikleri geliştir", order: 2 },
+    { category: "PRODUCT", title: "Kullanıcı testi tamamla", order: 3 },
+    { category: "PRODUCT", title: "Hata düzeltme ve son işlemler", order: 4 },
+    { category: "MARKETING", title: "Landing page oluştur", order: 1 },
+    { category: "MARKETING", title: "Sosyal medya hesaplarını kur", order: 2 },
+    { category: "MARKETING", title: "Launch duyurusunu hazırla", order: 3 },
+    { category: "MARKETING", title: "E-posta listesi oluştur", order: 4 },
+    { category: "LEGAL", title: "Gizlilik politikası yayınla", order: 1 },
+    { category: "LEGAL", title: "Kullanım koşullarını yayınla", order: 2 },
+    { category: "LEGAL", title: "Çerez onayını uygula", order: 3 },
+    { category: "TECH", title: "Üretim ortamını kur", order: 1 },
+    { category: "TECH", title: "Analitiği entegre et", order: 2 },
+    { category: "TECH", title: "Performans optimizasyonu", order: 3 },
+    { category: "TECH", title: "Güvenlik denetimini tamamla", order: 4 },
+  ];
+
+  for (const item of checklistItems) {
+    await prisma.preLaunchChecklist.create({
+      data: {
+        projectId,
+        category: item.category,
+        title: item.title,
+        order: item.order,
+        completed: Math.random() > 0.6,
+      },
+    });
+  }
+
+  const actions: Array<{ title: string; priority: Priority; dueDate: Date }> = [
+    { title: "Ürün demo görüşmeleri planla", priority: "HIGH", dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) },
+    { title: "Launch hakkında blog yazısı yaz", priority: "MEDIUM", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    { title: "Teknoloji gazetecileriyle iletişime geç", priority: "MEDIUM", dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
+    { title: "Yatırımcı güncellemesi hazırla", priority: "LOW", dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+  ];
+
+  for (const action of actions) {
+    await prisma.preLaunchAction.create({
+      data: { projectId, title: action.title, priority: action.priority, dueDate: action.dueDate },
+    });
+  }
+
+  const manualSource: MetricSource = "MANUAL";
+  for (let i = 30; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dau = 100 + (30 - i) * 5 + Math.floor(Math.random() * 20);
+    const mrr = 500 + (30 - i) * 50 + Math.floor(Math.random() * 100);
+    await prisma.metric.create({
+      data: {
+        projectId,
+        date,
+        dau,
+        mau: dau * 10,
+        mrr,
+        activeSubscriptions: Math.floor(mrr / 29),
+        newSignups: Math.floor(Math.random() * 15) + 5,
+        churnedUsers: Math.floor(Math.random() * 3),
+        activationRate: 60 + Math.random() * 20,
+        source: manualSource,
+      },
+    });
+  }
+
+  for (let i = 5; i >= 0; i--) {
+    const cohortDate = new Date();
+    cohortDate.setMonth(cohortDate.getMonth() - i);
+    await prisma.retentionCohort.create({
+      data: {
+        projectId,
+        cohortDate,
+        usersCount: 100 + i * 20,
+        retentionDay1: 85 + Math.random() * 10,
+        retentionDay7: 65 + Math.random() * 15,
+        retentionDay30: 45 + Math.random() * 15,
+        retentionDay60: 35 + Math.random() * 10,
+        retentionDay90: 28 + Math.random() * 7,
+      },
+    });
+  }
+
+  const funnelSteps: Array<{ step: ActivationStep; count: number; conversionRate: number }> = [
+    { step: "SIGNUP", count: 1000, conversionRate: 100 },
+    { step: "ONBOARDING", count: 850, conversionRate: 85 },
+    { step: "FIRST_ACTION", count: 680, conversionRate: 68 },
+    { step: "ACTIVATED", count: 550, conversionRate: 55 },
+  ];
+  for (const step of funnelSteps) {
+    await prisma.activationFunnel.create({
+      data: { projectId, date: new Date(), step: step.step, count: step.count, conversionRate: step.conversionRate },
+    });
+  }
+
+  const goals = [
+    {
+      title: "1.000 aktif kullanıcıya ulaş",
+      targetValue: 1000,
+      currentValue: 250,
+      unit: "kullanıcı",
+      startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    },
+    {
+      title: "$5.000 MRR'a ulaş",
+      targetValue: 5000,
+      currentValue: 1800,
+      unit: "$",
+      startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    },
+  ];
+  for (const goal of goals) {
+    await prisma.goal.create({ data: { projectId, ...goal } });
+  }
+
+  const routines: Array<{ title: string; description: string; frequency: Frequency }> = [
+    { title: "Haftalık metrik incelemesi", description: "DAU, MAU ve dönüşüm oranlarını analiz et", frequency: "WEEKLY" },
+    { title: "Aylık yatırımcı güncellemesi", description: "İlerleme raporu gönder", frequency: "MONTHLY" },
+    { title: "Haftalık içerik paylaşımı", description: "Sosyal medyada güncellemeleri paylaş", frequency: "WEEKLY" },
+  ];
+  for (const routine of routines) {
+    await prisma.growthRoutine.create({ data: { projectId, ...routine } });
+  }
+
+  const events: Array<{ eventType: EventType; title: string; date: Date }> = [
+    { eventType: "MILESTONE", title: "İlk 100 kullanıcı", date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) },
+    { eventType: "LAUNCH", title: "Ürün launch'u", date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    { eventType: "METRIC_THRESHOLD", title: "$1.000 MRR'a ulaşıldı", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
+  ];
+  for (const event of events) {
+    await prisma.timelineEvent.create({ data: { projectId, eventType: event.eventType, title: event.title, date: event.date } });
+  }
+}
