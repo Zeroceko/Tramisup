@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const routine = await prisma.growthRoutine.update({
+      where: { id: params.id },
+      data: {
+        lastCompletedAt: new Date(),
+      },
+    });
+
+    // Create timeline event
+    await prisma.timelineEvent.create({
+      data: {
+        projectId: routine.projectId,
+        eventType: "CUSTOM",
+        title: `Completed: ${routine.title}`,
+        date: new Date(),
+      },
+    });
+
+    return NextResponse.json(routine);
+  } catch (error) {
+    console.error("Error completing routine:", error);
+    return NextResponse.json(
+      { error: "Failed to complete routine" },
+      { status: 500 }
+    );
+  }
+}

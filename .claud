@@ -1,0 +1,32 @@
+# GSD Integration for Claude Code
+
+This project uses GSD (Get Shit Done) framework. Available commands and conventions:
+
+## Available Skills
+- `@accessibility` - WCAG accessibility audit
+- `@agent-browser` - Browser automation
+- `@best-practices` - Security & quality audit
+- `@code-optimizer` - Performance optimization
+- `@core-web-vitals` - LCP/INP/CLS optimization
+- `@debug-like-expert` - Deep debugging
+- `@frontend-design` - UI/UX design
+- `@lint` - Code linting
+- `@review` - Code review
+- `@test` - Test generation/execution
+
+## Project Context
+- Framework: [Your framework here]
+- Language: [Your language here]
+- Dependencies: Check package.json
+
+## Coding Standards
+- Use TypeScript strict mode
+- Follow ESLint configuration
+- Write tests for new features
+- Document complex logic
+
+## Helpful Context
+When working on this project:
+1. Check existing patterns before implementing
+2. Run tests before committing
+3. Update documentation for API changes

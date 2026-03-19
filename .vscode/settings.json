@@ -1,0 +1,11 @@
+{
+  "claude.contextFiles": [
+    ".claud",
+    ".cursorrules",
+    "README.md"
+  ],
+  "claude.customInstructions": "This project follows GSD conventions. Available skills: accessibility, agent-browser, code-optimizer, debug-like-expert, frontend-design, lint, review, test. Use @skillname to invoke.",
+  "files.exclude": {
+    "**/.gsd/sessions": true
+  }
+}
