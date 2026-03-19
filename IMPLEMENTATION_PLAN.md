@@ -12,6 +12,9 @@ Son güncelleme: Mart 2026
 - [x] Vercel CLI kuruldu (`v50.34.1`)
 - [x] Supabase CLI kuruldu (`v2.75.0`)
 - [x] `.env` `.gitignore`'da (güvenli)
+- [x] Vercel: Auto-deploy from GitHub
+- [x] Supabase: EU West (Paris) PostgreSQL
+- [x] Vercel env vars: DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET
 
 ### Schema (Phase 1) ✅
 - [x] `Project` → `Product` rename (1:1 → 1:N)
@@ -19,9 +22,10 @@ Son güncelleme: Mart 2026
 - [x] Yeni: `GrowthChecklist` (enum: `GrowthCategory`: ACQUISITION/ACTIVATION/RETENTION/REVENUE)
 - [x] Yeni: `Task` modeli (enum: `TaskStatus`: TODO/IN_PROGRESS/DONE)
 - [x] `PreLaunchAction` kaldırıldı → `Task` ile değiştirildi
-- [x] `Product`'a onboarding wizard alanları eklendi (description, category, targetAudience, businessModel, website, logoUrl, launchGoals)
+- [x] `Product`'a onboarding wizard alanları eklendi
 - [x] `prisma db push --force-reset` ile DB sıfırlandı ve yeni schema uygulandı
 - [x] `prisma generate` ile client yeniden oluşturuldu
+- [x] Schema push remote DB'ye yapılıyor
 
 ### Kod Güncellemeleri (Phase 1) ✅
 - [x] `lib/seed.ts` → `seedProductData()`, LaunchChecklist + GrowthChecklist + Task seed
@@ -37,6 +41,8 @@ Son güncelleme: Mart 2026
 - [x] Tüm `components/*` → `productId` prop rename
 - [x] `components/ActionsSection.tsx` → `Task` modeline göre yeniden yazıldı
 - [x] `next build` temiz — 21 route hatasız derlendi
+- [x] `package.json`: "name": "tramisup"
+- [x] `vercel.json`: buildCommand, framework, env vars
 
 ### Temel Auth Akışı ✅
 - [x] `/signup` → user + product + seed → signIn → `/dashboard`
@@ -49,6 +55,13 @@ Son güncelleme: Mart 2026
 - [x] `DashboardNav` — sticky header, pill nav, signout
 - [x] `PageHeader` — eyebrow + başlık + aksiyon slot
 - [x] `StatCard` — 4 accent rengi (blue/violet/emerald/amber)
+
+### Deploy ✅
+- [x] Vercel: `tramisup` projesi oluşturuldu
+- [x] Supabase: `tramisup` projesi (ref: `ojecebxxcbxrofnbkaae`)
+- [x] Vercel env vars ayarlandı
+- [x] GitHub auto-deploy bağlandı
+- [x] Production URL: `https://tramisup.vercel.app`
 
 ---
 
@@ -113,22 +126,7 @@ _Öncelik: Orta | Figma: Navigation_
 
 ---
 
-## Bekleyen: Deploy Altyapısı
-
-_Öncelik: Kritik | Bağımlılık: Token'lar_
-
-- [ ] Supabase access token al → `supabase login --token <token>`
-- [ ] Supabase proje oluştur (tramisup, EU West)
-- [ ] DB connection string al (Transaction mode pooler URL)
-- [ ] `npx prisma db push` → remote DB'ye schema push
-- [ ] Vercel token al → `vercel login`
-- [ ] `vercel` → Tramisup'ı deploy et
-- [ ] Env vars: `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
-- [ ] Production `NEXTAUTH_URL` güncelle
-
----
-
-## Gelecek: Auth + Entegrasyon İyileştirmeleri
+## Sonraki Yapılacaklar: Auth + Entegrasyon
 
 - [ ] Şifre sıfırlama — Resend ile magic link
 - [ ] E-posta doğrulama (opsiyonel)
@@ -158,3 +156,5 @@ _Öncelik: Kritik | Bağımlılık: Token'lar_
 | Seed | Signup'ta otomatik | Yeni kullanıcı boş dashboard görmesin |
 | Prisma | v6 | v7 breaking change (PrismaClientOptions) |
 | Params | `Promise<{id}>` | Next.js 15 zorunluluğu |
+| Deploy | Vercel + Supabase | GitHub integration, serverless, managed DB |
+| Region | EU West (Paris) | GDPR + Türkiye'ye yakınlık |

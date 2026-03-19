@@ -4,6 +4,8 @@ Startup kurucuları için **launch'tan growth'a** aşamayı yöneten çok-ürün
 
 Pre-launch hazırlık, growth readiness, kanban görev yönetimi, metrik takibi, growth rutinleri ve entegrasyon altyapısını tek bir yerden yönet.
 
+**Live:** [tramisup.vercel.app](https://tramisup.vercel.app)
+
 ---
 
 ## Başlarken
@@ -11,7 +13,7 @@ Pre-launch hazırlık, growth readiness, kanban görev yönetimi, metrik takibi,
 ### Gereksinimler
 
 - Node.js 18+
-- PostgreSQL (lokal için Docker Compose dahil)
+- Docker (lokal PostgreSQL için) — ya da Supabase'i kullan
 
 ### Kurulum
 
@@ -19,7 +21,7 @@ Pre-launch hazırlık, growth readiness, kanban görev yönetimi, metrik takibi,
 # Bağımlılıkları yükle
 npm install
 
-# Ortam değişkenlerini ayarla
+# Ortam değişkenlerini ayarla (lokal)
 cp .env.example .env
 # .env dosyasını düzenle (DATABASE_URL, NEXTAUTH_SECRET)
 
@@ -66,6 +68,8 @@ Uygulama `http://localhost:3001` adresinde açılır.
 - **Stil:** Tailwind CSS 3
 - **Auth:** NextAuth.js 4 (JWT + credentials)
 - **ORM:** Prisma 6 (PostgreSQL)
+- **Veritabanı:** Supabase PostgreSQL
+- **Deploy:** Vercel
 - **Grafikler:** Recharts
 - **Test:** Vitest
 - **Şifreleme:** bcryptjs
@@ -147,35 +151,46 @@ docker compose down   # Lokal PostgreSQL durdur
 
 ## Ortam Değişkenleri
 
+### Lokal Geliştirme
+
 | Değişken | Açıklama |
 |---|---|
-| `DATABASE_URL` | PostgreSQL bağlantı URL'si |
+| `DATABASE_URL` | PostgreSQL bağlantı URL'si (lokal: `localhost:5432`) |
 | `NEXTAUTH_SECRET` | JWT imzalama secret (en az 32 karakter) |
-| `NEXTAUTH_URL` | Uygulamanın tam URL'si |
+| `NEXTAUTH_URL` | Uygulamanın tam URL'si (`http://localhost:3001`) |
 
 Secret üretmek için:
 ```bash
 openssl rand -base64 32
 ```
 
+### Prodüktif (Vercel)
+
+Vercel dashboard'da ayarlanmış:
+- `DATABASE_URL`: Supabase connection string (transaction mode pooler)
+- `NEXTAUTH_URL`: `https://tramisup.vercel.app`
+- `NEXTAUTH_SECRET`: Production secret
+
 ---
 
 ## Deploy
 
-### Vercel + Supabase (Önerilen)
+### Live Deploy
 
-1. [supabase.com](https://supabase.com) → New Project oluştur
-2. Settings → Database → Connection string (Transaction mode) → kopyala
-3. [vercel.com](https://vercel.com) → GitHub'dan `Zeroceko/Tramisup` import et
-4. Environment variables ayarla:
+Vercel'de otomatik deploy aktif. GitHub'a push et:
 
-```env
-DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-NEXTAUTH_URL="https://tramisup.vercel.app"
-NEXTAUTH_SECRET="openssl rand -base64 32 çıktısı"
+```bash
+git push origin main
 ```
 
-5. Deploy sonrası: `npx prisma db push` (remote DB'ye schema push)
+Vercel GitHub'dan algılar ve otomatik deploy eder.
+
+### Lokal Deploy Testi
+
+```bash
+npm run build
+npm run start
+```
 
 ---
 

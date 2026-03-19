@@ -1,7 +1,7 @@
 # Tramisup — Handoff Belgesi
 
 **Tarih:** Mart 2026
-**Durum:** Phase 1 tamamlandı — multi-product schema, build temiz, GitHub'da
+**Durum:** Phase 1 tamamlandı — multi-product schema, build temiz, GitHub live, Vercel + Supabase bağlandı
 
 ---
 
@@ -23,7 +23,7 @@ Tramisup, startup kurucuları için "launch'tan growth'a" aşamasını yöneten 
 
 ```bash
 # Port 3000 başka uygulama tarafından kullanılıyor — her zaman 3001 kullan
-docker compose up -d          # PostgreSQL başlat
+docker compose up -d          # PostgreSQL başlat (lokal)
 npm run dev -- --port 3001    # Dev server
 ```
 
@@ -37,7 +37,7 @@ http://localhost:3001
 - Docker (lokal PostgreSQL için)
 - `.env` dosyasındaki değerler
 
-### `.env` durumu
+### `.env` durumu (lokal)
 
 ```
 DATABASE_URL="postgresql://tramisu:tramisu_dev_password@localhost:5432/tramisu"
@@ -53,7 +53,7 @@ NEXTAUTH_SECRET="<gerçek secret — .env dosyasında mevcut>"
 
 **Repo:** `https://github.com/Zeroceko/Tramisup` (private)
 **Branch:** `main`
-**Son commit:** Phase 1 schema + tüm kod güncellemeleri
+**Son commit:** Phase 1 schema + tüm kod güncellemeleri + docs update
 
 ```bash
 git push origin main   # Değişiklikleri push et
@@ -63,19 +63,17 @@ git push origin main   # Değişiklikleri push et
 
 ## Deploy Durumu
 
-| Servis | Durum |
-|---|---|
-| GitHub | Aktif — `Zeroceko/Tramisup` |
-| Supabase | Bekliyor — proje oluşturulmadı |
-| Vercel | Bekliyor — deploy yapılmadı |
+| Servis | Durum | URL |
+|---|---|---|
+| GitHub | ✅ Aktif | `Zeroceko/Tramisup` |
+| Supabase | ✅ Aktif | Project ref: `ojecebxxcbxrofnbkaae` |
+| Vercel | ✅ Aktif | `https://tramisup.vercel.app` |
 
-### Deploy için yapılacaklar
+### Deploy Detayları
 
-1. [supabase.com](https://supabase.com) → New Project (`tramisup`, EU West)
-2. Settings → Database → Connection string (Transaction mode) kopyala
-3. [vercel.com](https://vercel.com) → GitHub'dan import et
-4. Env vars gir (DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET)
-5. `npx prisma db push` ile remote DB'ye schema push
+- **Vercel:** GitHub'dan auto-deploy, env vars ayarlandı
+- **Supabase:** PostgreSQL, EU West (Paris), transaction mode pooler
+- **Schema:** Remote DB'ye push yapılıyor (Prisma)
 
 ---
 
@@ -151,7 +149,11 @@ Next.js 15 (App Router)
 
 **Şema ile DB senkron:**
 ```bash
+# Lokal
 npx prisma db push
+
+# Remote (Supabase)
+DATABASE_URL="postgresql://postgres.ojecebxxcbxrofnbkaae:IkQFnNieU04fXtqu@aws-1-eu-west-3.pooler.supabase.com:6543/postgres" npx prisma db push
 ```
 
 **Demo veri yükleme:**
@@ -177,10 +179,12 @@ curl -X POST http://localhost:3001/api/seed \
 ### Tamamlananlar ✅
 
 - GitHub repo: `Zeroceko/Tramisup` (private)
+- Vercel: Auto-deploy, env vars ✅
+- Supabase: EU West PostgreSQL, pooler bağlantı ✅
 - Signup → login → dashboard akışı (uçtan uca)
 - Auth guard tüm iç sayfalarda
-- **Multi-product schema:** User → Product (1:N), LaunchChecklist, GrowthChecklist, Task modelleri
-- **Build temiz:** `next build` hatasız, 21 route compile
+- Multi-product schema: User → Product (1:N), LaunchChecklist, GrowthChecklist, Task modelleri
+- Build temiz: `next build` hatasız, 21 route compile
 - Pre-launch checklist toggle (client-side + API)
 - Task yönetimi (ActionsSection — Task modeline bağlı)
 - Metrik girişi ve grafik görselleştirme
@@ -189,10 +193,13 @@ curl -X POST http://localhost:3001/api/seed \
 - Demo veri seed (signup'ta otomatik, 15 launch + 12 growth checklist + 6 task + 30 gün metrik)
 - Tüm `[id]/route.ts` Next.js 15 `params: Promise<{id}>` formatında
 - PageHeader + StatCard + AppShell component pattern'i
+- package.json: "name": "tramisup"
+- vercel.json: buildCommand, framework, env vars
+- .env.local ile lokal override desteği
 
 ### Eksik / Yarım
 
-- **Supabase + Vercel deploy:** Tokens bekleniyor
+- **Schema push remote DB'ye:** Supabase bağlantısı yavaş, bitmesi bekleniyor
 - **Products sayfası:** Ürün listesi ve yeni ürün wizard (Phase 2)
 - **Launch Readiness sayfası:** PageHeader + StatCard pattern ile yeniden tasarım (Phase 3)
 - **Growth Readiness sayfası:** GrowthChecklist kategorileri ile yeni sayfa (Phase 4)
@@ -212,23 +219,24 @@ curl -X POST http://localhost:3001/api/seed \
 
 ## Sonraki Adımlar (Öncelik Sırasıyla)
 
-1. **Supabase proje oluştur** → DB connection string al
-2. **Vercel deploy** → `Zeroceko/Tramisup` import et, env vars gir
-3. **Phase 2:** Products sayfası + 7 adımlı yeni ürün wizard
-4. **Phase 3:** Launch Readiness yeniden tasarım
-5. **Phase 4:** Growth Readiness sayfası
-6. **Phase 5:** Kanban Board
-7. **Phase 6:** Dashboard yeniden tasarım (Figma'ya uygun)
-8. **Phase 7:** Nav & Layout güncellemesi (product selector)
+1. ✅ **Schema push Supabase'e** — bitme bekleniyor
+2. **Phase 2:** Products sayfası + 7 adımlı yeni ürün wizard
+3. **Phase 3:** Launch Readiness yeniden tasarım
+4. **Phase 4:** Growth Readiness sayfası
+5. **Phase 5:** Kanban Board
+6. **Phase 6:** Dashboard yeniden tasarım (Figma'ya uygun)
+7. **Phase 7:** Nav & Layout güncellemesi (product selector)
 
 ---
 
-## Vercel Deploy için `.env` Şablonu
+## Prodüktive Ortam Değişkenleri
+
+Vercel'de ayarlandı:
 
 ```env
-DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DATABASE_URL="postgresql://postgres.ojecebxxcbxrofnbkaae:IkQFnNieU04fXtqu@aws-1-eu-west-3.pooler.supabase.com:6543/postgres"
 NEXTAUTH_URL="https://tramisup.vercel.app"
-NEXTAUTH_SECRET="<openssl rand -base64 32 çıktısı>"
+NEXTAUTH_SECRET="oY3Cp8OPhMjbexkr39oJa62L/ChbFb05isWnnjFAxBA="
 ```
 
 ---
@@ -245,3 +253,4 @@ NEXTAUTH_SECRET="<openssl rand -base64 32 çıktısı>"
 | Params typing | `Promise<{id: string}>` | Next.js 15 dynamic route zorunluluğu |
 | Multi-product | User→Product 1:N | Figma tasarımı çok ürün gösteriyor |
 | Task modeli | `Task` (TODO/IN_PROGRESS/DONE) | `PreLaunchAction` kaldırıldı, Kanban'a hazır |
+| Deploy | Vercel + Supabase | GitHub integration, serverless, managed DB |
