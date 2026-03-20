@@ -12,10 +12,14 @@ interface Task {
   priority: "LOW" | "MEDIUM" | "HIGH";
 }
 
-const priorityColors = {
-  HIGH: "bg-red-100 text-red-700 border-red-200",
-  MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  LOW: "bg-green-100 text-green-700 border-green-200",
+const priorityStyle: Record<string, string> = {
+  HIGH:   "bg-red-50 text-red-600 border-red-100",
+  MEDIUM: "bg-[#fee74e]/20 text-[#a07800] border-[#fee74e]/30",
+  LOW:    "bg-[#75fc96]/20 text-[#1a7a36] border-[#75fc96]/30",
+};
+
+const priorityLabel: Record<string, string> = {
+  HIGH: "Yüksek", MEDIUM: "Orta", LOW: "Düşük",
 };
 
 export default function ActionsSection({
@@ -33,6 +37,8 @@ export default function ActionsSection({
     dueDate: "",
     priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH",
   });
+
+  const inputCls = "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 
   const toggleTask = async (taskId: string, currentStatus: string) => {
     setLoading(taskId);
@@ -57,11 +63,7 @@ export default function ActionsSection({
       await fetch("/api/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newAction,
-          productId,
-          dueDate: newAction.dueDate || null,
-        }),
+        body: JSON.stringify({ ...newAction, productId, dueDate: newAction.dueDate || null }),
       });
       setNewAction({ title: "", dueDate: "", priority: "MEDIUM" });
       setShowAddForm(false);
@@ -77,108 +79,107 @@ export default function ActionsSection({
   const completedTasks = tasks.filter(a => a.status === "DONE");
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Action Items</h2>
+    <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">Görevler</p>
+          <h2 className="text-[16px] font-semibold text-[#0d0d12]">Aksiyon Listesi</h2>
+        </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition"
         >
-          {showAddForm ? "Cancel" : "+ Add"}
+          {showAddForm ? "İptal" : "+ Ekle"}
         </button>
       </div>
 
       {showAddForm && (
-        <form onSubmit={addTask} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3">
-          <div>
-            <input
-              type="text"
-              placeholder="Action title"
-              value={newAction.title}
-              onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={addTask} className="mb-4 p-4 bg-[#f6f6f6] rounded-[12px] space-y-3">
+          <input
+            type="text"
+            placeholder="Görev başlığı"
+            value={newAction.title}
+            onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+            required
+            className={inputCls}
+          />
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="date"
               value={newAction.dueDate}
               onChange={(e) => setNewAction({ ...newAction, dueDate: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className={inputCls}
             />
             <select
               value={newAction.priority}
-              onChange={(e) =>
-                setNewAction({ ...newAction, priority: e.target.value as "LOW" | "MEDIUM" | "HIGH" })
-              }
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              onChange={(e) => setNewAction({ ...newAction, priority: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
+              className={inputCls}
             >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
+              <option value="LOW">Düşük</option>
+              <option value="MEDIUM">Orta</option>
+              <option value="HIGH">Yüksek</option>
             </select>
           </div>
           <button
             type="submit"
             disabled={loading === "new"}
-            className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="w-full h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50"
           >
-            {loading === "new" ? "Adding..." : "Add Task"}
+            {loading === "new" ? "Ekleniyor…" : "Görev Ekle"}
           </button>
         </form>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {pendingTasks.length === 0 && !showAddForm && (
-          <p className="text-center text-gray-500 py-8">No pending tasks</p>
+          <p className="text-center text-[13px] text-[#9ca3af] py-8">Bekleyen görev yok</p>
         )}
 
         {pendingTasks.map((task) => (
-          <div
+          <label
             key={task.id}
-            className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className={`flex items-start gap-3 p-3 rounded-[10px] border border-[#e8e8e8] cursor-pointer hover:bg-[#f6f6f6] transition ${loading === task.id ? "opacity-60" : ""}`}
           >
-            <div className="flex items-start space-x-3">
-              <input
-                type="checkbox"
-                checked={task.status === "DONE"}
-                onChange={() => toggleTask(task.id, task.status)}
-                disabled={loading === task.id}
-                className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{task.title}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`px-2 py-0.5 text-xs rounded border ${priorityColors[task.priority]}`}>
-                    {task.priority}
+            <input
+              type="checkbox"
+              checked={task.status === "DONE"}
+              onChange={() => toggleTask(task.id, task.status)}
+              disabled={loading === task.id}
+              className="mt-0.5 h-4 w-4 rounded border-[#d0d0d0] accent-[#95dbda] cursor-pointer shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-medium text-[#0d0d12]">{task.title}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border ${priorityStyle[task.priority]}`}>
+                  {priorityLabel[task.priority]}
+                </span>
+                {task.dueDate && (
+                  <span className="text-[11px] text-[#9ca3af]">
+                    {format(new Date(task.dueDate), "d MMM")}
                   </span>
-                  {task.dueDate && (
-                    <span className="text-xs text-gray-600">
-                      Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-          </div>
+          </label>
         ))}
 
         {completedTasks.length > 0 && (
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm font-medium text-gray-500 mb-3">Completed ({completedTasks.length})</p>
-            <div className="space-y-2">
+          <div className="pt-3 border-t border-[#e8e8e8]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af] mb-2">
+              Tamamlandı ({completedTasks.length})
+            </p>
+            <div className="space-y-1">
               {completedTasks.map((task) => (
-                <div key={task.id} className="flex items-center space-x-3 p-2">
+                <label key={task.id} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={true}
                     onChange={() => toggleTask(task.id, task.status)}
                     disabled={loading === task.id}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-[#d0d0d0] accent-[#95dbda] cursor-pointer shrink-0"
                   />
-                  <p className="text-sm text-gray-400 line-through flex-1">{task.title}</p>
-                </div>
+                  <p className="text-[13px] text-[#9ca3af] line-through flex-1">{task.title}</p>
+                </label>
               ))}
             </div>
           </div>

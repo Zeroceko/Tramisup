@@ -5,6 +5,8 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -18,130 +20,123 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
+      const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
-        setError("Invalid email or password");
+        setError("E-posta veya şifre hatalı");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError("An error occurred. Please try again.");
+      setError("Bir hata oluştu. Lütfen tekrar dene.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(72,109,255,0.2),_transparent_34%),linear-gradient(180deg,#f8faff_0%,#f5f7fb_40%,#f3f4f8_100%)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-[32px] border border-white/70 bg-white/75 shadow-[0_32px_80px_-30px_rgba(15,23,42,0.28)] backdrop-blur lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="hidden flex-col justify-between bg-slate-950 p-10 text-white lg:flex">
-            <div>
-              <Link href="/" className="inline-flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-lg font-bold text-slate-950">
-                  T
-                </div>
-                <div>
-                  <p className="text-base font-semibold tracking-[-0.03em]">Tiramisup</p>
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator cockpit</p>
-                </div>
-              </Link>
-              <h1 className="mt-12 text-4xl font-semibold tracking-[-0.05em] text-white">
-                Welcome back to your growth operating system.
-              </h1>
-              <p className="mt-5 max-w-md text-sm leading-7 text-slate-300">
-                Pick up where launch planning ended and execution begins: readiness, metrics,
-                routines, and integration decisions in one place.
+    <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-6xl grid lg:grid-cols-[0.95fr_1.05fr] overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white shadow-card">
+
+        {/* Left panel */}
+        <section className="hidden lg:flex flex-col justify-between bg-[#0d0d12] p-10">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center font-bold text-[#0d0d12] text-[16px]">
+                T
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-white">Tiramisup</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Operator cockpit</p>
+              </div>
+            </Link>
+            <h1 className="mt-12 text-[32px] font-bold tracking-[-0.03em] text-white leading-tight">
+              Launch&apos;tan büyümeye giden<br />tek çalışma alanın.
+            </h1>
+            <p className="mt-4 text-[14px] leading-7 text-white/60">
+              Hazırlık, metrikler, rutinler ve entegrasyon kararları tek yerde.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              "Spreadsheet'siz launch hazırlığı takibi",
+              "MRR, retention ve aktivasyon tek yüzey",
+              "Haftalık growth ritüelleri herkes için görünür",
+            ].map((item) => (
+              <div key={item} className="rounded-[12px] border border-white/10 bg-white/5 px-4 py-3 text-[13px] text-white/70">
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Right panel */}
+        <section className="p-8 sm:p-12">
+          <div className="mx-auto max-w-md">
+            <div className="mb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80] mb-2">Giriş Yap</p>
+              <h2 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12]">Workspace&apos;e geri dön</h2>
+              <p className="mt-2 text-[14px] text-[#666d80]">
+                E-posta ve şifrenle devam et.
               </p>
             </div>
 
-            <div className="grid gap-3">
-              {[
-                "Track launch readiness without spreadsheet drift",
-                "Review MRR, retention, and activation from one surface",
-                "Keep weekly growth rituals visible to the whole team",
-              ].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
-                  {item}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-600">
+                  {error}
                 </div>
-              ))}
-            </div>
-          </section>
+              )}
 
-          <section className="p-6 sm:p-10 lg:p-12">
-            <div className="mx-auto max-w-md">
-              <div className="mb-8">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                  Sign in
-                </div>
-                <h2 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Open your Tiramisup workspace</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Use your email and password to continue into the dashboard.
-                </p>
+              <div>
+                <label htmlFor="email" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                  E-posta
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                  className={inputCls}
+                  placeholder="sen@ornek.com"
+                />
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {error ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                ) : null}
+              <div>
+                <label htmlFor="password" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                  Şifre
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className={inputCls}
+                  placeholder="••••••••"
+                />
+              </div>
 
-                <div>
-                  <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    placeholder="you@example.com"
-                  />
-                </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
+              </button>
+            </form>
 
-                <div>
-                  <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    placeholder="••••••••"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2458ff_0%,#6d8dff_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_20px_40px_-22px_rgba(36,88,255,0.95)] transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Signing in..." : "Sign In"}
-                </button>
-              </form>
-
-              <p className="mt-6 text-sm text-slate-600">
-                Don&apos;t have an account? {" "}
-                <Link href="/signup" className="font-semibold text-blue-700 hover:text-blue-800">
-                  Create one
-                </Link>
-              </p>
-            </div>
-          </section>
-        </div>
+            <p className="mt-6 text-[13px] text-[#666d80]">
+              Hesabın yok mu?{" "}
+              <Link href="/signup" className="font-semibold text-[#0d0d12] hover:text-[#666d80] transition">
+                Kayıt ol
+              </Link>
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

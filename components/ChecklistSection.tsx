@@ -21,10 +21,10 @@ interface ChecklistsByCategory {
 }
 
 const categoryInfo = {
-  PRODUCT: { icon: "🎯", label: "Product" },
-  MARKETING: { icon: "📢", label: "Marketing" },
-  LEGAL: { icon: "⚖️", label: "Legal" },
-  TECH: { icon: "⚙️", label: "Tech" },
+  PRODUCT:   { label: "Ürün" },
+  MARKETING: { label: "Pazarlama" },
+  LEGAL:     { label: "Hukuki" },
+  TECH:      { label: "Teknik" },
 };
 
 export default function ChecklistSection({
@@ -53,64 +53,55 @@ export default function ChecklistSection({
     }
   };
 
+  void productId;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Launch Checklist</h2>
-      </div>
+    <div className="space-y-3">
+      {(Object.keys(checklistsByCategory) as Array<keyof ChecklistsByCategory>).map((category) => {
+        const items = checklistsByCategory[category];
+        if (items.length === 0) return null;
 
-      <div className="space-y-6">
-        {(Object.keys(checklistsByCategory) as Array<keyof ChecklistsByCategory>).map((category) => {
-          const items = checklistsByCategory[category];
-          if (items.length === 0) return null;
+        const info = categoryInfo[category];
+        const completedCount = items.filter(item => item.completed).length;
 
-          const info = categoryInfo[category];
-          const completedCount = items.filter(item => item.completed).length;
-
-          return (
-            <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <span className="mr-2">{info.icon}</span>
-                  {info.label}
-                </h3>
-                <span className="text-sm text-gray-600">
-                  {completedCount}/{items.length}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.completed}
-                      onChange={() => toggleChecklistItem(item.id, item.completed)}
-                      disabled={loading === item.id}
-                      className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <p
-                        className={`font-medium ${
-                          item.completed ? "text-gray-400 line-through" : "text-gray-900"
-                        }`}
-                      >
-                        {item.title}
-                      </p>
-                      {item.description && (
-                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        return (
+          <div key={category} className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[14px] font-semibold text-[#0d0d12]">{info.label}</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#f6f6f6] text-[11px] font-semibold text-[#666d80]">
+                {completedCount}/{items.length}
+              </span>
             </div>
-          );
-        })}
-      </div>
+
+            <div className="space-y-1">
+              {items.map((item) => (
+                <label
+                  key={item.id}
+                  className={`flex items-start gap-3 px-3 py-2.5 rounded-[10px] cursor-pointer transition ${
+                    loading === item.id ? "opacity-60" : "hover:bg-[#f6f6f6]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={item.completed}
+                    onChange={() => toggleChecklistItem(item.id, item.completed)}
+                    disabled={loading === item.id}
+                    className="mt-0.5 h-4 w-4 rounded border-[#d0d0d0] accent-[#95dbda] cursor-pointer shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[14px] font-medium ${item.completed ? "text-[#9ca3af] line-through" : "text-[#0d0d12]"}`}>
+                      {item.title}
+                    </p>
+                    {item.description && (
+                      <p className="text-[12px] text-[#666d80] mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

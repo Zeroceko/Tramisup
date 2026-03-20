@@ -1,32 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock prisma
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
     },
-    project: {
+    product: {
       create: vi.fn(),
     },
   },
 }))
 
-// Mock bcryptjs
 vi.mock('bcryptjs', () => ({
   default: {
     hash: vi.fn(),
   },
 }))
 
+vi.mock('@/lib/seed', () => ({
+  seedProductData: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { POST } from '@/app/api/auth/signup/route'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-const mockPrismaUser = vi.mocked(prisma.user)
-const mockPrismaProject = vi.mocked(prisma.project)
-const mockBcrypt = vi.mocked(bcrypt)
+const mockPrismaUser    = vi.mocked(prisma.user)
+const mockPrismaProduct = vi.mocked(prisma.product)
+const mockBcrypt        = vi.mocked(bcrypt)
 
 function createRequest(body: Record<string, unknown>) {
   return new Request('http://localhost:3000/api/auth/signup', {
@@ -47,7 +49,7 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Email and password are required')
+    expect(data.error).toBe('Email ve şifre zorunludur')
   })
 
   it('should return 400 if password is missing', async () => {
@@ -56,7 +58,7 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Email and password are required')
+    expect(data.error).toBe('Email ve şifre zorunludur')
   })
 
   it('should return 400 if both email and password are missing', async () => {
@@ -65,7 +67,16 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Email and password are required')
+    expect(data.error).toBe('Email ve şifre zorunludur')
+  })
+
+  it('should return 400 if password is too short', async () => {
+    const request = createRequest({ email: 'test@example.com', password: 'short' })
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('Şifre en az 8 karakter olmalıdır')
   })
 
   it('should return 400 if user already exists', async () => {
@@ -87,10 +98,10 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('User with this email already exists')
+    expect(data.error).toBe('Bu e-posta adresi zaten kayıtlı')
   })
 
-  it('should create user with hashed password and default project', async () => {
+  it('should create user with hashed password and default product', async () => {
     mockPrismaUser.findUnique.mockResolvedValue(null)
     mockBcrypt.hash.mockResolvedValue('$2a$10$hashed' as never)
     mockPrismaUser.create.mockResolvedValue({
@@ -101,7 +112,7 @@ describe('POST /api/auth/signup', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
-    mockPrismaProject.create.mockResolvedValue({} as any)
+    mockPrismaProduct.create.mockResolvedValue({ id: 'product-123' } as any)
 
     const request = createRequest({
       name: 'New User',
@@ -112,12 +123,10 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(201)
-    expect(data.message).toBe('User created successfully')
+    expect(data.message).toBe('Hesap oluşturuldu')
 
-    // Verify password was hashed with cost factor 10
     expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 10)
 
-    // Verify user was created with hashed password
     expect(mockPrismaUser.create).toHaveBeenCalledWith({
       data: {
         email: 'new@example.com',
@@ -126,28 +135,27 @@ describe('POST /api/auth/signup', () => {
       },
     })
 
-    // Verify default project was created
-    expect(mockPrismaProject.create).toHaveBeenCalledWith({
+    expect(mockPrismaProduct.create).toHaveBeenCalledWith({
       data: {
         userId: 'new-user-123',
-        name: 'My Startup',
+        name: "Benim Startup'ım",
         status: 'PRE_LAUNCH',
       },
     })
   })
 
-  it('should handle signup without name', async () => {
+  it('should handle signup without name (falls back to email username)', async () => {
     mockPrismaUser.findUnique.mockResolvedValue(null)
     mockBcrypt.hash.mockResolvedValue('$2a$10$hashed' as never)
     mockPrismaUser.create.mockResolvedValue({
       id: 'new-user-456',
       email: 'noname@example.com',
-      name: undefined,
+      name: 'noname',
       passwordHash: '$2a$10$hashed',
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
-    mockPrismaProject.create.mockResolvedValue({} as any)
+    mockPrismaProduct.create.mockResolvedValue({ id: 'product-456' } as any)
 
     const request = createRequest({
       email: 'noname@example.com',
@@ -156,10 +164,11 @@ describe('POST /api/auth/signup', () => {
     const response = await POST(request)
 
     expect(response.status).toBe(201)
+    // name falls back to the email username part
     expect(mockPrismaUser.create).toHaveBeenCalledWith({
       data: {
         email: 'noname@example.com',
-        name: undefined,
+        name: 'noname',
         passwordHash: '$2a$10$hashed',
       },
     })
@@ -177,7 +186,7 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(500)
-    expect(data.error).toBe('Internal server error')
+    expect(data.error).toBe('Sunucu hatası, lütfen tekrar deneyin')
   })
 
   it('should not leak error details in 500 response', async () => {
@@ -190,7 +199,8 @@ describe('POST /api/auth/signup', () => {
     const response = await POST(request)
     const data = await response.json()
 
-    expect(data.error).toBe('Internal server error')
+    expect(response.status).toBe(500)
     expect(JSON.stringify(data)).not.toContain('Sensitive')
+    expect(JSON.stringify(data)).not.toContain('DB info')
   })
 })

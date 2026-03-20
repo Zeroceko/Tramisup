@@ -1,14 +1,20 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveProductId } from "@/lib/activeProduct";
 import ChecklistSection from "@/components/ChecklistSection";
 import ActionsSection from "@/components/ActionsSection";
+import PageHeader from "@/components/PageHeader";
 
 export default async function PreLaunchPage() {
   const session = await getServerSession(authOptions);
 
+  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
-    where: { userId: session?.user?.id },
+    where: {
+      userId: session?.user?.id,
+      ...(activeId ? { id: activeId } : {}),
+    },
   });
 
   const checklists = await prisma.launchChecklist.findMany({
@@ -33,40 +39,41 @@ export default async function PreLaunchPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pre-Launch Readiness</h1>
-        <p className="text-gray-600">
-          Track your launch preparation and ensure everything is ready
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Pre-Launch"
+        title="Launch Hazırlık Skoru"
+        description="Launch öncesi her şeyin hazır olduğundan emin ol."
+      />
 
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-8 mb-8">
+      {/* Readiness bar */}
+      <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Readiness Score</h2>
-            <p className="text-gray-600">
-              {completedItems} of {totalItems} items completed
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Hazırlık</p>
+            <p className="text-[14px] text-[#666d80]">
+              {completedItems} / {totalItems} madde tamamlandı
             </p>
           </div>
-          <div className="text-5xl font-bold text-indigo-600">{readinessScore}%</div>
+          <span className="text-[42px] font-bold text-[#0d0d12] leading-none tracking-[-0.03em]">
+            {readinessScore}%
+          </span>
         </div>
-        <div className="w-full bg-white rounded-full h-4 overflow-hidden">
+        <div className="w-full bg-[#f6f6f6] rounded-full h-2 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-500"
+            className="h-full bg-[#95dbda] rounded-full transition-all duration-500"
             style={{ width: `${readinessScore}%` }}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <ChecklistSection
             checklistsByCategory={checklistsByCategory}
             productId={product?.id || ""}
           />
         </div>
-
         <div>
           <ActionsSection
             tasks={tasks}

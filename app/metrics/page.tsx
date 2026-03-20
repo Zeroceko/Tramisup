@@ -1,30 +1,35 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveProductId } from "@/lib/activeProduct";
 import MetricsOverview from "@/components/MetricsOverview";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import RetentionCohortTable from "@/components/RetentionCohortTable";
 import ActivationFunnelChart from "@/components/ActivationFunnelChart";
+import PageHeader from "@/components/PageHeader";
 
 export default async function MetricsPage() {
   const session = await getServerSession(authOptions);
 
+  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
-    where: { userId: session?.user?.id },
+    where: {
+      userId: session?.user?.id,
+      ...(activeId ? { id: activeId } : {}),
+    },
   });
 
   if (!product) {
-    return <div>Product not found</div>;
+    return (
+      <div className="text-center py-20 text-[#666d80]">Ürün bulunamadı</div>
+    );
   }
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const metrics = await prisma.metric.findMany({
-    where: {
-      productId: product.id,
-      date: { gte: thirtyDaysAgo },
-    },
+    where: { productId: product.id, date: { gte: thirtyDaysAgo } },
     orderBy: { date: "asc" },
   });
 
@@ -39,16 +44,22 @@ export default async function MetricsPage() {
     orderBy: { date: "desc" },
   });
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Metrics Dashboard</h1>
-        <p className="text-gray-600">
-          Track your key performance indicators
-        </p>
-      </div>
+  const kpiItems = [
+    { label: "Günlük Aktif Kullanıcı", value: latestMetric?.dau?.toLocaleString() || "—" },
+    { label: "Aylık Aktif Kullanıcı",  value: latestMetric?.mau?.toLocaleString() || "—" },
+    { label: "MRR",                     value: latestMetric?.mrr ? `$${latestMetric.mrr.toLocaleString()}` : "—" },
+    { label: "Aktivasyon Oranı",        value: latestMetric?.activationRate ? `${latestMetric.activationRate}%` : "—" },
+  ];
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Metrikler"
+        title="Metrik Panosu"
+        description="Temel performans göstergelerini takip et."
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         <div className="lg:col-span-2">
           <MetricsOverview metrics={metrics} />
         </div>
@@ -57,39 +68,22 @@ export default async function MetricsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <ActivationFunnelChart productId={product.id} />
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h2>
+        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Anlık</p>
+          <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Temel Metrikler</h2>
           {latestMetric ? (
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Daily Active Users</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {latestMetric.dau?.toLocaleString() || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Monthly Active Users</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {latestMetric.mau?.toLocaleString() || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Monthly Recurring Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {latestMetric.mrr ? `$${latestMetric.mrr.toLocaleString()}` : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Activation Rate</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {latestMetric.activationRate ? `${latestMetric.activationRate}%` : "—"}
-                </p>
-              </div>
+              {kpiItems.map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between py-2 border-b border-[#f0f0f0] last:border-0">
+                  <p className="text-[13px] text-[#666d80]">{label}</p>
+                  <p className="text-[18px] font-bold text-[#0d0d12] tracking-[-0.02em]">{value}</p>
+                </div>
+              ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No metrics data yet</p>
+            <p className="text-[13px] text-[#9ca3af] text-center py-10">Henüz metrik verisi yok</p>
           )}
         </div>
       </div>

@@ -1,98 +1,61 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveProductId } from "@/lib/activeProduct";
 import IntegrationCard from "@/components/IntegrationCard";
+import PageHeader from "@/components/PageHeader";
 
 const AVAILABLE_INTEGRATIONS = [
-  {
-    provider: "STRIPE",
-    name: "Stripe",
-    description: "Import revenue, subscriptions, and customer data",
-    icon: "💳",
-    color: "from-purple-500 to-indigo-500",
-  },
-  {
-    provider: "GA4",
-    name: "Google Analytics 4",
-    description: "Sync user behavior and traffic data",
-    icon: "📊",
-    color: "from-orange-500 to-red-500",
-  },
-  {
-    provider: "MIXPANEL",
-    name: "Mixpanel",
-    description: "Track events and user analytics",
-    icon: "📈",
-    color: "from-blue-500 to-purple-500",
-  },
-  {
-    provider: "SEGMENT",
-    name: "Segment",
-    description: "Centralized data collection platform",
-    icon: "🔄",
-    color: "from-green-500 to-teal-500",
-  },
-  {
-    provider: "AMPLITUDE",
-    name: "Amplitude",
-    description: "Product analytics and user insights",
-    icon: "📉",
-    color: "from-indigo-500 to-blue-500",
-  },
-  {
-    provider: "POSTHOG",
-    name: "PostHog",
-    description: "Open-source product analytics",
-    icon: "🦔",
-    color: "from-yellow-500 to-orange-500",
-  },
+  { provider: "STRIPE",    name: "Stripe",             description: "Gelir, abonelik ve müşteri verilerini içe aktar", icon: "💳" },
+  { provider: "GA4",       name: "Google Analytics 4", description: "Kullanıcı davranışı ve trafik verilerini senkronize et", icon: "📊" },
+  { provider: "MIXPANEL",  name: "Mixpanel",           description: "Etkinlikleri ve kullanıcı analitiğini takip et", icon: "📈" },
+  { provider: "SEGMENT",   name: "Segment",            description: "Merkezi veri toplama platformu", icon: "🔄" },
+  { provider: "AMPLITUDE", name: "Amplitude",          description: "Ürün analitiği ve kullanıcı içgörüleri", icon: "📉" },
+  { provider: "POSTHOG",   name: "PostHog",            description: "Açık kaynak ürün analitiği", icon: "🦔" },
 ];
 
 export default async function IntegrationsPage() {
   const session = await getServerSession(authOptions);
 
+  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
-    where: { userId: session?.user?.id },
+    where: {
+      userId: session?.user?.id,
+      ...(activeId ? { id: activeId } : {}),
+    },
   });
 
   if (!product) {
-    return <div>Product not found</div>;
+    return <div className="text-center py-20 text-[#666d80]">Ürün bulunamadı</div>;
   }
 
   const existingIntegrations = await prisma.integration.findMany({
     where: { productId: product.id },
   });
 
-  const integrationMap = new Map(
-    existingIntegrations.map((i) => [i.provider, i])
-  );
+  const integrationMap = new Map(existingIntegrations.map((i) => [i.provider, i]));
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Integrations</h1>
-        <p className="text-gray-600">
-          Connect your tools to automatically sync metrics and data
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Entegrasyonlar"
+        title="Araçlarını Bağla"
+        description="Metrikleri otomatik senkronize etmek için araçlarını bağla."
+      />
 
-      <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">ℹ️</span>
-          <div>
-            <h3 className="font-semibold text-blue-900 mb-1">Integration Foundation (v1)</h3>
-            <p className="text-sm text-blue-800">
-              This version includes the integration architecture and connection UI.
-              Actual data syncing will be implemented in future releases.
-              You can test connections and see mock sync jobs.
-            </p>
-          </div>
+      <div className="mb-6 p-4 bg-[#fafafa] border border-[#e8e8e8] rounded-[12px] flex items-start gap-3">
+        <span className="text-[18px] shrink-0">ℹ️</span>
+        <div>
+          <p className="text-[13px] font-semibold text-[#0d0d12] mb-0.5">Entegrasyon Temeli (v1)</p>
+          <p className="text-[13px] text-[#666d80]">
+            Bu sürüm entegrasyon mimarisini ve bağlantı arayüzünü içerir. Gerçek veri senkronizasyonu ilerideki sürümlerde gelecek.
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {AVAILABLE_INTEGRATIONS.map((integration) => {
-          const existing = integrationMap.get(integration.provider as any);
+          const existing = integrationMap.get(integration.provider as Parameters<typeof integrationMap.get>[0]);
           return (
             <IntegrationCard
               key={integration.provider}
@@ -105,11 +68,12 @@ export default async function IntegrationsPage() {
       </div>
 
       {existingIntegrations.length > 0 && (
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Sync Jobs</h2>
-          <div className="text-center text-gray-500 py-8">
-            Sync history will appear here once integrations are active
-          </div>
+        <div className="mt-4 bg-white rounded-[15px] border border-[#e8e8e8] p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Senkronizasyon</p>
+          <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-4">Son Sync İşlemleri</h2>
+          <p className="text-center text-[13px] text-[#9ca3af] py-6">
+            Entegrasyonlar aktif olunca sync geçmişi burada görünecek
+          </p>
         </div>
       )}
     </div>

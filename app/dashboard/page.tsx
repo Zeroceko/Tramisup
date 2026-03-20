@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveProductId } from "@/lib/activeProduct";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
@@ -8,8 +9,12 @@ import StatCard from "@/components/StatCard";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
+  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
-    where: { userId: session?.user?.id },
+    where: {
+      userId: session?.user?.id,
+      ...(activeId ? { id: activeId } : {}),
+    },
     include: {
       _count: {
         select: {
@@ -41,22 +46,22 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Overview"
-        title={`Welcome back${session?.user?.name ? `, ${session.user.name}` : ""}`}
-        description="Track launch readiness, metrics rhythm, and growth execution from one operator view."
+        eyebrow="Genel Bakış"
+        title={`Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
+        description="Launch hazırlığını, metrikleri ve büyümeyi tek yerden takip et."
         actions={
           <>
             <Link
               href="/metrics"
-              className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+              className="inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6] transition"
             >
-              Update metrics
+              Metrik gir
             </Link>
             <Link
               href="/pre-launch"
-              className="inline-flex rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
             >
-              Review launch board
+              Launch board
             </Link>
           </>
         }
@@ -64,98 +69,108 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Product status"
-          value={product?.status.replace("_", " ") ?? "No product"}
-          hint="Current operating phase"
-          accent="blue"
+          label="Ürün durumu"
+          value={product?.status.replace("_", " ") ?? "Ürün yok"}
+          hint="Mevcut aşama"
+          accent="pink"
         />
         <StatCard
-          label="Readiness"
+          label="Hazırlık skoru"
           value={`${readinessScore}%`}
-          hint={`${completedChecklists}/${totalChecklists} checklist items complete`}
-          accent="violet"
+          hint={`${completedChecklists}/${totalChecklists} checklist tamamlandı`}
+          accent="teal"
         />
         <StatCard
-          label="Daily active users"
+          label="Günlük aktif kullanıcı"
           value={latestMetric?.dau?.toLocaleString() || "—"}
-          hint="Latest tracked day"
-          accent="emerald"
+          hint="Son takip edilen gün"
+          accent="green"
         />
         <StatCard
           label="MRR"
           value={latestMetric?.mrr ? `$${latestMetric.mrr.toLocaleString()}` : "—"}
-          hint="Most recent recurring revenue snapshot"
-          accent="amber"
+          hint="En son recurring gelir"
+          accent="yellow"
         />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="surface-card p-6">
-          <div className="flex items-center justify-between gap-4">
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        {/* Quick actions */}
+        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
+          <div className="flex items-center justify-between gap-4 mb-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Quick actions</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">Keep the operating loop moving</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hızlı erişim</p>
+              <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Döngüyü canlı tut</h2>
             </div>
-            <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">
-              This week
-            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#f6f6f6] text-[11px] font-semibold text-[#666d80]">
+              Bu hafta
+            </span>
           </div>
 
-          <div className="mt-6 grid gap-3">
+          <div className="space-y-2">
             {[
               {
                 href: "/pre-launch",
-                title: "Review pre-launch checklist",
-                description: `${product?._count.tasks ?? 0} pending tasks still open`,
+                title: "Pre-launch checklist",
+                description: `${product?._count.tasks ?? 0} bekleyen görev var`,
               },
               {
                 href: "/metrics",
-                title: "Enter today's metrics",
-                description: "Keep DAU, MRR, and activation current before the next review.",
+                title: "Bugünün metriklerini gir",
+                description: "DAU, MRR ve aktivasyonu güncel tut.",
               },
               {
                 href: "/integrations",
-                title: "Connect integrations",
-                description: `${product?._count.integrations ?? 0} active connectors, more ready to map.`,
+                title: "Entegrasyonları bağla",
+                description: `${product?._count.integrations ?? 0} aktif bağlantı, daha fazlası hazır.`,
               },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 transition hover:border-slate-300 hover:bg-slate-50"
+                className="flex items-start gap-3 rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 transition hover:border-[#d0d0d0] hover:bg-[#fafafa]"
               >
-                <p className="text-base font-semibold tracking-[-0.02em] text-slate-950">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#95dbda] shrink-0" />
+                <div>
+                  <p className="text-[14px] font-semibold text-[#0d0d12]">{item.title}</p>
+                  <p className="mt-0.5 text-[13px] text-[#666d80]">{item.description}</p>
+                </div>
               </Link>
             ))}
           </div>
         </div>
 
-        <div className="surface-card p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Goal pulse</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">Active growth goals</h2>
+        {/* Goal pulse */}
+        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hedef nabzı</p>
+          <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Aktif büyüme hedefleri</h2>
 
           {product?._count.goals === 0 ? (
-            <div className="mt-8 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
-              <p className="text-base font-medium text-slate-900">No active goals yet</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Set a measurable target so weekly routines have a direction.
+            <div className="mt-6 rounded-[12px] border border-dashed border-[#e8e8e8] bg-[#f6f6f6] px-5 py-10 text-center">
+              <p className="text-[14px] font-semibold text-[#0d0d12]">Henüz hedef yok</p>
+              <p className="mt-1 text-[13px] text-[#666d80]">
+                Haftalık rutinlerin bir yönü olsun diye ölçülebilir bir hedef belirle.
               </p>
               <Link
                 href="/growth"
-                className="mt-5 inline-flex rounded-full bg-[linear-gradient(135deg,#2458ff_0%,#6d8dff_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_32px_-18px_rgba(36,88,255,0.9)]"
+                className="mt-5 inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
               >
-                Create first goal
+                İlk hedefi oluştur
               </Link>
             </div>
           ) : (
-            <div className="mt-8 rounded-[24px] border border-slate-200 bg-white px-5 py-5">
-              <p className="text-4xl font-semibold tracking-[-0.05em] text-slate-950">{product?._count.goals}</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Active goal{product?._count.goals !== 1 ? "s" : ""} currently tracked in the growth workspace.
+            <div className="mt-6 rounded-[12px] border border-[#e8e8e8] bg-white px-5 py-5">
+              <p className="text-[36px] font-bold text-[#0d0d12] leading-none tracking-[-0.03em]">
+                {product?._count.goals}
               </p>
-              <Link href="/growth" className="mt-5 inline-flex text-sm font-semibold text-blue-700 hover:text-blue-800">
-                Open goals →
+              <p className="mt-2 text-[13px] text-[#666d80]">
+                Aktif hedef{product?._count.goals !== 1 ? "" : ""} growth workspace&apos;te takip ediliyor.
+              </p>
+              <Link
+                href="/growth"
+                className="mt-4 inline-flex text-[13px] font-semibold text-[#0d0d12] hover:text-[#666d80] transition"
+              >
+                Hedeflere git →
               </Link>
             </div>
           )}

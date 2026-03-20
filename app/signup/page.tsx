@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 
+const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -28,149 +30,144 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to create account");
+        setError(data.error || "Hesap oluşturulamadı");
         setLoading(false);
         return;
       }
 
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      const result = await signIn("credentials", { email, password, redirect: false });
 
       if (result?.error) {
-        setError("Account created but sign-in failed. Please try the login screen.");
+        setError("Hesap oluşturuldu ama giriş başarısız. Lütfen giriş ekranını dene.");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError("An error occurred. Please try again.");
+      setError("Bir hata oluştu. Lütfen tekrar dene.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(72,109,255,0.2),_transparent_34%),linear-gradient(180deg,#f8faff_0%,#f5f7fb_40%,#f3f4f8_100%)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-[32px] border border-white/70 bg-white/75 shadow-[0_32px_80px_-30px_rgba(15,23,42,0.28)] backdrop-blur lg:grid-cols-[1.02fr_0.98fr]">
-          <section className="p-6 sm:p-10 lg:p-12">
-            <div className="mx-auto max-w-md">
-              <div className="mb-8">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-                  Create workspace
-                </div>
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Set up Tiramisup for your launch team</h1>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Create your account now and start with launch planning, then expand into metrics and growth routines.
-                </p>
-              </div>
+    <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white shadow-card">
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {error ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                ) : null}
-
-                <div>
-                  <label htmlFor="name" className="mb-2 block text-sm font-medium text-slate-700">
-                    Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    placeholder="Jane Doe"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    placeholder="you@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={8}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    placeholder="At least 8 characters"
-                  />
-                  <p className="mt-2 text-xs text-slate-500">Use at least 8 characters for your workspace password.</p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2458ff_0%,#6d8dff_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_20px_40px_-22px_rgba(36,88,255,0.95)] transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Creating account..." : "Create Account"}
-                </button>
-              </form>
-
-              <p className="mt-6 text-sm text-slate-600">
-                Already have an account? {" "}
-                <Link href="/login" className="font-semibold text-blue-700 hover:text-blue-800">
-                  Sign in
-                </Link>
+        {/* Left panel — form */}
+        <section className="p-8 sm:p-12">
+          <div className="mx-auto max-w-md">
+            <div className="mb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80] mb-2">Kayıt Ol</p>
+              <h1 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12]">Launch ekibin için workspace oluştur</h1>
+              <p className="mt-2 text-[14px] text-[#666d80]">
+                Hesabını oluştur ve launch planlamasıyla başla; metrikler ve büyüme rutinlerine genişlet.
               </p>
             </div>
-          </section>
 
-          <section className="hidden flex-col justify-between border-l border-white/10 bg-[linear-gradient(180deg,#0f172a_0%,#111827_100%)] p-10 text-white lg:flex">
-            <div>
-              <Link href="/" className="inline-flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-lg font-bold text-slate-950">
-                  T
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-600">
+                  {error}
                 </div>
-                <div>
-                  <p className="text-base font-semibold tracking-[-0.03em]">Tiramisup</p>
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Launch to growth</p>
-                </div>
+              )}
+
+              <div>
+                <label htmlFor="name" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                  Ad Soyad
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoFocus
+                  className={inputCls}
+                  placeholder="Ada Lovelace"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                  E-posta
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={inputCls}
+                  placeholder="sen@ornek.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                  Şifre
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className={inputCls}
+                  placeholder="En az 8 karakter"
+                />
+                <p className="mt-1.5 text-[11px] text-[#9ca3af]">Şifren en az 8 karakter olmalı.</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}
+              </button>
+            </form>
+
+            <p className="mt-6 text-[13px] text-[#666d80]">
+              Zaten hesabın var mı?{" "}
+              <Link href="/login" className="font-semibold text-[#0d0d12] hover:text-[#666d80] transition">
+                Giriş yap
               </Link>
-              <h2 className="mt-12 text-4xl font-semibold tracking-[-0.05em] text-white">
-                A single workspace for the messy middle between launch and scale.
-              </h2>
-            </div>
+            </p>
+          </div>
+        </section>
 
-            <div className="grid gap-4">
-              {[
-                ["Pre-launch", "Checklist progress, launch blockers, and pending actions"],
-                ["Metrics", "Manual entry now, integration-ready foundation next"],
-                ["Growth", "Goals, routines, and progress visibility in one loop"],
-              ].map(([title, copy]) => (
-                <div key={title} className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-                  <p className="text-lg font-semibold tracking-[-0.03em] text-white">{title}</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-300">{copy}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+        {/* Right panel — dark feature showcase */}
+        <section className="hidden lg:flex flex-col justify-between bg-[#0d0d12] p-10">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center font-bold text-[#0d0d12] text-[16px]">
+                T
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-white">Tiramisup</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Launch to growth</p>
+              </div>
+            </Link>
+            <h2 className="mt-12 text-[28px] font-bold tracking-[-0.03em] text-white leading-tight">
+              Launch ile ölçek arasındaki<br />karmaşık orta yol için tek workspace.
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              ["Pre-Launch", "Checklist ilerlemesi, launch blokerları ve bekleyen aksiyonlar"],
+              ["Metrikler",  "Manuel giriş şimdi, entegrasyon-hazır temel sonra"],
+              ["Büyüme",     "Hedefler, rutinler ve ilerleme görünürlüğü tek döngüde"],
+            ].map(([title, copy]) => (
+              <div key={title} className="rounded-[12px] border border-white/10 bg-white/5 p-4">
+                <p className="text-[14px] font-semibold text-white">{title}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-white/60">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -15,6 +15,8 @@ interface Goal {
   completed: boolean;
 }
 
+const inputCls = "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+
 export default function GoalsSection({
   goals,
   productId,
@@ -56,19 +58,9 @@ export default function GoalsSection({
       await fetch("/api/goals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newGoal,
-          productId,
-          targetValue: parseFloat(newGoal.targetValue),
-        }),
+        body: JSON.stringify({ ...newGoal, productId, targetValue: parseFloat(newGoal.targetValue) }),
       });
-      setNewGoal({
-        title: "",
-        targetValue: "",
-        unit: "",
-        startDate: format(new Date(), "yyyy-MM-dd"),
-        endDate: "",
-      });
+      setNewGoal({ title: "", targetValue: "", unit: "", startDate: format(new Date(), "yyyy-MM-dd"), endDate: "" });
       setShowAddForm(false);
       router.refresh();
     } catch (error) {
@@ -82,122 +74,104 @@ export default function GoalsSection({
   const completedGoals = goals.filter((g) => g.completed);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Goals</h2>
+    <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">Büyüme</p>
+          <h2 className="text-[16px] font-semibold text-[#0d0d12]">Hedefler</h2>
+        </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition"
         >
-          {showAddForm ? "Cancel" : "+ Add Goal"}
+          {showAddForm ? "İptal" : "+ Hedef Ekle"}
         </button>
       </div>
 
       {showAddForm && (
-        <form onSubmit={addGoal} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3">
-          <div>
-            <input
-              type="text"
-              placeholder="Goal title (e.g., Reach 1000 users)"
-              value={newGoal.title}
-              onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={addGoal} className="mb-4 p-4 bg-[#f6f6f6] rounded-[12px] space-y-3">
+          <input
+            type="text"
+            placeholder="Hedef başlığı (örn. 1000 kullanıcıya ulaş)"
+            value={newGoal.title}
+            onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+            required
+            className={inputCls}
+          />
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
               step="0.01"
-              placeholder="Target value"
+              placeholder="Hedef değer"
               value={newGoal.targetValue}
               onChange={(e) => setNewGoal({ ...newGoal, targetValue: e.target.value })}
               required
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className={inputCls}
             />
             <input
               type="text"
-              placeholder="Unit (e.g., users, $)"
+              placeholder="Birim (kullanıcı, $)"
               value={newGoal.unit}
               onChange={(e) => setNewGoal({ ...newGoal, unit: e.target.value })}
               required
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className={inputCls}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={newGoal.startDate}
-                onChange={(e) => setNewGoal({ ...newGoal, startDate: e.target.value })}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              <p className="text-[11px] font-semibold text-[#666d80] mb-1">Başlangıç</p>
+              <input type="date" value={newGoal.startDate} onChange={(e) => setNewGoal({ ...newGoal, startDate: e.target.value })} required className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">End Date</label>
-              <input
-                type="date"
-                value={newGoal.endDate}
-                onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              <p className="text-[11px] font-semibold text-[#666d80] mb-1">Bitiş</p>
+              <input type="date" value={newGoal.endDate} onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })} required className={inputCls} />
             </div>
           </div>
           <button
             type="submit"
             disabled={loading === "new"}
-            className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="w-full h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50"
           >
-            {loading === "new" ? "Adding..." : "Add Goal"}
+            {loading === "new" ? "Ekleniyor…" : "Hedef Ekle"}
           </button>
         </form>
       )}
 
       {activeGoals.length === 0 && !showAddForm ? (
-        <p className="text-center text-gray-500 py-8">No active goals. Set one to track your progress!</p>
+        <p className="text-center text-[13px] text-[#9ca3af] py-8">Aktif hedef yok. İlk hedefinizi oluşturun!</p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {activeGoals.map((goal) => {
-            const progress = (goal.currentValue / goal.targetValue) * 100;
+            const progress = Math.min((goal.currentValue / goal.targetValue) * 100, 100);
             return (
-              <div
-                key={goal.id}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
+              <div key={goal.id} className="p-4 border border-[#e8e8e8] rounded-[12px]">
                 <div className="mb-3">
-                  <h3 className="font-medium text-gray-900">{goal.title}</h3>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                    <span>
-                      {goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()} {goal.unit}
-                    </span>
-                    <span>•</span>
-                    <span>Due {format(new Date(goal.endDate), "MMM d, yyyy")}</span>
+                  <h3 className="text-[14px] font-semibold text-[#0d0d12]">{goal.title}</h3>
+                  <div className="flex items-center gap-2 mt-1 text-[12px] text-[#666d80]">
+                    <span>{goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()} {goal.unit}</span>
+                    <span>·</span>
+                    <span>Bitiş {format(new Date(goal.endDate), "d MMM yyyy")}</span>
                   </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div className="w-full bg-[#f0f0f0] rounded-full h-1.5 mb-3">
                   <div
-                    className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
+                    className="bg-[#95dbda] h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">{Math.round(progress)}% complete</span>
+                  <span className="text-[12px] font-semibold text-[#666d80]">{Math.round(progress)}% tamamlandı</span>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="Update"
+                    placeholder="Güncelle"
                     onBlur={(e) => {
                       const value = parseFloat(e.target.value);
-                      if (!isNaN(value) && value !== goal.currentValue) {
-                        updateProgress(goal.id, value);
-                      }
+                      if (!isNaN(value) && value !== goal.currentValue) updateProgress(goal.id, value);
                       e.target.value = "";
                     }}
                     disabled={loading === goal.id}
-                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-24 px-2 py-1 text-[12px] rounded-[8px] border border-[#e8e8e8] outline-none focus:border-[#95dbda] transition"
                   />
                 </div>
               </div>
@@ -207,15 +181,20 @@ export default function GoalsSection({
       )}
 
       {completedGoals.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-sm font-medium text-gray-500 mb-3">Completed ({completedGoals.length})</p>
+        <div className="mt-4 pt-4 border-t border-[#e8e8e8]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af] mb-2">
+            Tamamlandı ({completedGoals.length})
+          </p>
           <div className="space-y-2">
             {completedGoals.map((goal) => (
-              <div key={goal.id} className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm font-medium text-gray-900">✓ {goal.title}</p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {goal.targetValue.toLocaleString()} {goal.unit} achieved
-                </p>
+              <div key={goal.id} className="flex items-center gap-2 px-3 py-2 bg-[#f6fffe] border border-[#95dbda]/30 rounded-[10px]">
+                <span className="w-4 h-4 rounded-full bg-[#75fc96] flex items-center justify-center shrink-0">
+                  <svg width="8" height="7" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <p className="text-[13px] font-medium text-[#0d0d12]">{goal.title}</p>
+                <span className="ml-auto text-[11px] text-[#666d80]">{goal.targetValue.toLocaleString()} {goal.unit}</span>
               </div>
             ))}
           </div>

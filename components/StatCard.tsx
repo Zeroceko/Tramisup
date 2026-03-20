@@ -2,25 +2,31 @@ type StatCardProps = {
   label: string;
   value: string;
   hint?: string;
-  accent?: "blue" | "violet" | "emerald" | "amber";
+  accent?: "pink" | "teal" | "yellow" | "green";
 };
 
-const accentMap = {
-  blue: "from-blue-500/15 to-cyan-500/10 text-blue-700",
-  violet: "from-violet-500/15 to-fuchsia-500/10 text-violet-700",
-  emerald: "from-emerald-500/15 to-teal-500/10 text-emerald-700",
-  amber: "from-amber-500/15 to-orange-500/10 text-amber-700",
+const accentMap: Record<string, string> = {
+  pink:   "bg-[#ffd7ef]",
+  teal:   "bg-[#95dbda]",
+  yellow: "bg-[#fee74e]",
+  green:  "bg-[#75fc96]",
 };
 
-export default function StatCard({ label, value, hint, accent = "blue" }: StatCardProps) {
+export default function StatCard({ label, value, hint, accent }: StatCardProps) {
   return (
-    <div className="group relative overflow-hidden rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.28)] backdrop-blur transition-transform duration-200 hover:-translate-y-0.5">
-      <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${accentMap[accent]} opacity-70 blur-2xl`} />
-      <div className="relative">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</p>
-        <p className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-950">{value}</p>
-        {hint ? <p className="mt-2 text-sm text-slate-500">{hint}</p> : null}
+    <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+          {label}
+        </p>
+        {accent && (
+          <span className={`w-2.5 h-2.5 rounded-full ${accentMap[accent]}`} />
+        )}
       </div>
+      <p className="text-[32px] font-bold text-[#0d0d12] leading-none tracking-[-0.03em]">
+        {value}
+      </p>
+      {hint && <p className="text-[13px] text-[#666d80]">{hint}</p>}
     </div>
   );
 }

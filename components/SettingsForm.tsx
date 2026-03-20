@@ -16,6 +16,9 @@ interface User {
   } | null;
 }
 
+const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+const labelCls = "block text-[12px] font-semibold text-[#0d0d12] mb-1.5";
+
 export default function SettingsForm({ user }: { user: User | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -44,111 +47,99 @@ export default function SettingsForm({ user }: { user: User | null }) {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update settings");
-      }
+      if (!response.ok) throw new Error("Failed to update settings");
 
-      setSuccess("Settings updated successfully!");
+      setSuccess("Ayarlar başarıyla güncellendi.");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
-            {success}
-          </div>
-        )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-600">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="px-4 py-3 rounded-[10px] bg-[#75fc96]/20 border border-[#75fc96]/40 text-[13px] text-[#1a7a36]">
+          {success}
+        </div>
+      )}
 
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={user?.email}
-                disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-              />
-            </div>
+      {/* Personal */}
+      <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">Kişisel Bilgiler</p>
+        <div className="space-y-3">
+          <div>
+            <label className={labelCls}>Ad Soyad</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>E-posta</label>
+            <input
+              type="email"
+              value={user?.email}
+              disabled
+              className={inputCls + " bg-[#f6f6f6] text-[#9ca3af] cursor-not-allowed"}
+            />
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Information</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Project Name
-              </label>
-              <input
-                type="text"
-                value={formData.projectName}
-                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Launch Date (Optional)
-              </label>
-              <input
-                type="date"
-                value={formData.launchDate}
-                onChange={(e) => setFormData({ ...formData, launchDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Project Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="PRE_LAUNCH">Pre-Launch</option>
-                <option value="LAUNCHED">Launched</option>
-                <option value="GROWING">Growing</option>
-              </select>
-            </div>
+      {/* Project */}
+      <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">Proje Bilgileri</p>
+        <div className="space-y-3">
+          <div>
+            <label className={labelCls}>Proje Adı</label>
+            <input
+              type="text"
+              value={formData.projectName}
+              onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Launch Tarihi <span className="font-normal text-[#9ca3af]">(opsiyonel)</span></label>
+            <input
+              type="date"
+              value={formData.launchDate}
+              onChange={(e) => setFormData({ ...formData, launchDate: e.target.value })}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Durum</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className={inputCls}
+            >
+              <option value="PRE_LAUNCH">Pre-Launch</option>
+              <option value="LAUNCHED">Launched</option>
+              <option value="GROWING">Growing</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? "Saving..." : "Save Changes"}
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}
+      </button>
+    </form>
   );
 }

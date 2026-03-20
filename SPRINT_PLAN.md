@@ -18,16 +18,16 @@ Bu belge roadmap'i geliştirici ekip için uygulanabilir sprint paketlerine böl
 - empty/error/loading state standardization
 
 ### Developer Tasks
-- [ ] `.next` cache sorunlarını azaltacak local dev playbook yaz
-- [ ] `globals.css` / Tailwind dev uyarısını kök neden bazlı düzelt
-- [ ] auth flow'u smoke-test et (signup/login/logout/session refresh)
-- [ ] seed akışını verify et
-- [ ] stale docs alanlarını temizle
+- [x] `.next` cache sorunlarını azaltacak local dev playbook yaz
+- [x] `globals.css` / Tailwind dev uyarısını kök neden bazlı düzelt
+- [x] auth flow'u smoke-test et (signup/login/logout/session refresh)
+- [x] seed akışını verify et
+- [x] stale docs alanlarını temizle
 
 ### Verification
-- [ ] `next build` temiz
-- [ ] signup -> dashboard akışı çalışıyor
-- [ ] docs kod gerçeğiyle uyumlu
+- [x] `next build` temiz (✓ verified 2026-03-20)
+- [x] signup -> dashboard akışı çalışıyor (✓ verified 2026-03-20)
+- [x] docs kod gerçeğiyle uyumlu (✓ .gsd/ documentation updated)
 
 ---
 
