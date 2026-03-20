@@ -13,6 +13,7 @@ interface Product {
 const navItems = [
   { href: "/dashboard",    label: "Genel Bakış" },
   { href: "/pre-launch",   label: "Pre-Launch" },
+  { href: "/tasks",        label: "Görevler" },
   { href: "/metrics",      label: "Metrikler" },
   { href: "/growth",       label: "Büyüme" },
   { href: "/integrations", label: "Entegrasyonlar" },

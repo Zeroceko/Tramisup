@@ -75,8 +75,39 @@ export default function ActionsSection({
     }
   };
 
-  const pendingTasks = tasks.filter(a => a.status !== "DONE");
+  const now = new Date();
+  const isOverdue = (dueDate: Date | null) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < now;
+  };
+
+  const getPendingTasks = () => {
+    const pending = tasks.filter(a => a.status !== "DONE");
+    // Sort: overdue+priority first, then by priority
+    return pending.sort((a, b) => {
+      const aOverdue = isOverdue(a.dueDate);
+      const bOverdue = isOverdue(b.dueDate);
+
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+
+      const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  };
+
+  const pendingTasks = getPendingTasks();
   const completedTasks = tasks.filter(a => a.status === "DONE");
+
+  const getTaskBorderStyle = (task: Task) => {
+    if (isOverdue(task.dueDate)) {
+      return "border-l-4 border-[#ff4d4f]"; // Red for overdue
+    }
+    if (task.priority === "HIGH") {
+      return "border-l-4 border-[#ff7a45]"; // Orange for high
+    }
+    return "border-[#e8e8e8]"; // Default
+  };
 
   return (
     <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
@@ -135,33 +166,41 @@ export default function ActionsSection({
           <p className="text-center text-[13px] text-[#9ca3af] py-8">Bekleyen görev yok</p>
         )}
 
-        {pendingTasks.map((task) => (
-          <label
-            key={task.id}
-            className={`flex items-start gap-3 p-3 rounded-[10px] border border-[#e8e8e8] cursor-pointer hover:bg-[#f6f6f6] transition ${loading === task.id ? "opacity-60" : ""}`}
-          >
-            <input
-              type="checkbox"
-              checked={task.status === "DONE"}
-              onChange={() => toggleTask(task.id, task.status)}
-              disabled={loading === task.id}
-              className="mt-0.5 h-4 w-4 rounded border-[#d0d0d0] accent-[#95dbda] cursor-pointer shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-[#0d0d12]">{task.title}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border ${priorityStyle[task.priority]}`}>
-                  {priorityLabel[task.priority]}
-                </span>
-                {task.dueDate && (
-                  <span className="text-[11px] text-[#9ca3af]">
-                    {format(new Date(task.dueDate), "d MMM")}
+        {pendingTasks.map((task) => {
+          const overdue = isOverdue(task.dueDate);
+          return (
+            <label
+              key={task.id}
+              className={`flex items-start gap-3 p-3 rounded-[10px] ${getTaskBorderStyle(task)} cursor-pointer hover:bg-[#f6f6f6] transition ${loading === task.id ? "opacity-60" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={task.status === "DONE"}
+                onChange={() => toggleTask(task.id, task.status)}
+                disabled={loading === task.id}
+                className="mt-0.5 h-4 w-4 rounded border-[#d0d0d0] accent-[#95dbda] cursor-pointer shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-[#0d0d12]">{task.title}</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border ${priorityStyle[task.priority]}`}>
+                    {priorityLabel[task.priority]}
                   </span>
-                )}
+                  {overdue && (
+                    <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-[#fff1f0] text-[#ff4d4f] border border-[#ffccc7]">
+                      OVERDUE
+                    </span>
+                  )}
+                  {task.dueDate && (
+                    <span className={`text-[11px] ${overdue ? "text-[#ff4d4f] font-semibold" : "text-[#9ca3af]"}`}>
+                      {format(new Date(task.dueDate), "d MMM")}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </label>
-        ))}
+            </label>
+          );
+        })}
 
         {completedTasks.length > 0 && (
           <div className="pt-3 border-t border-[#e8e8e8]">

@@ -183,6 +183,7 @@ export default async function PreLaunchPage() {
           <ChecklistSection
             checklistsByCategory={checklistsByCategory}
             productId={product?.id || ""}
+            onCreateTask={createTaskFromChecklistItem}
           />
         </div>
         <div>
