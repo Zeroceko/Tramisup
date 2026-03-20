@@ -9,7 +9,6 @@ export async function PATCH(
     const { id } = await context.params
     const { status } = await request.json()
 
-    // Validate status
     if (!["PENDING", "APPROVED", "REJECTED", "INVITED"].includes(status)) {
       return NextResponse.json(
         { error: "Invalid status" },
@@ -17,7 +16,6 @@ export async function PATCH(
       )
     }
 
-    // Update waitlist entry
     const entry = await prisma.waitlist.update({
       where: { id },
       data: { status },

@@ -15,6 +15,8 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [hasAccessCode, setHasAccessCode] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,42 +26,51 @@ export default function SignupPage() {
     setError("");
 
     try {
-      const checkRes = await fetch(`/api/waitlist/check?email=${encodeURIComponent(email.trim().toLowerCase())}`);
-      const checkData = await checkRes.json();
+      // If user has access code, use direct signup
+      if (hasAccessCode && accessCode.trim()) {
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            name, 
+            email, 
+            password, 
+            accessCode: accessCode.trim().toUpperCase() 
+          }),
+        });
 
-      if (checkData.status === "NOT_FOUND") {
-        setError(t('errors.notOnWaitlist'));
-        setLoading(false);
-        return;
-      }
+        const data = await response.json();
 
-      if (checkData.status === "PENDING") {
-        setError(t('errors.notApproved'));
-        setLoading(false);
-        return;
-      }
+        if (!response.ok) {
+          setError(data.error || t('errors.createFailed'));
+          setLoading(false);
+          return;
+        }
 
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
+        const result = await signIn("credentials", { email, password, redirect: false });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || t('errors.createFailed'));
-        setLoading(false);
-        return;
-      }
-
-      const result = await signIn("credentials", { email, password, redirect: false });
-
-      if (result?.error) {
-        setError(t('errors.loginAfterCreate'));
+        if (result?.error) {
+          setError(t('errors.loginAfterCreate'));
+        } else {
+          router.push(`/${locale}/dashboard`);
+          router.refresh();
+        }
       } else {
-        router.push(`/${locale}/dashboard`);
-        router.refresh();
+        // No access code → Join waitlist
+        const response = await fetch("/api/waitlist/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, name }),
+        });
+
+        if (!response.ok) {
+          setError("Waitlist'e katılırken hata oluştu");
+          setLoading(false);
+          return;
+        }
+
+        // Redirect to thank you page
+        router.push(`/${locale}/waitlist/thank-you`);
       }
     } catch {
       setError(t('errors.generic'));
@@ -135,6 +146,39 @@ export default function SignupPage() {
                   placeholder={t('passwordPlaceholder')}
                 />
                 <p className="mt-1.5 text-[11px] text-[#9ca3af]">{t('passwordHint')}</p>
+              </div>
+
+              <div className="rounded-[16px] border border-[#e8e8e8] bg-[#fafafa] p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasAccessCode}
+                    onChange={(e) => setHasAccessCode(e.target.checked)}
+                    className="h-4 w-4 rounded border-[#d0d7de] text-[#0d0d12] focus:ring-[#95dbda]"
+                  />
+                  <span className="text-[13px] font-medium text-[#0d0d12]">Erken erişim kodum var</span>
+                </label>
+
+                {hasAccessCode && (
+                  <div className="mt-4">
+                    <label htmlFor="accessCode" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
+                      Erken Erişim Kodu
+                    </label>
+                    <input
+                      id="accessCode"
+                      type="text"
+                      value={accessCode}
+                      onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                      required={hasAccessCode}
+                      className={inputCls}
+                      placeholder="TT31623SEN"
+                      maxLength={20}
+                    />
+                    <p className="mt-1.5 text-[11px] text-[#9ca3af]">
+                      Kodu girersen direkt hesap açılır. Kodun yoksa formu gönderip waitlist&apos;e katılabilirsin.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button

@@ -28,8 +28,48 @@ export default async function DashboardPage() {
     },
   });
 
+  if (!product) {
+    return (
+      <div>
+        <PageHeader
+          eyebrow="Genel Bakış"
+          title={`Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
+          description="İlk ürününü oluşturarak launch hazırlığını, metriklerini ve büyüme akışını başlat."
+        />
+
+        <section className="mt-6 rounded-[20px] border border-dashed border-[#d9d9d9] bg-white p-8 sm:p-10 text-center">
+          <div className="mx-auto max-w-2xl">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0fafa] text-[24px]">
+              🚀
+            </div>
+            <h2 className="text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+              Henüz bir ürünün yok
+            </h2>
+            <p className="mt-3 text-[14px] leading-7 text-[#666d80]">
+              Sahte veri göstermiyoruz. İlk ürününü oluştur, wizard&apos;ı tamamla; checklist, görevler ve diğer içerikler gerçek başlangıç verileriyle otomatik hazırlansın.
+            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                href="/products/new"
+                className="inline-flex items-center justify-center rounded-full bg-[#ffd7ef] px-5 h-11 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+              >
+                İlk ürününü oluştur
+              </Link>
+              <Link
+                href="/products"
+                className="inline-flex items-center justify-center rounded-full border border-[#e8e8e8] px-5 h-11 text-[14px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
+              >
+                Ürünler sayfasına git
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   const completedChecklists = await prisma.launchChecklist.count({
-    where: { productId: product?.id, completed: true },
+    where: { productId: product.id, completed: true },
   });
 
   const totalChecklists = product?._count.launchChecklists || 0;
