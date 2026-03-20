@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useTranslations, useLocale } from "next-intl";
 
 const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 
 export default function SignupPage() {
   const router = useRouter();
+  const t = useTranslations('signup');
+  const locale = useLocale();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,23 +24,21 @@ export default function SignupPage() {
     setError("");
 
     try {
-      // Check waitlist status first
       const checkRes = await fetch(`/api/waitlist/check?email=${encodeURIComponent(email.trim().toLowerCase())}`);
       const checkData = await checkRes.json();
 
       if (checkData.status === "NOT_FOUND") {
-        setError("Lütfen önce waitlist'e katıl. Ana sayfaya dön ve 'Ücretsiz Başla' butonuna tıkla.");
+        setError(t('errors.notOnWaitlist'));
         setLoading(false);
         return;
       }
 
       if (checkData.status === "PENDING") {
-        setError("Hesabın henüz onaylanmamış. Yakında email alacaksın. Lütfen kontrol et.");
+        setError(t('errors.notApproved'));
         setLoading(false);
         return;
       }
 
-      // Status === "APPROVED" → proceed with signup
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,7 +48,7 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Hesap oluşturulamadı");
+        setError(data.error || t('errors.createFailed'));
         setLoading(false);
         return;
       }
@@ -55,13 +56,13 @@ export default function SignupPage() {
       const result = await signIn("credentials", { email, password, redirect: false });
 
       if (result?.error) {
-        setError("Hesap oluşturuldu ama giriş başarısız. Lütfen giriş ekranını dene.");
+        setError(t('errors.loginAfterCreate'));
       } else {
-        router.push("/dashboard");
+        router.push(`/${locale}/dashboard`);
         router.refresh();
       }
     } catch {
-      setError("Bir hata oluştu. Lütfen tekrar dene.");
+      setError(t('errors.generic'));
     } finally {
       setLoading(false);
     }
@@ -71,14 +72,13 @@ export default function SignupPage() {
     <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white shadow-card">
 
-        {/* Left panel — form */}
         <section className="p-8 sm:p-12">
           <div className="mx-auto max-w-md">
             <div className="mb-8">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80] mb-2">Kayıt Ol</p>
-              <h1 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12]">Launch ekibin için workspace oluştur</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80] mb-2">{t('eyebrow')}</p>
+              <h1 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12]">{t('title')}</h1>
               <p className="mt-2 text-[14px] text-[#666d80]">
-                Hesabını oluştur ve launch planlamasıyla başla; metrikler ve büyüme rutinlerine genişlet.
+                {t('subtitle')}
               </p>
             </div>
 
@@ -91,7 +91,7 @@ export default function SignupPage() {
 
               <div>
                 <label htmlFor="name" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
-                  Ad Soyad
+                  {t('name')}
                 </label>
                 <input
                   id="name"
@@ -101,13 +101,13 @@ export default function SignupPage() {
                   required
                   autoFocus
                   className={inputCls}
-                  placeholder="Ada Lovelace"
+                  placeholder={t('namePlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
-                  E-posta
+                  {t('email')}
                 </label>
                 <input
                   id="email"
@@ -116,13 +116,13 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className={inputCls}
-                  placeholder="sen@ornek.com"
+                  placeholder={t('emailPlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
-                  Şifre
+                  {t('password')}
                 </label>
                 <input
                   id="password"
@@ -132,9 +132,9 @@ export default function SignupPage() {
                   required
                   minLength={8}
                   className={inputCls}
-                  placeholder="En az 8 karakter"
+                  placeholder={t('passwordPlaceholder')}
                 />
-                <p className="mt-1.5 text-[11px] text-[#9ca3af]">Şifren en az 8 karakter olmalı.</p>
+                <p className="mt-1.5 text-[11px] text-[#9ca3af]">{t('passwordHint')}</p>
               </div>
 
               <button
@@ -142,45 +142,40 @@ export default function SignupPage() {
                 disabled={loading}
                 className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}
+                {loading ? t('creating') : t('createAccount')}
               </button>
             </form>
 
             <p className="mt-6 text-[13px] text-[#666d80]">
-              Zaten hesabın var mı?{" "}
-              <Link href="/login" className="font-semibold text-[#0d0d12] hover:text-[#666d80] transition">
-                Giriş yap
+              {t('haveAccount')}{" "}
+              <Link href={`/${locale}/login`} className="font-semibold text-[#0d0d12] hover:text-[#666d80] transition">
+                {t('loginHere')}
               </Link>
             </p>
           </div>
         </section>
 
-        {/* Right panel — dark feature showcase */}
         <section className="hidden lg:flex flex-col justify-between bg-[#0d0d12] p-10">
           <div>
-            <Link href="/" className="inline-flex items-center gap-3">
+            <Link href={`/${locale}`} className="inline-flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center font-bold text-[#0d0d12] text-[16px]">
                 T
               </div>
               <div>
                 <p className="text-[15px] font-semibold text-white">Tiramisup</p>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Launch to growth</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">{t('sidebarTagline')}</p>
               </div>
             </Link>
-            <h2 className="mt-12 text-[28px] font-bold tracking-[-0.03em] text-white leading-tight">
-              Launch ile ölçek arasındaki<br />karmaşık orta yol için tek workspace.
+            <h2 className="mt-12 text-[28px] font-bold tracking-[-0.03em] text-white leading-tight whitespace-pre-line">
+              {t('sidebarTitle')}
             </h2>
           </div>
 
           <div className="space-y-3">
-            {[
-              ["Pre-Launch", "Checklist ilerlemesi, launch blokerları ve bekleyen aksiyonlar"],
-              ["Metrikler",  "Manuel giriş şimdi, entegrasyon-hazır temel sonra"],
-              ["Büyüme",     "Hedefler, rutinler ve ilerleme görünürlüğü tek döngüde"],
-            ].map(([title, copy]) => (
-              <div key={title} className="rounded-[12px] border border-white/10 bg-white/5 p-4">
-                <p className="text-[14px] font-semibold text-white">{title}</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-white/60">{copy}</p>
+            {Object.entries(t.raw('features') as Record<string, {title: string; desc: string}>).map(([key, feat]) => (
+              <div key={key} className="rounded-[12px] border border-white/10 bg-white/5 p-4">
+                <p className="text-[14px] font-semibold text-white">{feat.title}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-white/60">{feat.desc}</p>
               </div>
             ))}
           </div>

@@ -20,6 +20,18 @@
     "monthlyRevenue": "Monthly recurring revenue",
     "activeRoutines": "Active growth routines"
   },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "continue": "Continue",
+    "submit": "Submit"
+  },
   "dashboard": {
     "howReady": "How ready is your product for launch?",
     "weekSummary": "This week's summary 👋",
@@ -40,7 +52,13 @@
     "growth": "Growth",
     "teamPerformance": "Team Performance",
     "projectEfficiency": "Project Efficiency",
-    "taskSummary": "Task Summary"
+    "taskSummary": "Task Summary",
+    "title": "Dashboard",
+    "description": "Track launch readiness, metrics, and growth in one place.",
+    "launchReadiness": "Launch Readiness",
+    "metricEntry": "Enter metric",
+    "launchBoard": "Launch board",
+    "checklistCompleted": "checklist completed"
   },
   "features": {
     "launchReadiness": {
@@ -79,32 +97,82 @@
     }
   },
   "signup": {
-    "title": "Create Account",
+    "eyebrow": "Sign Up",
+    "title": "Create workspace for your launch team",
+    "subtitle": "Create your account and start with launch planning; expand to metrics and growth routines.",
     "name": "Full Name",
-    "namePlaceholder": "Your name",
+    "namePlaceholder": "Ada Lovelace",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
     "password": "Password",
     "passwordPlaceholder": "Min. 8 characters",
+    "passwordHint": "Your password must be at least 8 characters.",
     "createAccount": "Create Account",
+    "creating": "Creating account…",
     "haveAccount": "Already have an account?",
-    "loginHere": "Log in here",
-    "notApproved": "Your email is not approved yet. Please check your waitlist status or contact support.",
-    "notOnWaitlist": "Please join our waitlist first to get early access."
+    "loginHere": "Log in",
+    "sidebarTagline": "Launch to growth",
+    "sidebarTitle": "The single workspace for the\ncomplex middle path between launch and scale.",
+    "features": {
+      "preLaunch": {
+        "title": "Pre-Launch",
+        "desc": "Checklist progress, launch blockers, and pending actions"
+      },
+      "metrics": {
+        "title": "Metrics",
+        "desc": "Manual entry now, integration-ready foundation later"
+      },
+      "growth": {
+        "title": "Growth",
+        "desc": "Goals, routines, and progress visibility in one cycle"
+      }
+    },
+    "errors": {
+      "notOnWaitlist": "Please join our waitlist first. Go back to the homepage and click 'Start Free'.",
+      "notApproved": "Your account hasn't been approved yet. You'll receive an email soon. Please check back.",
+      "createFailed": "Could not create account",
+      "loginAfterCreate": "Account created but login failed. Please try the login screen.",
+      "generic": "An error occurred. Please try again."
+    }
   },
   "login": {
-    "title": "Log In",
+    "eyebrow": "Log In",
+    "title": "Welcome back to your workspace",
+    "subtitle": "Continue with your email and password.",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
     "password": "Password",
-    "passwordPlaceholder": "Your password",
+    "passwordPlaceholder": "••••••••",
     "loginButton": "Log In",
+    "loggingIn": "Logging in…",
     "noAccount": "Don't have an account?",
-    "signupHere": "Sign up here"
+    "signupHere": "Sign up",
+    "sidebarTitle": "Your single workspace from\nlaunch to growth.",
+    "sidebarSubtitle": "Readiness, metrics, routines, and integration decisions in one place.",
+    "features": [
+      "Launch readiness tracking without spreadsheets",
+      "MRR, retention, and activation on one surface",
+      "Weekly growth rituals visible to everyone"
+    ],
+    "errors": {
+      "wrongCredentials": "Incorrect email or password",
+      "generic": "An error occurred. Please try again."
+    }
   },
   "products": {
-    "newProduct": "New Product",
-    "createNew": "Create New Product"
+    "eyebrow": "Products",
+    "title": "Your Products",
+    "createNew": "New Product",
+    "newProduct": "Create New Product",
+    "status": {
+      "preLaunch": "Pre-Launch",
+      "launched": "Launched",
+      "growing": "Growing"
+    },
+    "actions": {
+      "goToDashboard": "Go to dashboard →",
+      "activateAndOpen": "Activate and open →"
+    }
   },
   "wizard": {
     "title": "Create New Product",
@@ -120,6 +188,37 @@
     "back": "Back",
     "continue": "Continue",
     "createProduct": "Create Product"
+  },
+  "preLaunch": {
+    "eyebrow": "Pre-Launch",
+    "title": "Launch Readiness Score",
+    "description": "Make sure everything is ready before launch."
+  },
+  "tasks": {
+    "eyebrow": "Tasks",
+    "title": "Tasks",
+    "description": "Manage launch and growth tasks."
+  },
+  "metrics": {
+    "eyebrow": "Metrics",
+    "title": "Metric Dashboard",
+    "description": "Enter metrics manually or automate with integrations.",
+    "coreMetrics": "Core Metrics"
+  },
+  "growth": {
+    "eyebrow": "Growth",
+    "title": "Growth Dashboard",
+    "description": "Goals, routines, and progress visibility."
+  },
+  "integrations": {
+    "eyebrow": "Integrations",
+    "title": "Integrations",
+    "description": "Connect your tools to automatically sync metrics."
+  },
+  "settings": {
+    "eyebrow": "Settings",
+    "title": "Account & Project",
+    "description": "Manage profile and product settings."
   },
   "admin": {
     "waitlist": {

@@ -7,7 +7,7 @@
  * the signup/login step entirely.
  */
 
-import { chromium, FullConfig } from '@playwright/test';
+import { chromium, expect, FullConfig } from '@playwright/test';
 import * as path from 'path';
 
 export const TEST_USER = {
@@ -42,6 +42,27 @@ export default async function globalSetup(config: FullConfig) {
 
   // ── Create account if login failed ────────────────────────────────────────
   if (loginResult !== 'ok') {
+    // Waitlist gate: add test user to waitlist and approve before signup
+    console.log('[setup] Adding test user to waitlist and approving...');
+    const joinRes = await page.request.post('/api/waitlist/join', {
+      data: { email: TEST_USER.email, name: TEST_USER.name, source: 'e2e-setup' },
+    });
+    if (joinRes.status() === 201 || joinRes.status() === 409) {
+      // 201 = created, 409 = already exists — both are fine
+      // Now approve: find the entry via admin page
+      await page.goto('/admin/waitlist');
+      await page.waitForLoadState('networkidle');
+      const row = page.locator('tr', { hasText: TEST_USER.email });
+      const approveBtn = row.getByRole('button', { name: 'Onayla' });
+      if (await approveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await approveBtn.click();
+        await expect(row.getByText('APPROVED')).toBeVisible({ timeout: 5000 });
+        console.log('[setup] Waitlist entry approved for:', TEST_USER.email);
+      } else {
+        console.log('[setup] Waitlist entry already approved or not found');
+      }
+    }
+
     await page.goto('/signup');
     await page.locator('#name').fill(TEST_USER.name);
     await page.locator('#email').fill(TEST_USER.email);

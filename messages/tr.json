@@ -20,6 +20,18 @@
     "monthlyRevenue": "Aylık tekrarlayan gelir",
     "activeRoutines": "Aktif büyüme rutini"
   },
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Bir hata oluştu",
+    "retry": "Tekrar dene",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "back": "Geri",
+    "continue": "Devam Et",
+    "submit": "Gönder"
+  },
   "dashboard": {
     "howReady": "Ürünün launch'a ne kadar hazır?",
     "weekSummary": "Bu hafta özet 👋",
@@ -40,7 +52,13 @@
     "growth": "Büyüme",
     "teamPerformance": "Takım Performansı",
     "projectEfficiency": "Proje Verimliliği",
-    "taskSummary": "Görev Özeti"
+    "taskSummary": "Görev Özeti",
+    "title": "Dashboard",
+    "description": "Launch hazırlığını, metrikleri ve büyümeyi tek yerden takip et.",
+    "launchReadiness": "Launch Hazırlığı",
+    "metricEntry": "Metrik gir",
+    "launchBoard": "Launch board",
+    "checklistCompleted": "checklist tamamlandı"
   },
   "features": {
     "launchReadiness": {
@@ -79,32 +97,82 @@
     }
   },
   "signup": {
-    "title": "Hesap Oluştur",
+    "eyebrow": "Kayıt Ol",
+    "title": "Launch ekibin için workspace oluştur",
+    "subtitle": "Hesabını oluştur ve launch planlamasıyla başla; metrikler ve büyüme rutinlerine genişlet.",
     "name": "Ad Soyad",
-    "namePlaceholder": "Adınız",
-    "email": "Email",
+    "namePlaceholder": "Ada Lovelace",
+    "email": "E-posta",
     "emailPlaceholder": "sen@ornek.com",
     "password": "Şifre",
-    "passwordPlaceholder": "Min. 8 karakter",
+    "passwordPlaceholder": "En az 8 karakter",
+    "passwordHint": "Şifren en az 8 karakter olmalı.",
     "createAccount": "Hesap Oluştur",
+    "creating": "Hesap oluşturuluyor…",
     "haveAccount": "Zaten hesabın var mı?",
-    "loginHere": "Buradan giriş yap",
-    "notApproved": "Email adresiniz henüz onaylanmadı. Lütfen bekleme listesi durumunuzu kontrol edin veya destek ile iletişime geçin.",
-    "notOnWaitlist": "Erken erişim için lütfen önce bekleme listemize katılın."
+    "loginHere": "Giriş yap",
+    "sidebarTagline": "Launch to growth",
+    "sidebarTitle": "Launch ile ölçek arasındaki\nkarmaşık orta yol için tek workspace.",
+    "features": {
+      "preLaunch": {
+        "title": "Pre-Launch",
+        "desc": "Checklist ilerlemesi, launch blokerları ve bekleyen aksiyonlar"
+      },
+      "metrics": {
+        "title": "Metrikler",
+        "desc": "Manuel giriş şimdi, entegrasyon-hazır temel sonra"
+      },
+      "growth": {
+        "title": "Büyüme",
+        "desc": "Hedefler, rutinler ve ilerleme görünürlüğü tek döngüde"
+      }
+    },
+    "errors": {
+      "notOnWaitlist": "Lütfen önce waitlist'e katıl. Ana sayfaya dön ve 'Ücretsiz Başla' butonuna tıkla.",
+      "notApproved": "Hesabın henüz onaylanmamış. Yakında email alacaksın. Lütfen kontrol et.",
+      "createFailed": "Hesap oluşturulamadı",
+      "loginAfterCreate": "Hesap oluşturuldu ama giriş başarısız. Lütfen giriş ekranını dene.",
+      "generic": "Bir hata oluştu. Lütfen tekrar dene."
+    }
   },
   "login": {
-    "title": "Giriş Yap",
-    "email": "Email",
+    "eyebrow": "Giriş Yap",
+    "title": "Workspace'e geri dön",
+    "subtitle": "E-posta ve şifrenle devam et.",
+    "email": "E-posta",
     "emailPlaceholder": "sen@ornek.com",
     "password": "Şifre",
-    "passwordPlaceholder": "Şifreniz",
+    "passwordPlaceholder": "••••••••",
     "loginButton": "Giriş Yap",
-    "noAccount": "Hesabınız yok mu?",
-    "signupHere": "Buradan kayıt olun"
+    "loggingIn": "Giriş yapılıyor…",
+    "noAccount": "Hesabın yok mu?",
+    "signupHere": "Kayıt ol",
+    "sidebarTitle": "Launch'tan büyümeye giden\ntek çalışma alanın.",
+    "sidebarSubtitle": "Hazırlık, metrikler, rutinler ve entegrasyon kararları tek yerde.",
+    "features": [
+      "Spreadsheet'siz launch hazırlığı takibi",
+      "MRR, retention ve aktivasyon tek yüzey",
+      "Haftalık growth ritüelleri herkes için görünür"
+    ],
+    "errors": {
+      "wrongCredentials": "E-posta veya şifre hatalı",
+      "generic": "Bir hata oluştu. Lütfen tekrar dene."
+    }
   },
   "products": {
-    "newProduct": "Yeni Ürün",
-    "createNew": "Yeni Ürün Oluştur"
+    "eyebrow": "Ürünler",
+    "title": "Ürünleriniz",
+    "createNew": "Yeni Ürün",
+    "newProduct": "Yeni Ürün Oluştur",
+    "status": {
+      "preLaunch": "Pre-Launch",
+      "launched": "Launched",
+      "growing": "Büyüyor"
+    },
+    "actions": {
+      "goToDashboard": "Dashboard'a git →",
+      "activateAndOpen": "Aktif yap ve aç →"
+    }
   },
   "wizard": {
     "title": "Yeni Ürün Oluştur",
@@ -120,6 +188,37 @@
     "back": "Geri",
     "continue": "Devam Et",
     "createProduct": "Ürünü Oluştur"
+  },
+  "preLaunch": {
+    "eyebrow": "Pre-Launch",
+    "title": "Launch Hazırlık Skoru",
+    "description": "Launch öncesi her şeyin hazır olduğundan emin ol."
+  },
+  "tasks": {
+    "eyebrow": "Görevler",
+    "title": "Görevler",
+    "description": "Launch ve büyüme görevlerini yönet."
+  },
+  "metrics": {
+    "eyebrow": "Metrikler",
+    "title": "Metrik Panosu",
+    "description": "Metrikleri manuel gir veya entegrasyonlarla otomatikleştir.",
+    "coreMetrics": "Temel Metrikler"
+  },
+  "growth": {
+    "eyebrow": "Büyüme",
+    "title": "Growth Dashboard",
+    "description": "Hedefler, rutinler ve ilerleme görünürlüğü."
+  },
+  "integrations": {
+    "eyebrow": "Entegrasyonlar",
+    "title": "Entegrasyonlar",
+    "description": "Metrikleri otomatik senkronize etmek için araçlarını bağla."
+  },
+  "settings": {
+    "eyebrow": "Ayarlar",
+    "title": "Hesap & Proje",
+    "description": "Profil ve ürün ayarlarını yönet."
   },
   "admin": {
     "waitlist": {
