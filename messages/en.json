@@ -1,0 +1,154 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
+    "login": "Log in",
+    "signupFree": "Start free"
+  },
+  "hero": {
+    "badge": "From launch to growth — one platform",
+    "title": "How ready is your product for launch?",
+    "subtitle": "Tiramisup combines launch checklist, live metrics, growth routines, and integration planning in a single operating layer.",
+    "createWorkspace": "Create workspace",
+    "existingAccount": "Existing account",
+    "noCreditCard": "No credit card required · Start with manual metrics"
+  },
+  "stats": {
+    "launchTasks": "Launch readiness tasks",
+    "checklistComplete": "Checklist completion",
+    "monthlyRevenue": "Monthly recurring revenue",
+    "activeRoutines": "Active growth routines"
+  },
+  "dashboard": {
+    "howReady": "How ready is your product for launch?",
+    "weekSummary": "This week's summary 👋",
+    "overview": "Overview",
+    "live": "Live",
+    "taskStats": "Task Statistics",
+    "totalTasks": "Total Tasks",
+    "meetingNote": "Meeting Note",
+    "meetingWith": "Meeting with Arc Company",
+    "time": "Time",
+    "viewDetails": "View details →",
+    "aiPlanIQ": "AI PlanIQ",
+    "assistant": "Assistant",
+    "goodMorning": "Good morning 👋",
+    "howCanHelp": "How can I help you today?",
+    "metrics": "Metrics",
+    "launchPlan": "Launch plan",
+    "growth": "Growth",
+    "teamPerformance": "Team Performance",
+    "projectEfficiency": "Project Efficiency",
+    "taskSummary": "Task Summary"
+  },
+  "features": {
+    "launchReadiness": {
+      "title": "Launch Readiness",
+      "description": "Track product, legal, marketing, and technical launch tasks on a single surface."
+    },
+    "metricRhythm": {
+      "title": "Metric Rhythm",
+      "description": "Capture DAU, MRR, retention, and activation with a weekly decision-making rhythm."
+    },
+    "growthEngine": {
+      "title": "Growth Engine",
+      "description": "Connect goals, routines, and integrations — work even in post-launch chaos."
+    }
+  },
+  "cta": {
+    "title": "There's a reason to\nstart today.",
+    "subtitle": "Start free with manual metrics. Add integrations whenever you want.",
+    "openWorkspace": "Open free workspace"
+  },
+  "footer": {
+    "rights": "© 2025 Tiramisup. All rights reserved."
+  },
+  "waitlist": {
+    "title": "Join the Waitlist",
+    "description": "Get early access to Tiramisup. We'll notify you when your account is ready.",
+    "namePlaceholder": "Your name (optional)",
+    "emailPlaceholder": "you@example.com",
+    "joinButton": "Join Waitlist",
+    "cancel": "Cancel",
+    "thankYou": {
+      "title": "You're on the list! 🎉",
+      "message": "We'll send you an email as soon as we're ready for you.",
+      "subtitle": "In the meantime, follow us for updates:",
+      "backHome": "Back to homepage"
+    }
+  },
+  "signup": {
+    "title": "Create Account",
+    "name": "Full Name",
+    "namePlaceholder": "Your name",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Min. 8 characters",
+    "createAccount": "Create Account",
+    "haveAccount": "Already have an account?",
+    "loginHere": "Log in here",
+    "notApproved": "Your email is not approved yet. Please check your waitlist status or contact support.",
+    "notOnWaitlist": "Please join our waitlist first to get early access."
+  },
+  "login": {
+    "title": "Log In",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "loginButton": "Log In",
+    "noAccount": "Don't have an account?",
+    "signupHere": "Sign up here"
+  },
+  "products": {
+    "newProduct": "New Product",
+    "createNew": "Create New Product"
+  },
+  "wizard": {
+    "title": "Create New Product",
+    "pills": {
+      "productInfo": "Product Info",
+      "launchGoals": "Launch Goals",
+      "metricsTracking": "Metrics & Tracking",
+      "growthApproach": "Growth Approach",
+      "integrations": "Integrations",
+      "team": "Team",
+      "quickStart": "Quick Start"
+    },
+    "back": "Back",
+    "continue": "Continue",
+    "createProduct": "Create Product"
+  },
+  "admin": {
+    "waitlist": {
+      "title": "Waitlist Management",
+      "stats": {
+        "total": "Total",
+        "pending": "Pending",
+        "approved": "Approved"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "status": "Status",
+        "source": "Source",
+        "date": "Date",
+        "actions": "Actions"
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "delete": "Delete"
+      },
+      "export": "Export CSV",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "invited": "Invited",
+        "rejected": "Rejected"
+      }
+    }
+  }
+}

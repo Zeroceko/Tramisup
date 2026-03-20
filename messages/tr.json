@@ -1,0 +1,154 @@
+{
+  "nav": {
+    "overview": "Genel bakış",
+    "howItWorks": "Nasıl çalışır",
+    "pricing": "Fiyatlar",
+    "login": "Giriş yap",
+    "signupFree": "Ücretsiz başla"
+  },
+  "hero": {
+    "badge": "Launch'tan büyümeye — tek platform",
+    "title": "Ürünün launch'a ne kadar hazır?",
+    "subtitle": "Tiramisup; launch checklist, canlı metrikler, büyüme rutinleri ve entegrasyon planlamasını tek bir operasyon katmanında toplar.",
+    "createWorkspace": "Çalışma alanı oluştur",
+    "existingAccount": "Var olan hesap",
+    "noCreditCard": "Kredi kartı gerekmez · Manuel metriklerle başla"
+  },
+  "stats": {
+    "launchTasks": "Launch hazırlık görevi",
+    "checklistComplete": "Checklist tamamlanma",
+    "monthlyRevenue": "Aylık tekrarlayan gelir",
+    "activeRoutines": "Aktif büyüme rutini"
+  },
+  "dashboard": {
+    "howReady": "Ürünün launch'a ne kadar hazır?",
+    "weekSummary": "Bu hafta özet 👋",
+    "overview": "Genel bakış",
+    "live": "Canlı",
+    "taskStats": "Görev İstatistikleri",
+    "totalTasks": "Toplam Görev",
+    "meetingNote": "Toplantı Notu",
+    "meetingWith": "Arc Company ile Toplantı",
+    "time": "Saat",
+    "viewDetails": "Detayları gör →",
+    "aiPlanIQ": "AI PlanIQ",
+    "assistant": "Asistan",
+    "goodMorning": "Günaydın 👋",
+    "howCanHelp": "Bugün size nasıl yardımcı olabilirim?",
+    "metrics": "Metrikler",
+    "launchPlan": "Launch plan",
+    "growth": "Büyüme",
+    "teamPerformance": "Takım Performansı",
+    "projectEfficiency": "Proje Verimliliği",
+    "taskSummary": "Görev Özeti"
+  },
+  "features": {
+    "launchReadiness": {
+      "title": "Launch Hazırlığı",
+      "description": "Ürün, hukuki, pazarlama ve teknik launch çalışmalarını tek bir yüzeyde takip et."
+    },
+    "metricRhythm": {
+      "title": "Metrik Ritmi",
+      "description": "DAU, MRR, retention ve aktivasyonu haftalık karar alma ritmiyle birlikte yakala."
+    },
+    "growthEngine": {
+      "title": "Büyüme Motoru",
+      "description": "Hedefleri, rutinleri ve entegrasyonları birbirine bağla — launch sonrası kaosda bile çalış."
+    }
+  },
+  "cta": {
+    "title": "Bugün başlamak için\nbir neden var.",
+    "subtitle": "Manuel metriklerle ücretsiz başla. İstediğinde entegrasyonları ekle.",
+    "openWorkspace": "Ücretsiz çalışma alanı aç"
+  },
+  "footer": {
+    "rights": "© 2025 Tiramisup. Tüm hakları saklıdır."
+  },
+  "waitlist": {
+    "title": "Bekleme Listesine Katıl",
+    "description": "Tiramisup'a erken erişim elde et. Hesabın hazır olduğunda seni bilgilendireceğiz.",
+    "namePlaceholder": "Adın (opsiyonel)",
+    "emailPlaceholder": "sen@ornek.com",
+    "joinButton": "Listeye Katıl",
+    "cancel": "İptal",
+    "thankYou": {
+      "title": "Sıradayısınız! 🎉",
+      "message": "Hazır olduğumuzda size en kısa sürede email göndereceğiz.",
+      "subtitle": "Bu arada, güncellemeler için bizi takip edin:",
+      "backHome": "Ana sayfaya dön"
+    }
+  },
+  "signup": {
+    "title": "Hesap Oluştur",
+    "name": "Ad Soyad",
+    "namePlaceholder": "Adınız",
+    "email": "Email",
+    "emailPlaceholder": "sen@ornek.com",
+    "password": "Şifre",
+    "passwordPlaceholder": "Min. 8 karakter",
+    "createAccount": "Hesap Oluştur",
+    "haveAccount": "Zaten hesabın var mı?",
+    "loginHere": "Buradan giriş yap",
+    "notApproved": "Email adresiniz henüz onaylanmadı. Lütfen bekleme listesi durumunuzu kontrol edin veya destek ile iletişime geçin.",
+    "notOnWaitlist": "Erken erişim için lütfen önce bekleme listemize katılın."
+  },
+  "login": {
+    "title": "Giriş Yap",
+    "email": "Email",
+    "emailPlaceholder": "sen@ornek.com",
+    "password": "Şifre",
+    "passwordPlaceholder": "Şifreniz",
+    "loginButton": "Giriş Yap",
+    "noAccount": "Hesabınız yok mu?",
+    "signupHere": "Buradan kayıt olun"
+  },
+  "products": {
+    "newProduct": "Yeni Ürün",
+    "createNew": "Yeni Ürün Oluştur"
+  },
+  "wizard": {
+    "title": "Yeni Ürün Oluştur",
+    "pills": {
+      "productInfo": "Ürünü Anlat",
+      "launchGoals": "Launch Hedefleri",
+      "metricsTracking": "Metrics & Tracking",
+      "growthApproach": "Growth Yaklaşımı",
+      "integrations": "Entegrasyonlar",
+      "team": "Ekip",
+      "quickStart": "Hızlı Başlangıç"
+    },
+    "back": "Geri",
+    "continue": "Devam Et",
+    "createProduct": "Ürünü Oluştur"
+  },
+  "admin": {
+    "waitlist": {
+      "title": "Bekleme Listesi Yönetimi",
+      "stats": {
+        "total": "Toplam",
+        "pending": "Bekleyen",
+        "approved": "Onaylanan"
+      },
+      "table": {
+        "name": "İsim",
+        "email": "Email",
+        "status": "Durum",
+        "source": "Kaynak",
+        "date": "Tarih",
+        "actions": "İşlemler"
+      },
+      "actions": {
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "delete": "Sil"
+      },
+      "export": "CSV İndir",
+      "status": {
+        "pending": "Bekliyor",
+        "approved": "Onaylandı",
+        "invited": "Davet edildi",
+        "rejected": "Reddedildi"
+      }
+    }
+  }
+}
