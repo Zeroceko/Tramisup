@@ -1,4 +1,4 @@
-# Tramisu - Project Instructions
+# Tiramisup - Project Instructions
 
 ## GSD Skills
 

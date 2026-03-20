@@ -27,7 +27,7 @@ export default function DashboardNav() {
               T
             </div>
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold tracking-[-0.03em] text-slate-950">Tramisu</p>
+              <p className="truncate text-base font-semibold tracking-[-0.03em] text-slate-950">Tiramisup</p>
               <p className="truncate text-xs uppercase tracking-[0.24em] text-slate-500">Startup command center</p>
             </div>
           </Link>

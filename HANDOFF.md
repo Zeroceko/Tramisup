@@ -1,256 +1,200 @@
-# Tramisup — Handoff Belgesi
+# Tiramisup — Handoff Document
 
-**Tarih:** Mart 2026
-**Durum:** Phase 1 tamamlandı — multi-product schema, build temiz, GitHub live, Vercel + Supabase bağlandı
-
----
-
-## Projenin Ne Olduğu
-
-Tramisup, startup kurucuları için "launch'tan growth'a" aşamasını yöneten çok-ürünlü operasyon panosu. Tek bir yerden:
-
-- Birden fazla ürün yönetimi (1:N User→Product)
-- Launch Readiness checklist (PRODUCT/MARKETING/LEGAL/TECH)
-- Growth Readiness checklist (ACQUISITION/ACTIVATION/RETENTION/REVENUE)
-- Kanban görev yönetimi (TODO/IN_PROGRESS/DONE)
-- Metrik girişi (DAU, MAU, MRR, aktivasyon) ve görselleştirme
-- Growth rutinleri ve hedef yönetimi
-- Entegrasyon bağlantı altyapısı (UI tamam, gerçek sync henüz yok)
+**Son güncelleme:** Mart 2026  
+**Durum:** Dokümantasyon ve strateji fazı tamamlandı — implementation'a hazır
 
 ---
 
-## Geliştirme Ortamı
+## Özet
 
+Tiramisup, founder ve küçük startup ekipleri için **launch-to-growth operating workspace**. Tek bir ürün veya ileride birden fazla ürün için launch hazırlığı, growth readiness, görev takibi, metrik takibi, hedefler, rutinler ve entegrasyon durumunu tek sistemde toplanmayı hedefler.
+
+**Bugünkü durum:**
+- Çalışan auth (signup/login/session)
+- Varsayılan product oluşturma ve seed
+- Dashboard, pre-launch, metrics, growth, integrations, settings sayfaları mevcut
+- Multi-product schema hazır, ama UX henüz yok
+- Growth checklist ve kanban modelleri schema'da var, UX eksik
+- Integrations kabuk olarak var, gerçek sync yok
+
+**Sıradaki iş:**
+Bu dokümantasyon pasiyle ürün nereye gideceğini ve nasıl inşa edileceğini tanımladık. Şimdi implementation başlayabilir.
+
+---
+
+## Çalışma Kılavuzları
+
+### Ürün vizyon ve strateji
+- **`ROADMAP.md`** — büyük resim, product thesis, 11-fazlı roadmap, AI/MCP architecture
+- **`PRODUCT_OPERATING_MODEL.md`** — launch phase, growth phase, passive intelligence, AI rolü
+- **`EXECUTIVE_OVERVIEW.md`** — sunum formatında özet, teknik olmayan inceleme için
+
+### Kullanıcı soruları ve entegrasyonlar
+- **`DISCOVERY_QUESTIONS_AND_INTEGRATIONS.md`**
+  - kullanıcıdan hangi bilgileri hangi aşamada soracağız
+  - sormadan hangi verileri nasıl alabiliriz
+  - entegrasyon tiers (Stripe, GA4, PostHog, Mixpanel, HubSpot, vb.)
+  - AI ve MCP gelecekteki rolleri
+
+### Geliştirici kılavuzu
+- **`SPRINT_PLAN.md`** — roadmap'i 10 sprint paketine böldük
+  - Sprint 0: Foundation reset
+  - Sprint 1: Product creation & understanding
+  - Sprint 2: Launch operating system
+  - Sprint 3: Metrics health layer
+  - Sprint 4: Growth operating system
+  - Sprint 5: Kanban board
+  - Sprint 6: Dashboard 2.0 & cohesion
+  - Sprint 7: Real integrations (Stripe + analytics)
+  - Sprint 8: Weekly review & AI summary
+  - Sprint 9+: Collaboration, reporting, platformization
+
+### Ekip execution belgesi
+- **`.gsd/PROJECT.md`** — ürün bugün ne, capability contract, milestone sequence
+- **`.gsd/REQUIREMENTS.md`** — active/validated/deferred/out-of-scope gereksinimler
+- **`.gsd/DECISIONS.md`** — architectural kararlar (append-only)
+- **`.gsd/KNOWLEDGE.md`** — ekip için çalışma kuralları, patterns, lessons learned
+- **`.gsd/STATE.md`** — şu anki focus ve next build targets
+
+### Akış envanteri
+- **`findings.md`** — mevcut ürün akışlarının detaylı envanteri
+  - working flows
+  - partial flows
+  - missing flows
+  - schema'de var ama UX yok
+
+### Çalışma izleri
+- **`task_plan.md`** — bu dokümantasyon turunda yapılan işler
+- **`progress.md`** — session log ve verification summary
+
+---
+
+## Teknik Bilgiler
+
+### Stack
+- Next.js 15 App Router
+- TypeScript
+- Tailwind CSS 3
+- Prisma 6
+- NextAuth 4
+- PostgreSQL (local: `postgresql://tramisu:tramisu_dev_password@localhost:5432/tramisu`)
+- Recharts
+
+### Çalıştırma
 ```bash
-# Port 3000 başka uygulama tarafından kullanılıyor — her zaman 3001 kullan
-docker compose up -d          # PostgreSQL başlat (lokal)
-npm run dev -- --port 3001    # Dev server
+npm install
+npm run dev
 ```
+Dev server: `http://localhost:3001` (port 3000 zaten kullanımda)
 
-```
-http://localhost:3001
-```
+### Environment
+`.env` dosyasında:
+- `DATABASE_URL`
+- `NEXTAUTH_URL=http://localhost:3001`
+- `NEXTAUTH_SECRET` (gerçek değer var, placeholder değil)
 
-### Gereksinimler
-
-- Node.js 18+
-- Docker (lokal PostgreSQL için)
-- `.env` dosyasındaki değerler
-
-### `.env` durumu (lokal)
-
-```
-DATABASE_URL="postgresql://tramisu:tramisu_dev_password@localhost:5432/tramisu"
-NEXTAUTH_URL="http://localhost:3001"
-NEXTAUTH_SECRET="<gerçek secret — .env dosyasında mevcut>"
-```
-
-> ⚠️ `NEXTAUTH_SECRET` değiştirilirse mevcut JWT token'lar geçersiz olur. Tarayıcı çerezlerini temizle.
-
----
-
-## GitHub
-
-**Repo:** `https://github.com/Zeroceko/Tramisup` (private)
-**Branch:** `main`
-**Son commit:** Phase 1 schema + tüm kod güncellemeleri + docs update
-
+### Build
 ```bash
-git push origin main   # Değişiklikleri push et
+npm run build
 ```
+Build şu an temiz geçiyor.
 
----
-
-## Deploy Durumu
-
-| Servis | Durum | URL |
-|---|---|---|
-| GitHub | ✅ Aktif | `Zeroceko/Tramisup` |
-| Supabase | ✅ Aktif | Project ref: `ojecebxxcbxrofnbkaae` |
-| Vercel | ✅ Aktif | `https://tramisup.vercel.app` |
-
-### Deploy Detayları
-
-- **Vercel:** GitHub'dan auto-deploy, env vars ayarlandı
-- **Supabase:** PostgreSQL, EU West (Paris), transaction mode pooler
-- **Schema:** Remote DB'ye push yapılıyor (Prisma)
+### Known Issues
+- Dev sunucusu zaman zaman `.next` cache sorunları yaratabilir → çözüm: kill + `rm -rf .next` + restart
+- `NEXTAUTH_SECRET` değişirse cookie/JWT invalid kalır → çözüm: browser cookies'i temizle
 
 ---
 
 ## Mimari
 
-```
-Next.js 15 (App Router)
-├── app/
-│   ├── page.tsx                  → Landing page (public)
-│   ├── login/page.tsx            → İki panelli giriş formu
-│   ├── signup/page.tsx           → İki panelli kayıt formu
-│   ├── dashboard/                → Ana özet (auth guard)
-│   ├── pre-launch/               → Launch checklist + kanban tasks (auth guard)
-│   ├── metrics/                  → Metrik girişi + grafik (auth guard)
-│   ├── growth/                   → Hedefler + rutinler + timeline (auth guard)
-│   ├── integrations/             → Entegrasyon bağlantı UI (auth guard)
-│   ├── settings/                 → Kullanıcı ayarları (auth guard)
-│   └── api/
-│       ├── auth/[...nextauth]/   → NextAuth handler
-│       ├── auth/signup/          → Kayıt + otomatik seed
-│       ├── seed/                 → Demo veri yükleme (POST, auth gerektirir)
-│       ├── actions/[id]/         → Task PATCH (status, priority)
-│       ├── checklist/[id]/       → LaunchChecklist item PATCH
-│       ├── goals/                → Goal CRUD
-│       ├── integrations/         → Integration bağlantı + test
-│       ├── metrics/              → Metrik POST + activation-funnel GET
-│       ├── routines/[id]/complete → Rutin tamamlama
-│       └── settings/             → Profil güncelleme
-├── components/
-│   ├── AppShell.tsx              → Tüm auth sayfaları için wrapper (nav + layout)
-│   ├── DashboardNav.tsx          → Sticky header + pill nav + signout
-│   ├── PageHeader.tsx            → Eyebrow + başlık + aksiyonlar
-│   ├── StatCard.tsx              → Renkli stat kartı (blue/violet/emerald/amber)
-│   ├── ChecklistSection.tsx      → Kategori bazlı launch checklist (client)
-│   ├── ActionsSection.tsx        → Task listesi + tamamlama (client, Task modeli)
-│   ├── MetricsOverview.tsx       → Recharts line chart
-│   ├── MetricEntryForm.tsx       → Manuel metrik giriş formu
-│   ├── RetentionCohortTable.tsx  → Cohort retention tablosu
-│   ├── ActivationFunnelChart.tsx → Funnel adım görselleştirme
-│   ├── GoalsSection.tsx          → Hedef progress kartları
-│   ├── GrowthRoutines.tsx        → Rutin listesi + tamamlama
-│   ├── TimelineFeed.tsx          → Milestone/event timeline
-│   └── IntegrationCard.tsx       → Entegrasyon bağlantı kartı
-└── lib/
-    ├── auth.ts                   → NextAuth options (JWT + credentials)
-    ├── prisma.ts                 → PrismaClient singleton
-    └── seed.ts                   → seedProductData() — demo veri oluşturma
-```
+### Sayfa yapısı
+- Public: landing, signup, login
+- Authenticated: dashboard, pre-launch, metrics, growth, integrations, settings, (ileride: products, board, growth-readiness)
+
+### Ana domain modeli
+- `User` → `Product[]` (multi-product ready, ama UX henüz yok)
+- `Product` → tüm feature'lar product-scoped
+- Checklist, Task, Goal, Routine, Metric, Integration, SyncJob modelleri mevcut
+
+### Seed mantığı
+`lib/seed.ts` kullanıcı signup olunca varsayılan product ve demo data oluşturur.
+
+### Design system
+- `AppShell` — authenticated layout wrapper
+- `PageHeader` — page başlıkları
+- `StatCard` — summary kartlar
+- `DashboardNav` — navigation
+- Glassmorphism + blue gradient + rounded-[24-32px]
 
 ---
 
-## Veritabanı
+## Sıradaki Implementation Adımları
 
-**ORM:** Prisma 6 (schema `prisma/schema.prisma`)
+### Hemen başlanabilecek işler (Sprint 0–1)
+1. **Runtime stabilization**
+   - `.next` cache playbook
+   - Tailwind warning'leri düzelt
+   - auth flow smoke test
 
-**Modeller:**
+2. **Product creation wizard**
+   - `app/products/page.tsx`
+   - `app/products/new/page.tsx`
+   - API: `POST /api/products`
+   - nav'a active product selector ekle
 
-| Model | Açıklama |
-|---|---|
-| `User` | Kimlik doğrulama, bcrypt hash |
-| `Product` | Her kullanıcıya ait ürünler (1:N), onboarding wizard alanları |
-| `LaunchChecklist` | PRODUCT/MARKETING/LEGAL/TECH kategorileri |
-| `GrowthChecklist` | ACQUISITION/ACTIVATION/RETENTION/REVENUE kategorileri |
-| `Task` | Kanban görevleri (TODO/IN_PROGRESS/DONE), Priority enum |
-| `Metric` | Günlük DAU/MAU/MRR kayıtları |
-| `RetentionCohort` | Aylık kohort retention verileri |
-| `ActivationFunnel` | SIGNUP→ONBOARDING→FIRST_ACTION→ACTIVATED |
-| `Goal` | Hedef + ilerleme |
-| `GrowthRoutine` | Haftalık/aylık rutinler |
-| `TimelineEvent` | Milestone/launch/metric threshold olayları |
-| `Integration` | Provider bağlantı durumu |
-| `SyncJob` | Entegrasyon sync log (altyapı hazır) |
+### Orta vadede kritik (Sprint 2–6)
+3. **Launch operating system** redesign
+4. **Metrics health layer** refinement
+5. **Growth readiness** page
+6. **Kanban board** experience
+7. **Dashboard 2.0** cohesion
 
-**Şema ile DB senkron:**
-```bash
-# Lokal
-npx prisma db push
-
-# Remote (Supabase)
-DATABASE_URL="postgresql://postgres.ojecebxxcbxrofnbkaae:IkQFnNieU04fXtqu@aws-1-eu-west-3.pooler.supabase.com:6543/postgres" npx prisma db push
-```
-
-**Demo veri yükleme:**
-Yeni kayıt olduğunda otomatik çalışır (`seedProductData`). Mevcut kullanıcı için:
-```bash
-curl -X POST http://localhost:3001/api/seed \
-  -H "Cookie: <session cookie>"
-```
+### Uzun vadede değer üreten (Sprint 7+)
+8. **Real integrations** (Stripe + analytics provider)
+9. **Weekly review** & AI summary layer
+10. **Collaboration** layer
 
 ---
 
-## Auth Akışı
+## Deployment Hazırlığı (henüz yapılmadı)
 
-1. `/signup` → `POST /api/auth/signup` → user + product oluştur + seed veri → `signIn()` → `/dashboard`
-2. `/login` → `signIn("credentials")` → `/dashboard`
-3. Her korumalı route'un `layout.tsx`'i `getServerSession` → `redirect("/login")`
-4. JWT session, `authOptions.callbacks.jwt` üzerinden `user.id` taşıyor
-
----
-
-## Mevcut Durum
-
-### Tamamlananlar ✅
-
-- GitHub repo: `Zeroceko/Tramisup` (private)
-- Vercel: Auto-deploy, env vars ✅
-- Supabase: EU West PostgreSQL, pooler bağlantı ✅
-- Signup → login → dashboard akışı (uçtan uca)
-- Auth guard tüm iç sayfalarda
-- Multi-product schema: User → Product (1:N), LaunchChecklist, GrowthChecklist, Task modelleri
-- Build temiz: `next build` hatasız, 21 route compile
-- Pre-launch checklist toggle (client-side + API)
-- Task yönetimi (ActionsSection — Task modeline bağlı)
-- Metrik girişi ve grafik görselleştirme
-- Growth hedefleri ve rutinler
-- Entegrasyon bağlantı UI (mock test)
-- Demo veri seed (signup'ta otomatik, 15 launch + 12 growth checklist + 6 task + 30 gün metrik)
-- Tüm `[id]/route.ts` Next.js 15 `params: Promise<{id}>` formatında
-- PageHeader + StatCard + AppShell component pattern'i
-- package.json: "name": "tramisup"
-- vercel.json: buildCommand, framework, env vars
-- .env.local ile lokal override desteği
-
-### Eksik / Yarım
-
-- **Schema push remote DB'ye:** Supabase bağlantısı yavaş, bitmesi bekleniyor
-- **Products sayfası:** Ürün listesi ve yeni ürün wizard (Phase 2)
-- **Launch Readiness sayfası:** PageHeader + StatCard pattern ile yeniden tasarım (Phase 3)
-- **Growth Readiness sayfası:** GrowthChecklist kategorileri ile yeni sayfa (Phase 4)
-- **Kanban Board:** Task'ları sütunlarla görselleştirme (Phase 5)
-- **Dashboard yeniden tasarım:** Figma tasarımına uygun (Phase 6)
-- **Nav & Layout güncellemesi:** Product selector, yeni nav yapısı (Phase 7)
-- **Entegrasyon sync:** UI var, gerçek webhook/OAuth akışı yok
-- **E-posta doğrulama / şifre sıfırlama:** Yok
-
-### Bilinen Sorunlar
-
-- `globals.css` bazen dev server başlangıcında `@layer base` uyarısı veriyor — production'ı etkilemiyor
-- JWT_SESSION_ERROR: `NEXTAUTH_SECRET` değiştirilince eski çerezler geçersiz. Tarayıcı çerezleri temizlenince düzelir
-- IDE TypeScript hataları: Prisma client cache bazen eski modelleri gösteriyor — `npx prisma generate` ile düzelir
+### Gereken işler
+- Hosted DB seç (Neon / Supabase / Railway)
+- GitHub repo push (onay gerekir)
+- Vercel deploy setup (onay gerekir)
+- Production env vars:
+  - `DATABASE_URL` (hosted)
+  - `NEXTAUTH_URL` (production URL)
+  - `NEXTAUTH_SECRET` (yeni generate et)
 
 ---
 
-## Sonraki Adımlar (Öncelik Sırasıyla)
+## Ekip İçin Notlar
 
-1. ✅ **Schema push Supabase'e** — bitme bekleniyor
-2. **Phase 2:** Products sayfası + 7 adımlı yeni ürün wizard
-3. **Phase 3:** Launch Readiness yeniden tasarım
-4. **Phase 4:** Growth Readiness sayfası
-5. **Phase 5:** Kanban Board
-6. **Phase 6:** Dashboard yeniden tasarım (Figma'ya uygun)
-7. **Phase 7:** Nav & Layout güncellemesi (product selector)
+1. **Docs doğruluğu:** Bu dökümanlar artık gerçek kod durumunu yansıtıyor, ileride yine senkronize kalmak önemli.
+2. **Schema vs UX gap:** Multi-product ve growth-readiness model var ama UX yok — önce mevcut loop'ları derinleştir, sonra genişlet.
+3. **Öncelik sırası:** Landing page polish değil, core operator loop.
+4. **AI katmanı:** Şimdi değil, ama product understanding + passive data collection + recommendation engine için hazırlık şart.
 
 ---
 
-## Prodüktive Ortam Değişkenleri
+## İletişim ve Karar
 
-Vercel'de ayarlandı:
-
-```env
-DATABASE_URL="postgresql://postgres.ojecebxxcbxrofnbkaae:IkQFnNieU04fXtqu@aws-1-eu-west-3.pooler.supabase.com:6543/postgres"
-NEXTAUTH_URL="https://tramisup.vercel.app"
-NEXTAUTH_SECRET="oY3Cp8OPhMjbexkr39oJa62L/ChbFb05isWnnjFAxBA="
-```
+- Outward-facing GitHub/Vercel/deploy işlemleri için onay gerekir
+- Dokümantasyon, kod, local verification serbest
+- Risk/trade-off'lar net şekilde dokümante edilmeli
 
 ---
 
-## Mimari Kararlar
+## Özet Teslimat Paketi
 
-| Karar | Tercih | Neden |
-|---|---|---|
-| Port | 3001 | 3000 başka uygulama tarafından kullanılıyor |
-| Auth | JWT session | Stateless, Vercel serverless ile uyumlu |
-| Seed | Signup'ta otomatik | Yeni kullanıcı boş dashboard görmesin |
-| ORM | Prisma 6 | Prisma 7 breaking change (PrismaClientOptions) |
-| Component pattern | AppShell + PageHeader + StatCard | Tutarlı layout, auth guard tek yerden |
-| Params typing | `Promise<{id: string}>` | Next.js 15 dynamic route zorunluluğu |
-| Multi-product | User→Product 1:N | Figma tasarımı çok ürün gösteriyor |
-| Task modeli | `Task` (TODO/IN_PROGRESS/DONE) | `PreLaunchAction` kaldırıldı, Kanban'a hazır |
-| Deploy | Vercel + Supabase | GitHub integration, serverless, managed DB |
+Bu handoff sonunda elimizde:
+- ✅ Product vision & roadmap
+- ✅ Operating model
+- ✅ Discovery questions & integrations matrix
+- ✅ Sprint-ready backlog
+- ✅ GSD execution docs
+- ✅ Flow inventory
+- ✅ Current state summary
+
+**Sonuç:** Ekip artık sadece roadmap değil, aynı zamanda sprintler, sorular, entegrasyonlar ve execution docs ile ilerleyebilir.

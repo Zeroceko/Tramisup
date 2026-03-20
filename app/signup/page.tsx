@@ -63,7 +63,7 @@ export default function SignupPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
                   Create workspace
                 </div>
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Set up Tramisu for your launch team</h1>
+                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Set up Tiramisup for your launch team</h1>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   Create your account now and start with launch planning, then expand into metrics and growth routines.
                 </p>
@@ -148,7 +148,7 @@ export default function SignupPage() {
                   T
                 </div>
                 <div>
-                  <p className="text-base font-semibold tracking-[-0.03em]">Tramisu</p>
+                  <p className="text-base font-semibold tracking-[-0.03em]">Tiramisup</p>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Launch to growth</p>
                 </div>
               </Link>

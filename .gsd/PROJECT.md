@@ -1,81 +1,50 @@
-# Tramisu - Startup Growth Command Center
+# Project
 
-A single-panel dashboard for startup/app owners to manage the full growth journey from pre-launch to scale.
+## What This Is
 
-## Tech Stack
+Tiramisup, founder ve küçük startup ekipleri için launch-to-growth operating workspace. Tek bir ürün veya ileride birden fazla ürün için launch hazırlığı, growth readiness, görev takibi, metrik takibi, hedefler, rutinler ve entegrasyon durumunu tek sistemde toplamayı hedefler.
 
-- **Frontend:** Next.js 15 (App Router), React 19, TypeScript 5, Tailwind CSS
-- **Backend:** Next.js API routes, NextAuth.js (credentials provider)
-- **Database:** PostgreSQL + Prisma ORM
-- **Charts:** Recharts
-- **Testing:** Vitest
-- **Deployment:** Docker + Vercel ready
+Bugün ürünün çalışan çekirdeği şudur: kullanıcı kayıt olur, bir varsayılan ürün oluşturulur, bu ürün için seed veri yüklenir, kullanıcı dashboard, pre-launch, metrics, growth, integrations ve settings yüzeylerine girip temel akışları kullanabilir.
+
+## Core Value
+
+Founder’ın “ürünüm şu an nerede, risk nerede ve sıradaki doğru adım ne?” sorusunu tek product workspace içinde cevaplayabilmesi.
 
 ## Current State
 
-**Working features:**
-- Authentication (signup/login with NextAuth)
-- Pre-launch management (checklist, action items, readiness score)
-- Metrics dashboard (DAU, MAU, MRR with trend charts)
-- Retention cohort analysis (heatmap visualization)
-- Activation funnel tracking
-- Manual metric entry form
-- Goals & OKRs with progress tracking
-- Growth routines (weekly/monthly playbooks)
-- Timeline activity feed
-- Integration architecture (connection management, status tracking)
-- Demo data seeding via API endpoint
+- Credentials tabanlı auth çalışıyor (signup/login/next-auth JWT session)
+- Signup sonrası varsayılan `Product` yaratılıyor ve demo veri seed ediliyor
+- Multi-product veri modeli schema’de hazır (`User -> Product[]`), ama UX hâlâ büyük ölçüde tek aktif ürün varsayıyor
+- Dashboard özet yüzeyi çalışıyor: launch readiness, latest metrics, goal pulse, quick actions
+- Pre-launch yüzeyi çalışıyor: launch checklist + task listesi + readiness score
+- Metrics yüzeyi çalışıyor: manuel metrik girişi, retention cohorts, activation funnel, trend görünümü
+- Growth yüzeyi çalışıyor: goals, progress update, routines, timeline
+- Integrations yüzeyi çalışıyor ama mostly façade: bağlanma/test shell’i var, gerçek veri senkronu yok
+- Settings yüzeyi çalışıyor: user + ilk ürün ayarları güncellenebiliyor
+- `GrowthChecklist` ve gerçek kanban board deneyimi schema’de var ama ayrı ürün akışı olarak tamamlanmış değil
+- Build temiz; dev runtime tarafında zaman zaman cache/manifest kaynaklı Next.js sorunları görülebiliyor
 
-**Architecture decisions:**
-- App Router structure with route groups for public/authenticated pages
-- Server components by default, client components for interactivity
-- API routes under `/api/*` for all CRUD operations
-- Prisma client singleton pattern via `lib/prisma.ts`
-- NextAuth with JWT sessions
+## Architecture / Key Patterns
 
-**Database schema:**
-Core tables: User, Project, PreLaunchChecklist, PreLaunchAction, Metric, RetentionCohort, ActivationFunnel, Goal, GrowthRoutine, TimelineEvent, Integration, SyncJob
+- Next.js 15 App Router
+- Server components by default; interaktif yüzeyler client component
+- NextAuth credentials provider + JWT session
+- Prisma client singleton (`lib/prisma.ts`)
+- Ana domain modeli `Product`; feature verilerinin çoğu `productId` ile bağlı
+- Authenticated sayfalar `AppShell` ile sarılıyor
+- Tasarım sistemi çekirdeği: `PageHeader`, `StatCard`, `DashboardNav`, `AppShell`
+- Seed mantığı `lib/seed.ts` içinde; demo product workspace’i hızlı ayağa kaldırmak için kullanılıyor
+- Integrations için `Integration` + `SyncJob` modeli var; gerçek sync orchestration henüz yok
 
-**Known technical debt:**
-- Integration tokens stored as plain JSON (needs encryption)
-- No input validation layer (Zod not yet added)
-- Manual metric entry only (real integrations stubbed)
-- No rate limiting on auth endpoints
-- No automated tests beyond stub structure
+## Capability Contract
 
-## Project Structure
+See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement status, and coverage mapping.
 
-```
-app/
-  (public)/ - Landing, login, signup
-  dashboard/ - Main dashboard
-  pre-launch/ - Checklist & actions
-  metrics/ - Charts & analytics
-  growth/ - Goals & routines
-  integrations/ - Integration hub
-  settings/ - User settings
-  api/ - All backend routes
+## Milestone Sequence
 
-components/ - React components
-lib/ - Prisma client, auth config
-prisma/ - Schema & migrations
-types/ - TypeScript definitions
-```
-
-## Development Status
-
-- Development server runs on port 3000
-- PostgreSQL via Docker Compose on port 5432
-- Migrations applied and schema generated
-- Demo data seeder functional
-- Docker production build configuration present
-- Vercel deployment documented
-
-## Next Priorities
-
-Based on roadmap in README:
-1. Real integrations (Stripe, GA4, Mixpanel)
-2. Scheduled sync jobs
-3. Token encryption for security
-4. Input validation with Zod
-5. Team collaboration features
+- [ ] M001: Product Foundation Reset — runtime, docs ve auth/seed tabanını güvenilir hale getir
+- [ ] M002: True MVP Operator Loop — tek ürün için create product → launch control → metrics → growth loop’unu tamamla
+- [ ] M003: Cohesive Product Experience — tüm iç sayfaları tek sistem hissi verecek şekilde hizala
+- [ ] M004: Multi-Product Experience — schema’deki multi-product modelini gerçek UX’e dönüştür
+- [ ] M005: Real Integrations — Stripe ve analytics kaynaklarından gerçek veri akışı kur
+- [ ] M006: Collaboration and Automation — ekip, review ritmi, alert ve automation katmanını ekle

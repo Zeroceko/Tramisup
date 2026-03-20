@@ -15,7 +15,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Tramisu — Launch OS",
+  title: "Tiramisup — Launch OS",
   description: "From pre-launch discipline to post-launch growth, in one system.",
 };
 

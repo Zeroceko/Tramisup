@@ -1,6 +1,6 @@
-# Tramisu Code Optimizer
+# Tiramisup Code Optimizer
 
-Optimize Tramisu codebase for performance, bundle size, and code quality.
+Optimize Tiramisup codebase for performance, bundle size, and code quality.
 
 ## When to Use
 
@@ -90,7 +90,7 @@ import Image from 'next/image'
 
 Output format:
 ```
-## Tramisu Optimization Report
+## Tiramisup Optimization Report
 
 ### Critical Issues (Fix Now)
 - [ ] Issue 1

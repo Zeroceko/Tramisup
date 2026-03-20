@@ -48,7 +48,7 @@ export default function LoginPage() {
                   T
                 </div>
                 <div>
-                  <p className="text-base font-semibold tracking-[-0.03em]">Tramisu</p>
+                  <p className="text-base font-semibold tracking-[-0.03em]">Tiramisup</p>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator cockpit</p>
                 </div>
               </Link>
@@ -81,7 +81,7 @@ export default function LoginPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                   Sign in
                 </div>
-                <h2 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Open your Tramisu workspace</h2>
+                <h2 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">Open your Tiramisup workspace</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   Use your email and password to continue into the dashboard.
                 </p>

@@ -1,10 +1,10 @@
-# Tramisu Growth Advisor MCP
+# Tiramisup Growth Advisor MCP
 
 AI-powered growth insights and recommendations for startup metrics.
 
 ## What is this?
 
-An MCP (Model Context Protocol) server that provides intelligent growth advice to Tramisu users based on their metrics data.
+An MCP (Model Context Protocol) server that provides intelligent growth advice to Tiramisup users based on their metrics data.
 
 ## Features
 
@@ -31,11 +31,11 @@ An MCP (Model Context Protocol) server that provides intelligent growth advice t
 ## Architecture
 
 ```
-Tramisu App (Next.js)
+Tiramisup App (Next.js)
     ↓
 MCP Client (inside app)
     ↓
-Tramisu MCP Server (this repo)
+Tiramisup MCP Server (this repo)
     ↓
 [Metric DB] → [AI Analysis] → [Recommendations]
 ```
@@ -168,10 +168,10 @@ Get actionable playbook for current stage
 
 ## Installation
 
-### 1. Add to Tramisu project
+### 1. Add to Tiramisup project
 
 ```bash
-# In Tramisu root
+# In Tiramisup root
 cd mcp-server
 npm install
 npm run build
@@ -293,11 +293,11 @@ npm run test
 
 - TypeScript
 - MCP SDK
-- Prisma (to read Tramisu DB)
+- Prisma (to read Tiramisup DB)
 - OpenAI (optional, for advanced analysis)
 
 ---
 
 **Status:** Prototype ready
-**Integration:** Drop-in to Tramisu
+**Integration:** Drop-in to Tiramisup
 **Usage:** Can be used via MCP client or REST API

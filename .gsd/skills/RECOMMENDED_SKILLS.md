@@ -1,10 +1,10 @@
-# Tramisu İçin Önerilen AITMPL Skills
+# Tiramisup İçin Önerilen AITMPL Skills
 
 ## Hemen Kullan (High Priority) 🔥
 
 ### 1. React Performance Optimization
 **Dosya:** `~/.gsd/agent/skills/aitmpl-temp/cli-tool/components/agents/performance-testing/react-performance-optimization.md`
-**Neden:** Tramisu React/Next.js kullanıyor, Recharts gibi ağır kütüphaneler var
+**Neden:** Tiramisup React/Next.js kullanıyor, Recharts gibi ağır kütüphaneler var
 **Kullanım:** "optimize react components" / "find react performance issues"
 
 ### 2. Database Optimization  
@@ -65,8 +65,8 @@
 cd ~/.gsd/agent/skills
 git clone https://github.com/davila7/claude-code-templates.git aitmpl
 
-# Tramisu'da kullan
-cd /path/to/Tramisu
+# Tiramisup'da kullan
+cd /path/to/Tiramisup
 gsd
 # "use react-performance-optimization skill"
 ```

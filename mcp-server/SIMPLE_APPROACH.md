@@ -1,4 +1,4 @@
-# Tramisu AI Advisor - Knowledge Base Implementation
+# Tiramisup AI Advisor - Knowledge Base Implementation
 
 ## Approach 2: Use AITMPL as Knowledge Base
 
@@ -262,7 +262,7 @@ Use AI to analyze metrics against AITMPL knowledge:
 
 export async function generateInsights(metrics: Metrics) {
   const prompt = `
-You are a growth advisor for a startup tracking tool called Tramisu.
+You are a growth advisor for a startup tracking tool called Tiramisup.
 
 Current metrics:
 - DAU: ${metrics.dau}
@@ -295,7 +295,7 @@ Format as JSON.
 ✅ **Fast to implement** - 1-2 hours
 ✅ **Uses existing data** - Prisma queries
 ✅ **Can add AI later** - start with rules, upgrade to AI
-✅ **In-app experience** - users don't leave Tramisu
+✅ **In-app experience** - users don't leave Tiramisup
 
 ## Roadmap
 

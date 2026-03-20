@@ -81,7 +81,7 @@ export default function Home() {
           <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center overflow-hidden">
             <span className="font-outfit font-semibold text-[15px] text-[#2e2e2e]">T</span>
           </div>
-          <span className="font-outfit font-medium text-[18px] text-[#2e2e2e] tracking-[-0.01em]">Tramisu</span>
+          <span className="font-outfit font-medium text-[18px] text-[#2e2e2e] tracking-[-0.01em]">Tiramisup</span>
         </div>
 
         {/* Nav pill */}
@@ -119,7 +119,7 @@ export default function Home() {
             Ürünün laucha ne kadar hazır?
           </h1>
           <p className="mt-5 text-[18px] text-[#5b5a64] max-w-[520px] mx-auto leading-[1.7]">
-            Tramisu; launch checklist, canlı metrikler, büyüme rutinleri ve entegrasyon planlamasını tek bir operasyon katmanında toplar.
+            Tiramisup; launch checklist, canlı metrikler, büyüme rutinleri ve entegrasyon planlamasını tek bir operasyon katmanında toplar.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link
@@ -276,9 +276,9 @@ export default function Home() {
             <div className="w-7 h-7 rounded-full bg-[#fee74e] flex items-center justify-center">
               <span className="font-outfit font-semibold text-[11px] text-[#2e2e2e]">T</span>
             </div>
-            <span className="font-outfit font-medium text-[14px] text-[#2e2e2e]">Tramisu</span>
+            <span className="font-outfit font-medium text-[14px] text-[#2e2e2e]">Tiramisup</span>
           </div>
-          <p className="text-[13px] text-[#666d80]">© 2025 Tramisu. Tüm hakları saklıdır.</p>
+          <p className="text-[13px] text-[#666d80]">© 2025 Tiramisup. Tüm hakları saklıdır.</p>
         </div>
       </footer>
     </div>
