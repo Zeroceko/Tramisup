@@ -21,6 +21,23 @@ export default function SignupPage() {
     setError("");
 
     try {
+      // Check waitlist status first
+      const checkRes = await fetch(`/api/waitlist/check?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      const checkData = await checkRes.json();
+
+      if (checkData.status === "NOT_FOUND") {
+        setError("Lütfen önce waitlist'e katıl. Ana sayfaya dön ve 'Ücretsiz Başla' butonuna tıkla.");
+        setLoading(false);
+        return;
+      }
+
+      if (checkData.status === "PENDING") {
+        setError("Hesabın henüz onaylanmamış. Yakında email alacaksın. Lütfen kontrol et.");
+        setLoading(false);
+        return;
+      }
+
+      // Status === "APPROVED" → proceed with signup
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

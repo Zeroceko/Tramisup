@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import WaitlistModal from "@/components/WaitlistModal";
 
 /* ── Mini bar chart (dekoratif) ─────────────────────────── */
 const bars = [8, 14, 10, 20, 16, 20, 14, 20, 18, 20, 12, 8, 20, 16, 8, 20, 14, 20, 16, 20];
@@ -72,6 +76,8 @@ function FeatureCard({
 
 /* ── Page ─────────────────────────────────────────────────── */
 export default function Home() {
+  const [showWaitlist, setShowWaitlist] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#f6f6f6]">
       {/* NAV */}
@@ -99,12 +105,12 @@ export default function Home() {
           >
             Giriş yap
           </Link>
-          <Link
-            href="/signup"
+          <button
+            onClick={() => setShowWaitlist(true)}
             className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
           >
             Ücretsiz başla
-          </Link>
+          </button>
         </div>
       </header>
 
@@ -122,15 +128,15 @@ export default function Home() {
             Tiramisup; launch checklist, canlı metrikler, büyüme rutinleri ve entegrasyon planlamasını tek bir operasyon katmanında toplar.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
-            <Link
-              href="/signup"
+            <button
+              onClick={() => setShowWaitlist(true)}
               className="inline-flex items-center gap-2 px-6 h-11 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1a1a1a] transition"
             >
               Çalışma alanı oluştur
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2.5 7h9M7.5 3l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </Link>
+            </button>
             <Link
               href="/login"
               className="inline-flex items-center px-6 h-11 rounded-full bg-white text-[14px] font-medium text-[#0d0d12] border border-[#e8e8e8] hover:border-[#d0d0d0] transition"
@@ -259,12 +265,12 @@ export default function Home() {
             Manuel metriklerle ücretsiz başla. İstediğinde entegrasyonları ekle.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
-            <Link
-              href="/signup"
+            <button
+              onClick={() => setShowWaitlist(true)}
               className="inline-flex items-center gap-2 px-7 h-12 rounded-full bg-[#ffd7ef] text-[15px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
             >
               Ücretsiz çalışma alanı aç
-            </Link>
+            </button>
           </div>
         </section>
       </main>
@@ -281,6 +287,9 @@ export default function Home() {
           <p className="text-[13px] text-[#666d80]">© 2025 Tiramisup. Tüm hakları saklıdır.</p>
         </div>
       </footer>
+
+      {/* Waitlist Modal */}
+      <WaitlistModal open={showWaitlist} onClose={() => setShowWaitlist(false)} />
     </div>
   );
 }

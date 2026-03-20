@@ -23,6 +23,31 @@ model User {
   products     Product[]
 }
 
+// ─── Waitlist (MVP Launch) ────────────────────────
+
+model Waitlist {
+  id        String         @id @default(cuid())
+  email     String         @unique
+  name      String?
+  source    String         @default("landing")
+  status    WaitlistStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WaitlistStatus {
+  PENDING
+  APPROVED
+  INVITED
+  REJECTED
+}
+
+// ─── Products ─────────────────────────────────────
+
 model Product {
   id         String        @id @default(cuid())
   userId     String
