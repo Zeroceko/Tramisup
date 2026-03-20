@@ -78,6 +78,9 @@ model LaunchChecklist {
   completed   Boolean           @default(false)
   completedAt DateTime?
   order       Int               @default(0)
+  priority    Priority          @default(MEDIUM)
+  linkedTaskId String?          @unique
+  linkedTask  Task?             @relation("ChecklistTask", fields: [linkedTaskId], references: [id])
 
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
@@ -132,6 +135,7 @@ model Task {
   priority    Priority   @default(MEDIUM)
   dueDate     DateTime?
   order       Int        @default(0)
+  launchChecklistItem LaunchChecklist? @relation("ChecklistTask")
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
