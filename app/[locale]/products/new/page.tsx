@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import Link from "next/link";
 
 type WizardData = {
@@ -216,6 +217,7 @@ function StepPills({ currentPill, onPillClick }: { currentPill: number; onPillCl
 
 export default function NewProductWizard() {
   const router = useRouter();
+  const locale = useLocale();
   const [currentPill, setCurrentPill] = useState(1);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [data, setData] = useState<Partial<WizardData>>({
@@ -322,7 +324,7 @@ export default function NewProductWizard() {
 
       const product = await res.json();
       document.cookie = `activeProductId=${product.id}; path=/`;
-      router.push("/dashboard");
+      router.push(`/${locale}/dashboard`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setLoading(false);
@@ -345,7 +347,7 @@ export default function NewProductWizard() {
     <div className="min-h-screen bg-[#f6f6f6] px-4 py-8 md:px-8 md:py-10">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-4 flex items-center justify-between px-1">
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-[13px] text-[#666d80] transition hover:text-[#111111]">
+          <Link href={`/${locale}/dashboard`} className="inline-flex items-center gap-1 text-[13px] text-[#666d80] transition hover:text-[#111111]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -360,7 +362,7 @@ export default function NewProductWizard() {
           <div className="mb-8 flex items-start justify-between gap-4">
             <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">Yeni Ürün Oluştur</h1>
             <Link
-              href="/dashboard"
+              href={`/${locale}/dashboard`}
               aria-label="Kapat"
               className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#ececec] text-[20px] leading-none text-[#666d80] transition hover:border-[#d8d8d8] hover:text-[#111111]"
             >

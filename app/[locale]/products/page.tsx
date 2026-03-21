@@ -6,11 +6,11 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
-async function SetActiveProductAction(productId: string) {
+async function SetActiveProductAction(productId: string, locale: string) {
   "use server";
   const store = await cookies();
   store.set("activeProductId", productId, { path: "/" });
-  redirect("/dashboard");
+  redirect(`/${locale}/dashboard`);
 }
 
 const statusLabel: Record<string, string> = {
@@ -25,9 +25,14 @@ const statusStyle: Record<string, string> = {
   GROWING:    "bg-[#95dbda] text-[#0d0d12]",
 };
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const products = await prisma.product.findMany({
     where: { userId: session.user.id },
@@ -48,7 +53,7 @@ export default async function ProductsPage() {
           </h1>
         </div>
         <Link
-          href="/products/new"
+          href={`/${locale}/products/new`}
           className="inline-flex items-center gap-2 px-5 h-10 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
         >
           <span className="text-lg leading-none">+</span>
@@ -67,7 +72,7 @@ export default async function ProductsPage() {
           <p className="text-[15px] font-semibold text-[#0d0d12]">Henüz ürün yok</p>
           <p className="mt-2 text-[13px] text-[#666d80]">İlk ürününü oluştur ve takibine başla.</p>
           <Link
-            href="/products/new"
+            href={`/${locale}/products/new`}
             className="mt-6 inline-flex items-center gap-2 px-5 h-10 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
           >
             İlk ürünü oluştur
@@ -108,7 +113,7 @@ export default async function ProductsPage() {
                   <form
                     action={async () => {
                       "use server";
-                      await SetActiveProductAction(product.id);
+                      await SetActiveProductAction(product.id, locale);
                     }}
                   >
                     <button

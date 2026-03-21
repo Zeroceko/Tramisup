@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
@@ -16,6 +16,8 @@ interface ProductSelectorProps {
 
 export default function ProductSelector({ products, activeProductId }: ProductSelectorProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = pathname?.split("/")[1] || "tr";
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -85,7 +87,7 @@ export default function ProductSelector({ products, activeProductId }: ProductSe
 
           <div className="border-t border-[#e8e8e8] p-2">
             <Link
-              href="/products/new"
+              href={`/${locale}/products/new`}
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
             >

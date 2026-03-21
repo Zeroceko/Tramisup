@@ -11,12 +11,12 @@ interface Product {
 }
 
 const navItems = [
-  { href: "/dashboard",    label: "Genel Bakış" },
-  { href: "/pre-launch",   label: "Pre-Launch" },
-  { href: "/tasks",        label: "Görevler" },
-  { href: "/metrics",      label: "Metrikler" },
-  { href: "/growth",       label: "Büyüme" },
-  { href: "/integrations", label: "Entegrasyonlar" },
+  { href: "/dashboard",    label: "Genel Bakış", requiresProduct: false },
+  { href: "/pre-launch",   label: "Pre-Launch", requiresProduct: true },
+  { href: "/tasks",        label: "Görevler", requiresProduct: true },
+  { href: "/metrics",      label: "Metrikler", requiresProduct: true },
+  { href: "/growth",       label: "Büyüme", requiresProduct: true },
+  { href: "/integrations", label: "Entegrasyonlar", requiresProduct: true },
 ];
 
 interface DashboardNavProps {
@@ -31,6 +31,8 @@ export default function DashboardNav({
   const pathname = usePathname();
   const locale = pathname?.split("/")[1] || "tr";
   const withLocale = (href: string) => `/${locale}${href}`;
+  const hasProducts = products.length > 0;
+  const visibleNavItems = navItems.filter((item) => hasProducts || !item.requiresProduct);
 
   const isActive = (href: string) => {
     const localizedHref = withLocale(href);
@@ -53,7 +55,7 @@ export default function DashboardNav({
 
         {/* Pill nav */}
         <nav className="hidden lg:flex items-center gap-1 bg-white rounded-full border border-[#e8e8e8] p-1 shadow-nav">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -75,15 +77,24 @@ export default function DashboardNav({
         <div className="flex items-center gap-2">
           <ProductSelector products={products} activeProductId={activeProductId} />
 
+          {!hasProducts && (
+            <Link
+              href={withLocale("/products/new")}
+              className="hidden sm:inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
+            >
+              İlk ürününü oluştur
+            </Link>
+          )}
+
           <Link
-            href="/settings"
+            href={withLocale("/settings")}
             className="hidden sm:inline-flex items-center px-4 h-9 rounded-full text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
           >
             Ayarlar
           </Link>
 
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => signOut({ callbackUrl: `/${locale}` })}
             className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
           >
             Çıkış
@@ -94,12 +105,12 @@ export default function DashboardNav({
       {/* Mobile nav */}
       <div className="lg:hidden border-t border-[#e8e8e8] px-4 pb-2">
         <nav className="flex gap-1 overflow-x-auto pt-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={withLocale(item.href)}
                 className={`whitespace-nowrap rounded-full px-4 h-[34px] flex items-center text-[12px] font-medium transition-colors ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"

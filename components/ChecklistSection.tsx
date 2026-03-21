@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
 interface ChecklistItem {
@@ -38,6 +38,8 @@ export default function ChecklistSection({
   onCreateTask,
 }: ChecklistSectionProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = pathname?.split("/")[1] || "tr";
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleToggle = async (itemId: string, currentStatus: boolean) => {
@@ -142,7 +144,7 @@ export default function ChecklistSection({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.linkedTaskId ? (
                         <Link
-                          href="/tasks"
+                          href={`/${locale}/tasks`}
                           className="px-2 h-6 rounded text-[10px] font-semibold bg-[#95dbda] text-white hover:bg-[#7ac9c7] transition"
                         >
                           → View Task
