@@ -1,7 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useLocale } from "next-intl"
 
 interface WaitlistModalProps {
   open: boolean
@@ -10,6 +12,7 @@ interface WaitlistModalProps {
 
 export default function WaitlistModal({ open, onClose }: WaitlistModalProps) {
   const router = useRouter()
+  const locale = useLocale()
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
@@ -41,7 +44,7 @@ export default function WaitlistModal({ open, onClose }: WaitlistModalProps) {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push("/waitlist/thank-you")
+        router.push(`/${locale}/waitlist/thank-you`)
       }, 1000)
     } catch (err) {
       console.error("Error joining waitlist:", err)
@@ -119,12 +122,21 @@ export default function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 disabled={loading || !email}
                 className="w-full h-11 rounded-full bg-[#95dbda] text-white text-[14px] font-semibold hover:bg-[#7ac9c7] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Kaydediliyor..." : "Waitlist&apos;e Katıl"}
+                {loading ? "Kaydediliyor..." : "Waitlist'e Katıl"}
               </button>
 
-              <p className="text-[12px] text-[#666d80] text-center">
-                Yakında seni davet edeceğiz 🎉
-              </p>
+              <div className="space-y-2 pt-1 text-center">
+                <p className="text-[12px] text-[#666d80]">
+                  Yakında seni davet edeceğiz 🎉
+                </p>
+                <Link
+                  href={`/${locale}/signup`}
+                  onClick={onClose}
+                  className="inline-flex text-[12px] font-semibold text-[#0d0d12] underline underline-offset-2 hover:text-[#666d80] transition"
+                >
+                  Erken erişim kodum var
+                </Link>
+              </div>
             </form>
           ) : (
             <div className="text-center py-6">

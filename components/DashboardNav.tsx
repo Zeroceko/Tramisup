@@ -29,16 +29,20 @@ export default function DashboardNav({
   activeProductId,
 }: DashboardNavProps) {
   const pathname = usePathname();
+  const locale = pathname?.split("/")[1] || "tr";
+  const withLocale = (href: string) => `/${locale}${href}`;
 
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname?.startsWith(href);
+  const isActive = (href: string) => {
+    const localizedHref = withLocale(href);
+    return href === "/dashboard" ? pathname === localizedHref : pathname?.startsWith(localizedHref);
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-[#e8e8e8]">
       <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
 
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
+        <Link href={withLocale("/dashboard")} className="flex items-center gap-2.5 shrink-0">
           <div className="w-9 h-9 rounded-full bg-[#fee74e] flex items-center justify-center">
             <span className="font-outfit font-semibold text-[14px] text-[#2e2e2e]">T</span>
           </div>
@@ -54,7 +58,7 @@ export default function DashboardNav({
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={withLocale(item.href)}
                 className={`rounded-full px-4 h-[34px] flex items-center text-[13px] font-medium transition-colors whitespace-nowrap ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"
