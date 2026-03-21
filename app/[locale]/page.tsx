@@ -6,69 +6,62 @@ import { useTranslations, useLocale } from "next-intl";
 import WaitlistModal from "@/components/WaitlistModal";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-/* ── Mini bar chart (dekoratif) ─────────────────────────── */
-const bars = [8, 14, 10, 20, 16, 20, 14, 20, 18, 20, 12, 8, 20, 16, 8, 20, 14, 20, 16, 20];
-
-function MiniBar({ heights, color = "pink" }: { heights: number[]; color?: "pink" | "teal" }) {
-  const bg = color === "pink" ? "#ffd7ef" : "#95dbda";
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-end gap-[3px]">
-      {heights.map((h, i) => (
-        <div key={i} style={{ width: 4, height: h, borderRadius: 4, background: bg }} />
-      ))}
-    </div>
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#e8e8e8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#666d80]">
+      <span className="h-1.5 w-1.5 rounded-full bg-[#95dbda]" />
+      {children}
+    </span>
   );
 }
 
-function StatCard({
-  count,
-  label,
-  chartColor = "pink",
-}: {
-  count: string;
-  label: string;
-  chartColor?: "pink" | "teal";
-}) {
+function MetricCard({ value, label, note }: { value: string; label: string; note: string }) {
   return (
-    <div className="card p-[20px_22px] flex flex-col gap-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[42px] font-bold leading-none text-black">{count}</p>
-        </div>
-        <div className="w-9 h-9 rounded-full bg-[#f6f6f6] flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-            <path d="M4 16L16 4M16 4H8M16 4V12" stroke="#666d80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
-      <MiniBar heights={bars.slice(0, 14)} color={chartColor} />
-      <p className="text-[16px] font-normal text-[#666d80]">{label}</p>
+    <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-5 shadow-sm">
+      <p className="text-[34px] font-bold tracking-[-0.03em] text-[#0d0d12]">{value}</p>
+      <p className="mt-2 text-[14px] font-medium text-[#0d0d12]">{label}</p>
+      <p className="mt-1 text-[13px] leading-6 text-[#666d80]">{note}</p>
     </div>
   );
 }
 
 function FeatureCard({
-  icon,
+  eyebrow,
   title,
   desc,
-  accent,
 }: {
-  icon: React.ReactNode;
+  eyebrow: string;
   title: string;
   desc: string;
-  accent?: string;
 }) {
   return (
-    <div className="card p-6 flex flex-col gap-4">
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center"
-        style={{ background: accent ?? "#ffd7ef" }}
-      >
-        {icon}
-      </div>
-      <div>
-        <p className="font-semibold text-[17px] text-[#0d0d12]">{title}</p>
-        <p className="mt-1.5 text-[14px] leading-6 text-[#666d80]">{desc}</p>
+    <div className="rounded-[24px] border border-[#e8e8e8] bg-white p-6 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{eyebrow}</p>
+      <h3 className="mt-3 text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">{title}</h3>
+      <p className="mt-3 text-[14px] leading-7 text-[#666d80]">{desc}</p>
+    </div>
+  );
+}
+
+function WorkflowStep({
+  index,
+  title,
+  desc,
+}: {
+  index: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f0fafa] text-[14px] font-semibold text-[#0d0d12]">
+          {index}
+        </div>
+        <div>
+          <h4 className="text-[17px] font-semibold text-[#0d0d12]">{title}</h4>
+          <p className="mt-2 text-[14px] leading-7 text-[#666d80]">{desc}</p>
+        </div>
       </div>
     </div>
   );
@@ -80,207 +73,173 @@ export default function Home() {
   const locale = useLocale();
 
   return (
-    <div className="min-h-screen bg-[#f6f6f6]">
-      {/* NAV */}
-      <header className="flex items-center justify-between px-6 py-5 max-w-[1200px] mx-auto">
+    <div className="min-h-screen bg-[#f6f6f6] text-[#0d0d12]">
+      <header className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center overflow-hidden">
-            <span className="font-outfit font-semibold text-[15px] text-[#2e2e2e]">T</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#fee74e]">
+            <span className="font-outfit text-[15px] font-semibold text-[#2e2e2e]">T</span>
           </div>
-          <span className="font-outfit font-medium text-[18px] text-[#2e2e2e] tracking-[-0.01em]">Tiramisup</span>
+          <div>
+            <span className="font-outfit text-[18px] font-medium tracking-[-0.01em] text-[#2e2e2e]">Tiramisup</span>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#9ca3af]">Launch to growth</p>
+          </div>
         </div>
 
-        <nav className="nav-pill hidden md:flex">
-          <a href="#features" className="nav-pill-item active">{t('nav.overview')}</a>
-          <a href="#how" className="nav-pill-item">{t('nav.howItWorks')}</a>
-          <a href="#pricing" className="nav-pill-item">{t('nav.pricing')}</a>
+        <nav className="hidden md:flex items-center gap-1 rounded-full border border-[#e8e8e8] bg-white p-1 shadow-sm">
+          <a href="#problem" className="rounded-full px-4 py-2 text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6]">Problem</a>
+          <a href="#system" className="rounded-full px-4 py-2 text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6]">System</a>
+          <a href="#flow" className="rounded-full px-4 py-2 text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6]">Flow</a>
         </nav>
 
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <Link
             href={`/${locale}/login`}
-            className="hidden sm:inline-flex items-center px-4 h-9 rounded-full text-[13px] font-medium text-[#0d0d12] hover:bg-white transition"
+            className="hidden sm:inline-flex h-9 items-center rounded-full px-4 text-[13px] font-medium text-[#0d0d12] hover:bg-white transition"
           >
-            {t('nav.login')}
+            {t("nav.login")}
           </Link>
           <button
             onClick={() => setWaitlistOpen(true)}
-            className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
+            className="inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
           >
-            {t('nav.signupFree')}
+            {t("nav.signupFree")}
           </button>
         </div>
       </header>
 
-      {/* HERO */}
-      <main className="max-w-[1200px] mx-auto px-6 pt-8 pb-20">
-        <section className="text-center mb-12">
-          <div className="inline-flex items-center gap-1.5 mb-6 px-3 py-1.5 rounded-full bg-white border border-[#e8e8e8] text-[12px] font-medium text-[#666d80]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#95dbda] inline-block" />
-            {t('hero.badge')}
+      <main className="mx-auto w-full max-w-[1200px] px-6 pb-24 pt-8">
+        <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <SectionLabel>{t("hero.badge")}</SectionLabel>
+            <h1 className="mt-6 max-w-[720px] text-[48px] font-bold leading-[1.02] tracking-[-0.04em] text-[#0d0d12] sm:text-[66px]">
+              Launch sonrası kaosu,
+              <br />
+              çalıştırılabilir bir sisteme çevir.
+            </h1>
+            <p className="mt-6 max-w-[620px] text-[18px] leading-8 text-[#5b5a64]">
+              Tiramisup; launch checklist, görevler, metrikler, growth ritüelleri ve entegrasyon kararlarını tek bir product workspace içinde toplar. Spreadsheet, Notion ve dağınık dashboard geçişlerini azaltır.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setWaitlistOpen(true)}
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-black px-6 text-[14px] font-semibold text-white transition hover:bg-[#1a1a1a]"
+              >
+                {t("hero.createWorkspace")}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2.5 7h9M7.5 3l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <Link
+                href={`/${locale}/login`}
+                className="inline-flex h-12 items-center rounded-full border border-[#e8e8e8] bg-white px-6 text-[14px] font-medium text-[#0d0d12] transition hover:border-[#d0d0d0]"
+              >
+                {t("hero.existingAccount")}
+              </Link>
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-2 text-[12px] text-[#666d80]">
+              <span className="rounded-full border border-[#e8e8e8] bg-white px-3 py-1.5">Waitlist + early access</span>
+              <span className="rounded-full border border-[#e8e8e8] bg-white px-3 py-1.5">TR / EN</span>
+              <span className="rounded-full border border-[#e8e8e8] bg-white px-3 py-1.5">No fake onboarding data</span>
+            </div>
           </div>
-          <h1 className="text-[52px] sm:text-[64px] font-bold text-black leading-[1.05] tracking-[-0.03em] max-w-[700px] mx-auto">
-            {t('hero.title')}
-          </h1>
-          <p className="mt-5 text-[18px] text-[#5b5a64] max-w-[520px] mx-auto leading-[1.7]">
-            {t('hero.subtitle')}
+
+          <div className="rounded-[28px] border border-[#e8e8e8] bg-[#0d0d12] p-6 text-white shadow-card">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Weekly operating view</p>
+                <p className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Founder cockpit</p>
+              </div>
+              <span className="rounded-full bg-[#ffd7ef] px-3 py-1 text-[11px] font-semibold text-[#0d0d12]">Live MVP</span>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                <p className="text-[12px] text-white/50">Launch readiness</p>
+                <p className="mt-2 text-[32px] font-bold">82%</p>
+                <p className="mt-2 text-[13px] leading-6 text-white/65">Checklist ilerlemesi, blocker görünürlüğü ve task linkage tek yüzeyde.</p>
+              </div>
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                <p className="text-[12px] text-white/50">Metric rhythm</p>
+                <p className="mt-2 text-[32px] font-bold">Daily</p>
+                <p className="mt-2 text-[13px] leading-6 text-white/65">MRR, activation ve operasyonel metrikler için tek karar yüzeyi.</p>
+              </div>
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                <p className="text-[12px] text-white/50">Why teams adopt it</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-[14px] bg-black/30 p-3 text-[13px] text-white/80">Checklist → task dönüşümü</div>
+                  <div className="rounded-[14px] bg-black/30 p-3 text-[13px] text-white/80">Boş dashboard yerine yönlendiren onboarding</div>
+                  <div className="rounded-[14px] bg-black/30 p-3 text-[13px] text-white/80">Ürün bazlı çalışma context&apos;i</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="problem" className="mt-20 grid gap-4 md:grid-cols-3">
+          <FeatureCard eyebrow="Problem" title="Launch sırasında ekip nerede olduğunu kaybediyor" desc="Checklist başka yerde, görevler başka yerde, metrikler başka yerde kalınca ekip karar vermek yerine context taşımaya başlıyor." />
+          <FeatureCard eyebrow="Approach" title="Tek bir çalışma yüzeyinde operasyonel ritim" desc="Tiramisup, launch readiness ile growth execution arasındaki orta katmanı sahiplenir. Yani yapılacak iş ile görülecek sinyal aynı yerde yaşar." />
+          <FeatureCard eyebrow="Outcome" title="Daha az dağınıklık, daha net sonraki adım" desc="İlk kullanıcı deneyimi güvenli empty state ile başlar; ürün oluşturulduğunda yüzeyler anlamlı hale gelir. Sahte başarı hissi üretmez." />
+        </section>
+
+        <section className="mt-20 grid gap-4 md:grid-cols-4" id="system">
+          <MetricCard value="Waitlist" label="Lead capture" note="Landing CTA doğrudan bekleme listesine ya da erken erişim yoluna gider." />
+          <MetricCard value="Code" label="Early access" note="Onaylı kullanıcılar kod ile direkt signup akışına girer." />
+          <MetricCard value="Empty" label="Safe first run" note="Kullanıcının ürünü yoksa fake dashboard yerine gerçek başlangıç yönlendirmesi görür." />
+          <MetricCard value="Wizard" label="Product setup" note="İlk ürün wizard üzerinden tanımlanır, context ürün bazlı oturur." />
+        </section>
+
+        <section id="flow" className="mt-20">
+          <div className="max-w-[760px]">
+            <SectionLabel>Onboarding flow</SectionLabel>
+            <h2 className="mt-5 text-[42px] font-bold tracking-[-0.03em] text-[#0d0d12]">İlk 5 dakikada ne olur?</h2>
+            <p className="mt-4 text-[16px] leading-8 text-[#666d80]">
+              Bu landing sayfasının görevi sadece güzel görünmek değil; kullanıcının bir sonraki adıma güvenle geçmesini sağlamak. Akış bu yüzden olabildiğince açık ve düşük sürtünmeli tutuldu.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <WorkflowStep index="01" title="Lead capture veya early access seçimi" desc="Start free CTA waitlist modal açar. Kodu olan kullanıcı signup'a gider, olmayan kullanıcı waitlist'e katılır." />
+            <WorkflowStep index="02" title="Kodlu kayıt" desc="Erken erişim kodu ile kullanıcı hesabını açar. Signup artık otomatik fake product seed etmez." />
+            <WorkflowStep index="03" title="Temiz dashboard" desc="Kullanıcının ürünü yoksa dashboard kırık kartlar ya da fake veri göstermez; ilk ürününü oluştur CTA'sı verir." />
+            <WorkflowStep index="04" title="Gerçek ürün context'i" desc="Wizard tamamlandığında ürün oluşturulur ve iç yüzeyler ürün bazlı çalışmaya başlar." />
+          </div>
+        </section>
+
+        <section className="mt-20 rounded-[30px] border border-[#e8e8e8] bg-white p-10 text-center shadow-sm">
+          <SectionLabel>Current release</SectionLabel>
+          <h2 className="mt-5 text-[40px] font-bold tracking-[-0.03em] text-[#0d0d12]">Launch-to-growth için sade ama çalışan bir MVP.</h2>
+          <p className="mx-auto mt-4 max-w-[650px] text-[16px] leading-8 text-[#666d80]">
+            Eğer şu an aradığın şey, launch sonrası neye bakacağını ve ne yapacağını bir arada tutan sade bir operating layer ise, Tiramisup o alanı sahipleniyor.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => setWaitlistOpen(true)}
-              className="inline-flex items-center gap-2 px-6 h-11 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1a1a1a] transition"
+              className="inline-flex h-12 items-center rounded-full bg-[#ffd7ef] px-7 text-[15px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
             >
-              {t('hero.createWorkspace')}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2.5 7h9M7.5 3l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {t("cta.openWorkspace")}
             </button>
             <Link
               href={`/${locale}/login`}
-              className="inline-flex items-center px-6 h-11 rounded-full bg-white text-[14px] font-medium text-[#0d0d12] border border-[#e8e8e8] hover:border-[#d0d0d0] transition"
+              className="inline-flex h-12 items-center rounded-full border border-[#e8e8e8] px-7 text-[15px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6]"
             >
-              {t('hero.existingAccount')}
+              {t("nav.login")}
             </Link>
-          </div>
-          <p className="mt-3 text-[13px] text-[#666d80]">{t('hero.noCreditCard')}</p>
-        </section>
-
-        {/* STAT CARDS */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3" id="features">
-          <StatCard count="234" label={t('stats.launchTasks')} chartColor="pink" />
-          <StatCard count="82%" label={t('stats.checklistComplete')} chartColor="teal" />
-          <StatCard count="$12.4k" label={t('stats.monthlyRevenue')} chartColor="pink" />
-          <StatCard count="6" label={t('stats.activeRoutines')} chartColor="teal" />
-        </section>
-
-        {/* DASHBOARD MOCKUP */}
-        <section className="card p-6 mb-3">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-[22px] font-normal text-[#5b5a64]">{t('dashboard.howReady')}</p>
-              <p className="text-[32px] font-bold text-black leading-tight">{t('dashboard.weekSummary')}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="tag-pink">{t('dashboard.overview')}</div>
-              <div className="tag-green">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                  <path d="M2 6L6 2M6 2H3.5M6 2V4.5" stroke="#0d0d12" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {t('dashboard.live')}
-              </div>
-            </div>
-          </div>
-
-          {/* inner grid */}
-          <div className="grid md:grid-cols-3 gap-3">
-            <div className="bg-[#f6f6f6] rounded-[12px] p-4">
-              <p className="section-title mb-1">{t('dashboard.taskStats')}</p>
-              <p className="text-[12px] text-[#666d80]">{t('dashboard.totalTasks')}</p>
-              <div className="flex items-end justify-between mt-2">
-                <p className="text-[32px] font-bold text-black leading-none">506</p>
-                <div className="tag-green">▲ 4.3%</div>
-              </div>
-              <div className="mt-3 flex items-end gap-[3px]">
-                {[...Array(32)].map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 4,
-                      height: i < 28 ? 16 : 25,
-                      borderRadius: 4,
-                      background: i < 28 ? "#ffd7ef" : "#8cb4b9",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-[#000000] rounded-[12px] p-5 text-white">
-              <p className="section-title text-white mb-3">{t('dashboard.meetingNote')}</p>
-              <p className="text-[18px] font-medium leading-snug">{t('dashboard.meetingWith')}</p>
-              <p className="mt-2 text-[13px] text-white/60">{t('dashboard.time')}: 14.00 - 16.00</p>
-              <div className="mt-4">
-                <div className="inline-flex items-center px-4 h-10 rounded-full bg-[#ffd7ef] text-[13px] font-medium text-black">
-                  {t('dashboard.viewDetails')}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#f6f6f6] rounded-[12px] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="section-title">{t('dashboard.aiPlanIQ')}</p>
-                <div className="inline-flex items-center gap-1 bg-white rounded px-2 py-1 text-[11px] text-[#666d80]">
-                  {t('dashboard.assistant')} ▾
-                </div>
-              </div>
-              <p className="text-[13px] text-[#0d0d12] font-medium">{t('dashboard.goodMorning')}</p>
-              <p className="text-[12px] text-[#666d80] mt-1">{t('dashboard.howCanHelp')}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {[t('dashboard.metrics'), t('dashboard.launchPlan'), t('dashboard.growth')].map((label) => (
-                  <span key={label} className="bg-white rounded-[4px] px-2 py-1 text-[11px] text-[#666d80]">{label}</span>
-                ))}
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-1.5">
-                {[t('dashboard.teamPerformance'), t('dashboard.projectEfficiency'), t('dashboard.taskSummary')].map((label) => (
-                  <div key={label} className="bg-white rounded-lg p-2 text-[10px] text-[#666d80] leading-tight">{label}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="grid md:grid-cols-3 gap-3 mb-16" id="how">
-          <FeatureCard
-            accent="#ffd7ef"
-            icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3 5-5M20 12a8 8 0 11-16 0 8 8 0 0116 0z" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-            title={t('features.launchReadiness.title')}
-            desc={t('features.launchReadiness.description')}
-          />
-          <FeatureCard
-            accent="#95dbda"
-            icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-8 4 16 3-8h4" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-            title={t('features.metricRhythm.title')}
-            desc={t('features.metricRhythm.description')}
-          />
-          <FeatureCard
-            accent="#fee74e"
-            icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-            title={t('features.growthEngine.title')}
-            desc={t('features.growthEngine.description')}
-          />
-        </section>
-
-        {/* CTA */}
-        <section className="card p-12 text-center" id="pricing">
-          <p className="text-[36px] font-bold text-black leading-tight tracking-[-0.02em] whitespace-pre-line">
-            {t('cta.title')}
-          </p>
-          <p className="mt-4 text-[16px] text-[#666d80] max-w-[380px] mx-auto leading-relaxed">
-            {t('cta.subtitle')}
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
-            <button
-              onClick={() => setWaitlistOpen(true)}
-              className="inline-flex items-center gap-2 px-7 h-12 rounded-full bg-[#ffd7ef] text-[15px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
-            >
-              {t('cta.openWorkspace')}
-            </button>
           </div>
         </section>
       </main>
 
-      {/* FOOTER */}
-      <footer className="border-t border-[#e8e8e8] py-8 px-6">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+      <footer className="border-t border-[#e8e8e8] px-6 py-8">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#fee74e] flex items-center justify-center">
-              <span className="font-outfit font-semibold text-[11px] text-[#2e2e2e]">T</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#fee74e]">
+              <span className="font-outfit text-[11px] font-semibold text-[#2e2e2e]">T</span>
             </div>
-            <span className="font-outfit font-medium text-[14px] text-[#2e2e2e]">Tiramisup</span>
+            <span className="font-outfit text-[14px] font-medium text-[#2e2e2e]">Tiramisup</span>
           </div>
-          <p className="text-[13px] text-[#666d80]">{t('footer.rights')}</p>
+          <p className="text-[13px] text-[#666d80]">{t("footer.rights")}</p>
         </div>
       </footer>
 
