@@ -1,7 +1,19 @@
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import WaitlistTable from "@/components/WaitlistTable"
 
-export default async function AdminWaitlistPage() {
+const ADMIN_EMAIL = "admin@tiramisup"
+
+export default async function AdminWaitlistPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+    redirect(`/${locale}/login`)
+  }
+
   const entries = await prisma.waitlist.findMany({
     orderBy: { createdAt: "desc" },
   })

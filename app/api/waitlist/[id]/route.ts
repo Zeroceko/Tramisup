@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+
+const ADMIN_EMAIL = "admin@tiramisup"
+
+async function requireAdmin() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+    return false
+  }
+  return true
+}
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await requireAdmin())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { id } = await context.params
     const { status } = await request.json()
 
@@ -36,6 +52,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await requireAdmin())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { id } = await context.params
 
     await prisma.waitlist.delete({

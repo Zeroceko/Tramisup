@@ -9,10 +9,20 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn(),
+}))
+
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
+}))
+
 import { PATCH, DELETE } from '@/app/api/waitlist/[id]/route'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
 
 const mockWaitlist = vi.mocked(prisma.waitlist)
+const mockGetServerSession = vi.mocked(getServerSession)
 
 function createPatchRequest(body: Record<string, unknown>) {
   return new Request('http://localhost:3000/api/waitlist/test-id', {
@@ -30,9 +40,44 @@ function createDeleteRequest() {
 
 const mockContext = { params: Promise.resolve({ id: 'test-id' }) }
 
+function mockAdmin() {
+  mockGetServerSession.mockResolvedValue({
+    user: { email: 'admin@tiramisup', name: 'Admin', id: 'admin-id' },
+    expires: '',
+  })
+}
+
+function mockNonAdmin() {
+  mockGetServerSession.mockResolvedValue({
+    user: { email: 'user@example.com', name: 'User', id: 'user-id' },
+    expires: '',
+  })
+}
+
+function mockNoSession() {
+  mockGetServerSession.mockResolvedValue(null)
+}
+
 describe('PATCH /api/waitlist/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAdmin()
+  })
+
+  it('should return 401 if not authenticated', async () => {
+    mockNoSession()
+    const request = createPatchRequest({ status: 'APPROVED' })
+    const response = await PATCH(request, mockContext)
+
+    expect(response.status).toBe(401)
+  })
+
+  it('should return 401 if not admin email', async () => {
+    mockNonAdmin()
+    const request = createPatchRequest({ status: 'APPROVED' })
+    const response = await PATCH(request, mockContext)
+
+    expect(response.status).toBe(401)
   })
 
   it('should return 400 for invalid status value', async () => {
@@ -85,6 +130,7 @@ describe('PATCH /api/waitlist/[id]', () => {
   it('should accept all valid status values', async () => {
     for (const status of ['PENDING', 'APPROVED', 'REJECTED', 'INVITED']) {
       vi.clearAllMocks()
+      mockAdmin()
       mockWaitlist.update.mockResolvedValue({
         id: 'test-id',
         status,
@@ -112,6 +158,23 @@ describe('PATCH /api/waitlist/[id]', () => {
 describe('DELETE /api/waitlist/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAdmin()
+  })
+
+  it('should return 401 if not authenticated', async () => {
+    mockNoSession()
+    const request = createDeleteRequest()
+    const response = await DELETE(request, mockContext)
+
+    expect(response.status).toBe(401)
+  })
+
+  it('should return 401 if not admin email', async () => {
+    mockNonAdmin()
+    const request = createDeleteRequest()
+    const response = await DELETE(request, mockContext)
+
+    expect(response.status).toBe(401)
   })
 
   it('should delete entry successfully', async () => {

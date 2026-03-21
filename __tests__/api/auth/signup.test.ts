@@ -6,9 +6,6 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
     },
-    product: {
-      create: vi.fn(),
-    },
   },
 }))
 
@@ -18,17 +15,14 @@ vi.mock('bcryptjs', () => ({
   },
 }))
 
-vi.mock('@/lib/seed', () => ({
-  seedProductData: vi.fn().mockResolvedValue(undefined),
-}))
-
 import { POST } from '@/app/api/auth/signup/route'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-const mockPrismaUser    = vi.mocked(prisma.user)
-const mockPrismaProduct = vi.mocked(prisma.product)
-const mockBcrypt        = vi.mocked(bcrypt)
+const mockPrismaUser = vi.mocked(prisma.user)
+const mockBcrypt     = vi.mocked(bcrypt)
+
+const VALID_ACCESS_CODE = 'TT31623SEN'
 
 function createRequest(body: Record<string, unknown>) {
   return new Request('http://localhost:3000/api/auth/signup', {
@@ -44,7 +38,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if email is missing', async () => {
-    const request = createRequest({ password: 'password123' })
+    const request = createRequest({ password: 'password123', accessCode: VALID_ACCESS_CODE })
     const response = await POST(request)
     const data = await response.json()
 
@@ -53,7 +47,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if password is missing', async () => {
-    const request = createRequest({ email: 'test@example.com' })
+    const request = createRequest({ email: 'test@example.com', accessCode: VALID_ACCESS_CODE })
     const response = await POST(request)
     const data = await response.json()
 
@@ -62,7 +56,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if both email and password are missing', async () => {
-    const request = createRequest({ name: 'Test' })
+    const request = createRequest({ name: 'Test', accessCode: VALID_ACCESS_CODE })
     const response = await POST(request)
     const data = await response.json()
 
@@ -71,12 +65,62 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if password is too short', async () => {
-    const request = createRequest({ email: 'test@example.com', password: 'short' })
+    const request = createRequest({ email: 'test@example.com', password: 'short', accessCode: VALID_ACCESS_CODE })
     const response = await POST(request)
     const data = await response.json()
 
     expect(response.status).toBe(400)
     expect(data.error).toBe('Şifre en az 8 karakter olmalıdır')
+  })
+
+  it('should return 400 if access code is missing', async () => {
+    const request = createRequest({
+      name: 'Test',
+      email: 'test@example.com',
+      password: 'password123',
+    })
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('Geçersiz erken erişim kodu')
+  })
+
+  it('should return 400 if access code is invalid', async () => {
+    const request = createRequest({
+      name: 'Test',
+      email: 'test@example.com',
+      password: 'password123',
+      accessCode: 'WRONGCODE',
+    })
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('Geçersiz erken erişim kodu')
+  })
+
+  it('should accept access code case-insensitively', async () => {
+    mockPrismaUser.findUnique.mockResolvedValue(null)
+    mockBcrypt.hash.mockResolvedValue('$2a$10$hashed' as never)
+    mockPrismaUser.create.mockResolvedValue({
+      id: 'new-user-123',
+      email: 'case@example.com',
+      name: 'Case Test',
+      passwordHash: '$2a$10$hashed',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+
+    const request = createRequest({
+      name: 'Case Test',
+      email: 'case@example.com',
+      password: 'password123',
+      accessCode: 'tt31623sen',
+    })
+    const response = await POST(request)
+
+    expect(response.status).toBe(201)
   })
 
   it('should return 400 if user already exists', async () => {
@@ -93,6 +137,7 @@ describe('POST /api/auth/signup', () => {
       name: 'Test',
       email: 'existing@example.com',
       password: 'password123',
+      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
@@ -101,7 +146,7 @@ describe('POST /api/auth/signup', () => {
     expect(data.error).toBe('Bu e-posta adresi zaten kayıtlı')
   })
 
-  it('should create user with hashed password and default product', async () => {
+  it('should create user with hashed password (no product creation)', async () => {
     mockPrismaUser.findUnique.mockResolvedValue(null)
     mockBcrypt.hash.mockResolvedValue('$2a$10$hashed' as never)
     mockPrismaUser.create.mockResolvedValue({
@@ -112,18 +157,19 @@ describe('POST /api/auth/signup', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
-    mockPrismaProduct.create.mockResolvedValue({ id: 'product-123' } as any)
 
     const request = createRequest({
       name: 'New User',
       email: 'new@example.com',
       password: 'password123',
+      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
 
     expect(response.status).toBe(201)
     expect(data.message).toBe('Hesap oluşturuldu')
+    expect(data.userId).toBe('new-user-123')
 
     expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 10)
 
@@ -132,14 +178,6 @@ describe('POST /api/auth/signup', () => {
         email: 'new@example.com',
         name: 'New User',
         passwordHash: '$2a$10$hashed',
-      },
-    })
-
-    expect(mockPrismaProduct.create).toHaveBeenCalledWith({
-      data: {
-        userId: 'new-user-123',
-        name: "Benim Startup'ım",
-        status: 'PRE_LAUNCH',
       },
     })
   })
@@ -155,16 +193,15 @@ describe('POST /api/auth/signup', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
-    mockPrismaProduct.create.mockResolvedValue({ id: 'product-456' } as any)
 
     const request = createRequest({
       email: 'noname@example.com',
       password: 'password123',
+      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
 
     expect(response.status).toBe(201)
-    // name falls back to the email username part
     expect(mockPrismaUser.create).toHaveBeenCalledWith({
       data: {
         email: 'noname@example.com',
@@ -181,6 +218,7 @@ describe('POST /api/auth/signup', () => {
       name: 'Test',
       email: 'test@example.com',
       password: 'password123',
+      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
@@ -195,6 +233,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       email: 'test@example.com',
       password: 'password123',
+      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
