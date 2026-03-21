@@ -1,6 +1,7 @@
 import Link from "next/link"
 
-export default function ThankYouPage() {
+export default async function ThankYouPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
@@ -50,7 +51,7 @@ export default function ThankYouPage() {
 
         {/* Back to home */}
         <Link
-          href="/"
+          href={`/${locale}`}
           className="inline-flex items-center px-6 h-11 rounded-full bg-[#f6f6f6] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#e8e8e8] transition"
         >
           Ana sayfaya dön

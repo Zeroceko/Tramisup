@@ -55,13 +55,13 @@ export default async function DashboardPage({
             </p>
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href={`//products/new`}
+                href={`/${locale}/products/new`}
                 className="inline-flex items-center justify-center rounded-full bg-[#ffd7ef] px-5 h-11 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
                 İlk ürününü oluştur
               </Link>
               <Link
-                href={`//products`}
+                href={`/${locale}/products`}
                 className="inline-flex items-center justify-center rounded-full border border-[#e8e8e8] px-5 h-11 text-[14px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
               >
                 Ürünler sayfasına git
@@ -97,13 +97,13 @@ export default async function DashboardPage({
         actions={
           <>
             <Link
-              href={`//metrics`}
+              href={`/${locale}/metrics`}
               className="inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6] transition"
             >
               Metrik gir
             </Link>
             <Link
-              href={`//pre-launch`}
+              href={`/${locale}/pre-launch`}
               className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
             >
               Launch board
@@ -155,17 +155,17 @@ export default async function DashboardPage({
           <div className="space-y-2">
             {[
               {
-                href: "/pre-launch",
+                href: `/${locale}/pre-launch`,
                 title: "Pre-launch checklist",
                 description: `${product?._count.tasks ?? 0} bekleyen görev var`,
               },
               {
-                href: "/metrics",
+                href: `/${locale}/metrics`,
                 title: "Bugünün metriklerini gir",
                 description: "DAU, MRR ve aktivasyonu güncel tut.",
               },
               {
-                href: "/integrations",
+                href: `/${locale}/integrations`,
                 title: "Entegrasyonları bağla",
                 description: `${product?._count.integrations ?? 0} aktif bağlantı, daha fazlası hazır.`,
               },
@@ -197,7 +197,7 @@ export default async function DashboardPage({
                 Haftalık rutinlerin bir yönü olsun diye ölçülebilir bir hedef belirle.
               </p>
               <Link
-                href={`//growth`}
+                href={`/${locale}/growth`}
                 className="mt-5 inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
               >
                 İlk hedefi oluştur
@@ -212,7 +212,7 @@ export default async function DashboardPage({
                 Aktif hedef{product?._count.goals !== 1 ? "" : ""} growth workspace&apos;te takip ediliyor.
               </p>
               <Link
-                href={`//growth`}
+                href={`/${locale}/growth`}
                 className="mt-4 inline-flex text-[13px] font-semibold text-[#0d0d12] hover:text-[#666d80] transition"
               >
                 Hedeflere git →
