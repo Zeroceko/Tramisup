@@ -10,8 +10,22 @@ export default async function AdminWaitlistPage({ params }: { params: Promise<{ 
   const { locale } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
-    redirect(`/${locale}/login`)
+  if (!session?.user?.email) {
+    redirect(`/${locale}/login?callbackUrl=/${locale}/admin/waitlist`)
+  }
+
+  if (session.user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4">
+        <div className="max-w-md text-center rounded-[20px] border border-[#e8e8e8] bg-white p-8">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#666d80]">Yetkisiz Erişim</p>
+          <h1 className="mt-2 text-[24px] font-bold text-[#0d0d12]">Bu sayfaya erişim yetkin yok</h1>
+          <p className="mt-3 text-[14px] text-[#666d80]">
+            Admin paneline sadece yetkili hesaplarla erişilebilir.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   const entries = await prisma.waitlist.findMany({
