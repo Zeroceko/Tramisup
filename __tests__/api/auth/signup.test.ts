@@ -6,6 +6,10 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    waitlist: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
   },
 }))
 
@@ -20,6 +24,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 const mockPrismaUser = vi.mocked(prisma.user)
+const mockPrismaWaitlist = vi.mocked(prisma.waitlist)
 const mockBcrypt     = vi.mocked(bcrypt)
 
 const VALID_ACCESS_CODE = 'TT31623SEN'
@@ -35,6 +40,8 @@ function createRequest(body: Record<string, unknown>) {
 describe('POST /api/auth/signup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // By default, waitlist lookup returns null (no DB code found)
+    mockPrismaWaitlist.findFirst.mockResolvedValue(null)
   })
 
   it('should return 400 if email is missing', async () => {
@@ -83,7 +90,7 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Geçersiz erken erişim kodu')
+    expect(data.error).toBe('Erken erişim kodu gereklidir')
   })
 
   it('should return 400 if access code is invalid', async () => {

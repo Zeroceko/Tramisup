@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+vi.mock('@/lib/email', () => ({
+  sendInviteEmail: vi.fn(),
+}))
+
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     waitlist: {
+      findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -20,9 +25,11 @@ vi.mock('@/lib/auth', () => ({
 import { PATCH, DELETE } from '@/app/api/waitlist/[id]/route'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { sendInviteEmail } from '@/lib/email'
 
 const mockWaitlist = vi.mocked(prisma.waitlist)
 const mockGetServerSession = vi.mocked(getServerSession)
+const mockSendInviteEmail = vi.mocked(sendInviteEmail)
 
 function createPatchRequest(body: Record<string, unknown>) {
   return new Request('http://localhost:3000/api/waitlist/test-id', {
@@ -62,6 +69,32 @@ describe('PATCH /api/waitlist/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAdmin()
+    // Default mock for finding existing entry
+    mockWaitlist.findUnique.mockResolvedValue({
+      id: 'test-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      status: 'PENDING',
+      inviteCode: null,
+      inviteCodeUsedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: 'landing',
+    })
+    // Default mock for update - returns the updated entry
+    mockWaitlist.update.mockResolvedValue({
+      id: 'test-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      status: 'APPROVED',
+      inviteCode: 'ABCD1234',
+      inviteCodeUsedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: 'landing',
+    })
+    // Mock email sending
+    mockSendInviteEmail.mockResolvedValue(undefined)
   })
 
   it('should return 401 if not authenticated', async () => {
@@ -106,10 +139,12 @@ describe('PATCH /api/waitlist/[id]', () => {
 
     expect(response.status).toBe(200)
     expect(data.status).toBe('APPROVED')
-    expect(mockWaitlist.update).toHaveBeenCalledWith({
-      where: { id: 'test-id' },
-      data: { status: 'APPROVED' },
-    })
+    expect(mockWaitlist.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'test-id' },
+        data: expect.objectContaining({ status: 'APPROVED' }),
+      })
+    )
   })
 
   it('should update entry to REJECTED', async () => {

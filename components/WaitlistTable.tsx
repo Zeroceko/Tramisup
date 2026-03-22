@@ -12,6 +12,7 @@ interface WaitlistEntry {
   name: string | null
   source: string
   status: WaitlistStatus
+  inviteCode: string | null
   createdAt: Date
 }
 
@@ -90,6 +91,9 @@ export default function WaitlistTable({ entries }: WaitlistTableProps) {
               Tarih
             </th>
             <th className="px-6 py-4 text-left text-[12px] font-semibold text-[#666d80] uppercase tracking-[0.1em]">
+              Davet Kodu
+            </th>
+            <th className="px-6 py-4 text-left text-[12px] font-semibold text-[#666d80] uppercase tracking-[0.1em]">
               Durum
             </th>
             <th className="px-6 py-4 text-left text-[12px] font-semibold text-[#666d80] uppercase tracking-[0.1em]">
@@ -113,6 +117,21 @@ export default function WaitlistTable({ entries }: WaitlistTableProps) {
                 </td>
                 <td className="px-6 py-4 text-[13px] text-[#666d80]">
                   {format(new Date(entry.createdAt), "d MMM yyyy", { locale: tr })}
+                </td>
+                <td className="px-6 py-4">
+                  {entry.inviteCode ? (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(entry.inviteCode!);
+                      }}
+                      className="px-3 py-1.5 rounded text-[11px] font-semibold bg-[#f0fffe] text-[#2d9d9b] border border-[#95dbda] hover:bg-[#dff8f7] transition"
+                      title="Kopyalamak için tıkla"
+                    >
+                      {entry.inviteCode}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] text-[#999]">—</span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <span

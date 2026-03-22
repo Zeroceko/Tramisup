@@ -3,21 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import ProductSelector from "@/components/ProductSelector";
 
 interface Product {
   id: string;
   name: string;
 }
-
-const navItems = [
-  { href: "/dashboard",    label: "Genel Bakış", requiresProduct: false },
-  { href: "/pre-launch",   label: "Pre-Launch", requiresProduct: true },
-  { href: "/tasks",        label: "Görevler", requiresProduct: true },
-  { href: "/metrics",      label: "Metrikler", requiresProduct: true },
-  { href: "/growth",       label: "Büyüme", requiresProduct: true },
-  { href: "/integrations", label: "Entegrasyonlar", requiresProduct: true },
-];
 
 interface DashboardNavProps {
   products?: Product[];
@@ -30,6 +22,17 @@ export default function DashboardNav({
 }: DashboardNavProps) {
   const pathname = usePathname();
   const locale = pathname?.split("/")[1] || "tr";
+  const t = useTranslations();
+
+  const navItems = [
+    { href: "/dashboard",    key: "dashboard.overview", requiresProduct: false },
+    { href: "/pre-launch",   key: "preLaunch.eyebrow", requiresProduct: true },
+    { href: "/tasks",        key: "tasks.eyebrow", requiresProduct: true },
+    { href: "/metrics",      key: "metrics.eyebrow", requiresProduct: true },
+    { href: "/growth",       key: "growth.eyebrow", requiresProduct: true },
+    { href: "/integrations", key: "integrations.eyebrow", requiresProduct: true },
+  ];
+
   const withLocale = (href: string) => `/${locale}${href}`;
   const hasProducts = products.length > 0;
   const visibleNavItems = navItems.filter((item) => hasProducts || !item.requiresProduct);
@@ -67,7 +70,7 @@ export default function DashboardNav({
                     : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
                 }`}
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}
@@ -82,7 +85,7 @@ export default function DashboardNav({
               href={withLocale("/products/new")}
               className="hidden sm:inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
             >
-              İlk ürününü oluştur
+              {t("common.createFirstProduct")}
             </Link>
           )}
 
@@ -90,14 +93,14 @@ export default function DashboardNav({
             href={withLocale("/settings")}
             className="hidden sm:inline-flex items-center px-4 h-9 rounded-full text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
           >
-            Ayarlar
+            {t("settings.eyebrow")}
           </Link>
 
           <button
             onClick={() => signOut({ callbackUrl: `/${locale}` })}
             className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
           >
-            Çıkış
+            {t("common.signOut")}
           </button>
         </div>
       </div>
@@ -117,7 +120,7 @@ export default function DashboardNav({
                     : "text-[#666d80] border border-[#e8e8e8]"
                 }`}
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}

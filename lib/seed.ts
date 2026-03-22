@@ -10,7 +10,11 @@ import type {
   TaskStatus,
 } from "@prisma/client";
 
-export async function seedProductData(productId: string) {
+export async function seedProductData(
+  productId: string,
+  tx?: any
+) {
+  const db = tx || prisma;
   // Launch checklist items
   const launchItems: Array<{ category: LaunchCategory; title: string; order: number }> = [
     { category: "PRODUCT", title: "Ürün değer önerisi tanımla", order: 1 },
@@ -31,7 +35,7 @@ export async function seedProductData(productId: string) {
   ];
 
   for (const item of launchItems) {
-    await prisma.launchChecklist.create({
+    await db.launchChecklist.create({
       data: {
         productId,
         category: item.category,
@@ -59,7 +63,7 @@ export async function seedProductData(productId: string) {
   ];
 
   for (const item of growthItems) {
-    await prisma.growthChecklist.create({
+    await db.growthChecklist.create({
       data: {
         productId,
         category: item.category,
@@ -81,7 +85,7 @@ export async function seedProductData(productId: string) {
   ];
 
   for (const task of tasks) {
-    await prisma.task.create({
+    await db.task.create({
       data: { productId, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate },
     });
   }
@@ -93,7 +97,7 @@ export async function seedProductData(productId: string) {
     date.setDate(date.getDate() - i);
     const dau = 100 + (30 - i) * 5 + Math.floor(Math.random() * 20);
     const mrr = 500 + (30 - i) * 50 + Math.floor(Math.random() * 100);
-    await prisma.metric.create({
+    await db.metric.create({
       data: {
         productId,
         date,
@@ -113,7 +117,7 @@ export async function seedProductData(productId: string) {
   for (let i = 5; i >= 0; i--) {
     const cohortDate = new Date();
     cohortDate.setMonth(cohortDate.getMonth() - i);
-    await prisma.retentionCohort.create({
+    await db.retentionCohort.create({
       data: {
         productId,
         cohortDate,
@@ -135,7 +139,7 @@ export async function seedProductData(productId: string) {
     { step: "ACTIVATED", count: 550, conversionRate: 55 },
   ];
   for (const step of funnelSteps) {
-    await prisma.activationFunnel.create({
+    await db.activationFunnel.create({
       data: { productId, date: new Date(), step: step.step, count: step.count, conversionRate: step.conversionRate },
     });
   }
@@ -160,7 +164,7 @@ export async function seedProductData(productId: string) {
     },
   ];
   for (const goal of goals) {
-    await prisma.goal.create({ data: { productId, ...goal } });
+    await db.goal.create({ data: { productId, ...goal } });
   }
 
   // Routines
@@ -170,7 +174,7 @@ export async function seedProductData(productId: string) {
     { title: "Haftalık içerik paylaşımı", description: "Sosyal medyada güncellemeleri paylaş", frequency: "WEEKLY" },
   ];
   for (const routine of routines) {
-    await prisma.growthRoutine.create({ data: { productId, ...routine } });
+    await db.growthRoutine.create({ data: { productId, ...routine } });
   }
 
   // Timeline events
@@ -180,6 +184,6 @@ export async function seedProductData(productId: string) {
     { eventType: "METRIC_THRESHOLD", title: "$1.000 MRR'a ulaşıldı", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
   ];
   for (const event of events) {
-    await prisma.timelineEvent.create({ data: { productId, eventType: event.eventType, title: event.title, date: event.date } });
+    await db.timelineEvent.create({ data: { productId, eventType: event.eventType, title: event.title, date: event.date } });
   }
 }

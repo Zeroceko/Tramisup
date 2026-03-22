@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -9,6 +10,7 @@ import PageHeader from "@/components/PageHeader";
 
 export default async function GrowthPage() {
   const session = await getServerSession(authOptions);
+  const t = await getTranslations("growth");
 
   const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
@@ -43,9 +45,9 @@ export default async function GrowthPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Büyüme"
-        title="Growth Dashboard"
-        description="Rutinleri takip et, hedefler belirle, ilerlemeyi izle."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

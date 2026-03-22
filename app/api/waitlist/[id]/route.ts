@@ -2,8 +2,16 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { sendInviteEmail } from "@/lib/email"
 
-const ADMIN_EMAIL = "admin@tiramisup"
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup"
+
+function generateInviteCode(): string {
+  // Generate 8-character random code (A-Z0-9)
+  return Array.from({ length: 8 })
+    .map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)])
+    .join("")
+}
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions)
@@ -32,10 +40,33 @@ export async function PATCH(
       )
     }
 
+    // Get current entry to check if we need to generate invite code
+    const existingEntry = await prisma.waitlist.findUnique({
+      where: { id },
+    })
+
+    if (!existingEntry) {
+      return NextResponse.json(
+        { error: "Entry not found" },
+        { status: 404 }
+      )
+    }
+
+    // Generate invite code if approving/inviting and no code exists
+    let updateData: any = { status }
+    if ((status === "APPROVED" || status === "INVITED") && !existingEntry.inviteCode) {
+      updateData.inviteCode = generateInviteCode()
+    }
+
     const entry = await prisma.waitlist.update({
       where: { id },
-      data: { status },
+      data: updateData,
     })
+
+    // Send invite email if code was just generated
+    if (updateData.inviteCode && entry.email) {
+      await sendInviteEmail(entry.email, entry.name || null, updateData.inviteCode)
+    }
 
     return NextResponse.json(entry, { status: 200 })
   } catch (error) {

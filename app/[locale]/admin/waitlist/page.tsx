@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import WaitlistTable from "@/components/WaitlistTable"
 
-const ADMIN_EMAIL = "admin@tiramisup"
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup"
 
 export default async function AdminWaitlistPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params

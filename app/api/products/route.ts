@@ -60,25 +60,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create product
-    const product = await prisma.product.create({
-      data: {
-        userId: session.user.id,
-        name,
-        status: "PRE_LAUNCH",
-        category,
-        description,
-        targetAudience,
-        businessModel,
-        website: website || null,
-        launchGoals: launchGoals ? JSON.stringify(launchGoals) : null,
-      },
-    });
+    // Create product and optionally seed data in a transaction
+    const product = await prisma.$transaction(async (tx) => {
+      const newProduct = await tx.product.create({
+        data: {
+          userId: session.user.id,
+          name,
+          status: "PRE_LAUNCH",
+          category,
+          description,
+          targetAudience,
+          businessModel,
+          website: website || null,
+          launchGoals: launchGoals ? JSON.stringify(launchGoals) : null,
+        },
+      });
 
-    // Optionally seed demo data
-    if (seedData) {
-      await seedProductData(product.id);
-    }
+      // Optionally seed demo data
+      if (seedData) {
+        await seedProductData(newProduct.id, tx);
+      }
+
+      return newProduct;
+    });
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {

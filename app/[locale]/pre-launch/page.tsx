@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -55,6 +56,7 @@ async function createTaskFromChecklistItem(itemId: string) {
 
 export default async function PreLaunchPage() {
   const session = await getServerSession(authOptions);
+  const t = await getTranslations("preLaunch");
 
   const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
@@ -126,9 +128,9 @@ export default async function PreLaunchPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Pre-Launch"
-        title="Launch Hazırlık Skoru"
-        description="Launch öncesi her şeyin hazır olduğundan emin ol."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
       />
 
       {/* Launch Review Summary */}

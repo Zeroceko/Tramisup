@@ -30,7 +30,10 @@
     "edit": "Edit",
     "back": "Back",
     "continue": "Continue",
-    "submit": "Submit"
+    "submit": "Submit",
+    "signOut": "Sign out",
+    "noProduct": "No product yet",
+    "createFirstProduct": "Create your first product"
   },
   "dashboard": {
     "howReady": "How ready is your product for launch?",

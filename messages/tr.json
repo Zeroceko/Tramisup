@@ -30,7 +30,10 @@
     "edit": "Düzenle",
     "back": "Geri",
     "continue": "Devam Et",
-    "submit": "Gönder"
+    "submit": "Gönder",
+    "signOut": "Çıkış",
+    "noProduct": "Henüz bir ürünün yok",
+    "createFirstProduct": "İlk ürününü oluştur"
   },
   "dashboard": {
     "howReady": "Ürünün launch'a ne kadar hazır?",

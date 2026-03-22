@@ -47,8 +47,8 @@ describe('Auth Module - authOptions', () => {
       expect(authOptions.session?.strategy).toBe('jwt')
     })
 
-    it('should set custom sign-in page to /login', () => {
-      expect(authOptions.pages?.signIn).toBe('/login')
+    it('should set custom sign-in page to /tr/login', () => {
+      expect(authOptions.pages?.signIn).toBe('/tr/login')
     })
 
     it('should use NEXTAUTH_SECRET from env', () => {

@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -16,6 +17,7 @@ const AVAILABLE_INTEGRATIONS = [
 
 export default async function IntegrationsPage() {
   const session = await getServerSession(authOptions);
+  const t = await getTranslations("integrations");
 
   const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
@@ -38,9 +40,9 @@ export default async function IntegrationsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Entegrasyonlar"
-        title="Araçlarını Bağla"
-        description="Metrikleri otomatik senkronize etmek için araçlarını bağla."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
       />
 
       <div className="mb-6 p-4 bg-[#fafafa] border border-[#e8e8e8] rounded-[12px] flex items-start gap-3">

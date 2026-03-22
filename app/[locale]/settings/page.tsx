@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import SettingsForm from "@/components/SettingsForm";
@@ -6,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
+  const t = await getTranslations("settings");
 
   const userWithProducts = await prisma.user.findUnique({
     where: { id: session?.user?.id },
@@ -20,9 +22,9 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-xl">
       <PageHeader
-        eyebrow="Ayarlar"
-        title="Hesap & Proje"
-        description="Hesabını ve proje bilgilerini yönet."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
       />
       <SettingsForm user={user} />
     </div>
