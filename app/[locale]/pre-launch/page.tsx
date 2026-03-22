@@ -9,6 +9,7 @@ import ActionsSection from "@/components/ActionsSection";
 import PageHeader from "@/components/PageHeader";
 import LaunchReviewSummary from "@/components/LaunchReviewSummary";
 import BlockerSummary from "@/components/BlockerSummary";
+import LaunchButton from "@/components/LaunchButton";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(itemId: string) {
@@ -54,7 +55,12 @@ async function createTaskFromChecklistItem(itemId: string) {
   }
 }
 
-export default async function PreLaunchPage() {
+export default async function PreLaunchPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await getServerSession(authOptions);
   const t = await getTranslations("preLaunch");
 
@@ -195,6 +201,21 @@ export default async function PreLaunchPage() {
           />
         </div>
       </div>
+
+      {/* Launch transition */}
+      {product && product.status === "PRE_LAUNCH" && (
+        <div className="mt-6 rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
+          <p className="text-[14px] font-semibold text-[#0d0d12]">
+            Ürününü yayınladın mı?
+          </p>
+          <p className="mt-1 text-[13px] text-[#666d80]">
+            Launch&apos;ını kaydet — dashboard büyüme moduna geçer.
+          </p>
+          <div className="mt-4">
+            <LaunchButton productId={product.id} locale={locale} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -76,11 +76,15 @@ export async function POST(request: Request) {
 
     // 2. Create product + seed data in a transaction
     const product = await prisma.$transaction(async (tx) => {
+      const productStatus = ["Launch oldu", "Büyüme aşamasında"].includes(launchStatus)
+        ? "LAUNCHED"
+        : "PRE_LAUNCH";
+
       const newProduct = await tx.product.create({
         data: {
           userId: session.user.id,
           name,
-          status: "PRE_LAUNCH",
+          status: productStatus,
           category,
           description,
           targetAudience,

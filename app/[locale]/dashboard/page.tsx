@@ -110,10 +110,10 @@ export default async function DashboardPage({
               Metrik gir
             </Link>
             <Link
-              href={`/${locale}/pre-launch`}
+              href={product?.status === "LAUNCHED" ? `/${locale}/growth` : `/${locale}/pre-launch`}
               className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
             >
-              Launch board
+              {product?.status === "LAUNCHED" ? "Growth" : "Launch board"}
             </Link>
           </>
         }
@@ -152,7 +152,9 @@ export default async function DashboardPage({
           <div className="flex items-center justify-between gap-4 mb-5">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hızlı erişim</p>
-              <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Döngüyü canlı tut</h2>
+              <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">
+                {product?.status === "LAUNCHED" ? "Büyümeyi sürdür" : "Döngüyü canlı tut"}
+              </h2>
             </div>
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#f6f6f6] text-[11px] font-semibold text-[#666d80]">
               Bu hafta
@@ -160,23 +162,42 @@ export default async function DashboardPage({
           </div>
 
           <div className="space-y-2">
-            {[
-              {
-                href: `/${locale}/pre-launch`,
-                title: "Pre-launch checklist",
-                description: `${product?._count.tasks ?? 0} bekleyen görev var`,
-              },
-              {
-                href: `/${locale}/metrics`,
-                title: "Bugünün metriklerini gir",
-                description: "DAU, MRR ve aktivasyonu güncel tut.",
-              },
-              {
-                href: `/${locale}/integrations`,
-                title: "Entegrasyonları bağla",
-                description: `${product?._count.integrations ?? 0} aktif bağlantı, daha fazlası hazır.`,
-              },
-            ].map((item) => (
+            {(product?.status === "LAUNCHED"
+              ? [
+                  {
+                    href: `/${locale}/growth`,
+                    title: "Growth checklist",
+                    description: "Büyüme adımlarını takip et ve işaretle.",
+                  },
+                  {
+                    href: `/${locale}/metrics`,
+                    title: "Bugünün metriklerini gir",
+                    description: "DAU, MRR ve aktivasyonu güncel tut.",
+                  },
+                  {
+                    href: `/${locale}/tasks`,
+                    title: "Görevlere bak",
+                    description: `${product?._count.tasks ?? 0} bekleyen görev var`,
+                  },
+                ]
+              : [
+                  {
+                    href: `/${locale}/pre-launch`,
+                    title: "Launch checklist",
+                    description: `${product?._count.tasks ?? 0} bekleyen görev var`,
+                  },
+                  {
+                    href: `/${locale}/metrics`,
+                    title: "Bugünün metriklerini gir",
+                    description: "DAU, MRR ve aktivasyonu güncel tut.",
+                  },
+                  {
+                    href: `/${locale}/integrations`,
+                    title: "Entegrasyonları bağla",
+                    description: `${product?._count.integrations ?? 0} aktif bağlantı, daha fazlası hazır.`,
+                  },
+                ]
+            ).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
