@@ -16,9 +16,18 @@ export async function PATCH(
     const { id } = await context.params;
     const body = await request.json();
 
+    // Verify ownership via product
+    const existing = await prisma.task.findFirst({
+      where: { id },
+      include: { product: { select: { userId: true } } },
+    });
+    if (!existing || existing.product.userId !== session.user.id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const task = await prisma.task.update({
       where: { id },
-      data: body,
+      data: { status: body.status },
     });
 
     return NextResponse.json(task);

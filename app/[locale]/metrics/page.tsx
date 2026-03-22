@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -9,8 +10,14 @@ import RetentionCohortTable from "@/components/RetentionCohortTable";
 import ActivationFunnelChart from "@/components/ActivationFunnelChart";
 import PageHeader from "@/components/PageHeader";
 
-export default async function MetricsPage() {
+export default async function MetricsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await getServerSession(authOptions);
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("metrics");
 
   const activeId = await getActiveProductId();

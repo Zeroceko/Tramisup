@@ -1,13 +1,20 @@
 import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import PageHeader from "@/components/PageHeader";
 import TasksList from "@/components/TasksList";
 
-export default async function TasksPage() {
+export default async function TasksPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await getServerSession(authOptions);
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("tasks");
 
   const activeId = await getActiveProductId();

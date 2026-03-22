@@ -23,6 +23,18 @@ export async function POST(request: Request) {
       activationRate,
     } = data;
 
+    if (!productId || !date) {
+      return NextResponse.json({ error: "productId ve date zorunlu" }, { status: 400 });
+    }
+
+    // Verify ownership
+    const product = await prisma.product.findFirst({
+      where: { id: productId, userId: session.user.id },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Ürün bulunamadı" }, { status: 404 });
+    }
+
     const metric = await prisma.metric.upsert({
       where: {
         productId_date: {

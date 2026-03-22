@@ -43,6 +43,13 @@ export default function MetricEntryForm({
     setLoading(true);
     setError("");
 
+    const hasValue = formData.dau || formData.mau || formData.mrr || formData.newSignups || formData.churnedUsers || formData.activationRate;
+    if (!hasValue) {
+      setError("En az bir metrik değeri gir.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/metrics", {
         method: "POST",
