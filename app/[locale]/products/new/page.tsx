@@ -12,20 +12,11 @@ type WizardData = {
   targetAudience: string;
   businessModel: string;
   launchStatus: string;
-  launchGoals: string[];
-  successMetric: string;
-  growthChannels: string[];
-};
-
-type AiSuggestions = {
-  successMetric?: string;
-  growthChannels?: string[];
 };
 
 const PILLS = [
   { id: 1, label: "Ürünü Anlat" },
   { id: 2, label: "Kitle & Model" },
-  { id: 3, label: "Hedefler & Büyüme" },
 ];
 
 const CATEGORIES = [
@@ -66,43 +57,14 @@ const LAUNCH_STATUSES = [
   "Büyüme aşamasında",
 ];
 
-const LAUNCH_GOALS = [
-  "İlk 100 kullanıcıya ulaş",
-  "$1000 MRR'a ulaş",
-  "İlk 10 paying customer",
-  "Product-market fit kanıtla",
-  "Beta feedback topla",
-  "Viral loop kur",
-];
-
-const SUCCESS_METRICS = [
-  "Kullanıcı sayısı",
-  "MRR",
-  "Activation rate",
-  "Retention rate",
-  "NPS",
-  "Churn rate",
-];
-
-const GROWTH_CHANNELS = [
-  "Organic/SEO",
-  "Paid ads",
-  "Content marketing",
-  "Social media",
-  "Product Hunt",
-  "Referral/Word of mouth",
-  "Partnerships",
-  "Cold outreach",
-];
-
 type Question = {
-  id: string;
-  type: "text" | "textarea" | "radio" | "checkbox";
+  id: keyof WizardData;
+  type: "text" | "textarea" | "radio";
   label: string;
   description?: string;
   placeholder?: string;
   options?: string[];
-  required?: boolean;
+  required: boolean;
 };
 
 const PILL_QUESTIONS: Record<number, Question[]> = {
@@ -117,14 +79,14 @@ const PILL_QUESTIONS: Record<number, Question[]> = {
     {
       id: "description",
       type: "textarea",
-      label: "Hangi sorunu çözüyorsunuz?",
-      placeholder: "Ürününüzü bir cümleyle tanımlayın",
+      label: "Ne işe yarıyor?",
+      placeholder: "Hangi sorunu çözüyor, kısaca anlatın",
       required: true,
     },
     {
       id: "category",
       type: "radio",
-      label: "Hangi kategoriye giriyorsunuz?",
+      label: "Hangi kategoriye giriyor?",
       options: CATEGORIES,
       required: true,
     },
@@ -133,69 +95,35 @@ const PILL_QUESTIONS: Record<number, Question[]> = {
     {
       id: "targetAudience",
       type: "radio",
-      label: "Ana hedef kitleniz kim?",
+      label: "Kime satıyorsunuz?",
       options: AUDIENCES,
       required: true,
     },
     {
       id: "businessModel",
       type: "radio",
-      label: "İş modeliniz nedir?",
+      label: "Para nasıl kazanıyorsunuz?",
       options: BUSINESS_MODELS,
       required: true,
     },
-  ],
-  3: [
     {
       id: "launchStatus",
       type: "radio",
-      label: "Şu an hangi aşamadasınız?",
+      label: "Şu an nerede?",
+      description: "Tiramisup buna göre plan yapacak",
       options: LAUNCH_STATUSES,
       required: true,
-    },
-    {
-      id: "launchGoals",
-      type: "checkbox",
-      label: "İlk 90 günde hangi hedeflere ulaşmak istiyorsunuz?",
-      description: "İstediğiniz kadar seçebilirsiniz",
-      options: LAUNCH_GOALS,
-    },
-    {
-      id: "successMetric",
-      type: "radio",
-      label: "Başarıyı hangi metrikle ölçeceksiniz?",
-      options: SUCCESS_METRICS,
-      required: true,
-    },
-    {
-      id: "growthChannels",
-      type: "checkbox",
-      label: "Büyüme için hangi kanalları kullanacaksınız?",
-      description: "Öncelikli 2-3 kanal seçin",
-      options: GROWTH_CHANNELS,
     },
   ],
 };
 
-const AI_SUGGESTED_FIELDS = new Set(["successMetric", "growthChannels"]);
-
-function RecommendedBadge() {
-  return (
-    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#fef9c3] px-2.5 py-0.5 text-[11px] font-semibold text-[#854d0e]">
-      ✦ Önerilen
-    </span>
-  );
-}
-
 function OptionButton({
   selected,
   onClick,
-  recommended,
   children,
 }: {
   selected: boolean;
   onClick: () => void;
-  recommended?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -205,46 +133,10 @@ function OptionButton({
       className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
         selected
           ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
-          : recommended
-          ? "border-[#fbbf24]/60 bg-[#fffbeb] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
           : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
       }`}
     >
-      <span className="flex items-center justify-between gap-3">
-        <span>{children}</span>
-        {recommended && <RecommendedBadge />}
-      </span>
-    </button>
-  );
-}
-
-function CheckButton({
-  selected,
-  onClick,
-  recommended,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  recommended?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
-        selected
-          ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
-          : recommended
-          ? "border-[#fbbf24]/60 bg-[#fffbeb] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
-          : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
-      }`}
-    >
-      <span className="flex items-center justify-between gap-3">
-        <span>{children}</span>
-        {recommended && <RecommendedBadge />}
-      </span>
+      {children}
     </button>
   );
 }
@@ -257,7 +149,7 @@ function StepPills({
   onPillClick: (pill: number) => void;
 }) {
   return (
-    <div className="mb-10 flex flex-wrap gap-3">
+    <div className="mb-10 flex gap-3">
       {PILLS.map((pill) => {
         const isActive = currentPill === pill.id;
         const isCompleted = pill.id < currentPill;
@@ -290,80 +182,25 @@ export default function NewProductWizard() {
   const locale = useLocale();
   const [currentPill, setCurrentPill] = useState(1);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [data, setData] = useState<Partial<WizardData>>({
-    launchGoals: [],
-    growthChannels: [],
-  });
+  const [data, setData] = useState<Partial<WizardData>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestions>({});
-  const [aiLoading, setAiLoading] = useState(false);
 
   const pillQuestions = PILL_QUESTIONS[currentPill] || [];
   const currentQuestion = pillQuestions[questionIndex];
   const isLastQuestionInPill = questionIndex === pillQuestions.length - 1;
   const isLastPill = currentPill === PILLS.length;
 
-  const getValue = (id: string): any => {
-    return (
-      (data as any)[id] || (currentQuestion?.type === "checkbox" ? [] : "")
-    );
-  };
+  const getValue = (id: string) => (data as any)[id] || "";
 
-  const setValue = (id: string, value: any) => {
+  const setValue = (id: string, value: string) => {
     setData((prev) => ({ ...prev, [id]: value }));
   };
 
   const canProceed = () => {
     if (!currentQuestion) return true;
-    if (!currentQuestion.required) return true;
     const val = getValue(currentQuestion.id);
-    if (currentQuestion.type === "checkbox") return true;
     return val && val.toString().trim() !== "";
-  };
-
-  const getRecommended = (fieldId: string): string | string[] | undefined => {
-    if (!AI_SUGGESTED_FIELDS.has(fieldId)) return undefined;
-    return (aiSuggestions as any)[fieldId];
-  };
-
-  const isOptionRecommended = (fieldId: string, option: string): boolean => {
-    const rec = getRecommended(fieldId);
-    if (!rec) return false;
-    if (Array.isArray(rec)) return rec.includes(option);
-    return rec === option;
-  };
-
-  // Only show hint when suggestions are actually loaded for this field
-  const hasActualRecommendation =
-    currentQuestion !== undefined &&
-    AI_SUGGESTED_FIELDS.has(currentQuestion.id) &&
-    !aiLoading &&
-    getRecommended(currentQuestion.id) !== undefined;
-
-  const fetchAiSuggestions = async (wizardData: Partial<WizardData>) => {
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai/wizard-suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: wizardData.name,
-          description: wizardData.description,
-          category: wizardData.category,
-          targetAudience: wizardData.targetAudience,
-          businessModel: wizardData.businessModel,
-        }),
-      });
-      if (res.ok) {
-        const suggestions = await res.json();
-        setAiSuggestions(suggestions);
-      }
-    } catch {
-      // Non-fatal
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   const handleNext = () => {
@@ -377,10 +214,6 @@ export default function NewProductWizard() {
       if (isLastPill) {
         handleSubmit();
       } else {
-        // Leaving Pill 2 → fire AI (has category, audience, businessModel)
-        if (currentPill === 2) {
-          fetchAiSuggestions(data);
-        }
         setCurrentPill((p) => p + 1);
         setQuestionIndex(0);
       }
@@ -397,7 +230,7 @@ export default function NewProductWizard() {
       const prevPill = currentPill - 1;
       const prevQuestions = PILL_QUESTIONS[prevPill] || [];
       setCurrentPill(prevPill);
-      setQuestionIndex(Math.max(0, prevQuestions.length - 1));
+      setQuestionIndex(prevQuestions.length - 1);
     }
   };
 
@@ -407,16 +240,6 @@ export default function NewProductWizard() {
       setCurrentPill(targetPill);
       setQuestionIndex(0);
     }
-  };
-
-  const toggleArrayValue = (key: string, value: string) => {
-    const current = getValue(key) as string[];
-    setValue(
-      key,
-      current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value]
-    );
   };
 
   const handleSubmit = async () => {
@@ -433,12 +256,8 @@ export default function NewProductWizard() {
           category: data.category,
           targetAudience: data.targetAudience,
           businessModel: data.businessModel,
-          launchGoals: data.launchGoals,
-          seedData: false,
-          // Context for AI plan generation
           launchStatus: data.launchStatus,
-          successMetric: data.successMetric,
-          growthChannels: data.growthChannels,
+          seedData: false,
         }),
       });
 
@@ -461,11 +280,8 @@ export default function NewProductWizard() {
   for (let i = 1; i <= PILLS.length; i++) {
     const qs = PILL_QUESTIONS[i] || [];
     totalQuestions += qs.length;
-    if (i < currentPill) {
-      completedQuestions += qs.length;
-    } else if (i === currentPill) {
-      completedQuestions += questionIndex;
-    }
+    if (i < currentPill) completedQuestions += qs.length;
+    else if (i === currentPill) completedQuestions += questionIndex;
   }
 
   return (
@@ -487,43 +303,25 @@ export default function NewProductWizard() {
             </svg>
             Geri dön
           </Link>
-          <div className="flex items-center gap-3">
-            {aiLoading && (
-              <span className="flex items-center gap-1.5 text-[12px] text-[#a07800]">
-                <svg
-                  className="animate-spin"
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeDasharray="40 20"
-                  />
-                </svg>
-                Tiramisup analiz ediyor…
-              </span>
-            )}
-            <span className="text-[12px] font-medium text-[#666d80]">
-              {completedQuestions + 1} / {totalQuestions}
-            </span>
-          </div>
+          <span className="text-[12px] font-medium text-[#666d80]">
+            {completedQuestions + 1} / {totalQuestions}
+          </span>
         </div>
 
         <div className="rounded-[28px] border border-[#ededed] bg-white px-6 py-6 shadow-card md:px-10 md:py-8">
           <div className="mb-8 flex items-start justify-between gap-4">
-            <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">
-              Yeni Ürün Oluştur
-            </h1>
+            <div>
+              <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">
+                Ürününüzü tanıyalım
+              </h1>
+              <p className="mt-1 text-[14px] text-[#666d80]">
+                Tiramisup size özel launch ve büyüme planı hazırlayacak
+              </p>
+            </div>
             <Link
               href={`/${locale}/dashboard`}
               aria-label="Kapat"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#ececec] text-[20px] leading-none text-[#666d80] transition hover:border-[#d8d8d8] hover:text-[#111111]"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#ececec] text-[20px] leading-none text-[#666d80] transition hover:border-[#d8d8d8] hover:text-[#111111]"
             >
               ×
             </Link>
@@ -548,11 +346,6 @@ export default function NewProductWizard() {
                     {currentQuestion.description}
                   </p>
                 ) : null}
-                {hasActualRecommendation && (
-                  <p className="mt-2 text-[12px] text-[#a07800]">
-                    ✦ Sarı seçenekler Tiramisup&apos;un size özel tavsiyesi
-                  </p>
-                )}
               </div>
 
               <div className="space-y-3">
@@ -560,7 +353,7 @@ export default function NewProductWizard() {
                   <input
                     autoFocus
                     type="text"
-                    value={getValue(currentQuestion.id) || ""}
+                    value={getValue(currentQuestion.id)}
                     onChange={(e) => setValue(currentQuestion.id, e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleNext()}
                     placeholder={currentQuestion.placeholder}
@@ -570,11 +363,12 @@ export default function NewProductWizard() {
 
                 {currentQuestion.type === "textarea" ? (
                   <textarea
+                    autoFocus
                     rows={4}
-                    value={getValue(currentQuestion.id) || ""}
+                    value={getValue(currentQuestion.id)}
                     onChange={(e) => setValue(currentQuestion.id, e.target.value)}
                     placeholder={currentQuestion.placeholder}
-                    className="w-full rounded-[22px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition resize-none focus:border-[#95dbda] focus:bg-white"
+                    className="w-full resize-none rounded-[22px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
                   />
                 ) : null}
 
@@ -584,33 +378,9 @@ export default function NewProductWizard() {
                         key={option}
                         selected={getValue(currentQuestion.id) === option}
                         onClick={() => setValue(currentQuestion.id, option)}
-                        recommended={isOptionRecommended(
-                          currentQuestion.id,
-                          option
-                        )}
                       >
                         {option}
                       </OptionButton>
-                    ))
-                  : null}
-
-                {currentQuestion.type === "checkbox" && currentQuestion.options
-                  ? currentQuestion.options.map((option) => (
-                      <CheckButton
-                        key={option}
-                        selected={(getValue(currentQuestion.id) || []).includes(
-                          option
-                        )}
-                        onClick={() =>
-                          toggleArrayValue(currentQuestion.id, option)
-                        }
-                        recommended={isOptionRecommended(
-                          currentQuestion.id,
-                          option
-                        )}
-                      >
-                        {option}
-                      </CheckButton>
                     ))
                   : null}
               </div>
@@ -633,7 +403,7 @@ export default function NewProductWizard() {
               type="button"
               onClick={handleNext}
               disabled={!canProceed() || loading}
-              className={`min-w-[170px] rounded-full px-6 py-3 text-[14px] font-semibold transition ${
+              className={`min-w-[180px] rounded-full px-6 py-3 text-[14px] font-semibold transition ${
                 canProceed() && !loading
                   ? "bg-[#ffd7ef] text-[#111111] hover:bg-[#f7c8e2]"
                   : "bg-[#f1f1f1] text-[#a0a0a0] cursor-not-allowed"
@@ -641,12 +411,18 @@ export default function NewProductWizard() {
             >
               {isLastPill && isLastQuestionInPill
                 ? loading
-                  ? "Planın oluşturuluyor…"
-                  : "Planımı Oluştur"
+                  ? "Plan hazırlanıyor…"
+                  : "Planımı Oluştur ✦"
                 : "Devam Et"}
             </button>
           </div>
         </div>
+
+        {isLastPill && isLastQuestionInPill && !loading && (
+          <p className="mt-4 text-center text-[12px] text-[#999]">
+            Tiramisup ürününüzü analiz edip size özel launch & büyüme planı hazırlayacak
+          </p>
+        )}
       </div>
     </div>
   );

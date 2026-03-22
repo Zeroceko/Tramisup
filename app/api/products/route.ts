@@ -48,19 +48,8 @@ export async function POST(request: Request) {
       description,
       targetAudience,
       businessModel,
-      website,
-      launchGoals,
-      seedData = false,
-      // Extended wizard fields for AI plan
-      launchDate,
       launchStatus,
-      pricingStrategy,
-      growthChannels,
-      successMetric,
-      trackingMetrics,
-      teamSize,
-      userRole,
-      firstTask,
+      seedData = false,
     } = body;
 
     if (!name || !category || !targetAudience || !businessModel) {
@@ -76,22 +65,8 @@ export async function POST(request: Request) {
       description,
       category,
       targetAudience,
-      launchStatus,
       businessModel,
-      pricingStrategy,
-      launchGoals: Array.isArray(launchGoals)
-        ? launchGoals
-        : launchGoals
-        ? JSON.parse(launchGoals)
-        : [],
-      growthChannels,
-      successMetric,
-      trackingMetrics,
-      teamSize,
-      userRole,
-      website,
-      launchDate,
-      firstTask,
+      launchStatus,
     });
 
     // 2. Create product + seed data in a transaction
@@ -105,8 +80,6 @@ export async function POST(request: Request) {
           description,
           targetAudience,
           businessModel,
-          website: website || null,
-          launchGoals: launchGoals ? JSON.stringify(launchGoals) : null,
         },
       });
 

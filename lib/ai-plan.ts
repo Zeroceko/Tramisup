@@ -34,18 +34,8 @@ export type WizardInput = {
   description: string;
   category?: string;
   targetAudience?: string;
-  launchStatus?: string;
   businessModel?: string;
-  pricingStrategy?: string;
-  launchGoals?: string[];
-  growthChannels?: string[];
-  successMetric?: string;
-  trackingMetrics?: string[];
-  teamSize?: string;
-  userRole?: string;
-  website?: string;
-  launchDate?: string;
-  firstTask?: string;
+  launchStatus?: string;
 };
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
@@ -59,80 +49,75 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const goalsText = input.launchGoals?.length
-      ? input.launchGoals.join(", ")
-      : "not specified";
-    const channelsText = input.growthChannels?.length
-      ? input.growthChannels.join(", ")
-      : "not specified";
+    const prompt = `Sen deneyimli bir startup danışmanısın. Bir kurucunun ürününü analiz edip onun için önceliklendirilmiş bir eylem planı hazırlıyorsun.
 
-    const prompt = `You are an expert startup advisor creating a personalized action plan.
+ÜRÜN BİLGİLERİ:
+- Ad: ${input.name}
+- Açıklama: ${input.description}
+- Kategori: ${input.category || "SaaS"}
+- Hedef kitle: ${input.targetAudience || "belirtilmemiş"}
+- İş modeli: ${input.businessModel || "belirtilmemiş"}
+- Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 
-PRODUCT DETAILS:
-- Name: ${input.name}
-- Description: ${input.description}
-- Category: ${input.category || "SaaS"}
-- Target audience: ${input.targetAudience || "unknown"}
-- Launch status: ${input.launchStatus || "unknown"}
-- Business model: ${input.businessModel || "unknown"}
-- Pricing strategy: ${input.pricingStrategy || "unknown"}
-- Launch goals: ${goalsText}
-- Growth channels: ${channelsText}
-- Success metric: ${input.successMetric || "unknown"}
-- Team size: ${input.teamSize || "unknown"}
-- User role: ${input.userRole || "unknown"}
-${input.website ? `- Website: ${input.website}` : ""}
-${input.launchDate ? `- Target launch date: ${input.launchDate}` : ""}
+GÖREVIN:
+Bu ürünü analiz et ve gerçekten yapılması gerekenleri belirle. Kullanıcıya sormak yerine SEN karar ver:
+- Bu aşamada en kritik launch engelleri neler?
+- Hangi growth kanalları bu kategori ve iş modeli için en mantıklı?
+- Bu hedef kitleye ulaşmak için ne yapılmalı?
+- Bu iş modelini büyütmek için hangi aktivasyonu ve retansiyonu sağlamalı?
 
-Create a highly personalized action plan SPECIFIC to this product. Do NOT give generic startup advice.
-Reference the actual product, its audience, and business model in the titles.
-Write everything in TURKISH.
+AŞAMA BAZLI DÜŞÜN:
+${input.launchStatus === "Fikir aşamasında" ? "- Henüz ürün yok. Önce validasyon ve MVP. Hiç pazarlama yapma, önce var ol." : ""}
+${input.launchStatus === "Geliştirme aşamasında" ? "- Ürün yapılıyor. Beta kullanıcılar bul, erken feedback topla, launch hazırlığı yap." : ""}
+${input.launchStatus === "Beta'da" ? "- Ürün var, kullanıcılar var. Feedback'i ürüne yansıt, launch için hazırlan, ilk ödeme yapan müşterileri bul." : ""}
+${input.launchStatus === "Yakında launch" ? "- Launch çok yakın. Pazarlama altyapısını kur, launch kampanyasını hazırla, ilk kullanıcı kitlesini oluştur." : ""}
+${input.launchStatus === "Launch oldu" ? "- Ürün canlıda. Müşteri edinme ve aktivasyona odaklan, churn'ü takip et, growth kanallarını test et." : ""}
+${input.launchStatus === "Büyüme aşamasında" ? "- Büyüme fazı. Ölçeklendirilebilir büyüme kanallarına odaklan, retansiyon ve geliri optimize et." : ""}
 
-Return ONLY a valid JSON object with this exact structure:
+Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — '${input.name}' adını ve context'i kullan. Generic tavsiye verme.
+
+SADECE geçerli JSON döndür, hiç açıklama ekleme:
 
 {
   "launchChecklist": [
     {
-      "category": "PRODUCT" | "MARKETING" | "LEGAL" | "TECH",
-      "title": "specific actionable task title (max 60 chars)",
-      "description": "1-2 sentence explanation why this matters for this product",
-      "priority": "HIGH" | "MEDIUM" | "LOW",
+      "category": "PRODUCT" veya "MARKETING" veya "LEGAL" veya "TECH",
+      "title": "maks 65 karakter, spesifik ve aksiyonable",
+      "description": "neden önemli, 1-2 cümle",
+      "priority": "HIGH" veya "MEDIUM" veya "LOW",
       "order": 1
     }
   ],
   "growthChecklist": [
     {
-      "category": "ACQUISITION" | "ACTIVATION" | "RETENTION" | "REVENUE",
-      "title": "specific actionable task title (max 60 chars)",
-      "description": "1-2 sentence explanation",
+      "category": "ACQUISITION" veya "ACTIVATION" veya "RETENTION" veya "REVENUE",
+      "title": "maks 65 karakter, spesifik ve aksiyonable",
+      "description": "neden önemli, 1-2 cümle",
       "order": 1
     }
   ],
   "tasks": [
     {
-      "title": "specific first-week task (max 60 chars)",
-      "description": "what exactly to do",
-      "priority": "HIGH" | "MEDIUM" | "LOW",
-      "status": "TODO" | "IN_PROGRESS"
+      "title": "maks 65 karakter, bu hafta yapılacak",
+      "description": "tam olarak ne yapılacak",
+      "priority": "HIGH" veya "MEDIUM" veya "LOW",
+      "status": "TODO" veya "IN_PROGRESS"
     }
   ]
 }
 
-Rules:
-- launchChecklist: 10-14 items, ordered within each category, cover PRODUCT/MARKETING/LEGAL/TECH proportionally
-- growthChecklist: 8-12 items, cover all four categories: ACQUISITION, ACTIVATION, RETENTION, REVENUE
-- tasks: 4-6 immediate tasks for THIS week
-${input.firstTask ? `- Include this user-specified first task in tasks: "${input.firstTask}"` : ""}
-- Every item must be SPECIFIC to this product, not generic
-- Respond with ONLY the JSON object, no markdown, no explanations`;
+Kurallar:
+- launchChecklist: 10-14 madde. PRODUCT, MARKETING, LEGAL, TECH kategorilerini dengeli dağıt
+- growthChecklist: 8-12 madde. ACQUISITION, ACTIVATION, RETENTION, REVENUE kategorilerini dengeli dağıt
+- tasks: 4-6 madde. Bu hafta başlanabilecek, spesifik işler
+- Her madde "${input.name}" ürününe ve "${input.targetAudience}" kitlesine özgü olsun
+- Aşamaya göre önceliklendirme yap (launch olmamışsa growth checklist daha az kritik, ama yine de ekle)`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
-
     const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const plan: AiPlan = JSON.parse(cleaned);
 
-    // Validate structure
     if (!plan.launchChecklist || !plan.growthChecklist || !plan.tasks) {
       throw new Error("Invalid AI plan structure");
     }
