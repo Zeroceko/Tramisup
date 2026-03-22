@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 
 export type AiLaunchItem = {
@@ -39,15 +39,14 @@ export type WizardInput = {
 };
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.warn("[ai-plan] GEMINI_API_KEY not set — skipping AI plan");
+    console.warn("[ai-plan] OPENAI_API_KEY not set — skipping AI plan");
     return null;
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const client = new OpenAI({ apiKey });
 
     const prompt = `Sen deneyimli bir startup danışmanısın. Bir kurucunun ürününü analiz edip onun için önceliklendirilmiş bir eylem planı hazırlıyorsun.
 
@@ -67,30 +66,30 @@ Bu ürünü analiz et ve gerçekten yapılması gerekenleri belirle. Kullanıcı
 - Bu iş modelini büyütmek için hangi aktivasyonu ve retansiyonu sağlamalı?
 
 AŞAMA BAZLI DÜŞÜN:
-${input.launchStatus === "Fikir aşamasında" ? "- Henüz ürün yok. Önce validasyon ve MVP. Hiç pazarlama yapma, önce var ol." : ""}
-${input.launchStatus === "Geliştirme aşamasında" ? "- Ürün yapılıyor. Beta kullanıcılar bul, erken feedback topla, launch hazırlığı yap." : ""}
-${input.launchStatus === "Beta'da" ? "- Ürün var, kullanıcılar var. Feedback'i ürüne yansıt, launch için hazırlan, ilk ödeme yapan müşterileri bul." : ""}
-${input.launchStatus === "Yakında launch" ? "- Launch çok yakın. Pazarlama altyapısını kur, launch kampanyasını hazırla, ilk kullanıcı kitlesini oluştur." : ""}
-${input.launchStatus === "Launch oldu" ? "- Ürün canlıda. Müşteri edinme ve aktivasyona odaklan, churn'ü takip et, growth kanallarını test et." : ""}
-${input.launchStatus === "Büyüme aşamasında" ? "- Büyüme fazı. Ölçeklendirilebilir büyüme kanallarına odaklan, retansiyon ve geliri optimize et." : ""}
+${input.launchStatus === "Fikir aşamasında" ? "Henüz ürün yok. Önce validasyon ve MVP. Hiç pazarlama yapma, önce var ol." : ""}
+${input.launchStatus === "Geliştirme aşamasında" ? "Ürün yapılıyor. Beta kullanıcılar bul, erken feedback topla, launch hazırlığı yap." : ""}
+${input.launchStatus === "Beta'da" ? "Ürün var, kullanıcılar var. Feedback'i ürüne yansıt, launch için hazırlan, ilk ödeme yapan müşterileri bul." : ""}
+${input.launchStatus === "Yakında launch" ? "Launch çok yakın. Pazarlama altyapısını kur, launch kampanyasını hazırla, ilk kullanıcı kitlesini oluştur." : ""}
+${input.launchStatus === "Launch oldu" ? "Ürün canlıda. Müşteri edinme ve aktivasyona odaklan, churn'ü takip et, growth kanallarını test et." : ""}
+${input.launchStatus === "Büyüme aşamasında" ? "Büyüme fazı. Ölçeklendirilebilir büyüme kanallarına odaklan, retansiyon ve geliri optimize et." : ""}
 
-Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — '${input.name}' adını ve context'i kullan. Generic tavsiye verme.
+Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — "${input.name}" adını ve context'i kullan. Generic tavsiye verme.
 
 SADECE geçerli JSON döndür, hiç açıklama ekleme:
 
 {
   "launchChecklist": [
     {
-      "category": "PRODUCT" veya "MARKETING" veya "LEGAL" veya "TECH",
+      "category": "PRODUCT" | "MARKETING" | "LEGAL" | "TECH",
       "title": "maks 65 karakter, spesifik ve aksiyonable",
       "description": "neden önemli, 1-2 cümle",
-      "priority": "HIGH" veya "MEDIUM" veya "LOW",
+      "priority": "HIGH" | "MEDIUM" | "LOW",
       "order": 1
     }
   ],
   "growthChecklist": [
     {
-      "category": "ACQUISITION" veya "ACTIVATION" veya "RETENTION" veya "REVENUE",
+      "category": "ACQUISITION" | "ACTIVATION" | "RETENTION" | "REVENUE",
       "title": "maks 65 karakter, spesifik ve aksiyonable",
       "description": "neden önemli, 1-2 cümle",
       "order": 1
@@ -100,8 +99,8 @@ SADECE geçerli JSON döndür, hiç açıklama ekleme:
     {
       "title": "maks 65 karakter, bu hafta yapılacak",
       "description": "tam olarak ne yapılacak",
-      "priority": "HIGH" veya "MEDIUM" veya "LOW",
-      "status": "TODO" veya "IN_PROGRESS"
+      "priority": "HIGH" | "MEDIUM" | "LOW",
+      "status": "TODO" | "IN_PROGRESS"
     }
   ]
 }
@@ -111,12 +110,17 @@ Kurallar:
 - growthChecklist: 8-12 madde. ACQUISITION, ACTIVATION, RETENTION, REVENUE kategorilerini dengeli dağıt
 - tasks: 4-6 madde. Bu hafta başlanabilecek, spesifik işler
 - Her madde "${input.name}" ürününe ve "${input.targetAudience}" kitlesine özgü olsun
-- Aşamaya göre önceliklendirme yap (launch olmamışsa growth checklist daha az kritik, ama yine de ekle)`;
+- Aşamaya göre önceliklendirme yap`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    const plan: AiPlan = JSON.parse(cleaned);
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const text = response.choices[0]?.message?.content || "{}";
+    const plan: AiPlan = JSON.parse(text);
 
     if (!plan.launchChecklist || !plan.growthChecklist || !plan.tasks) {
       throw new Error("Invalid AI plan structure");
