@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateAiPlan } from "@/lib/ai-plan";
 import { seedAiPlan, seedStaticChecklists, seedMetricsData } from "@/lib/seed";
+import { scrapeUrl } from "@/lib/url-scraper";
 
 export async function GET(request: Request) {
   try {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       targetAudience,
       businessModel,
       launchStatus,
+      website,
       seedData = false,
     } = body;
 
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
+    const websiteContent = website ? await scrapeUrl(website) : null;
     const aiPlan = await generateAiPlan({
       name,
       description,
@@ -67,6 +70,8 @@ export async function POST(request: Request) {
       targetAudience,
       businessModel,
       launchStatus,
+      website,
+      websiteContent: websiteContent ?? undefined,
     });
 
     // 2. Create product + seed data in a transaction
@@ -80,6 +85,7 @@ export async function POST(request: Request) {
           description,
           targetAudience,
           businessModel,
+          website,
         },
       });
 

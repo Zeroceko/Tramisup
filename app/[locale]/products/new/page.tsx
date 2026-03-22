@@ -12,6 +12,7 @@ type WizardData = {
   targetAudience: string;
   businessModel: string;
   launchStatus: string;
+  website?: string;
 };
 
 const PILLS = [
@@ -257,6 +258,7 @@ export default function NewProductWizard() {
           targetAudience: data.targetAudience,
           businessModel: data.businessModel,
           launchStatus: data.launchStatus,
+          website: data.website,
           seedData: false,
         }),
       });
@@ -362,14 +364,31 @@ export default function NewProductWizard() {
                 ) : null}
 
                 {currentQuestion.type === "textarea" ? (
-                  <textarea
-                    autoFocus
-                    rows={4}
-                    value={getValue(currentQuestion.id)}
-                    onChange={(e) => setValue(currentQuestion.id, e.target.value)}
-                    placeholder={currentQuestion.placeholder}
-                    className="w-full resize-none rounded-[22px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
-                  />
+                  <>
+                    <textarea
+                      autoFocus
+                      rows={4}
+                      value={getValue(currentQuestion.id)}
+                      onChange={(e) => setValue(currentQuestion.id, e.target.value)}
+                      placeholder={currentQuestion.placeholder}
+                      className="w-full resize-none rounded-[22px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
+                    />
+                    {currentQuestion.id === "description" && (
+                      <div className="flex items-center gap-2 rounded-[18px] border border-[#efefef] bg-[#fafafa] px-4 py-3 transition focus-within:border-[#95dbda] focus-within:bg-white">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#b6bcc6]">
+                          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <input
+                          type="url"
+                          value={getValue("website")}
+                          onChange={(e) => setValue("website", e.target.value)}
+                          placeholder="URL ekle (opsiyonel) — landing page, GitHub, App Store…"
+                          className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#b6bcc6] outline-none"
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : null}
 
                 {currentQuestion.type === "radio" && currentQuestion.options
