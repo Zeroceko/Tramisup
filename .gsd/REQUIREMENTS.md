@@ -1,213 +1,123 @@
-# Requirements
+# Tiramisup — Requirements
 
-This file is the explicit capability and coverage contract for the project.
+**Last updated:** 22 March 2026
+**Sprint:** 4 complete
 
-Use it to track what is actively in scope, what has been validated by completed work, what is intentionally deferred, and what is explicitly out of scope.
+Status legend:
+- Done: implemented and verified by test or browser smoke test
+- Partial: implemented but not fully validated or has known gaps
+- Not started: not yet built
 
-Guidelines:
-- Keep requirements capability-oriented, not a giant feature wishlist.
-- Requirements should be atomic, testable, and stated in plain language.
-- Every **Active** requirement should be mapped to a slice, deferred, blocked with reason, or moved out of scope.
-- Each requirement should have one accountable primary owner and may have supporting slices.
-- Research may suggest requirements, but research does not silently make them binding.
-- Validation means the requirement was actually proven by completed work and verification, not just discussed.
+---
 
-## Active
+## R001 — Authentication & Access
 
-### R001 — Founder account and authenticated workspace access
-- Class: core-capability
-- Status: active
-- Description: A founder must be able to sign up, sign in, and access a protected workspace.
-- Why it matters: No product loop exists without reliable entry and session continuity.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: partial
-- Notes: Core auth flow exists, but password reset and email verification are not present.
+The product must allow early-access users to sign up with an access code, sign in, and access a protected workspace. Unauthenticated users must be redirected to login.
 
-### R002 — Product-centered workspace initialization
-- Class: primary-user-loop
-- Status: active
-- Description: A new user must land in a meaningful product workspace instead of an empty shell.
-- Why it matters: First-run value is essential; blank dashboards create churn.
-- Source: inferred
-- Primary owning slice: M002/S01
-- Supporting slices: M001/S01
-- Validation: partial
-- Notes: Default product + seed exist; explicit product creation wizard and active product selection are still missing.
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| Signup with access code (static `TT31623SEN`) | Done | Verified in production |
+| Signup with DB-generated invite code (from admin approval) | Done | Code path verified; code generated on approval and checked at signup |
+| Login with email + password (Credentials provider) | Done | JWT session; error message shown on bad credentials |
+| All inner surfaces redirect unauthenticated users to `/{locale}/login` | Done | Pre-launch, tasks, metrics, growth all redirect server-side (Sprint 4 S1, verified by S5 smoke test) |
+| Admin panel restricted to `admin@tiramisup` | Done | Non-admin sees "Yetkisiz Erişim"; unauthenticated redirected to login with callbackUrl |
+| Password reset | Not started | Deferred; not critical for early-access phase |
+| Email verification on signup | Not started | Deferred |
 
-### R003 — Launch readiness management
-- Class: primary-user-loop
-- Status: active
-- Description: Users must be able to evaluate launch readiness through structured checklist progress and linked execution tasks.
-- Why it matters: This is the core pre-launch value surface.
-- Source: user
-- Primary owning slice: M002/S02
-- Supporting slices: M003/S01
-- Validation: partial
-- Notes: Checklist and tasks exist; blocker/risk and launch review experience are incomplete.
+---
 
-### R004 — Metrics tracking and health visibility
-- Class: primary-user-loop
-- Status: active
-- Description: Users must be able to record and review core growth metrics for a product.
-- Why it matters: The product must support recurring health review, not just static planning.
-- Source: user
-- Primary owning slice: M002/S03
-- Supporting slices: M003/S02
-- Validation: partial
-- Notes: Manual metrics flow exists; provider-backed metrics and KPI configuration are still missing.
+## R002 — Product Creation
 
-### R005 — Goals and routine-driven growth management
-- Class: primary-user-loop
-- Status: active
-- Description: Users must be able to define goals, update progress, and maintain recurring growth routines.
-- Why it matters: This is the post-launch operating rhythm layer.
-- Source: user
-- Primary owning slice: M002/S04
-- Supporting slices: M003/S03
-- Validation: partial
-- Notes: Goals and routines work; growth-readiness checklist workflow is not exposed yet.
+Users must be able to create a product through a guided wizard. The wizard must accept an optional URL, generate an AI plan, and record the correct launch status.
 
-### R006 — Multi-product portfolio support
-- Class: differentiator
-- Status: active
-- Description: A user must be able to manage more than one product in one account and switch context safely.
-- Why it matters: The schema already assumes this and the roadmap depends on it becoming real UX.
-- Source: execution
-- Primary owning slice: M004/S01
-- Supporting slices: M002/S01, M003/S04
-- Validation: mapped
-- Notes: Data model supports this; product list, selector, and context switching UX are not yet implemented.
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| 6-step product creation wizard | Done | `/{locale}/products/new` |
+| Optional URL field — wizard accepts landing page, GitHub, App Store URLs | Done | URL stored as `product.website` |
+| AI analysis of URL content for plan generation | Done | DeepSeek primary; Gemini fallback; static seed as final fallback |
+| `launchStatus` → `product.status` mapping on creation | Done | "Launch oldu" / "Büyüme aşamasında" → LAUNCHED; all others → PRE_LAUNCH |
+| No auto-seeded fake data on signup | Done | Clean empty state until user explicitly creates a product |
+| Multi-product switcher UI | Not started | Schema supports multiple products; switching UX is M004 (deferred) |
 
-### R007 — Execution layer via task system
-- Class: primary-user-loop
-- Status: active
-- Description: The workspace must support task creation, prioritization, and status progression as an execution layer.
-- Why it matters: Checklists and goals need a concrete action system.
-- Source: inferred
-- Primary owning slice: M002/S02
-- Supporting slices: M005/S01
-- Validation: partial
-- Notes: Task list works; full board/kanban experience is still missing.
+---
 
-### R008 — Real integration-backed data ingestion
-- Class: integration
-- Status: active
-- Description: The system must ingest at least one revenue source and one product analytics source automatically.
-- Why it matters: Manual entry is enough for MVP, but sustained value requires passive data collection.
-- Source: user
-- Primary owning slice: M005/S01
-- Supporting slices: M005/S02
-- Validation: unmapped
-- Notes: Integration shell exists, but real sync is not implemented.
+## R003 — Launch Readiness
 
-### R009 — Team-readable operating documentation
-- Class: operability
-- Status: active
-- Description: The repo must contain clear product, requirement, decision, and roadmap documents that the team can code against.
-- Why it matters: Execution quality collapses when docs drift ahead of reality.
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: none
-- Validation: partial
-- Notes: This GSD documentation pass addresses the gap, but it should stay current over time.
+Users in PRE_LAUNCH state must be able to assess launch readiness via a structured checklist and manually transition to LAUNCHED status.
 
-## Validated
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| Pre-launch checklist with score | Done | `/{locale}/pre-launch` renders checklist + readiness score |
+| "Ürünümü launch ettim →" LaunchButton on pre-launch page | Done | Visible when `product.status === PRE_LAUNCH` |
+| LaunchButton → PATCH `/api/products/[id]` → status LAUNCHED | Done | Verified by S5 smoke test (operator loop OL-02) |
+| Dashboard switches content after launch (launch checklist → growth checklist) | Done | Verified by S5 smoke test (OL-02) |
+| Task system accessible from pre-launch surface | Done | `/{locale}/tasks` with status toggle (TODO → IN_PROGRESS → DONE); ownership check enforced |
+| Ownership check on task PATCH (cannot modify another user's tasks) | Done | Sprint 4 S3 |
+| Kanban board view | Not started | Deferred to M003/S04 |
+| Production browser smoke test of full PRE_LAUNCH → LAUNCHED flow | Not started | Pending manual verification on https://tramisup.vercel.app |
 
-### R010 — Protected authenticated routes
-- Class: continuity
-- Status: validated
-- Description: Authenticated pages are protected behind session checks and redirect unauthorized users to login.
-- Why it matters: Users should not access workspace pages anonymously.
-- Source: execution
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: validated
-- Notes: Dashboard, pre-launch, metrics, growth, integrations, and settings layouts use `getServerSession` and redirect.
+---
 
-### R011 — Seeded first-run demo state
-- Class: launchability
-- Status: validated
-- Description: Signup creates a default product and seeds demo data so the first workspace is populated.
-- Why it matters: This shortens time-to-value and makes the product explorable.
-- Source: execution
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: validated
-- Notes: Implemented in `app/api/auth/signup/route.ts` via `seedProductData(product.id)`.
+## R004 — Metrics
 
-### R012 — Buildable application baseline
-- Class: quality-attribute
-- Status: validated
-- Description: The application must build successfully in production mode.
-- Why it matters: No roadmap matters if the app cannot be compiled and shipped.
-- Source: execution
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: validated
-- Notes: `next build` passes.
+Users must be able to manually record growth metrics and view them in the dashboard.
 
-## Deferred
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| Metric entry form on `/{locale}/metrics` | Done | Form renders |
+| POST `/api/metrics` writes metric to DB | Done | Sprint 4 S2 |
+| Form validates empty submit with error message | Done | Sprint 4 S2 |
+| Page updates after submit without full reload | Done | `revalidatePath` or `router.refresh` confirmed |
+| Ownership check on metric POST | Done | Sprint 4 S2 |
+| Metric chart/visualization on metrics page | Done | Chart renders existing data |
+| Provider-backed automatic metric ingestion (Stripe, analytics) | Not started | M005 — deferred until after core loop is stable |
 
-### R020 — Collaboration and team roles
-- Class: admin/support
-- Status: deferred
-- Description: Multi-user collaboration, invites, and roles.
-- Why it matters: Useful for team adoption, but not required before single-user value is proven.
-- Source: inferred
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Defer until after real multi-product and integration value are in place.
+---
 
-### R021 — Reporting/export surfaces
-- Class: admin/support
-- Status: deferred
-- Description: Investor update mode, CSV/PDF export, and shareable views.
-- Why it matters: Valuable later, but not on the critical path to operator-loop validation.
-- Source: inferred
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Should follow after weekly review and data quality are mature.
+## R005 — Growth
 
-## Out of Scope
+Users in LAUNCHED state must be able to manage a growth checklist, goals, and routines in a dedicated surface.
 
-### R030 — Pixel-perfect marketing-first development
-- Class: anti-feature
-- Status: out-of-scope
-- Description: Prioritizing landing-page polish and perfect marketing surfaces ahead of core product workflows.
-- Why it matters: Prevents scope confusion and protects core product execution.
-- Source: user
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: n/a
-- Notes: Marketing work can continue later, but not at the expense of launch/growth operator flows.
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| Growth checklist with toggle on `/{locale}/growth` | Done | `GrowthChecklistSection` — 12 items; optimistic UI update confirmed |
+| Toggle persists via PATCH `/api/growth-checklist/[id]` | Done | Verified by S5 smoke test (OL-03) |
+| Goals section on growth page | Done | Present in `/{locale}/growth` |
+| Routines section on growth page | Done | Present in `/{locale}/growth` |
+| Dashboard AI insights card ("Sitende ne eksik?") | Done | Appears for products with `product.website`; on-demand analysis via `GET /api/products/[id]/insights` |
+| AI insights caching (avoid re-scrape on every click) | Not started | Deferred; currently re-scrapes on each "Analiz et" click |
+| Growth-readiness summary visible in dashboard after checklist activity | Done | Dashboard quick-actions update after launch status changes |
 
-## Traceability
+---
 
-| ID | Class | Status | Primary owner | Supporting | Proof |
-|---|---|---|---|---|---|
-| R001 | core-capability | active | M001/S01 | none | partial |
-| R002 | primary-user-loop | active | M002/S01 | M001/S01 | partial |
-| R003 | primary-user-loop | active | M002/S02 | M003/S01 | partial |
-| R004 | primary-user-loop | active | M002/S03 | M003/S02 | partial |
-| R005 | primary-user-loop | active | M002/S04 | M003/S03 | partial |
-| R006 | differentiator | active | M004/S01 | M002/S01, M003/S04 | mapped |
-| R007 | primary-user-loop | active | M002/S02 | M005/S01 | partial |
-| R008 | integration | active | M005/S01 | M005/S02 | unmapped |
-| R009 | operability | active | M001/S02 | none | partial |
-| R010 | continuity | validated | M001/S01 | none | validated |
-| R011 | launchability | validated | M001/S01 | none | validated |
-| R012 | quality-attribute | validated | M001/S01 | none | validated |
-| R020 | admin/support | deferred | none | none | unmapped |
-| R021 | admin/support | deferred | none | none | unmapped |
-| R030 | anti-feature | out-of-scope | none | none | n/a |
+## R006 — Admin & Ops
+
+The product must have an admin surface for managing the waitlist and generating invite codes.
+
+| Sub-requirement | Status | Notes |
+|---|---|---|
+| Admin panel at `/{locale}/admin/waitlist` | Done | Lists all waitlist entries |
+| Waitlist entries show status (PENDING, APPROVED, INVITED, REJECTED) | Done | |
+| Approve → generates unique invite code → stored on Waitlist row | Done | |
+| Invite code visible in admin table for APPROVED/INVITED entries | Done | |
+| Reject waitlist entry | Done | |
+| Delete waitlist entry | Done | DELETE `/api/waitlist/[id]` |
+| Email invite code to user on approval | Partial | `sendInviteEmail` is called on approval; `RESEND_API_KEY` not set in Vercel production — emails log to console only |
+| `RESEND_API_KEY` set in Vercel + delivery verified | Not started | Requires Vercel env var addition + Resend domain verification for tiramisup.com |
+| `inviteCodeUsedAt` set on Waitlist row when code is used at signup | Done | |
+| Fallback to console.log when `RESEND_API_KEY` absent | Done | Behavior preserved |
+
+---
 
 ## Coverage Summary
 
-- Active requirements: 9
-- Mapped to slices: 9
-- Validated: 3
-- Unmapped active requirements: 0
+| Requirement | Overall Status |
+|---|---|
+| R001 — Authentication & Access | Partial (password reset / email verification missing) |
+| R002 — Product Creation | Partial (multi-product switcher UX not built) |
+| R003 — Launch Readiness | Partial (kanban deferred; production smoke test pending) |
+| R004 — Metrics | Partial (provider-backed ingestion not built) |
+| R005 — Growth | Partial (AI insights caching not built) |
+| R006 — Admin & Ops | Partial (email delivery not live — RESEND_API_KEY missing in production) |
+
+**Core operator loop (signup → product creation → pre-launch → launch → growth) is fully implemented and verified locally. Production browser verification of the full loop is the primary outstanding item.**
