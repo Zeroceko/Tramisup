@@ -13,6 +13,8 @@ type WizardData = {
   businessModel: string;
   launchStatus: string;
   website?: string;
+  stageQ1?: string;
+  stageQ2?: string;
 };
 
 const PILLS = [
@@ -57,6 +59,33 @@ const LAUNCH_STATUSES = [
   "Launch oldu",
   "Büyüme aşamasında",
 ];
+
+const STAGE_FOLLOW_UP: Record<string, [string, string]> = {
+  "Fikir aşamasında": [
+    "Bu problemi yaşayan kaç kişiyle konuştun?",
+    "Rakiplerinden farkın ne?",
+  ],
+  "Geliştirme aşamasında": [
+    "Beta listende kaç kişi var?",
+    "MVP ne zaman hazır olacak?",
+  ],
+  "Beta'da": [
+    "Kaç aktif beta kullanıcın var?",
+    "En çok aldığın feedback nedir?",
+  ],
+  "Yakında launch": [
+    "Launch tarihin var mı? (ay/yıl)",
+    "İlk 100 kullanıcıyı nereden bulacaksın?",
+  ],
+  "Launch oldu": [
+    "Şu an kaç aktif kullanıcın var?",
+    "Aylık geliriniz (MRR) nedir?",
+  ],
+  "Büyüme aşamasında": [
+    "Aylık büyüme oranınız nedir?",
+    "En iyi kullanıcı edinim kanalınız hangisi?",
+  ],
+};
 
 type Question = {
   id: keyof WizardData;
@@ -183,6 +212,7 @@ export default function NewProductWizard() {
   const locale = useLocale();
   const [currentPill, setCurrentPill] = useState(1);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [showStageContext, setShowStageContext] = useState(false);
   const [data, setData] = useState<Partial<WizardData>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -192,13 +222,18 @@ export default function NewProductWizard() {
   const isLastQuestionInPill = questionIndex === pillQuestions.length - 1;
   const isLastPill = currentPill === PILLS.length;
 
-  const getValue = (id: string) => (data as any)[id] || "";
+  // The stageContext step is injected after launchStatus (last question of pill 2)
+  const isLaunchStatusQuestion =
+    currentPill === 2 && currentQuestion?.id === "launchStatus";
+
+  const getValue = (id: string) => (data as Record<string, string>)[id] || "";
 
   const setValue = (id: string, value: string) => {
     setData((prev) => ({ ...prev, [id]: value }));
   };
 
   const canProceed = () => {
+    if (showStageContext) return true; // follow-up questions are optional
     if (!currentQuestion) return true;
     const val = getValue(currentQuestion.id);
     return val && val.toString().trim() !== "";
@@ -210,6 +245,18 @@ export default function NewProductWizard() {
       return;
     }
     setError("");
+
+    // If we just answered launchStatus and haven't shown follow-ups yet, show them
+    if (isLaunchStatusQuestion && isLastQuestionInPill && isLastPill && !showStageContext) {
+      setShowStageContext(true);
+      return;
+    }
+
+    // If we're on the stageContext step, submit
+    if (showStageContext) {
+      handleSubmit();
+      return;
+    }
 
     if (isLastQuestionInPill) {
       if (isLastPill) {
@@ -225,6 +272,10 @@ export default function NewProductWizard() {
 
   const handleBack = () => {
     setError("");
+    if (showStageContext) {
+      setShowStageContext(false);
+      return;
+    }
     if (questionIndex > 0) {
       setQuestionIndex((i) => i - 1);
     } else if (currentPill > 1) {
@@ -238,6 +289,7 @@ export default function NewProductWizard() {
   const goToPill = (targetPill: number) => {
     if (targetPill <= currentPill) {
       setError("");
+      setShowStageContext(false);
       setCurrentPill(targetPill);
       setQuestionIndex(0);
     }
@@ -247,6 +299,16 @@ export default function NewProductWizard() {
     try {
       setLoading(true);
       setError("");
+
+      // Build stageContext JSON from the two optional follow-up answers
+      const followUps = data.launchStatus ? STAGE_FOLLOW_UP[data.launchStatus] : undefined;
+      const stageContext =
+        followUps && (data.stageQ1 || data.stageQ2)
+          ? JSON.stringify({
+              [followUps[0]]: data.stageQ1 || "",
+              [followUps[1]]: data.stageQ2 || "",
+            })
+          : undefined;
 
       const res = await fetch("/api/products", {
         method: "POST",
@@ -259,6 +321,7 @@ export default function NewProductWizard() {
           businessModel: data.businessModel,
           launchStatus: data.launchStatus,
           website: data.website,
+          stageContext,
           seedData: false,
         }),
       });
@@ -277,6 +340,7 @@ export default function NewProductWizard() {
     }
   };
 
+  // Progress counter — stageContext counts as one extra step
   let totalQuestions = 0;
   let completedQuestions = 0;
   for (let i = 1; i <= PILLS.length; i++) {
@@ -285,6 +349,13 @@ export default function NewProductWizard() {
     if (i < currentPill) completedQuestions += qs.length;
     else if (i === currentPill) completedQuestions += questionIndex;
   }
+  // Add stageContext step to total and mark it completed when we're past it
+  totalQuestions += 1;
+  if (showStageContext) completedQuestions += PILL_QUESTIONS[2].length; // all pill-2 questions done
+
+  const followUpQuestions = data.launchStatus
+    ? STAGE_FOLLOW_UP[data.launchStatus]
+    : undefined;
 
   return (
     <div className="min-h-screen bg-[#f6f6f6] px-4 py-8 md:px-8 md:py-10">
@@ -337,7 +408,48 @@ export default function NewProductWizard() {
             </div>
           ) : null}
 
-          {currentQuestion ? (
+          {/* Stage context follow-up step */}
+          {showStageContext && followUpQuestions ? (
+            <div className="mx-auto max-w-3xl space-y-6">
+              <div className="text-center">
+                <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[32px]">
+                  Biraz daha anlatalım
+                </h2>
+                <p className="mt-2 text-[14px] text-[#6b7280]">
+                  Opsiyonel — atlamak istersen &ldquo;Geç&rdquo;e basabilirsin
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[13px] font-semibold text-[#111111]">
+                    {followUpQuestions[0]}
+                  </label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={getValue("stageQ1")}
+                    onChange={(e) => setValue("stageQ1", e.target.value)}
+                    placeholder="Opsiyonel"
+                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[13px] font-semibold text-[#111111]">
+                    {followUpQuestions[1]}
+                  </label>
+                  <input
+                    type="text"
+                    value={getValue("stageQ2")}
+                    onChange={(e) => setValue("stageQ2", e.target.value)}
+                    placeholder="Opsiyonel"
+                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : currentQuestion ? (
             <div className="mx-auto max-w-3xl space-y-6">
               <div className="text-center">
                 <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[36px]">
@@ -407,7 +519,7 @@ export default function NewProductWizard() {
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-center gap-3 md:justify-end">
-            {currentPill > 1 || questionIndex > 0 ? (
+            {(currentPill > 1 || questionIndex > 0 || showStageContext) ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -418,17 +530,28 @@ export default function NewProductWizard() {
               </button>
             ) : null}
 
+            {/* Skip button only on stageContext step */}
+            {showStageContext && !loading && (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="h-11 rounded-full border border-[#ececec] px-5 text-[13px] font-medium text-[#666d80] transition hover:bg-[#fafafa]"
+              >
+                Geç
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleNext}
-              disabled={!canProceed() || loading}
+              disabled={(!canProceed() && !showStageContext) || loading}
               className={`min-w-[180px] rounded-full px-6 py-3 text-[14px] font-semibold transition ${
-                canProceed() && !loading
+                (canProceed() || showStageContext) && !loading
                   ? "bg-[#ffd7ef] text-[#111111] hover:bg-[#f7c8e2]"
                   : "bg-[#f1f1f1] text-[#a0a0a0] cursor-not-allowed"
               }`}
             >
-              {isLastPill && isLastQuestionInPill
+              {showStageContext
                 ? loading
                   ? "Plan hazırlanıyor…"
                   : "Planımı Oluştur ✦"
@@ -437,9 +560,10 @@ export default function NewProductWizard() {
           </div>
         </div>
 
-        {isLastPill && isLastQuestionInPill && !loading && (
+        {showStageContext && !loading && (
           <p className="mt-4 text-center text-[12px] text-[#999]">
-            Tiramisup ürününüzü analiz edip size özel launch & büyüme planı hazırlayacak
+            Tiramisup ürününüzü analiz edip size özel launch & büyüme planı
+            hazırlayacak
           </p>
         )}
       </div>

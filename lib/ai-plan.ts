@@ -39,6 +39,7 @@ export type WizardInput = {
   launchStatus?: string;
   website?: string;
   websiteContent?: string;
+  stageContext?: string;
 };
 
 const PROMPT = (input: WizardInput) => `Sen deneyimli bir startup danışmanısın. Bir kurucunun ürününü analiz edip onun için önceliklendirilmiş bir eylem planı hazırlıyorsun.
@@ -50,6 +51,7 @@ const PROMPT = (input: WizardInput) => `Sen deneyimli bir startup danışmanıs�
 - Hedef kitle: ${input.targetAudience || "belirtilmemiş"}
 - İş modeli: ${input.businessModel || "belirtilmemiş"}
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
+${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
 ${input.websiteContent ? `\nWEBSITE İÇERİĞİ (${input.website}):\n${input.websiteContent}\n\nBu içeriği de analiz ederek plana dahil et.` : ""}
 GÖREVIN:
 Bu ürünü analiz et ve gerçekten yapılması gerekenleri belirle. Kullanıcıya sormak yerine SEN karar ver:

@@ -14,7 +14,7 @@ interface InsightsCardProps {
 }
 
 export default function InsightsCard({ productId, website }: InsightsCardProps) {
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error" | "no-content">("idle");
   const [insights, setInsights] = useState<Insight[]>([]);
 
   async function analyze() {
@@ -23,6 +23,10 @@ export default function InsightsCard({ productId, website }: InsightsCardProps) 
       const res = await fetch(`/api/products/${productId}/insights`);
       if (!res.ok) throw new Error("fetch failed");
       const data = await res.json();
+      if (data.error && (!data.insights || data.insights.length === 0)) {
+        setState("no-content");
+        return;
+      }
       setInsights(data.insights || []);
       setState("done");
     } catch {
@@ -64,9 +68,18 @@ export default function InsightsCard({ productId, website }: InsightsCardProps) 
         </div>
       )}
 
+      {state === "no-content" && (
+        <div className="mt-4 rounded-[10px] border border-dashed border-[#e8e8e8] px-4 py-6 text-center">
+          <p className="text-[13px] text-[#666d80]">Site içeriği okunamadı — JavaScript ile render edilen siteler desteklenmiyor.</p>
+        </div>
+      )}
+
       {state === "done" && insights.length === 0 && (
         <div className="mt-4 rounded-[10px] border border-dashed border-[#e8e8e8] px-4 py-6 text-center">
-          <p className="text-[13px] text-[#666d80]">Belirgin bir eksik bulunamadı.</p>
+          <p className="text-[13px] text-[#666d80]">AI analiz tamamlanamadı.</p>
+          <button onClick={analyze} className="mt-2 text-[13px] font-semibold text-[#0d0d12] hover:underline">
+            Tekrar dene
+          </button>
         </div>
       )}
 

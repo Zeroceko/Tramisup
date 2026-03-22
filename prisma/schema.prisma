@@ -1,6 +1,3 @@
-// Tramisu — Prisma Schema
-// Multi-product startup operations dashboard
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,8 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Core ────────────────────────────────────────────
-
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -19,26 +14,231 @@ model User {
   passwordHash String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
   products     Product[]
 }
 
-// ─── Waitlist (MVP Launch) ────────────────────────
-
 model Waitlist {
-  id        String         @id @default(cuid())
-  email     String         @unique
-  name      String?
-  source    String         @default("landing")
-  status    WaitlistStatus @default(PENDING)
-  inviteCode String?       @unique
+  id               String         @id @default(cuid())
+  email            String         @unique
+  name             String?
+  source           String         @default("landing")
+  status           WaitlistStatus @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  inviteCode       String?        @unique
   inviteCodeUsedAt DateTime?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
 
   @@index([email])
   @@index([status])
   @@index([createdAt])
+}
+
+model Product {
+  id                String             @id @default(cuid())
+  userId            String
+  name              String
+  status            ProductStatus      @default(PRE_LAUNCH)
+  launchDate        DateTime?
+  description       String?
+  category          String?
+  targetAudience    String?
+  businessModel     String?
+  website           String?
+  launchStatus      String?
+  logoUrl           String?
+  launchGoals       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  activationFunnels ActivationFunnel[]
+  goals             Goal[]
+  growthChecklists  GrowthChecklist[]
+  routines          GrowthRoutine[]
+  integrations      Integration[]
+  launchChecklists  LaunchChecklist[]
+  metrics           Metric[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  retentionCohorts  RetentionCohort[]
+  tasks             Task[]
+  timelineEvents    TimelineEvent[]
+
+  @@index([userId])
+}
+
+model LaunchChecklist {
+  id           String         @id @default(cuid())
+  productId    String
+  category     LaunchCategory
+  title        String
+  description  String?
+  completed    Boolean        @default(false)
+  completedAt  DateTime?
+  order        Int            @default(0)
+  priority     Priority       @default(MEDIUM)
+  linkedTaskId String?        @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  linkedTask   Task?          @relation("ChecklistTask", fields: [linkedTaskId], references: [id])
+  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model GrowthChecklist {
+  id          String         @id @default(cuid())
+  productId   String
+  category    GrowthCategory
+  title       String
+  description String?
+  completed   Boolean        @default(false)
+  completedAt DateTime?
+  order       Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Task {
+  id                  String           @id @default(cuid())
+  productId           String
+  title               String
+  description         String?
+  status              TaskStatus       @default(TODO)
+  priority            Priority         @default(MEDIUM)
+  dueDate             DateTime?
+  order               Int              @default(0)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  launchChecklistItem LaunchChecklist? @relation("ChecklistTask")
+  product             Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([productId, status])
+}
+
+model Metric {
+  id                  String       @id @default(cuid())
+  productId           String
+  date                DateTime
+  dau                 Int?
+  mau                 Int?
+  mrr                 Float?
+  activeSubscriptions Int?
+  newSignups          Int?
+  churnedUsers        Int?
+  activationRate      Float?
+  source              MetricSource @default(MANUAL)
+  createdAt           DateTime     @default(now())
+  product             Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date])
+  @@index([productId, date])
+}
+
+model RetentionCohort {
+  id             String   @id @default(cuid())
+  productId      String
+  cohortDate     DateTime
+  usersCount     Int
+  retentionDay1  Float?
+  retentionDay7  Float?
+  retentionDay30 Float?
+  retentionDay60 Float?
+  retentionDay90 Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, cohortDate])
+  @@index([productId])
+}
+
+model ActivationFunnel {
+  id             String         @id @default(cuid())
+  productId      String
+  date           DateTime
+  step           ActivationStep
+  count          Int
+  conversionRate Float?
+  createdAt      DateTime       @default(now())
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date, step])
+  @@index([productId, date])
+}
+
+model GrowthRoutine {
+  id              String    @id @default(cuid())
+  productId       String
+  title           String
+  description     String?
+  frequency       Frequency
+  lastCompletedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Goal {
+  id           String   @id @default(cuid())
+  productId    String
+  title        String
+  targetValue  Float
+  currentValue Float    @default(0)
+  unit         String
+  startDate    DateTime
+  endDate      DateTime
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model TimelineEvent {
+  id          String    @id @default(cuid())
+  productId   String
+  eventType   EventType
+  title       String
+  description String?
+  date        DateTime
+  createdAt   DateTime  @default(now())
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, date])
+}
+
+model Integration {
+  id         String              @id @default(cuid())
+  productId  String
+  provider   IntegrationProvider
+  status     IntegrationStatus   @default(DISCONNECTED)
+  config     String?
+  lastSyncAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  syncJobs   SyncJob[]
+
+  @@unique([productId, provider])
+  @@index([productId])
+}
+
+model SyncJob {
+  id            String      @id @default(cuid())
+  integrationId String
+  status        SyncStatus
+  startedAt     DateTime    @default(now())
+  completedAt   DateTime?
+  error         String?
+  recordsSynced Int?
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
 }
 
 enum WaitlistStatus {
@@ -48,71 +248,10 @@ enum WaitlistStatus {
   REJECTED
 }
 
-// ─── Products ─────────────────────────────────────
-
-model Product {
-  id         String        @id @default(cuid())
-  userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name       String
-  status     ProductStatus @default(PRE_LAUNCH)
-  launchDate DateTime?
-
-  // Onboarding wizard fields (7-step)
-  description    String?
-  category       String?   // e.g. SaaS, E-commerce, Marketplace
-  targetAudience String?
-  businessModel  String?   // e.g. Subscription, Freemium, One-time
-  website        String?
-  logoUrl        String?
-  launchGoals    String?   // JSON array of selected goals
-
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  // Relations
-  launchChecklists  LaunchChecklist[]
-  growthChecklists  GrowthChecklist[]
-  tasks             Task[]
-  metrics           Metric[]
-  retentionCohorts  RetentionCohort[]
-  activationFunnels ActivationFunnel[]
-  routines          GrowthRoutine[]
-  goals             Goal[]
-  timelineEvents    TimelineEvent[]
-  integrations      Integration[]
-
-  @@index([userId])
-}
-
 enum ProductStatus {
   PRE_LAUNCH
   LAUNCHED
   GROWING
-}
-
-// ─── Launch Readiness ────────────────────────────────
-
-model LaunchChecklist {
-  id          String            @id @default(cuid())
-  productId   String
-  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  category    LaunchCategory
-  title       String
-  description String?
-  completed   Boolean           @default(false)
-  completedAt DateTime?
-  order       Int               @default(0)
-  priority    Priority          @default(MEDIUM)
-  linkedTaskId String?          @unique
-  linkedTask  Task?             @relation("ChecklistTask", fields: [linkedTaskId], references: [id])
-
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@index([productId])
 }
 
 enum LaunchCategory {
@@ -122,53 +261,11 @@ enum LaunchCategory {
   TECH
 }
 
-// ─── Growth Readiness ────────────────────────────────
-
-model GrowthChecklist {
-  id          String            @id @default(cuid())
-  productId   String
-  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  category    GrowthCategory
-  title       String
-  description String?
-  completed   Boolean           @default(false)
-  completedAt DateTime?
-  order       Int               @default(0)
-
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@index([productId])
-}
-
 enum GrowthCategory {
   ACQUISITION
   ACTIVATION
   RETENTION
   REVENUE
-}
-
-// ─── Kanban Tasks ────────────────────────────────────
-
-model Task {
-  id          String     @id @default(cuid())
-  productId   String
-  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  title       String
-  description String?
-  status      TaskStatus @default(TODO)
-  priority    Priority   @default(MEDIUM)
-  dueDate     DateTime?
-  order       Int        @default(0)
-  launchChecklistItem LaunchChecklist? @relation("ChecklistTask")
-
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  @@index([productId])
-  @@index([productId, status])
 }
 
 enum TaskStatus {
@@ -183,70 +280,9 @@ enum Priority {
   HIGH
 }
 
-// ─── Metrics ─────────────────────────────────────────
-
-model Metric {
-  id                  String       @id @default(cuid())
-  productId           String
-  product             Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  date                DateTime
-  dau                 Int?
-  mau                 Int?
-  mrr                 Float?
-  activeSubscriptions Int?
-  newSignups          Int?
-  churnedUsers        Int?
-  activationRate      Float?
-
-  source              MetricSource @default(MANUAL)
-
-  createdAt           DateTime     @default(now())
-
-  @@unique([productId, date])
-  @@index([productId, date])
-}
-
 enum MetricSource {
   MANUAL
   INTEGRATION
-}
-
-model RetentionCohort {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  cohortDate  DateTime
-  usersCount  Int
-
-  retentionDay1  Float?
-  retentionDay7  Float?
-  retentionDay30 Float?
-  retentionDay60 Float?
-  retentionDay90 Float?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([productId, cohortDate])
-  @@index([productId])
-}
-
-model ActivationFunnel {
-  id             String         @id @default(cuid())
-  productId      String
-  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  date           DateTime
-  step           ActivationStep
-  count          Int
-  conversionRate Float?
-
-  createdAt      DateTime       @default(now())
-
-  @@unique([productId, date, step])
-  @@index([productId, date])
 }
 
 enum ActivationStep {
@@ -256,62 +292,9 @@ enum ActivationStep {
   ACTIVATED
 }
 
-// ─── Growth ──────────────────────────────────────────
-
-model GrowthRoutine {
-  id              String    @id @default(cuid())
-  productId       String
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  title           String
-  description     String?
-  frequency       Frequency
-  lastCompletedAt DateTime?
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([productId])
-}
-
 enum Frequency {
   WEEKLY
   MONTHLY
-}
-
-model Goal {
-  id           String   @id @default(cuid())
-  productId    String
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  title        String
-  targetValue  Float
-  currentValue Float    @default(0)
-  unit         String
-
-  startDate    DateTime
-  endDate      DateTime
-  completed    Boolean  @default(false)
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([productId])
-}
-
-model TimelineEvent {
-  id          String    @id @default(cuid())
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  eventType   EventType
-  title       String
-  description String?
-  date        DateTime
-
-  createdAt   DateTime  @default(now())
-
-  @@index([productId, date])
 }
 
 enum EventType {
@@ -321,27 +304,6 @@ enum EventType {
   INTEGRATION_CONNECTED
   METRIC_THRESHOLD
   CUSTOM
-}
-
-// ─── Integrations ────────────────────────────────────
-
-model Integration {
-  id         String              @id @default(cuid())
-  productId  String
-  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  provider   IntegrationProvider
-  status     IntegrationStatus   @default(DISCONNECTED)
-  config     String?             // JSON encrypted
-
-  lastSyncAt DateTime?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-
-  syncJobs   SyncJob[]
-
-  @@unique([productId, provider])
-  @@index([productId])
 }
 
 enum IntegrationProvider {
@@ -357,20 +319,6 @@ enum IntegrationStatus {
   DISCONNECTED
   CONNECTED
   ERROR
-}
-
-model SyncJob {
-  id            String      @id @default(cuid())
-  integrationId String
-  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-
-  status        SyncStatus
-  startedAt     DateTime    @default(now())
-  completedAt   DateTime?
-  error         String?
-  recordsSynced Int?
-
-  @@index([integrationId])
 }
 
 enum SyncStatus {

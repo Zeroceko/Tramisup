@@ -42,13 +42,28 @@ Kurallar:
 - 5-8 insight döndür
 - Gerçekten bu siteye özel ol, generic tavsiye verme
 - Her insight aksiyonable olsun
-- Türkçe yaz`;
+- Türkçe yaz
+- Her koşulda en az 5 insight döndür. Eğer site içeriği yetersizse, genel startup website en iyi pratiklerine göre eksik olabilecekleri listele. Asla boş array döndürme.`;
 
 type Insight = {
   area: string;
   issue: string;
   fix: string;
 };
+
+function extractInsights(parsed: unknown): Insight[] {
+  if (!parsed || typeof parsed !== "object") return [];
+  const obj = parsed as Record<string, unknown>;
+  // Try common keys
+  for (const key of ["insights", "analysis", "items", "results", "eksikler"]) {
+    if (Array.isArray(obj[key]) && (obj[key] as unknown[]).length > 0) {
+      return obj[key] as Insight[];
+    }
+  }
+  // If the object itself has area/issue/fix — it's a single item
+  if (obj.area && obj.issue) return [obj as unknown as Insight];
+  return [];
+}
 
 async function generateInsights(productName: string, website: string, content: string): Promise<Insight[]> {
   const prompt = INSIGHTS_PROMPT(productName, website, content);
@@ -66,8 +81,11 @@ async function generateInsights(productName: string, website: string, content: s
         temperature: 0.6,
       });
       const text = res.choices[0]?.message?.content || "{}";
+      console.log("[insights] DeepSeek raw:", text.slice(0, 200));
       const parsed = JSON.parse(text);
-      return parsed.insights || [];
+      const insights = extractInsights(parsed);
+      if (insights.length > 0) return insights;
+      console.warn("[insights] DeepSeek returned 0 insights, keys:", Object.keys(parsed));
     } catch (err) {
       console.warn("[insights] DeepSeek failed:", (err as Error).message);
     }
@@ -79,8 +97,9 @@ async function generateInsights(productName: string, website: string, content: s
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      console.log("[insights] Gemini raw:", text.slice(0, 200));
       const parsed = JSON.parse(text);
-      return parsed.insights || [];
+      return extractInsights(parsed);
     } catch (err) {
       console.warn("[insights] Gemini failed:", (err as Error).message);
     }

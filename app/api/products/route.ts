@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       businessModel,
       launchStatus,
       website,
+      stageContext,
       seedData = false,
     } = body;
 
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       launchStatus,
       website,
       websiteContent: websiteContent ?? undefined,
+      stageContext,
     });
 
     // 2. Create product + seed data in a transaction
@@ -85,6 +87,7 @@ export async function POST(request: Request) {
           userId: session.user.id,
           name,
           status: productStatus,
+          launchStatus,
           category,
           description,
           targetAudience,

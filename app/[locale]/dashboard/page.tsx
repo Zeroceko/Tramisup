@@ -6,6 +6,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import InsightsCard from "@/components/InsightsCard";
+import AdvisorCard from "@/components/AdvisorCard";
 
 export default async function DashboardPage({
   params,
@@ -119,6 +120,12 @@ export default async function DashboardPage({
           </>
         }
       />
+
+      {product && (
+        <section className="mt-6">
+          <AdvisorCard productId={product.id} productName={product.name} />
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
