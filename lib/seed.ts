@@ -9,13 +9,55 @@ import type {
   Priority,
   TaskStatus,
 } from "@prisma/client";
+import type { AiPlan } from "@/lib/ai-plan";
 
-export async function seedProductData(
-  productId: string,
-  tx?: any
-) {
+// Seed AI-generated plan (launch checklist, growth checklist, tasks)
+export async function seedAiPlan(productId: string, plan: AiPlan, tx?: any) {
   const db = tx || prisma;
-  // Launch checklist items
+
+  for (const item of plan.launchChecklist) {
+    await db.launchChecklist.create({
+      data: {
+        productId,
+        category: item.category,
+        title: item.title,
+        description: item.description,
+        priority: item.priority,
+        order: item.order,
+        completed: false,
+      },
+    });
+  }
+
+  for (const item of plan.growthChecklist) {
+    await db.growthChecklist.create({
+      data: {
+        productId,
+        category: item.category,
+        title: item.title,
+        description: item.description,
+        order: item.order,
+        completed: false,
+      },
+    });
+  }
+
+  for (const task of plan.tasks) {
+    await db.task.create({
+      data: {
+        productId,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+      },
+    });
+  }
+}
+
+// Seed static fallback checklists (used when AI is unavailable)
+export async function seedStaticChecklists(productId: string, tx?: any) {
+  const db = tx || prisma;
   const launchItems: Array<{ category: LaunchCategory; title: string; order: number }> = [
     { category: "PRODUCT", title: "Ürün değer önerisi tanımla", order: 1 },
     { category: "PRODUCT", title: "MVP özellikleri geliştir", order: 2 },
@@ -89,8 +131,11 @@ export async function seedProductData(
       data: { productId, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate },
     });
   }
+}
 
-  // Metrics
+// Seed demo metrics/numbers (only when user opts in to demo data)
+export async function seedMetricsData(productId: string, tx?: any) {
+  const db = tx || prisma;
   const manualSource: MetricSource = "MANUAL";
   for (let i = 30; i >= 0; i--) {
     const date = new Date();
@@ -186,4 +231,10 @@ export async function seedProductData(
   for (const event of events) {
     await db.timelineEvent.create({ data: { productId, eventType: event.eventType, title: event.title, date: event.date } });
   }
+}
+
+// Backwards-compatible wrapper (used by tests + old code)
+export async function seedProductData(productId: string, tx?: any) {
+  await seedStaticChecklists(productId, tx);
+  await seedMetricsData(productId, tx);
 }

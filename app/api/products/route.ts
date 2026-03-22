@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { seedProductData } from "@/lib/seed";
+import { generateAiPlan } from "@/lib/ai-plan";
+import { seedAiPlan, seedStaticChecklists, seedMetricsData } from "@/lib/seed";
 
 export async function GET(request: Request) {
   try {
@@ -50,9 +51,18 @@ export async function POST(request: Request) {
       website,
       launchGoals,
       seedData = false,
+      // Extended wizard fields for AI plan
+      launchDate,
+      launchStatus,
+      pricingStrategy,
+      growthChannels,
+      successMetric,
+      trackingMetrics,
+      teamSize,
+      userRole,
+      firstTask,
     } = body;
 
-    // Validate required fields (description is optional)
     if (!name || !category || !targetAudience || !businessModel) {
       return NextResponse.json(
         { error: "Required fields missing" },
@@ -60,7 +70,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create product and optionally seed data in a transaction
+    // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
+    const aiPlan = await generateAiPlan({
+      name,
+      description,
+      category,
+      targetAudience,
+      launchStatus,
+      businessModel,
+      pricingStrategy,
+      launchGoals: Array.isArray(launchGoals)
+        ? launchGoals
+        : launchGoals
+        ? JSON.parse(launchGoals)
+        : [],
+      growthChannels,
+      successMetric,
+      trackingMetrics,
+      teamSize,
+      userRole,
+      website,
+      launchDate,
+      firstTask,
+    });
+
+    // 2. Create product + seed data in a transaction
     const product = await prisma.$transaction(async (tx) => {
       const newProduct = await tx.product.create({
         data: {
@@ -76,9 +110,16 @@ export async function POST(request: Request) {
         },
       });
 
-      // Optionally seed demo data
+      // Always seed checklists: AI-generated if available, static fallback otherwise
+      if (aiPlan) {
+        await seedAiPlan(newProduct.id, aiPlan, tx);
+      } else {
+        await seedStaticChecklists(newProduct.id, tx);
+      }
+
+      // Seed demo metrics only if user opted in
       if (seedData) {
-        await seedProductData(newProduct.id, tx);
+        await seedMetricsData(newProduct.id, tx);
       }
 
       return newProduct;

@@ -406,8 +406,18 @@ export default function NewProductWizard() {
           targetAudience: data.targetAudience,
           businessModel: data.businessModel,
           website: data.website,
-          launchGoals: JSON.stringify(data.launchGoals),
+          launchGoals: data.launchGoals,
           seedData,
+          // Extended fields for AI plan generation
+          launchDate: data.launchDate,
+          launchStatus: data.launchStatus,
+          pricingStrategy: data.pricingStrategy,
+          growthChannels: data.growthChannels,
+          successMetric: data.successMetric,
+          trackingMetrics: data.trackingMetrics,
+          teamSize: data.teamSize,
+          userRole: data.userRole,
+          firstTask: data.firstTask,
         }),
       });
 
