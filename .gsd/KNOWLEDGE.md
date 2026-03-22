@@ -11,6 +11,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | K002 | prioritization | Product workflows beat marketing polish | The user explicitly wants login/register/in-product functionality ahead of landing-page work | 2026-03 |
 | K003 | docs | Treat README/HANDOFF claims as suspect until checked against code | Project docs have drifted ahead of implementation before | 2026-03 |
 | K004 | auth | If `NEXTAUTH_SECRET` changes, expect stale cookie/JWT issues and clear browser session state before debugging deeper | Prevents wasting time on false auth regressions | 2026-03 |
+| K005 | recommendations | Store-readiness guidance shown to users must include legal pages, paywall/subscription disclosure, review-account readiness, privacy/SDK disclosures, accessibility checks, ASO metadata, and IAP/subscription completeness | Prevents shallow or incomplete App Store preparation advice in user-facing recommendations | 2026-03 |
 
 ## Patterns
 
@@ -18,7 +19,7 @@ Agents read this before every unit. Add entries when you discover something wort
 |---|---------|-------|-------|
 | P001 | Authenticated page shell | `AppShell`, `DashboardNav`, route layouts under `app/*/layout.tsx` | Protected pages use session check + shared shell |
 | P002 | Product-scoped data access | Most app pages and API routes query by `productId` or first product for user | UX still assumes one active product, but data model is multi-product |
-| P003 | Seeded demo workspace | `lib/seed.ts`, `app/api/auth/signup/route.ts`, `app/api/seed/route.ts` | First-run experience depends on seeded data for visibility |
+| P003 | Product creation triggers first real workspace data | `app/api/products/route.ts`, `lib/seed.ts`, `app/[locale]/dashboard/page.tsx` | Signup no longer seeds a fake workspace; first product creation is the moment seeded starter data may appear |
 | P004 | Progressive interactivity | Server page fetches data, client component mutates via API then `router.refresh()` | Used in checklist, tasks, goals, routines, integrations |
 
 ## Lessons Learned

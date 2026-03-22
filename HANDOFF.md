@@ -1,59 +1,108 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 22 March 2026 (session 3 — Sprint 3 + 4)
-**Status:** MVP operator loop complete, production live and functional
+**Last Updated:** 22 March 2026  
+**Status:** MVP operator loop is live; user-facing advisory layer has started, but guided coaching/pulse logic is still a next-phase capability.
 
 ---
 
 ## Executive Summary
 
-Tiramisup is stable locally and in production. All tests pass, build is clean, and the full onboarding spine works end-to-end including AI plan generation on product creation.
+Tiramisup is now beyond simple onboarding stabilization. The product has a working launch-to-growth transition: users can sign up, create a product, mark it as launched, and see the workspace adapt from launch-oriented content to growth-oriented content.
 
 What is now true:
-- Public landing → waitlist → early-access signup → dashboard → product creation flow works end-to-end in production
-- Product creation triggers AI plan (DeepSeek primary, Gemini fallback, static seed final fallback)
-- URL scraping: wizard accepts optional URL, AI analyzes landing page / GitHub / App Store content
-- `launchStatus` maps to `product.status` (LAUNCHED vs PRE_LAUNCH) on product creation
-- Pre-launch page has "Ürünümü launch ettim →" button — PATCH /api/products/[id] updates status
-- Dashboard adapts content for PRE_LAUNCH (launch checklist) vs LAUNCHED (growth checklist)
-- Dashboard AI insights card ("Sitende ne eksik?") appears for products with URL — on-demand analysis
-- Growth page has interactive GrowthChecklistSection with toggle
-- All authenticated inner surfaces (pre-launch, tasks, metrics, growth) redirect to login if unauthenticated
-- Metrics form validates empty submit; ownership checks on metrics + task APIs
-- Admin panel exists at `/{locale}/admin/waitlist` with auth (admin@tiramisup only)
-- DB-backed invite codes: admin approve → unique code generated → stored on Waitlist row
-- Signup accepts DB invite codes OR static fallback `TT31623SEN`
-- Email sending: `lib/email.ts` + `sendInviteEmail` wired and triggered on approval — needs `RESEND_API_KEY` in Vercel to actually send (currently logs to console)
-- All internal links are locale-prefixed (`/{locale}/...`) — no broken `/products` etc.
-- 58 unit tests pass locally; build is clean
-- No fake seed data on signup
-- Supabase is active (was temporarily paused — now resumed)
+- Public landing → waitlist / early-access signup → dashboard → product creation works as a real flow
+- Signup does **not** create fake product data; first meaningful workspace context begins after product creation
+- `launchStatus` from the wizard maps into `product.status` (`PRE_LAUNCH` vs `LAUNCHED`)
+- Pre-launch page includes a launch transition action (`Ürünümü launch ettim →`)
+- Dashboard adapts based on product status
+- Growth page includes an interactive growth checklist grouped by category
+- AI plan generation and URL-based product analysis exist and are part of the product experience
+- Admin waitlist flow exists, generates invite codes, and supports approve/reject workflows
+- Production is live and functional
+
+What is not yet true:
+- Tiramisup does **not yet** behave like a fully stage-aware operator coach
+- The product is status-aware, not deeply stage-aware
+- It does not yet systematically tell users what to measure next, what to ignore, or how to interpret how their product is going
+- A proper “pulse / performance / monitoring” layer is still future work
+
+This is an important distinction: the product has entered an AI-assisted operator mode, but not yet a fully guided operator-coach mode.
 
 ---
 
-## Current Onboarding Flow
+## Current Product State
+
+### User-facing product loop
+A real user can now do the following:
+1. Discover the product from landing page
+2. Join waitlist or use an access code
+3. Create an account
+4. Land in a safe empty dashboard if no product exists
+5. Create a product through the wizard
+6. Receive AI-generated plan/input from the wizard flow
+7. Enter a pre-launch workspace
+8. Mark the product as launched
+9. See dashboard and growth surfaces change accordingly
+
+### AI capability that exists now
+AI is not only decorative anymore.
+It currently helps in these ways:
+- product plan generation during product creation
+- URL/site/app context analysis
+- dashboard insights card for products with URLs
+
+### AI capability that does **not** fully exist yet
+The system does not yet reliably function as a proactive founder coach that:
+- infers user stage deeply
+- recommends stage-based metrics consistently
+- introduces post-launch question sets automatically
+- gives pulse-based “how is my product doing?” guidance
+- adapts guidance beyond the current `PRE_LAUNCH` / `LAUNCHED` split
+
+---
+
+## Current Onboarding and Product Flow
 
 ### 1. Landing
 - `/tr` or `/en`
-- Primary CTA opens WaitlistModal
+- Primary CTA opens waitlist modal
 
 ### 2. Waitlist
-- Modal: name + email → POST `/api/waitlist/join` → redirect to `/{locale}/waitlist/thank-you`
-- Modal also has **"Erken erişim kodum var"** link → goes to signup
+- Name + email → `POST /api/waitlist/join`
+- Redirect to `/{locale}/waitlist/thank-you`
+- Modal also includes “Erken erişim kodum var” path to signup
 
 ### 3. Early-Access Signup
 - Route: `/{locale}/signup`
-- Requires: name, email, password, access code
-- **Current static access code: `TT31623SEN`**
-- Creates user only — no auto-product, no fake seed data
+- Inputs: name, email, password, access code
+- Access code logic:
+  - primary: invite codes stored on waitlist rows
+  - fallback: `TT31623SEN`
+- Signup creates user only
+- No fake auto-product, no fake seeded dashboard
 
-### 4. Dashboard (first-time user)
-- Route: `/{locale}/dashboard`
-- If no product: clean empty state with "İlk ürününü oluştur" CTA
-- If has product: normal dashboard
+### 4. First Dashboard State
+- `/{locale}/dashboard`
+- If no product exists:
+  - clear empty state
+  - CTA to create first product
+- If product exists:
+  - dashboard content loads based on product context/status
 
 ### 5. Product Creation
-- `/{locale}/products/new` — full wizard
+- `/{locale}/products/new`
+- Full wizard
+- Accepts optional URL
+- AI plan generation and scraping/analysis are part of the flow
+- `launchStatus` maps to `product.status`
+
+### 6. Pre-Launch → Launch Transition
+- Pre-launch page exposes launch action for `PRE_LAUNCH` products
+- Launch action updates product status and changes downstream workspace behavior
+
+### 7. Growth Surface
+- Growth page includes category-based growth checklist
+- Interactive toggles and optimistic updates are implemented
 
 ---
 
@@ -61,196 +110,122 @@ What is now true:
 
 **URL:** https://tramisup.vercel.app
 
-**Status: Live and functional** (Supabase active, all env vars clean)
+**Current status:** Live and usable
 
-**Supabase:**
-- Project ID: `ojecebxxcbxrofnbkaae`, region: `eu-west-3`
-- Free tier pauses after 7 days inactivity → if production returns 500s mysteriously, check Supabase dashboard first and resume
-- After resuming, no code changes needed — env vars are already correct
+### Known production-sensitive notes
+- Supabase free tier may pause after inactivity; if production returns unexplained 500s, check and resume Supabase first
+- Locale-prefixed routing remains mandatory everywhere
+- Invite-code and auth flow are live
+- Email sending for invite approval is wired, but still depends on `RESEND_API_KEY` being correctly set
 
-**Admin account:**
-- Email: `admin@tiramisup`, password: `t1ram1sup`
-- If account doesn't exist on production: signup at `/tr/signup` with code `TT31623SEN`
-- Admin panel: `https://tramisup.vercel.app/tr/admin/waitlist`
-
-**Vercel env vars (all clean — no trailing `\n`):**
-- `DATABASE_URL` — Session Pooler, port 5432, no `?pgbouncer=true`
-- `DEEPSEEK_API_KEY` — primary AI provider
-- `GEMINI_API_KEY` — fallback AI provider
-- ⚠️ When updating env vars via CLI, use `printf 'value' | vercel env add KEY production` — NOT `echo` (adds trailing newline that silently corrupts keys and DB connection)
-
-**Vercel:**
-- Auto-deploys from `main` branch
+### Admin access
+- Admin panel: `/{locale}/admin/waitlist`
+- Admin account pattern currently depends on `admin@tiramisup`
+- Non-admins are blocked from the admin surface
 
 ---
 
-## Admin Panel
+## Important Architecture / Product Notes
 
-Route: `/{locale}/admin/waitlist`
+### 1. Status-aware, not fully stage-aware
+The current operator adaptation is built on `product.status`:
+- `PRE_LAUNCH`
+- `LAUNCHED`
 
-- Requires login as `admin@tiramisup` (any email can login; only this one gets admin access)
-- Shows all waitlist entries with approve/reject controls
-- Unauthenticated → redirect to login with callbackUrl
-- Non-admin → "Yetkisiz Erişim" message
+This is useful and real, but it is still simpler than the longer-term product direction.
+Future work may introduce a richer stage model (for example: pre-launch, just launched, early traction, etc.).
 
-API routes protected:
-- `PATCH /api/waitlist/[id]` — approve/reject
-- `DELETE /api/waitlist/[id]` — delete entry
+### 2. No fake signup seed
+This is a hard product rule now.
+A new account should not be padded with fake tasks, fake metrics, or fake launch progress.
 
----
+### 3. Broken or incomplete surfaces should be gated
+If something is not ready, the product should narrow the path rather than expose a broken route.
 
-## Tech Stack
+### 4. Locale-aware routing is a non-negotiable constraint
+All user-visible navigation must continue to use `/${locale}/...`.
 
-| Layer | Tech |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS 3 |
-| Auth | NextAuth 4 (Credentials + JWT) |
-| ORM | Prisma 7 |
-| DB | PostgreSQL (Supabase) |
-| i18n | next-intl, locales: `tr` (default), `en` |
-| Testing | Vitest (unit) + Playwright (E2E) |
-| Hosting | Vercel |
+### 5. User-facing advisory knowledge now exists in project skills
+Two project skills were added specifically for **recommendations Tiramisup gives its users about their own apps**, not primarily for Tiramisup’s internal release process:
+- `.gsd/skills/app-store-submission-advisor/SKILL.md`
+- `.gsd/skills/play-store-submission-advisor/SKILL.md`
 
----
+These should be used by the user-facing advisory model, not treated as internal engineering checklists.
 
-## Key Architecture Notes
+### 6. Founder Coach agent added
+A new project-local agent exists:
+- `.gsd/agents/founder-coach.md`
 
-### i18n Routing
-All routes under `app/[locale]/`. Locale prefix is **always required** in links:
-```typescript
-// CORRECT
-href={`/${locale}/dashboard`}
-href={`/${locale}/products/new`}
+Its role is to act as a user-facing guidance model for Tiramisup users. It is designed to:
+- give stage-aware recommendations
+- provide launch/growth/store-readiness guidance
+- proactively suggest next steps when user context is clear enough
+- use the store-submission advisor skills when relevant
 
-// WRONG (causes 404)
-href="/dashboard"
-href="//products"
-```
-Default locale: `tr`. Auth signIn path must be locale-prefixed: `/tr/login`.
-
-### Auth Flow
-- `lib/auth.ts` → NextAuth with Credentials provider
-- `authOptions.pages.signIn = '/tr/login'`
-- `getServerSession(authOptions)` in server components
-- JWT strategy (no DB sessions table)
-
-### Access Code Logic
-- Defined in `app/api/auth/signup/route.ts`
-- Primary: DB lookup via `waitlist.inviteCode` (generated when admin approves an entry)
-- Fallback: env var `EARLY_ACCESS_CODE` → defaults to `TT31623SEN`
-- On successful use, `inviteCodeUsedAt` is set on the Waitlist row
-- Admin can see invite codes in the admin panel table (APPROVED/INVITED entries)
-
-### DB Schema Key Models
-- `User` — app users
-- `Product` — user's products (created post-signup via wizard)
-- `Waitlist` — email collection (status: PENDING | APPROVED | INVITED | REJECTED)
+This is the correct home for customer-facing “what should I do next?” intelligence.
 
 ---
 
-## Dev Setup
+## Development Team / Agent Structure
 
-```bash
-npm install
-npm run dev        # starts on :3000 (or :3001 if busy)
-```
+Project-local agents now include:
+- `fullstack-developer`
+- `qa-tester`
+- `principal-pm`
+- `product-designer`
+- `docs-updater`
+- `first-time-user`
+- `sprint-planner`
+- `founder-coach`
 
-If dev server behaves nonsensically (500 errors, missing modules):
-```bash
-rm -rf .next
-npm run dev
-```
-
-Local DB: uses `.env.local` → `DATABASE_URL` pointing to Supabase (or local Postgres).
-
----
-
-## Running Tests
-
-```bash
-# Unit tests (58 tests)
-npx vitest run
-
-# E2E tests (16 tests) — dev server must be on :3000
-npm run dev   # in one terminal
-npx playwright test --config=playwright-waitlist.config.ts  # in another
-
-# Full suite
-npm test
-```
-
-All 74 tests should pass. If E2E fails with timeouts → restart dev server with `rm -rf .next && npm run dev`.
+### Role split that matters
+- `principal-pm` sets scope and priority direction
+- `sprint-planner` translates that into the next sprint structure
+- `founder-coach` is not an internal dev helper; it is the user-facing advisory model
+- store-submission advisor skills are for user guidance, not mainly for internal release work
 
 ---
 
-## Recent Commits (last session)
+## Tests / Verification State
 
-```
-6dbf686 feat: sprint 4 S1-S3 — auth guards + metric/task security
-677f375 feat: sprint 3 S4 — dashboard AI insights card
-33f9c7e feat: sprint 3 — operator loop closure (S1-S5)
-6b89ed7 feat: add URL analysis to wizard — AI reads landing page/GitHub/App Store content
-df148c9 docs: update HANDOFF for 22 March 2026 state
-```
+Current signals from the repo and handoff history:
+- build is clean
+- unit tests are passing
+- major onboarding and operator-loop pieces have been implemented and deployed
+
+Still important to keep doing:
+- browser-level production smoke checks on the full user journey
+- verification of status transition (`PRE_LAUNCH` → `LAUNCHED`) in production
+- validation that growth checklist and AI insight surfaces behave correctly with real user data
 
 ---
 
 ## What Still Needs Work
 
-### High Priority
-1. **Production smoke test** — PRE_LAUNCH → LaunchButton → LAUNCHED → growth checklist full flow needs browser verification in production
-2. **`RESEND_API_KEY` Vercel env** — `printf 'key' | vercel env add RESEND_API_KEY production` → approve a waitlist entry → confirm email arrives
+### Highest-priority future product gaps
+1. **Guided metrics setup** — the product should help users define what to measure now
+2. **Post-launch coaching** — the system should introduce better next-step guidance after launch
+3. **Pulse / performance layer** — users should be able to understand how their product is actually doing, not only what setup/checklist items remain
+4. **Richer stage model** — eventually move beyond a simple binary `PRE_LAUNCH` / `LAUNCHED`
 
-### Medium Priority
-3. AI insights caching — currently re-scrapes on every "Analiz et" click; expensive for frequently visited dashboards
-4. Multi-product switcher UI (schema ready, UX not built — M004)
+### Important but not immediate blockers
+5. Multi-product switching UX
+6. Real integrations (Stripe / analytics sources)
+7. Broader i18n coverage
+8. Invite email delivery verification in production
 
-### Lower Priority
-5. Şifre sıfırlama / email doğrulama
-6. SEO, analytics, content polish
-7. Real integrations / Stripe (M005)
-
----
-
-## Important Project Truths
-
-1. **Supabase free tier pauses** — if production breaks mysteriously after a week of inactivity, unpause DB first before debugging anything else.
-
-2. **`.next` cache can corrupt** — `rm -rf .next && npm run dev` before chasing runtime ghosts.
-
-3. **Locale prefix required everywhere** — any link without `/${locale}/` prefix will 404 or break auth redirects.
-
-4. **DATABASE_URL trailing newline** — Vercel env var was fixed. Do not copy-paste the value with trailing `\n` when updating.
-
-5. **Docs can drift ahead of code** — always verify with `npm run build` + browser flow, not just reading docs.
+### Explicitly okay to defer
+It is acceptable that the full guided operator-coach layer comes later.
+The current state is already good enough to ship and build on, as long as everyone remains honest about what is complete and what is still only foundation.
 
 ---
 
-## Smoke Test Checklist
+## Final Read on Current State
 
-### Before shipping any change:
-```
-[ ] npm run build — passes
-[ ] npx vitest run — all pass
-[ ] E2E: landing → waitlist modal → submit → thank-you
-[ ] E2E: signup with TT31623SEN → login → dashboard empty state
-[ ] E2E: /tr/admin/waitlist → shows login redirect (if not authed)
-```
+Tiramisup is no longer just a collection of startup surfaces. It now has the beginning of a real operator loop and the first signs of user-facing AI assistance.
 
-### Production smoke test:
-```
-[ ] https://tramisup.vercel.app/tr loads
-[ ] Waitlist form submits
-[ ] Signup with TT31623SEN works
-[ ] Login works
-[ ] Dashboard empty state → product wizard → product created → dashboard with data
-[ ] Dashboard shows AI insights card for product with URL
-[ ] Pre-launch page shows "Ürünümü launch ettim →" button
-[ ] Launch button → status LAUNCHED → dashboard shows growth content
-[ ] /tr/growth shows GrowthChecklistSection with toggle
-[ ] Unauthenticated /tr/pre-launch → redirect to /tr/login
-[ ] /tr/admin/waitlist accessible with admin@tiramisup
-[ ] Admin approve entry → invite code appears in table
-```
+The right mental model is:
+- **current:** AI-assisted, status-aware operator workspace
+- **next phase:** stage-aware founder coaching, metric recommendation, and pulse-based guidance
+
+That means the product is in a good shipping state for this phase, but the next wave of work should focus less on adding more surfaces and more on making the system smarter about what the user should do next.

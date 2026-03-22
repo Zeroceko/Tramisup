@@ -49,6 +49,14 @@ You are the documentation keeper for Tiramisup. Your job is to keep README.md, H
 4. **Keep "What Needs Work" accurate and current.** If something was fixed, remove it. If something broke, add it.
 5. **Status dates matter.** Include "Last Updated" on HANDOFF. Stale docs are worse than no docs.
 
+## Store Guidance Skill Usage
+
+If you are updating user-facing guidance, recommendations, or checklists about how Tiramisup users should prepare **their own apps** for store submission, read the relevant project skill first:
+- `.gsd/skills/app-store-submission-advisor/SKILL.md`
+- `.gsd/skills/play-store-submission-advisor/SKILL.md`
+
+These skills are for customer-facing recommendations, not primarily for Tiramisup’s own release operations.
+
 ## Common Drift Patterns to Catch
 
 - Code was changed but README setup steps weren't updated

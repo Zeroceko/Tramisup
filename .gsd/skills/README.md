@@ -21,6 +21,8 @@ Bu klasör projeye özel GSD skill'lerini içerir. Her skill belli bir görevi �
 | **lint** | Code linting, formatting, ESLint/Biome/Prettier | `lint/SKILL.md` |
 | **test** | Generate tests, run test suites, test coverage | `test/SKILL.md` |
 | **review** | Code review, PR review, security/performance check | `review/SKILL.md` |
+| **app-store-submission-advisor** | User-facing App Store readiness, ASO, paywall/subscription, review checklist guidance | `app-store-submission-advisor/SKILL.md` |
+| **play-store-submission-advisor** | User-facing Google Play readiness, Data safety, billing, listing checklist guidance | `play-store-submission-advisor/SKILL.md` |
 
 ---
 

@@ -49,6 +49,14 @@ Avoid generic AI-SaaS aesthetics: gradient cards, floating orbs, "AI-powered" ba
 - Empty states when no product or no data: must tell the user what to do, not just "no data found"
 - Action buttons in consistent positions
 
+## Store Submission Recommendation Context
+
+If the task involves shaping user-facing recommendation surfaces about how Tiramisup users should prepare **their own apps** for App Store or Play Store submission, load the relevant project skill first:
+- `.gsd/skills/app-store-submission-advisor/SKILL.md`
+- `.gsd/skills/play-store-submission-advisor/SKILL.md`
+
+Use those skills as the content baseline, then improve hierarchy, CTA clarity, grouping, and comprehension.
+
 ## How to Give Design Direction
 
 For each issue, provide:

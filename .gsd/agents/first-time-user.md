@@ -58,6 +58,14 @@ Your job is to walk through the product from the outside and report what you exp
 - Is there a clear "what to do first" moment?
 - Or does it feel overwhelming or undifferentiated?
 
+## Store-Readiness Recommendation Context
+
+If the task is to evaluate whether Tiramisup’s user-facing submission guidance feels clear, trustworthy, or overwhelming for users preparing **their own apps** for release, first read the relevant skill:
+- `.gsd/skills/app-store-submission-advisor/SKILL.md`
+- `.gsd/skills/play-store-submission-advisor/SKILL.md`
+
+Use those skills as the advisory baseline, then respond from a first-time-user perception lens.
+
 ## How to Report
 
 Write your experience as a running stream-of-consciousness, then summarize:

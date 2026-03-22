@@ -79,6 +79,14 @@ Do not start M002 work until M001 blockers are resolved. Do not start M003 until
 - Password reset, email verification — useful, not blocking activation
 - SEO, analytics, marketing polish — after operator loop is complete
 
+## External Recommendation Skills
+
+When the task is about advising Tiramisup users on how to prepare **their own apps** for store submission, load the relevant project skill before giving guidance:
+- `.gsd/skills/app-store-submission-advisor/SKILL.md` for iOS / App Store recommendations
+- `.gsd/skills/play-store-submission-advisor/SKILL.md` for Android / Google Play recommendations
+
+Use those skills for user-facing submission/readiness advice, not for Tiramisup’s own internal release work.
+
 ## What You Do Not Do
 
 - You do not write implementation tickets. You give direction and sequencing.
