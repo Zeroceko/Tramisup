@@ -15,23 +15,30 @@ export default async function DashboardPage({
   const session = await getServerSession(authOptions);
 
   const activeId = await getActiveProductId();
-  const product = await prisma.product.findFirst({
-    where: {
-      userId: session?.user?.id,
-      ...(activeId ? { id: activeId } : {}),
-    },
-    include: {
-      _count: {
-        select: {
-          launchChecklists: true,
-          tasks: true,
-          metrics: true,
-          goals: true,
-          integrations: { where: { status: "CONNECTED" } },
-        },
+  const productInclude = {
+    _count: {
+      select: {
+        launchChecklists: true,
+        tasks: true,
+        metrics: true,
+        goals: true,
+        integrations: { where: { status: "CONNECTED" } },
       },
     },
+  } as const;
+
+  // Try active product first, fall back to first product for user
+  let product = await prisma.product.findFirst({
+    where: { userId: session?.user?.id, ...(activeId ? { id: activeId } : {}) },
+    include: productInclude,
   });
+
+  if (!product && activeId) {
+    product = await prisma.product.findFirst({
+      where: { userId: session?.user?.id },
+      include: productInclude,
+    });
+  }
 
   if (!product) {
     return (
