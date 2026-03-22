@@ -5,6 +5,7 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
+import InsightsCard from "@/components/InsightsCard";
 
 export default async function DashboardPage({
   params,
@@ -249,6 +250,13 @@ export default async function DashboardPage({
           )}
         </div>
       </section>
+
+      {/* AI Insights — only for products with a URL */}
+      {product?.website && (
+        <section className="mt-4">
+          <InsightsCard productId={product.id} website={product.website} />
+        </section>
+      )}
     </div>
   );
 }
