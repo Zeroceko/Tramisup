@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 
 export type AiLaunchItem = {
@@ -38,17 +39,7 @@ export type WizardInput = {
   launchStatus?: string;
 };
 
-export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    console.warn("[ai-plan] OPENAI_API_KEY not set — skipping AI plan");
-    return null;
-  }
-
-  try {
-    const client = new OpenAI({ apiKey });
-
-    const prompt = `Sen deneyimli bir startup danışmanısın. Bir kurucunun ürününü analiz edip onun için önceliklendirilmiş bir eylem planı hazırlıyorsun.
+const PROMPT = (input: WizardInput) => `Sen deneyimli bir startup danışmanısın. Bir kurucunun ürününü analiz edip onun için önceliklendirilmiş bir eylem planı hazırlıyorsun.
 
 ÜRÜN BİLGİLERİ:
 - Ad: ${input.name}
@@ -63,19 +54,19 @@ Bu ürünü analiz et ve gerçekten yapılması gerekenleri belirle. Kullanıcı
 - Bu aşamada en kritik launch engelleri neler?
 - Hangi growth kanalları bu kategori ve iş modeli için en mantıklı?
 - Bu hedef kitleye ulaşmak için ne yapılmalı?
-- Bu iş modelini büyütmek için hangi aktivasyonu ve retansiyonu sağlamalı?
+- Bu iş modelini büyütmek için hangi aktivasyon ve retansiyon adımları gerekli?
 
 AŞAMA BAZLI DÜŞÜN:
-${input.launchStatus === "Fikir aşamasında" ? "Henüz ürün yok. Önce validasyon ve MVP. Hiç pazarlama yapma, önce var ol." : ""}
+${input.launchStatus === "Fikir aşamasında" ? "Henüz ürün yok. Önce validasyon ve MVP. Pazarlama değil, önce var ol." : ""}
 ${input.launchStatus === "Geliştirme aşamasında" ? "Ürün yapılıyor. Beta kullanıcılar bul, erken feedback topla, launch hazırlığı yap." : ""}
 ${input.launchStatus === "Beta'da" ? "Ürün var, kullanıcılar var. Feedback'i ürüne yansıt, launch için hazırlan, ilk ödeme yapan müşterileri bul." : ""}
 ${input.launchStatus === "Yakında launch" ? "Launch çok yakın. Pazarlama altyapısını kur, launch kampanyasını hazırla, ilk kullanıcı kitlesini oluştur." : ""}
 ${input.launchStatus === "Launch oldu" ? "Ürün canlıda. Müşteri edinme ve aktivasyona odaklan, churn'ü takip et, growth kanallarını test et." : ""}
-${input.launchStatus === "Büyüme aşamasında" ? "Büyüme fazı. Ölçeklendirilebilir büyüme kanallarına odaklan, retansiyon ve geliri optimize et." : ""}
+${input.launchStatus === "Büyüme aşamasında" ? "Büyüme fazı. Ölçeklendirilebilir growth kanallarına odaklan, retansiyon ve geliri optimize et." : ""}
 
-Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — "${input.name}" adını ve context'i kullan. Generic tavsiye verme.
+Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — "${input.name}" adını kullan. Generic tavsiye verme.
 
-SADECE geçerli JSON döndür, hiç açıklama ekleme:
+SADECE geçerli JSON döndür:
 
 {
   "launchChecklist": [
@@ -106,29 +97,70 @@ SADECE geçerli JSON döndür, hiç açıklama ekleme:
 }
 
 Kurallar:
-- launchChecklist: 10-14 madde. PRODUCT, MARKETING, LEGAL, TECH kategorilerini dengeli dağıt
-- growthChecklist: 8-12 madde. ACQUISITION, ACTIVATION, RETENTION, REVENUE kategorilerini dengeli dağıt
+- launchChecklist: 10-14 madde. PRODUCT, MARKETING, LEGAL, TECH dengeli dağıtım
+- growthChecklist: 8-12 madde. ACQUISITION, ACTIVATION, RETENTION, REVENUE dengeli dağıtım
 - tasks: 4-6 madde. Bu hafta başlanabilecek, spesifik işler
-- Her madde "${input.name}" ürününe ve "${input.targetAudience}" kitlesine özgü olsun
-- Aşamaya göre önceliklendirme yap`;
+- Her madde "${input.name}" ürününe ve "${input.targetAudience}" kitlesine özgü olsun`;
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-    });
+function parsePlan(text: string): AiPlan {
+  const cleaned = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  const plan: AiPlan = JSON.parse(cleaned);
+  if (!plan.launchChecklist || !plan.growthChecklist || !plan.tasks) {
+    throw new Error("Invalid plan structure");
+  }
+  return plan;
+}
 
-    const text = response.choices[0]?.message?.content || "{}";
-    const plan: AiPlan = JSON.parse(text);
+async function tryDeepSeek(input: WizardInput): Promise<AiPlan> {
+  const client = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: "https://api.deepseek.com",
+  });
+  const response = await client.chat.completions.create({
+    model: "deepseek-chat",
+    messages: [{ role: "user", content: PROMPT(input) }],
+    response_format: { type: "json_object" },
+    temperature: 0.7,
+  });
+  return parsePlan(response.choices[0]?.message?.content || "{}");
+}
 
-    if (!plan.launchChecklist || !plan.growthChecklist || !plan.tasks) {
-      throw new Error("Invalid AI plan structure");
-    }
+async function tryGemini(input: WizardInput): Promise<AiPlan> {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const result = await model.generateContent(PROMPT(input));
+  return parsePlan(result.response.text());
+}
 
-    return plan;
-  } catch (err) {
-    console.error("[ai-plan] Generation failed:", err);
+export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
+  const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+
+  if (!hasDeepSeek && !hasGemini) {
+    console.warn("[ai-plan] No AI API key configured — using static fallback");
     return null;
   }
+
+  // Try DeepSeek first, fallback to Gemini
+  if (hasDeepSeek) {
+    try {
+      const plan = await tryDeepSeek(input);
+      console.log("[ai-plan] Generated via DeepSeek");
+      return plan;
+    } catch (err) {
+      console.warn("[ai-plan] DeepSeek failed, trying Gemini:", (err as Error).message);
+    }
+  }
+
+  if (hasGemini) {
+    try {
+      const plan = await tryGemini(input);
+      console.log("[ai-plan] Generated via Gemini (fallback)");
+      return plan;
+    } catch (err) {
+      console.error("[ai-plan] Gemini fallback also failed:", (err as Error).message);
+    }
+  }
+
+  return null;
 }
