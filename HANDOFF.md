@@ -1,24 +1,22 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 22 March 2026
-**Status:** MVP stabilized, tests all green, production blocked by Supabase pause
+**Last Updated:** 22 March 2026 (session 2)
+**Status:** MVP stabilized, production live and functional
 
 ---
 
 ## Executive Summary
 
-Tiramisup is in a stable state locally. All tests pass, build is clean, and the core onboarding spine works end-to-end. Production is temporarily blocked because the Supabase free-tier DB auto-paused due to inactivity.
-
-**One manual action required before production works:**
-→ Unpause Supabase from the dashboard (see Production section below)
+Tiramisup is stable locally and in production. All tests pass, build is clean, and the full onboarding spine works end-to-end including AI plan generation on product creation.
 
 What is now true:
-- Public landing → waitlist → early-access signup → dashboard → product creation flow works
+- Public landing → waitlist → early-access signup → dashboard → product creation flow works end-to-end in production
+- Product creation triggers AI plan (DeepSeek primary, Gemini fallback, static seed final fallback)
 - Admin panel exists at `/{locale}/admin/waitlist` with auth (admin@tiramisup only)
 - All internal links are locale-prefixed (`/{locale}/...`) — no broken `/products` etc.
-- 58 unit tests + 16 E2E tests all pass locally
-- Build is clean (`npm run build` passes)
+- 58 unit tests pass locally; build is clean
 - No fake seed data on signup
+- Supabase is active (was temporarily paused — now resumed)
 
 ---
 
@@ -52,20 +50,26 @@ What is now true:
 
 **URL:** https://tramisup.vercel.app
 
-**BLOCKER: Supabase DB is paused**
-- Project ID: `ojecebxxcbxrofnbkaae`, region: `eu-west-3`
-- Free tier pauses after 7 days inactivity
-- Fix: go to https://supabase.com/dashboard → select project → click **Resume**
-- All API endpoints return 500 while paused; landing page (static) still works
+**Status: Live and functional** (Supabase active, all env vars clean)
 
-**After unpausing, do this:**
-1. Create admin account: go to `https://tramisup.vercel.app/tr/signup`
-2. Use code `TT31623SEN`, email `admin@tiramisup`, any password → e.g. `t1ram1sUP`
-3. Admin panel will then work at `https://tramisup.vercel.app/tr/admin/waitlist`
+**Supabase:**
+- Project ID: `ojecebxxcbxrofnbkaae`, region: `eu-west-3`
+- Free tier pauses after 7 days inactivity → if production returns 500s mysteriously, check Supabase dashboard first and resume
+- After resuming, no code changes needed — env vars are already correct
+
+**Admin account:**
+- Email: `admin@tiramisup`, password: `t1ram1sup`
+- If account doesn't exist on production: signup at `/tr/signup` with code `TT31623SEN`
+- Admin panel: `https://tramisup.vercel.app/tr/admin/waitlist`
+
+**Vercel env vars (all clean — no trailing `\n`):**
+- `DATABASE_URL` — Session Pooler, port 5432, no `?pgbouncer=true`
+- `DEEPSEEK_API_KEY` — primary AI provider
+- `GEMINI_API_KEY` — fallback AI provider
+- ⚠️ When updating env vars via CLI, use `printf 'value' | vercel env add KEY production` — NOT `echo` (adds trailing newline that silently corrupts keys and DB connection)
 
 **Vercel:**
 - Auto-deploys from `main` branch
-- DATABASE_URL env var is set (trailing `\n` was removed — do not re-add)
 
 ---
 
@@ -183,19 +187,16 @@ c939547 fix: stabilize onboarding routes and navigation gating
 ## What Still Needs Work
 
 ### High Priority
-1. **Unpause Supabase + create admin account on production** (immediate blocker)
-2. Harden post-product-creation flow (wizard → active product → inner surfaces)
-3. Verify every authenticated route doesn't have broken locale links
+1. Harden post-product-creation flow (wizard → active product → inner surfaces need real-data verification)
+2. Verify every authenticated route works correctly with a real newly created product
 
 ### Medium Priority
-4. Replace static access code with proper invite-code management
-5. Complete i18n on authenticated screens
-6. Empty states for tasks/metrics/growth when product context is missing
+3. DB-backed invite codes (currently static `TT31623SEN` — schema has `inviteCode` field but admin UI codegen not wired)
+4. Email sending on waitlist approval (Resend installed, `lib/email.ts` exists, not triggered yet)
 
 ### Lower Priority
-7. Email sending (invite on waitlist approval)
-8. Admin authentication hardening (currently email-based check)
-9. SEO, analytics, content polish
+5. Admin auth hardening (`ADMIN_EMAIL` env var exists but not set on Vercel — falls back to `admin@tiramisup`)
+6. SEO, analytics, content polish
 
 ---
 
@@ -224,11 +225,12 @@ c939547 fix: stabilize onboarding routes and navigation gating
 [ ] E2E: /tr/admin/waitlist → shows login redirect (if not authed)
 ```
 
-### Production (after Supabase unpaused):
+### Production smoke test:
 ```
 [ ] https://tramisup.vercel.app/tr loads
 [ ] Waitlist form submits
 [ ] Signup with TT31623SEN works
 [ ] Login works
+[ ] Dashboard empty state → product wizard → product created → dashboard with data
 [ ] /tr/admin/waitlist accessible with admin@tiramisup
 ```
