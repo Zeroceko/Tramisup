@@ -31,16 +31,18 @@ export async function POST(request: Request) {
 
     const normalizedCode = accessCode.toUpperCase();
 
-    // Check if code matches a DB invite code
+    // Fallback: check if code matches the static fallback code
+    const isValidFallbackCode = normalizedCode === EARLY_ACCESS_CODE;
+
+    // Check if code matches a DB invite code (non-blocking — fallback still works if DB lookup fails)
     let inviteCodeEntry = null;
-    if (normalizedCode) {
+    try {
       inviteCodeEntry = await prisma.waitlist.findFirst({
         where: { inviteCode: normalizedCode },
       });
+    } catch (lookupErr) {
+      console.error("Waitlist lookup failed, falling back to static code:", lookupErr);
     }
-
-    // Fallback: check if code matches the static fallback code
-    const isValidFallbackCode = normalizedCode === EARLY_ACCESS_CODE;
 
     // Code must match either a DB code or the fallback code
     if (!inviteCodeEntry && !isValidFallbackCode) {
@@ -64,12 +66,14 @@ export async function POST(request: Request) {
       data: { email, name: name || email.split("@")[0], passwordHash },
     });
 
-    // Mark DB invite code as used
+    // Mark DB invite code as used (best-effort — user is already created)
     if (inviteCodeEntry) {
-      await prisma.waitlist.update({
-        where: { id: inviteCodeEntry.id },
-        data: { inviteCodeUsedAt: new Date() },
-      });
+      prisma.waitlist
+        .update({
+          where: { id: inviteCodeEntry.id },
+          data: { inviteCodeUsedAt: new Date() },
+        })
+        .catch((err) => console.error("Failed to mark invite code as used:", err));
     }
 
     return NextResponse.json(
