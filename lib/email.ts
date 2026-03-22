@@ -16,7 +16,7 @@ export async function sendInviteEmail(
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      from: "Tiramisup <invite@tiramisup.com>",
+      from: "Tiramisup <onboarding@resend.dev>",
       to,
       subject: "Tiramisup — Erken Erişim Davetiyeniz",
       html: `
