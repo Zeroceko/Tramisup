@@ -1,7 +1,7 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 22 March 2026 (session 2)
-**Status:** MVP stabilized, production live and functional
+**Last Updated:** 22 March 2026 (session 3 — Sprint 3 + 4)
+**Status:** MVP operator loop complete, production live and functional
 
 ---
 
@@ -12,7 +12,18 @@ Tiramisup is stable locally and in production. All tests pass, build is clean, a
 What is now true:
 - Public landing → waitlist → early-access signup → dashboard → product creation flow works end-to-end in production
 - Product creation triggers AI plan (DeepSeek primary, Gemini fallback, static seed final fallback)
+- URL scraping: wizard accepts optional URL, AI analyzes landing page / GitHub / App Store content
+- `launchStatus` maps to `product.status` (LAUNCHED vs PRE_LAUNCH) on product creation
+- Pre-launch page has "Ürünümü launch ettim →" button — PATCH /api/products/[id] updates status
+- Dashboard adapts content for PRE_LAUNCH (launch checklist) vs LAUNCHED (growth checklist)
+- Dashboard AI insights card ("Sitende ne eksik?") appears for products with URL — on-demand analysis
+- Growth page has interactive GrowthChecklistSection with toggle
+- All authenticated inner surfaces (pre-launch, tasks, metrics, growth) redirect to login if unauthenticated
+- Metrics form validates empty submit; ownership checks on metrics + task APIs
 - Admin panel exists at `/{locale}/admin/waitlist` with auth (admin@tiramisup only)
+- DB-backed invite codes: admin approve → unique code generated → stored on Waitlist row
+- Signup accepts DB invite codes OR static fallback `TT31623SEN`
+- Email sending: `lib/email.ts` + `sendInviteEmail` wired and triggered on approval — needs `RESEND_API_KEY` in Vercel to actually send (currently logs to console)
 - All internal links are locale-prefixed (`/{locale}/...`) — no broken `/products` etc.
 - 58 unit tests pass locally; build is clean
 - No fake seed data on signup
@@ -127,8 +138,10 @@ Default locale: `tr`. Auth signIn path must be locale-prefixed: `/tr/login`.
 
 ### Access Code Logic
 - Defined in `app/api/auth/signup/route.ts`
-- `VALID_ACCESS_CODE = 'TT31623SEN'` (uppercase, case-insensitive check)
-- No `lib/accessCode.ts` — that file was deleted (was dead code)
+- Primary: DB lookup via `waitlist.inviteCode` (generated when admin approves an entry)
+- Fallback: env var `EARLY_ACCESS_CODE` → defaults to `TT31623SEN`
+- On successful use, `inviteCodeUsedAt` is set on the Waitlist row
+- Admin can see invite codes in the admin panel table (APPROVED/INVITED entries)
 
 ### DB Schema Key Models
 - `User` — app users
@@ -175,11 +188,11 @@ All 74 tests should pass. If E2E fails with timeouts → restart dev server with
 ## Recent Commits (last session)
 
 ```
-8687ce6 feat: refresh landing page messaging and layout
-5864d9d fix: improve admin panel auth UX and login callbackUrl support
-c5f936e fix: locale-prefix all internal links across dashboard and thank-you page
-2a53129 feat: add admin auth + align tests with access-code signup flow
-c939547 fix: stabilize onboarding routes and navigation gating
+6dbf686 feat: sprint 4 S1-S3 — auth guards + metric/task security
+677f375 feat: sprint 3 S4 — dashboard AI insights card
+33f9c7e feat: sprint 3 — operator loop closure (S1-S5)
+6b89ed7 feat: add URL analysis to wizard — AI reads landing page/GitHub/App Store content
+df148c9 docs: update HANDOFF for 22 March 2026 state
 ```
 
 ---
@@ -187,16 +200,17 @@ c939547 fix: stabilize onboarding routes and navigation gating
 ## What Still Needs Work
 
 ### High Priority
-1. Harden post-product-creation flow (wizard → active product → inner surfaces need real-data verification)
-2. Verify every authenticated route works correctly with a real newly created product
+1. **Production smoke test** — PRE_LAUNCH → LaunchButton → LAUNCHED → growth checklist full flow needs browser verification in production
+2. **`RESEND_API_KEY` Vercel env** — `printf 'key' | vercel env add RESEND_API_KEY production` → approve a waitlist entry → confirm email arrives
 
 ### Medium Priority
-3. DB-backed invite codes (currently static `TT31623SEN` — schema has `inviteCode` field but admin UI codegen not wired)
-4. Email sending on waitlist approval (Resend installed, `lib/email.ts` exists, not triggered yet)
+3. AI insights caching — currently re-scrapes on every "Analiz et" click; expensive for frequently visited dashboards
+4. Multi-product switcher UI (schema ready, UX not built — M004)
 
 ### Lower Priority
-5. Admin auth hardening (`ADMIN_EMAIL` env var exists but not set on Vercel — falls back to `admin@tiramisup`)
+5. Şifre sıfırlama / email doğrulama
 6. SEO, analytics, content polish
+7. Real integrations / Stripe (M005)
 
 ---
 
@@ -232,5 +246,11 @@ c939547 fix: stabilize onboarding routes and navigation gating
 [ ] Signup with TT31623SEN works
 [ ] Login works
 [ ] Dashboard empty state → product wizard → product created → dashboard with data
+[ ] Dashboard shows AI insights card for product with URL
+[ ] Pre-launch page shows "Ürünümü launch ettim →" button
+[ ] Launch button → status LAUNCHED → dashboard shows growth content
+[ ] /tr/growth shows GrowthChecklistSection with toggle
+[ ] Unauthenticated /tr/pre-launch → redirect to /tr/login
 [ ] /tr/admin/waitlist accessible with admin@tiramisup
+[ ] Admin approve entry → invite code appears in table
 ```
