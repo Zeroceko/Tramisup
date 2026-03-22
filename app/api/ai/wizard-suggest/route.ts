@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { name, description, category, targetAudience, launchStatus, website } =
+    const { name, description, category, targetAudience, businessModel } =
       await req.json();
 
     if (!name || !description) {
@@ -19,31 +19,32 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const prompt = `You are an expert startup advisor. Analyze this product and recommend the best metrics and growth strategy options.
+    const prompt = `You are an expert startup advisor. Based on this product, recommend the best success metric and growth channels.
 
 Product: "${name}"
 Description: "${description}"
 Category: ${category || "SaaS"}
 Target audience: ${targetAudience || "unknown"}
-Launch status: ${launchStatus || "unknown"}
-${website ? `Website: ${website}` : ""}
+Business model: ${businessModel || "unknown"}
 
-Return ONLY a valid JSON object. Every value MUST be exactly as written in the option lists below.
+Return ONLY a valid JSON object. Values MUST exactly match the options listed.
 
 {
-  "successMetric": one of: "Kullanıcı sayısı" | "MRR" | "Activation rate" | "Retention rate" | "NPS" | "Churn rate",
-  "trackingMetrics": array of 2-4 items from: ["DAU/MAU", "MRR/ARR", "Churn", "Activation", "Retention", "Conversion rate", "ARPU"],
-  "growthChannels": array of 2-3 items from: ["Organic/SEO", "Paid ads", "Content marketing", "Social media", "Product Hunt", "Referral/Word of mouth", "Partnerships", "Cold outreach"],
-  "pricingStrategy": one of: "Free → Paid upsell" | "Free trial → Subscription" | "Direkt paid" | "Contact sales" | "Henüz karar vermedim",
-  "wantedIntegrations": array of 1-3 items from: ["Stripe", "GA4", "Mixpanel", "Segment", "Amplitude", "PostHog"]
+  "successMetric": one of exactly: "Kullanıcı sayısı" | "MRR" | "Activation rate" | "Retention rate" | "NPS" | "Churn rate",
+  "growthChannels": array of 2-3 items from exactly: ["Organic/SEO", "Paid ads", "Content marketing", "Social media", "Product Hunt", "Referral/Word of mouth", "Partnerships", "Cold outreach"]
 }
 
-Respond with ONLY the JSON object. No markdown fences, no explanations.`;
+Reasoning guide:
+- SaaS/Subscription → successMetric: "MRR", channels lean toward "Content marketing", "Organic/SEO"
+- Marketplace fee → successMetric: "Kullanıcı sayısı", channels lean toward "Referral/Word of mouth"
+- Freemium → successMetric: "Activation rate", channels lean toward "Product Hunt", "Content marketing"
+- B2B/Enterprise → channels include "Cold outreach", "Partnerships"
+- Consumer → channels include "Social media", "Referral/Word of mouth"
+
+Respond with ONLY the JSON object. No markdown, no explanations.`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
-
-    // Strip markdown code fences if model adds them
     const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const suggestions = JSON.parse(cleaned);
 

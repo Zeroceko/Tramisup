@@ -6,63 +6,65 @@ import { useLocale } from "next-intl";
 import Link from "next/link";
 
 type WizardData = {
-  // Pill 1: Ürünü Anlat
   name: string;
   description: string;
   category: string;
   targetAudience: string;
+  businessModel: string;
   launchStatus: string;
-
-  // Pill 2: Launch Hedefleri
-  launchDate: string;
   launchGoals: string[];
   successMetric: string;
-
-  // Pill 3: Metrics
-  trackingMetrics: string[];
-  hasDataSource: string;
-
-  // Pill 4: Growth
   growthChannels: string[];
-  businessModel: string;
-  pricingStrategy: string;
-
-  // Pill 5: Integrations
-  currentTools: string[];
-  wantedIntegrations: string[];
-
-  // Pill 6: Team
-  teamSize: string;
-  userRole: string;
-
-  // Pill 7: İlk Aksiyonlar
-  wantsDemoData: string;
-  firstTask: string;
-
-  website: string;
 };
 
 type AiSuggestions = {
   successMetric?: string;
-  trackingMetrics?: string[];
   growthChannels?: string[];
-  pricingStrategy?: string;
-  wantedIntegrations?: string[];
 };
 
 const PILLS = [
   { id: 1, label: "Ürünü Anlat" },
-  { id: 2, label: "Launch Hedefleri" },
-  { id: 3, label: "Metrics & Tracking" },
-  { id: 4, label: "Growth Yaklaşımı" },
-  { id: 5, label: "Entegrasyonlar" },
-  { id: 6, label: "Ekip" },
-  { id: 7, label: "Hızlı Başlangıç" },
+  { id: 2, label: "Kitle & Model" },
+  { id: 3, label: "Hedefler & Büyüme" },
 ];
 
-const CATEGORIES = ["SaaS", "E-commerce", "Marketplace", "Mobile App", "Content/Media", "Platform", "Diğer"];
-const AUDIENCES = ["Developers", "KOBİ", "Tüketiciler", "Kurumsal", "Startup'lar", "Freelancer'lar", "Diğer"];
-const LAUNCH_STATUSES = ["Fikir aşamasında", "Geliştirme aşamasında", "Beta'da", "Yakında launch", "Launch oldu", "Büyüme aşamasında"];
+const CATEGORIES = [
+  "SaaS",
+  "E-commerce",
+  "Marketplace",
+  "Mobile App",
+  "Content/Media",
+  "Platform",
+  "Diğer",
+];
+
+const AUDIENCES = [
+  "Developers",
+  "KOBİ",
+  "Tüketiciler",
+  "Kurumsal",
+  "Startup'lar",
+  "Freelancer'lar",
+  "Diğer",
+];
+
+const BUSINESS_MODELS = [
+  "Freemium",
+  "Subscription",
+  "One-time payment",
+  "Usage-based",
+  "Enterprise/Custom",
+  "Marketplace fee",
+];
+
+const LAUNCH_STATUSES = [
+  "Fikir aşamasında",
+  "Geliştirme aşamasında",
+  "Beta'da",
+  "Yakında launch",
+  "Launch oldu",
+  "Büyüme aşamasında",
+];
 
 const LAUNCH_GOALS = [
   "İlk 100 kullanıcıya ulaş",
@@ -73,9 +75,14 @@ const LAUNCH_GOALS = [
   "Viral loop kur",
 ];
 
-const SUCCESS_METRICS = ["Kullanıcı sayısı", "MRR", "Activation rate", "Retention rate", "NPS", "Churn rate"];
-
-const TRACKING_METRICS = ["DAU/MAU", "MRR/ARR", "Churn", "Activation", "Retention", "Conversion rate", "ARPU"];
+const SUCCESS_METRICS = [
+  "Kullanıcı sayısı",
+  "MRR",
+  "Activation rate",
+  "Retention rate",
+  "NPS",
+  "Churn rate",
+];
 
 const GROWTH_CHANNELS = [
   "Organic/SEO",
@@ -88,35 +95,9 @@ const GROWTH_CHANNELS = [
   "Cold outreach",
 ];
 
-const BUSINESS_MODELS = ["Freemium", "Subscription", "One-time payment", "Usage-based", "Enterprise/Custom", "Marketplace fee"];
-
-const PRICING_STRATEGIES = [
-  "Free → Paid upsell",
-  "Free trial → Subscription",
-  "Direkt paid",
-  "Contact sales",
-  "Henüz karar vermedim",
-];
-
-const CURRENT_TOOLS = [
-  "Google Analytics",
-  "Mixpanel",
-  "Amplitude",
-  "Stripe",
-  "Segment",
-  "PostHog",
-  "Custom analytics",
-  "Henüz yok",
-];
-
-const WANTED_INTEGRATIONS = ["Stripe", "GA4", "Mixpanel", "Segment", "Amplitude", "PostHog"];
-
-const TEAM_SIZES = ["Solo founder", "2-3 kişi", "4-10 kişi", "10+ kişi"];
-const USER_ROLES = ["Founder/CEO", "Product Manager", "Developer", "Growth", "Marketing", "Diğer"];
-
 type Question = {
   id: string;
-  type: "text" | "textarea" | "radio" | "checkbox" | "url" | "date";
+  type: "text" | "textarea" | "radio" | "checkbox";
   label: string;
   description?: string;
   placeholder?: string;
@@ -126,43 +107,77 @@ type Question = {
 
 const PILL_QUESTIONS: Record<number, Question[]> = {
   1: [
-    { id: "name", type: "text", label: "Ürününüzün adı nedir?", placeholder: "Örn: Tiramisup", required: true },
-    { id: "description", type: "textarea", label: "Hangi sorunu çözüyorsunuz?", placeholder: "Kısa açıklama (1-2 cümle)", required: true },
-    { id: "category", type: "radio", label: "Hangi kategoriye giriyorsunuz?", options: CATEGORIES, required: true },
-    { id: "targetAudience", type: "radio", label: "Ana hedef kitleniz kim?", options: AUDIENCES, required: true },
-    { id: "launchStatus", type: "radio", label: "Şu an hangi aşamadasınız?", options: LAUNCH_STATUSES, required: true },
-    { id: "website", type: "url", label: "Ürün siteniz var mı?", placeholder: "https://urunun.com" },
+    {
+      id: "name",
+      type: "text",
+      label: "Ürününüzün adı nedir?",
+      placeholder: "Örn: Tiramisup",
+      required: true,
+    },
+    {
+      id: "description",
+      type: "textarea",
+      label: "Hangi sorunu çözüyorsunuz?",
+      placeholder: "Ürününüzü bir cümleyle tanımlayın",
+      required: true,
+    },
+    {
+      id: "category",
+      type: "radio",
+      label: "Hangi kategoriye giriyorsunuz?",
+      options: CATEGORIES,
+      required: true,
+    },
   ],
   2: [
-    { id: "launchDate", type: "date", label: "Launch tarihiniz ne zaman?", description: "Yaklaşık bir tarih girin", required: true },
-    { id: "launchGoals", type: "checkbox", label: "İlk 90 günde hangi hedeflere ulaşmak istiyorsunuz?", options: LAUNCH_GOALS },
-    { id: "successMetric", type: "radio", label: "Başarıyı hangi metrikle ölçeceksiniz?", options: SUCCESS_METRICS, required: true },
+    {
+      id: "targetAudience",
+      type: "radio",
+      label: "Ana hedef kitleniz kim?",
+      options: AUDIENCES,
+      required: true,
+    },
+    {
+      id: "businessModel",
+      type: "radio",
+      label: "İş modeliniz nedir?",
+      options: BUSINESS_MODELS,
+      required: true,
+    },
   ],
   3: [
-    { id: "trackingMetrics", type: "checkbox", label: "Hangi metrikleri takip etmek istiyorsunuz?", options: TRACKING_METRICS },
-    { id: "hasDataSource", type: "radio", label: "Şu an veri kaynağınız var mı?", options: ["Evet, entegre edeceğim", "Hayır, manuel gireceğim", "Henüz bilmiyorum"], required: true },
-  ],
-  4: [
-    { id: "growthChannels", type: "checkbox", label: "Hangi growth kanallarını kullanacaksınız?", description: "Öncelikli 2-3 kanal seçin", options: GROWTH_CHANNELS },
-    { id: "businessModel", type: "radio", label: "İş modeliniz nedir?", options: BUSINESS_MODELS, required: true },
-    { id: "pricingStrategy", type: "radio", label: "Pricing stratejiniz nedir?", options: PRICING_STRATEGIES, required: true },
-  ],
-  5: [
-    { id: "currentTools", type: "checkbox", label: "Şu an hangi araçları kullanıyorsunuz?", options: CURRENT_TOOLS },
-    { id: "wantedIntegrations", type: "checkbox", label: "Tiramisup ile bağlamak istediğiniz araçlar?", options: WANTED_INTEGRATIONS },
-  ],
-  6: [
-    { id: "teamSize", type: "radio", label: "Ekip büyüklüğünüz nedir?", options: TEAM_SIZES, required: true },
-    { id: "userRole", type: "radio", label: "Sizin rolünüz nedir?", options: USER_ROLES, required: true },
-  ],
-  7: [
-    { id: "wantsDemoData", type: "radio", label: "Demo veri ile başlamak ister misiniz?", description: "Hemen ürünü keşfetmenize yardımcı olur", options: ["Evet, demo veri yükle", "Hayır, temiz başlayayım"], required: true },
-    { id: "firstTask", type: "text", label: "İlk göreviniz ne olsun?", placeholder: "Örn: Landing page tasarımı tamamla" },
+    {
+      id: "launchStatus",
+      type: "radio",
+      label: "Şu an hangi aşamadasınız?",
+      options: LAUNCH_STATUSES,
+      required: true,
+    },
+    {
+      id: "launchGoals",
+      type: "checkbox",
+      label: "İlk 90 günde hangi hedeflere ulaşmak istiyorsunuz?",
+      description: "İstediğiniz kadar seçebilirsiniz",
+      options: LAUNCH_GOALS,
+    },
+    {
+      id: "successMetric",
+      type: "radio",
+      label: "Başarıyı hangi metrikle ölçeceksiniz?",
+      options: SUCCESS_METRICS,
+      required: true,
+    },
+    {
+      id: "growthChannels",
+      type: "checkbox",
+      label: "Büyüme için hangi kanalları kullanacaksınız?",
+      description: "Öncelikli 2-3 kanal seçin",
+      options: GROWTH_CHANNELS,
+    },
   ],
 };
 
-// Questions that receive AI recommendations
-const AI_SUGGESTED_FIELDS = new Set(["successMetric", "trackingMetrics", "growthChannels", "pricingStrategy", "wantedIntegrations"]);
+const AI_SUGGESTED_FIELDS = new Set(["successMetric", "growthChannels"]);
 
 function RecommendedBadge() {
   return (
@@ -234,7 +249,13 @@ function CheckButton({
   );
 }
 
-function StepPills({ currentPill, onPillClick }: { currentPill: number; onPillClick: (pill: number) => void }) {
+function StepPills({
+  currentPill,
+  onPillClick,
+}: {
+  currentPill: number;
+  onPillClick: (pill: number) => void;
+}) {
   return (
     <div className="mb-10 flex flex-wrap gap-3">
       {PILLS.map((pill) => {
@@ -252,8 +273,8 @@ function StepPills({ currentPill, onPillClick }: { currentPill: number; onPillCl
               isActive
                 ? "bg-[#95dbda] text-[#111111] shadow-[0_6px_18px_rgba(149,219,218,0.28)]"
                 : isCompleted
-                  ? "bg-[#d0d0d0] text-white hover:bg-[#bdbdbd] cursor-pointer"
-                  : "bg-[#d0d0d0] text-white/95 cursor-not-allowed"
+                ? "bg-[#d0d0d0] text-white hover:bg-[#bdbdbd] cursor-pointer"
+                : "bg-[#d0d0d0] text-white/95 cursor-not-allowed"
             }`}
           >
             {pill.label}
@@ -271,10 +292,7 @@ export default function NewProductWizard() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [data, setData] = useState<Partial<WizardData>>({
     launchGoals: [],
-    trackingMetrics: [],
     growthChannels: [],
-    currentTools: [],
-    wantedIntegrations: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -287,7 +305,9 @@ export default function NewProductWizard() {
   const isLastPill = currentPill === PILLS.length;
 
   const getValue = (id: string): any => {
-    return (data as any)[id] || (currentQuestion?.type === "checkbox" ? [] : "");
+    return (
+      (data as any)[id] || (currentQuestion?.type === "checkbox" ? [] : "")
+    );
   };
 
   const setValue = (id: string, value: any) => {
@@ -302,7 +322,6 @@ export default function NewProductWizard() {
     return val && val.toString().trim() !== "";
   };
 
-  // Returns recommended value(s) for current question field, or undefined
   const getRecommended = (fieldId: string): string | string[] | undefined => {
     if (!AI_SUGGESTED_FIELDS.has(fieldId)) return undefined;
     return (aiSuggestions as any)[fieldId];
@@ -315,6 +334,13 @@ export default function NewProductWizard() {
     return rec === option;
   };
 
+  // Only show hint when suggestions are actually loaded for this field
+  const hasActualRecommendation =
+    currentQuestion !== undefined &&
+    AI_SUGGESTED_FIELDS.has(currentQuestion.id) &&
+    !aiLoading &&
+    getRecommended(currentQuestion.id) !== undefined;
+
   const fetchAiSuggestions = async (wizardData: Partial<WizardData>) => {
     setAiLoading(true);
     try {
@@ -326,8 +352,7 @@ export default function NewProductWizard() {
           description: wizardData.description,
           category: wizardData.category,
           targetAudience: wizardData.targetAudience,
-          launchStatus: wizardData.launchStatus,
-          website: wizardData.website,
+          businessModel: wizardData.businessModel,
         }),
       });
       if (res.ok) {
@@ -335,7 +360,7 @@ export default function NewProductWizard() {
         setAiSuggestions(suggestions);
       }
     } catch {
-      // Non-fatal — wizard works without suggestions
+      // Non-fatal
     } finally {
       setAiLoading(false);
     }
@@ -352,8 +377,8 @@ export default function NewProductWizard() {
       if (isLastPill) {
         handleSubmit();
       } else {
-        // Leaving Step 1 → fire AI suggestions in background
-        if (currentPill === 1) {
+        // Leaving Pill 2 → fire AI (has category, audience, businessModel)
+        if (currentPill === 2) {
           fetchAiSuggestions(data);
         }
         setCurrentPill((p) => p + 1);
@@ -386,15 +411,18 @@ export default function NewProductWizard() {
 
   const toggleArrayValue = (key: string, value: string) => {
     const current = getValue(key) as string[];
-    setValue(key, current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
+    setValue(
+      key,
+      current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value]
+    );
   };
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
       setError("");
-
-      const seedData = data.wantsDemoData === "Evet, demo veri yükle";
 
       const res = await fetch("/api/products", {
         method: "POST",
@@ -405,19 +433,12 @@ export default function NewProductWizard() {
           category: data.category,
           targetAudience: data.targetAudience,
           businessModel: data.businessModel,
-          website: data.website,
           launchGoals: data.launchGoals,
-          seedData,
-          // Extended fields for AI plan generation
-          launchDate: data.launchDate,
+          seedData: false,
+          // Context for AI plan generation
           launchStatus: data.launchStatus,
-          pricingStrategy: data.pricingStrategy,
-          growthChannels: data.growthChannels,
           successMetric: data.successMetric,
-          trackingMetrics: data.trackingMetrics,
-          teamSize: data.teamSize,
-          userRole: data.userRole,
-          firstTask: data.firstTask,
+          growthChannels: data.growthChannels,
         }),
       });
 
@@ -447,24 +468,43 @@ export default function NewProductWizard() {
     }
   }
 
-  const hasRecommendation =
-    currentQuestion && AI_SUGGESTED_FIELDS.has(currentQuestion.id) && !aiLoading;
-
   return (
     <div className="min-h-screen bg-[#f6f6f6] px-4 py-8 md:px-8 md:py-10">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-4 flex items-center justify-between px-1">
-          <Link href={`/${locale}/dashboard`} className="inline-flex items-center gap-1 text-[13px] text-[#666d80] transition hover:text-[#111111]">
+          <Link
+            href={`/${locale}/dashboard`}
+            className="inline-flex items-center gap-1 text-[13px] text-[#666d80] transition hover:text-[#111111]"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M19 12H5M12 5l-7 7 7 7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Geri dön
           </Link>
           <div className="flex items-center gap-3">
             {aiLoading && (
               <span className="flex items-center gap-1.5 text-[12px] text-[#a07800]">
-                <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40 20" />
+                <svg
+                  className="animate-spin"
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray="40 20"
+                  />
                 </svg>
                 Tiramisup analiz ediyor…
               </span>
@@ -477,7 +517,9 @@ export default function NewProductWizard() {
 
         <div className="rounded-[28px] border border-[#ededed] bg-white px-6 py-6 shadow-card md:px-10 md:py-8">
           <div className="mb-8 flex items-start justify-between gap-4">
-            <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">Yeni Ürün Oluştur</h1>
+            <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">
+              Yeni Ürün Oluştur
+            </h1>
             <Link
               href={`/${locale}/dashboard`}
               aria-label="Kapat"
@@ -489,16 +531,26 @@ export default function NewProductWizard() {
 
           <StepPills currentPill={currentPill} onPillClick={goToPill} />
 
-          {error ? <div className="mb-5 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">{error}</div> : null}
+          {error ? (
+            <div className="mb-5 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">
+              {error}
+            </div>
+          ) : null}
 
           {currentQuestion ? (
             <div className="mx-auto max-w-3xl space-y-6">
               <div className="text-center">
-                <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[36px]">{currentQuestion.label}</h2>
-                {currentQuestion.description ? <p className="mt-2 text-[14px] text-[#6b7280]">{currentQuestion.description}</p> : null}
-                {hasRecommendation && (
+                <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[36px]">
+                  {currentQuestion.label}
+                </h2>
+                {currentQuestion.description ? (
+                  <p className="mt-2 text-[14px] text-[#6b7280]">
+                    {currentQuestion.description}
+                  </p>
+                ) : null}
+                {hasActualRecommendation && (
                   <p className="mt-2 text-[12px] text-[#a07800]">
-                    ✦ Sarı ile işaretlenenler Tiramisup&apos;un ürününüze özel tavsiyesi
+                    ✦ Sarı seçenekler Tiramisup&apos;un size özel tavsiyesi
                   </p>
                 )}
               </div>
@@ -526,32 +578,16 @@ export default function NewProductWizard() {
                   />
                 ) : null}
 
-                {currentQuestion.type === "url" ? (
-                  <input
-                    type="url"
-                    value={getValue(currentQuestion.id) || ""}
-                    onChange={(e) => setValue(currentQuestion.id, e.target.value)}
-                    placeholder={currentQuestion.placeholder}
-                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
-                  />
-                ) : null}
-
-                {currentQuestion.type === "date" ? (
-                  <input
-                    type="date"
-                    value={getValue(currentQuestion.id) || ""}
-                    onChange={(e) => setValue(currentQuestion.id, e.target.value)}
-                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] outline-none transition focus:border-[#95dbda] focus:bg-white"
-                  />
-                ) : null}
-
                 {currentQuestion.type === "radio" && currentQuestion.options
                   ? currentQuestion.options.map((option) => (
                       <OptionButton
                         key={option}
                         selected={getValue(currentQuestion.id) === option}
                         onClick={() => setValue(currentQuestion.id, option)}
-                        recommended={isOptionRecommended(currentQuestion.id, option)}
+                        recommended={isOptionRecommended(
+                          currentQuestion.id,
+                          option
+                        )}
                       >
                         {option}
                       </OptionButton>
@@ -562,9 +598,16 @@ export default function NewProductWizard() {
                   ? currentQuestion.options.map((option) => (
                       <CheckButton
                         key={option}
-                        selected={(getValue(currentQuestion.id) || []).includes(option)}
-                        onClick={() => toggleArrayValue(currentQuestion.id, option)}
-                        recommended={isOptionRecommended(currentQuestion.id, option)}
+                        selected={(getValue(currentQuestion.id) || []).includes(
+                          option
+                        )}
+                        onClick={() =>
+                          toggleArrayValue(currentQuestion.id, option)
+                        }
+                        recommended={isOptionRecommended(
+                          currentQuestion.id,
+                          option
+                        )}
                       >
                         {option}
                       </CheckButton>
@@ -591,10 +634,16 @@ export default function NewProductWizard() {
               onClick={handleNext}
               disabled={!canProceed() || loading}
               className={`min-w-[170px] rounded-full px-6 py-3 text-[14px] font-semibold transition ${
-                canProceed() && !loading ? "bg-[#ffd7ef] text-[#111111] hover:bg-[#f7c8e2]" : "bg-[#f1f1f1] text-[#a0a0a0] cursor-not-allowed"
+                canProceed() && !loading
+                  ? "bg-[#ffd7ef] text-[#111111] hover:bg-[#f7c8e2]"
+                  : "bg-[#f1f1f1] text-[#a0a0a0] cursor-not-allowed"
               }`}
             >
-              {isLastPill && isLastQuestionInPill ? (loading ? "Oluşturuluyor…" : "Ürünü Oluştur") : "Devam Et"}
+              {isLastPill && isLastQuestionInPill
+                ? loading
+                  ? "Planın oluşturuluyor…"
+                  : "Planımı Oluştur"
+                : "Devam Et"}
             </button>
           </div>
         </div>
