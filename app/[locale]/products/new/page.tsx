@@ -12,34 +12,42 @@ type WizardData = {
   category: string;
   targetAudience: string;
   launchStatus: string;
-  
+
   // Pill 2: Launch Hedefleri
   launchDate: string;
   launchGoals: string[];
   successMetric: string;
-  
+
   // Pill 3: Metrics
   trackingMetrics: string[];
   hasDataSource: string;
-  
+
   // Pill 4: Growth
   growthChannels: string[];
   businessModel: string;
   pricingStrategy: string;
-  
+
   // Pill 5: Integrations
   currentTools: string[];
   wantedIntegrations: string[];
-  
+
   // Pill 6: Team
   teamSize: string;
   userRole: string;
-  
+
   // Pill 7: İlk Aksiyonlar
   wantsDemoData: string;
   firstTask: string;
-  
+
   website: string;
+};
+
+type AiSuggestions = {
+  successMetric?: string;
+  trackingMetrics?: string[];
+  growthChannels?: string[];
+  pricingStrategy?: string;
+  wantedIntegrations?: string[];
 };
 
 const PILLS = [
@@ -153,7 +161,28 @@ const PILL_QUESTIONS: Record<number, Question[]> = {
   ],
 };
 
-function OptionButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+// Questions that receive AI recommendations
+const AI_SUGGESTED_FIELDS = new Set(["successMetric", "trackingMetrics", "growthChannels", "pricingStrategy", "wantedIntegrations"]);
+
+function RecommendedBadge() {
+  return (
+    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#fef9c3] px-2.5 py-0.5 text-[11px] font-semibold text-[#854d0e]">
+      ✦ Önerilen
+    </span>
+  );
+}
+
+function OptionButton({
+  selected,
+  onClick,
+  recommended,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  recommended?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -161,15 +190,30 @@ function OptionButton({ selected, onClick, children }: { selected: boolean; onCl
       className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
         selected
           ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
+          : recommended
+          ? "border-[#fbbf24]/60 bg-[#fffbeb] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
           : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
       }`}
     >
-      {children}
+      <span className="flex items-center justify-between gap-3">
+        <span>{children}</span>
+        {recommended && <RecommendedBadge />}
+      </span>
     </button>
   );
 }
 
-function CheckButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function CheckButton({
+  selected,
+  onClick,
+  recommended,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  recommended?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -177,10 +221,15 @@ function CheckButton({ selected, onClick, children }: { selected: boolean; onCli
       className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
         selected
           ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
+          : recommended
+          ? "border-[#fbbf24]/60 bg-[#fffbeb] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
           : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
       }`}
     >
-      {children}
+      <span className="flex items-center justify-between gap-3">
+        <span>{children}</span>
+        {recommended && <RecommendedBadge />}
+      </span>
     </button>
   );
 }
@@ -229,6 +278,8 @@ export default function NewProductWizard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestions>({});
+  const [aiLoading, setAiLoading] = useState(false);
 
   const pillQuestions = PILL_QUESTIONS[currentPill] || [];
   const currentQuestion = pillQuestions[questionIndex];
@@ -251,6 +302,45 @@ export default function NewProductWizard() {
     return val && val.toString().trim() !== "";
   };
 
+  // Returns recommended value(s) for current question field, or undefined
+  const getRecommended = (fieldId: string): string | string[] | undefined => {
+    if (!AI_SUGGESTED_FIELDS.has(fieldId)) return undefined;
+    return (aiSuggestions as any)[fieldId];
+  };
+
+  const isOptionRecommended = (fieldId: string, option: string): boolean => {
+    const rec = getRecommended(fieldId);
+    if (!rec) return false;
+    if (Array.isArray(rec)) return rec.includes(option);
+    return rec === option;
+  };
+
+  const fetchAiSuggestions = async (wizardData: Partial<WizardData>) => {
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/wizard-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: wizardData.name,
+          description: wizardData.description,
+          category: wizardData.category,
+          targetAudience: wizardData.targetAudience,
+          launchStatus: wizardData.launchStatus,
+          website: wizardData.website,
+        }),
+      });
+      if (res.ok) {
+        const suggestions = await res.json();
+        setAiSuggestions(suggestions);
+      }
+    } catch {
+      // Non-fatal — wizard works without suggestions
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleNext = () => {
     if (!canProceed()) {
       setError("Bu alanı doldurmak gerekiyor.");
@@ -262,6 +352,10 @@ export default function NewProductWizard() {
       if (isLastPill) {
         handleSubmit();
       } else {
+        // Leaving Step 1 → fire AI suggestions in background
+        if (currentPill === 1) {
+          fetchAiSuggestions(data);
+        }
         setCurrentPill((p) => p + 1);
         setQuestionIndex(0);
       }
@@ -343,6 +437,9 @@ export default function NewProductWizard() {
     }
   }
 
+  const hasRecommendation =
+    currentQuestion && AI_SUGGESTED_FIELDS.has(currentQuestion.id) && !aiLoading;
+
   return (
     <div className="min-h-screen bg-[#f6f6f6] px-4 py-8 md:px-8 md:py-10">
       <div className="mx-auto w-full max-w-6xl">
@@ -353,9 +450,19 @@ export default function NewProductWizard() {
             </svg>
             Geri dön
           </Link>
-          <span className="text-[12px] font-medium text-[#666d80]">
-            {completedQuestions + 1} / {totalQuestions}
-          </span>
+          <div className="flex items-center gap-3">
+            {aiLoading && (
+              <span className="flex items-center gap-1.5 text-[12px] text-[#a07800]">
+                <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40 20" />
+                </svg>
+                Tiramisup analiz ediyor…
+              </span>
+            )}
+            <span className="text-[12px] font-medium text-[#666d80]">
+              {completedQuestions + 1} / {totalQuestions}
+            </span>
+          </div>
         </div>
 
         <div className="rounded-[28px] border border-[#ededed] bg-white px-6 py-6 shadow-card md:px-10 md:py-8">
@@ -379,6 +486,11 @@ export default function NewProductWizard() {
               <div className="text-center">
                 <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[36px]">{currentQuestion.label}</h2>
                 {currentQuestion.description ? <p className="mt-2 text-[14px] text-[#6b7280]">{currentQuestion.description}</p> : null}
+                {hasRecommendation && (
+                  <p className="mt-2 text-[12px] text-[#a07800]">
+                    ✦ Sarı ile işaretlenenler Tiramisup&apos;un ürününüze özel tavsiyesi
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -429,6 +541,7 @@ export default function NewProductWizard() {
                         key={option}
                         selected={getValue(currentQuestion.id) === option}
                         onClick={() => setValue(currentQuestion.id, option)}
+                        recommended={isOptionRecommended(currentQuestion.id, option)}
                       >
                         {option}
                       </OptionButton>
@@ -441,6 +554,7 @@ export default function NewProductWizard() {
                         key={option}
                         selected={(getValue(currentQuestion.id) || []).includes(option)}
                         onClick={() => toggleArrayValue(currentQuestion.id, option)}
+                        recommended={isOptionRecommended(currentQuestion.id, option)}
                       >
                         {option}
                       </CheckButton>
