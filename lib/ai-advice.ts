@@ -64,7 +64,25 @@ function stageContext(launchStatus: string): string {
   return contexts[launchStatus] || "Ürününü büyütmeye odaklan.";
 }
 
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+
 async function callAI(prompt: string): Promise<WeeklyAdvice | null> {
+  // Qwen → DeepSeek → Gemini
+  if (process.env.QWEN_API_KEY) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.QWEN_API_KEY, baseURL: QWEN_BASE_URL });
+      const res = await client.chat.completions.create({
+        model: "qwen-plus",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+      const parsed = JSON.parse(res.choices[0]?.message?.content || "{}");
+      if (parsed.focus && parsed.actions?.length) return parsed as WeeklyAdvice;
+    } catch (err) {
+      console.warn("[advice] Qwen failed:", (err as Error).message);
+    }
+  }
   if (process.env.DEEPSEEK_API_KEY) {
     try {
       const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });

@@ -115,6 +115,22 @@ function parsePlan(text: string): AiPlan {
   return plan;
 }
 
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+
+async function tryQwen(input: WizardInput): Promise<AiPlan> {
+  const client = new OpenAI({
+    apiKey: process.env.QWEN_API_KEY,
+    baseURL: QWEN_BASE_URL,
+  });
+  const response = await client.chat.completions.create({
+    model: "qwen-plus",
+    messages: [{ role: "user", content: PROMPT(input) }],
+    response_format: { type: "json_object" },
+    temperature: 0.7,
+  });
+  return parsePlan(response.choices[0]?.message?.content || "{}");
+}
+
 async function tryDeepSeek(input: WizardInput): Promise<AiPlan> {
   const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
@@ -137,15 +153,26 @@ async function tryGemini(input: WizardInput): Promise<AiPlan> {
 }
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
+  const hasQwen = !!process.env.QWEN_API_KEY;
   const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
   const hasGemini = !!process.env.GEMINI_API_KEY;
 
-  if (!hasDeepSeek && !hasGemini) {
+  if (!hasQwen && !hasDeepSeek && !hasGemini) {
     console.warn("[ai-plan] No AI API key configured — using static fallback");
     return null;
   }
 
-  // Try DeepSeek first, fallback to Gemini
+  // Qwen → DeepSeek → Gemini
+  if (hasQwen) {
+    try {
+      const plan = await tryQwen(input);
+      console.log("[ai-plan] Generated via Qwen");
+      return plan;
+    } catch (err) {
+      console.warn("[ai-plan] Qwen failed, trying DeepSeek:", (err as Error).message);
+    }
+  }
+
   if (hasDeepSeek) {
     try {
       const plan = await tryDeepSeek(input);

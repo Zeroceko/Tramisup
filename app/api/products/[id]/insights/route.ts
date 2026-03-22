@@ -65,8 +65,28 @@ function extractInsights(parsed: unknown): Insight[] {
   return [];
 }
 
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+
 async function generateInsights(productName: string, website: string, content: string): Promise<Insight[]> {
   const prompt = INSIGHTS_PROMPT(productName, website, content);
+
+  if (process.env.QWEN_API_KEY) {
+    try {
+      const client = new OpenAI({ apiKey: process.env.QWEN_API_KEY, baseURL: QWEN_BASE_URL });
+      const res = await client.chat.completions.create({
+        model: "qwen-plus",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.6,
+      });
+      const text = res.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(text);
+      const insights = extractInsights(parsed);
+      if (insights.length > 0) { console.log("[insights] Generated via Qwen"); return insights; }
+    } catch (err) {
+      console.warn("[insights] Qwen failed:", (err as Error).message);
+    }
+  }
 
   if (process.env.DEEPSEEK_API_KEY) {
     try {
@@ -81,10 +101,9 @@ async function generateInsights(productName: string, website: string, content: s
         temperature: 0.6,
       });
       const text = res.choices[0]?.message?.content || "{}";
-      console.log("[insights] DeepSeek raw:", text.slice(0, 200));
       const parsed = JSON.parse(text);
       const insights = extractInsights(parsed);
-      if (insights.length > 0) return insights;
+      if (insights.length > 0) { console.log("[insights] Generated via DeepSeek"); return insights; }
       console.warn("[insights] DeepSeek returned 0 insights, keys:", Object.keys(parsed));
     } catch (err) {
       console.warn("[insights] DeepSeek failed:", (err as Error).message);
