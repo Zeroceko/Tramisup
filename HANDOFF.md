@@ -1,326 +1,234 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 21 March 2026  
-**Status:** Live MVP, onboarding path stabilized, deeper product hardening still in progress
+**Last Updated:** 22 March 2026
+**Status:** MVP stabilized, tests all green, production blocked by Supabase pause
 
 ---
 
-## Executive summary
+## Executive Summary
 
-Tiramisup is now in a materially better state than the earlier "looks done but breaks on first use" phase.
+Tiramisup is in a stable state locally. All tests pass, build is clean, and the core onboarding spine works end-to-end. Production is temporarily blocked because the Supabase free-tier DB auto-paused due to inactivity.
 
-The most important improvement is this:
-
-- first-time users can move through the **public landing → waitlist / early-access signup → dashboard empty state → first product creation** path without immediately seeing fake seeded product data.
-
-That was the right correction.
+**One manual action required before production works:**
+→ Unpause Supabase from the dashboard (see Production section below)
 
 What is now true:
-- landing page is live
-- waitlist CTA is live
-- early-access signup exists behind a static code
-- signup no longer seeds fake product data automatically
-- dashboard shows a safe empty state if the user has no product
-- users can enter the product wizard from that empty state
-- critical locale-aware route cleanup was applied to the main onboarding surfaces
-
-What is not yet safely claimable:
-- every inner product surface is polished enough for broad real-user use
-- the entire post-wizard product lifecycle is fully hardened
-- i18n is complete across all authenticated screens
-- invite-code management is production-grade
+- Public landing → waitlist → early-access signup → dashboard → product creation flow works
+- Admin panel exists at `/{locale}/admin/waitlist` with auth (admin@tiramisup only)
+- All internal links are locale-prefixed (`/{locale}/...`) — no broken `/products` etc.
+- 58 unit tests + 16 E2E tests all pass locally
+- Build is clean (`npm run build` passes)
+- No fake seed data on signup
 
 ---
 
-## Current source-of-truth onboarding flow
+## Current Onboarding Flow
 
 ### 1. Landing
-Public localized landing page:
-- `/tr`
-- `/en`
+- `/tr` or `/en`
+- Primary CTA opens WaitlistModal
 
-Primary CTA opens waitlist modal.
+### 2. Waitlist
+- Modal: name + email → POST `/api/waitlist/join` → redirect to `/{locale}/waitlist/thank-you`
+- Modal also has **"Erken erişim kodum var"** link → goes to signup
 
-### 2. Waitlist path
-The waitlist modal allows:
-- name
-- email
-- submit to `/api/waitlist/join`
+### 3. Early-Access Signup
+- Route: `/{locale}/signup`
+- Requires: name, email, password, access code
+- **Current static access code: `TT31623SEN`**
+- Creates user only — no auto-product, no fake seed data
 
-The modal now also includes:
-- **Erken erişim kodum var**
+### 4. Dashboard (first-time user)
+- Route: `/{locale}/dashboard`
+- If no product: clean empty state with "İlk ürününü oluştur" CTA
+- If has product: normal dashboard
 
-That link sends users to localized signup.
+### 5. Product Creation
+- `/{locale}/products/new` — full wizard
 
-### 3. Early-access signup path
-Route:
-- `/{locale}/signup`
+---
 
-Current behavior:
-- requires name, email, password, access code
-- current static access code:
+## Production
 
-```txt
-TT31623SEN
+**URL:** https://tramisup.vercel.app
+
+**BLOCKER: Supabase DB is paused**
+- Project ID: `ojecebxxcbxrofnbkaae`, region: `eu-west-3`
+- Free tier pauses after 7 days inactivity
+- Fix: go to https://supabase.com/dashboard → select project → click **Resume**
+- All API endpoints return 500 while paused; landing page (static) still works
+
+**After unpausing, do this:**
+1. Create admin account: go to `https://tramisup.vercel.app/tr/signup`
+2. Use code `TT31623SEN`, email `admin@tiramisup`, any password → e.g. `t1ram1sUP`
+3. Admin panel will then work at `https://tramisup.vercel.app/tr/admin/waitlist`
+
+**Vercel:**
+- Auto-deploys from `main` branch
+- DATABASE_URL env var is set (trailing `\n` was removed — do not re-add)
+
+---
+
+## Admin Panel
+
+Route: `/{locale}/admin/waitlist`
+
+- Requires login as `admin@tiramisup` (any email can login; only this one gets admin access)
+- Shows all waitlist entries with approve/reject controls
+- Unauthenticated → redirect to login with callbackUrl
+- Non-admin → "Yetkisiz Erişim" message
+
+API routes protected:
+- `PATCH /api/waitlist/[id]` — approve/reject
+- `DELETE /api/waitlist/[id]` — delete entry
+
+---
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS 3 |
+| Auth | NextAuth 4 (Credentials + JWT) |
+| ORM | Prisma 7 |
+| DB | PostgreSQL (Supabase) |
+| i18n | next-intl, locales: `tr` (default), `en` |
+| Testing | Vitest (unit) + Playwright (E2E) |
+| Hosting | Vercel |
+
+---
+
+## Key Architecture Notes
+
+### i18n Routing
+All routes under `app/[locale]/`. Locale prefix is **always required** in links:
+```typescript
+// CORRECT
+href={`/${locale}/dashboard`}
+href={`/${locale}/products/new`}
+
+// WRONG (causes 404)
+href="/dashboard"
+href="//products"
+```
+Default locale: `tr`. Auth signIn path must be locale-prefixed: `/tr/login`.
+
+### Auth Flow
+- `lib/auth.ts` → NextAuth with Credentials provider
+- `authOptions.pages.signIn = '/tr/login'`
+- `getServerSession(authOptions)` in server components
+- JWT strategy (no DB sessions table)
+
+### Access Code Logic
+- Defined in `app/api/auth/signup/route.ts`
+- `VALID_ACCESS_CODE = 'TT31623SEN'` (uppercase, case-insensitive check)
+- No `lib/accessCode.ts` — that file was deleted (was dead code)
+
+### DB Schema Key Models
+- `User` — app users
+- `Product` — user's products (created post-signup via wizard)
+- `Waitlist` — email collection (status: PENDING | APPROVED | INVITED | REJECTED)
+
+---
+
+## Dev Setup
+
+```bash
+npm install
+npm run dev        # starts on :3000 (or :3001 if busy)
 ```
 
-Signup endpoint:
-- `/api/auth/signup`
-
-Current behavior:
-- validates code
-- creates user
-- **does not auto-create product**
-- **does not auto-seed fake data**
-
-This was a deliberate fix.
-
-### 4. First authenticated dashboard state
-Route:
-- `/{locale}/dashboard`
-
-If user has no product:
-- clean empty state
-- no fake metrics
-- no fake tasks
-- no fake readiness score
-- CTA: **İlk ürününü oluştur**
-
-### 5. Product creation
-Entry:
-- `/{locale}/products/new`
-
-This is the main wizard for first real product setup.
-
----
-
-## Most important architectural correction
-
-### Removed behavior
-Before this stabilization pass, signup did this:
-- create user
-- create default product
-- seed checklist/tasks/metrics/goals/routines immediately
-
-That produced a fake first-run experience.
-
-### Current rule
-Signup now:
-- creates user only
-
-Product data should start only after product creation.
-
-This is the most important product-quality correction in the current state.
-
----
-
-## Current production notes
-
-Production URL:
-
-```txt
-https://tramisup.vercel.app
-```
-
-Vercel production deploys on pushes to `main`.
-
-Recent stabilization work was pushed to `main` in multiple commits, including:
-- fake signup seed removal
-- early-access signup flow
-- waitlist modal → signup link
-- route gating / localized navigation stabilization
-- empty dashboard state for users with no products
-
----
-
-## Important project truths
-
-### 1. Port behavior in local dev
-In this machine, port `3000` may already be in use.
-Next dev can auto-shift to `3001`.
-
-Always inspect dev server output before running browser checks.
-
-### 2. Next dev cache can lie
-This project has already shown:
-- stale chunks
-- missing module errors inside `.next`
-- broken dev runtime while `npm run build` still passes
-
-If local dev behaves nonsensically:
-
+If dev server behaves nonsensically (500 errors, missing modules):
 ```bash
 rm -rf .next
 npm run dev
 ```
 
-Do this before chasing ghosts.
-
-### 3. Docs historically drifted ahead of runtime
-Do not trust old README/HANDOFF claims blindly.
-Always verify with:
-- build output
-- local browser flow
-- production browser flow
-- actual routes in `app/[locale]`
+Local DB: uses `.env.local` → `DATABASE_URL` pointing to Supabase (or local Postgres).
 
 ---
 
-## Files most relevant right now
+## Running Tests
 
-### Public onboarding
-- `app/[locale]/page.tsx`
-- `components/WaitlistModal.tsx`
-- `app/[locale]/signup/page.tsx`
-- `app/api/waitlist/join/route.ts`
-- `app/api/auth/signup/route.ts`
+```bash
+# Unit tests (58 tests)
+npx vitest run
 
-### Authenticated onboarding
-- `app/[locale]/dashboard/page.tsx`
-- `app/[locale]/products/new/page.tsx`
-- `app/api/products/route.ts`
+# E2E tests (16 tests) — dev server must be on :3000
+npm run dev   # in one terminal
+npx playwright test --config=playwright-waitlist.config.ts  # in another
 
-### Navigation / route safety
-- `components/DashboardNav.tsx`
-- `components/ProductSelector.tsx`
-- `components/ChecklistSection.tsx`
-- `app/[locale]/*/layout.tsx`
-
-### Error fallback safety
-- `app/global-error.tsx`
-- `app/not-found.tsx`
-
----
-
-## What was recently stabilized
-
-### Route cleanup
-Many links and redirects were still using non-locale paths like:
-- `/dashboard`
-- `/products/new`
-- `/metrics`
-
-Those were a major source of onboarding breakage after locale routing was introduced.
-
-Critical route cleanup was applied across:
-- dashboard entrypoints
-- products page
-- wizard redirects
-- settings / metrics / growth / integrations / pre-launch layouts
-- product selector
-- checklist task links
-- top nav gating logic
-
-### Navigation gating
-Top nav previously exposed inner surfaces even when the user had no product.
-That led to broken or contextless flows.
-
-Current approach:
-- if no products exist, nav is reduced to safe surfaces
-- user gets a direct first-product CTA instead of being encouraged into broken paths
-
----
-
-## What still needs work
-
-This is the real backlog, not the optimistic one.
-
-### High priority
-1. Verify production end-to-end onboarding again after each routing change
-2. Harden post-wizard flow:
-   - product creation
-   - active product selection
-   - dashboard after product exists
-3. Replace static access code with proper invite-code management
-4. Continue hiding or gating incomplete authenticated surfaces
-
-### Medium priority
-5. Expand i18n throughout authenticated app
-6. Improve product selector / active product UX
-7. Add stronger empty states to tasks, metrics, growth, integrations when product context is incomplete
-8. Improve admin waitlist workflow
-
-### Lower priority
-9. SEO hardening
-10. content polish
-11. analytics / monitoring improvements
-
----
-
-## Known compromises
-
-### Static access code
-The early-access flow currently uses a single static code:
-
-```txt
-TT31623SEN
+# Full suite
+npm test
 ```
 
-This is acceptable as a temporary controlled-access mechanism.
-It is not a proper invite system.
-
-### Product readiness beyond onboarding
-The first-run experience is much safer now, but not every authenticated area is product-polished yet.
-The core rule should remain:
-- prefer safe empty states and gated navigation
-- do not show fake data to make screens look complete
+All 74 tests should pass. If E2E fails with timeouts → restart dev server with `rm -rf .next && npm run dev`.
 
 ---
 
-## Recommended next working style
+## Recent Commits (last session)
 
-When continuing from here:
-
-1. Start with `npm run build`
-2. Start dev server and confirm actual port
-3. Smoke test these routes in browser:
-   - `/{locale}`
-   - `/{locale}/signup`
-   - `/{locale}/dashboard`
-   - `/{locale}/products/new`
-4. Only after the onboarding spine is green, continue deeper product work
-
-Do not expand feature surface until the onboarding spine stays stable.
+```
+8687ce6 feat: refresh landing page messaging and layout
+5864d9d fix: improve admin panel auth UX and login callbackUrl support
+c5f936e fix: locale-prefix all internal links across dashboard and thank-you page
+2a53129 feat: add admin auth + align tests with access-code signup flow
+c939547 fix: stabilize onboarding routes and navigation gating
+```
 
 ---
 
-## Practical smoke checklist
+## What Still Needs Work
 
-### Public
-- landing loads
-- waitlist modal opens
-- waitlist submit works
-- waitlist thank-you works
-- modal link to signup works
+### High Priority
+1. **Unpause Supabase + create admin account on production** (immediate blocker)
+2. Harden post-product-creation flow (wizard → active product → inner surfaces)
+3. Verify every authenticated route doesn't have broken locale links
 
-### Early access
-- signup loads
-- access code field visible
-- `TT31623SEN` works
-- login works
+### Medium Priority
+4. Replace static access code with proper invite-code management
+5. Complete i18n on authenticated screens
+6. Empty states for tasks/metrics/growth when product context is missing
 
-### First-time user
-- dashboard empty state appears
-- no fake seeded product data shown
-- first product CTA works
-- wizard opens
-
-### After product creation
-- localized redirect works
-- active product context is set
-- inner nav does not immediately break
+### Lower Priority
+7. Email sending (invite on waitlist approval)
+8. Admin authentication hardening (currently email-based check)
+9. SEO, analytics, content polish
 
 ---
 
-## Bottom line
+## Important Project Truths
 
-The project is no longer in the most dangerous state.
-The onboarding path has been substantially stabilized.
+1. **Supabase free tier pauses** — if production breaks mysteriously after a week of inactivity, unpause DB first before debugging anything else.
 
-But it still needs continued hardening before it deserves the label "fully product-ready."
+2. **`.next` cache can corrupt** — `rm -rf .next && npm run dev` before chasing runtime ghosts.
 
-The correct posture is:
-- ship carefully
-- verify constantly
-- prefer safe states over fake completeness
-- keep onboarding sacred
+3. **Locale prefix required everywhere** — any link without `/${locale}/` prefix will 404 or break auth redirects.
+
+4. **DATABASE_URL trailing newline** — Vercel env var was fixed. Do not copy-paste the value with trailing `\n` when updating.
+
+5. **Docs can drift ahead of code** — always verify with `npm run build` + browser flow, not just reading docs.
+
+---
+
+## Smoke Test Checklist
+
+### Before shipping any change:
+```
+[ ] npm run build — passes
+[ ] npx vitest run — all pass
+[ ] E2E: landing → waitlist modal → submit → thank-you
+[ ] E2E: signup with TT31623SEN → login → dashboard empty state
+[ ] E2E: /tr/admin/waitlist → shows login redirect (if not authed)
+```
+
+### Production (after Supabase unpaused):
+```
+[ ] https://tramisup.vercel.app/tr loads
+[ ] Waitlist form submits
+[ ] Signup with TT31623SEN works
+[ ] Login works
+[ ] /tr/admin/waitlist accessible with admin@tiramisup
+```
