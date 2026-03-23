@@ -15,6 +15,7 @@ export type SavedMetricSetup = {
   selections: FunnelMetricSelection[];
   entries: MetricEntryRow[];
   platforms?: string[];
+  ignoredLaunchChecklistIds?: string[];
   founderSummary?: {
     headline: string;
     summary: string;
@@ -44,4 +45,18 @@ export function parseSavedMetricSetup(value: string | null | undefined): SavedMe
   } catch {
     return null;
   }
+}
+
+export function buildSavedMetricSetupValue(
+  current: string | null | undefined,
+  updater: (setup: SavedMetricSetup) => SavedMetricSetup
+) {
+  const parsed = parseSavedMetricSetup(current);
+  const base: SavedMetricSetup = parsed ?? {
+    version: 3,
+    selections: [],
+    entries: [],
+  };
+
+  return JSON.stringify(updater(base));
 }

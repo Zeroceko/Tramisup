@@ -100,6 +100,9 @@ The priority stack is:
 - Product creation now shows a foreground “Tramisup önerileri hazırlanıyor” overlay instead of exposing raw provider/config language during AI preparation
 - Mobile app products now merge a deterministic iOS / Android store-readiness baseline into the AI-generated launch checklist
 - Post-signup routing now goes to product creation first, and shell product loading falls back safely instead of crashing the whole authenticated surface when the database pool is temporarily saturated
+- Growth page now uses a single shared next-step logic chain: metric setup → first metric entry → first goal → growth checklist execution → Founder Coach focus
+- Founder Coach now reads metric setup and saved entry maturity from `launchGoals` instead of assuming launch-post users always need the same generic advice
+- Growth checklist category naming is now aligned with actual growth execution language instead of mismatched placeholder labels
 
 ---
 
@@ -243,6 +246,16 @@ The user should make the choice **where they see the metric**, not after reading
 - save CTA must be visible near the current action context
 - after save, user should be taken to the metrics input flow
 
+### Current sequencing rule
+For launched products, Growth should now behave like a staged operating system:
+1. metric setup
+2. first metrics entry
+3. first explicit goal
+4. growth checklist execution
+5. Founder Coach prioritization
+
+The whole surface should keep reinforcing that order instead of mixing all layers equally.
+
 ### Pre-launch behavior
 For pre-launch products, Growth should stay visible as the next stage, but the page should explain that it is coming next and point back to launch readiness.
 Do not hide the section completely unless the stage model changes again.
@@ -255,6 +268,16 @@ Before setup is completed, avoid dumping:
 - timeline
 
 These should only appear after the primary setup step is done.
+
+### Coach rule
+Founder Coach on the Growth page should not behave like a generic motivational card.
+It should read:
+- whether metric setup exists
+- whether real metric entries exist
+- whether goals exist
+- whether launch blockers are actually active or were intentionally ignored
+
+The fallback recommendation should match current workspace maturity, not only raw product status.
 
 ### Important framing rule
 Growth is now the answer to:
@@ -370,7 +393,7 @@ Tasks should feel like the user’s **daily work surface**, not a backlog dump.
 3. Improve metrics trend visualization and drill-down so users can read what changed, not only that something changed
 4. Convert pre-launch Growth preview into a cleaner launch-readiness gate if future feedback says the mixed stage is still confusing
 5. Keep the no-fake-data rule strict: only AI-generated or user-created records should appear in the workspace
-6. Continue the current design pass using Figma references from VS Code / Codex if needed; this terminal agent could not use Figma MCP because the MCP auth context did not carry over here
+6. Continue the current design pass using Figma as a component/system reference, not as a pixel-copy source
 
 ### Medium priority
 1. Make Founder Coach progressively smarter once actual metric history exists

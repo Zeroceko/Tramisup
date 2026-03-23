@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildSavedMetricSetupValue, parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export async function PATCH(
   request: Request,
@@ -14,7 +15,40 @@ export async function PATCH(
     }
 
     const { id } = await context.params;
-    const { completed } = await request.json();
+    const { completed, ignored } = await request.json();
+
+    const existingItem = await prisma.launchChecklist.findFirst({
+      where: { id },
+      include: { product: true },
+    });
+
+    if (!existingItem || existingItem.product.userId !== session.user.id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (typeof ignored === "boolean") {
+      const ignoredIds = new Set(
+        parseSavedMetricSetup(existingItem.product.launchGoals)?.ignoredLaunchChecklistIds ?? []
+      );
+
+      if (ignored) {
+        ignoredIds.add(id);
+      } else {
+        ignoredIds.delete(id);
+      }
+
+      await prisma.product.update({
+        where: { id: existingItem.productId },
+        data: {
+          launchGoals: buildSavedMetricSetupValue(existingItem.product.launchGoals, (setup) => ({
+            ...setup,
+            ignoredLaunchChecklistIds: Array.from(ignoredIds),
+          })),
+        },
+      });
+
+      return NextResponse.json({ id, ignored });
+    }
 
     const item = await prisma.launchChecklist.update({
       where: { id },

@@ -10,6 +10,7 @@ import PageHeader from "@/components/PageHeader";
 import LaunchReviewSummary from "@/components/LaunchReviewSummary";
 import BlockerSummary from "@/components/BlockerSummary";
 import LaunchButton from "@/components/LaunchButton";
+import { buildSavedMetricSetupValue, parseSavedMetricSetup } from "@/lib/metric-setup";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(itemId: string) {
@@ -55,6 +56,51 @@ async function createTaskFromChecklistItem(itemId: string) {
   }
 }
 
+async function setChecklistItemIgnored(itemId: string, ignored: boolean) {
+  "use server";
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const checklistItem = await prisma.launchChecklist.findUnique({
+      where: { id: itemId },
+      include: { product: true },
+    });
+
+    if (!checklistItem || checklistItem.product.userId !== session.user.id) {
+      throw new Error("Item not found or unauthorized");
+    }
+
+    const ignoredIds = new Set(
+      parseSavedMetricSetup(checklistItem.product.launchGoals)?.ignoredLaunchChecklistIds ?? []
+    );
+
+    if (ignored) {
+      ignoredIds.add(itemId);
+    } else {
+      ignoredIds.delete(itemId);
+    }
+
+    await prisma.product.update({
+      where: { id: checklistItem.productId },
+      data: {
+        launchGoals: buildSavedMetricSetupValue(checklistItem.product.launchGoals, (setup) => ({
+          ...setup,
+          ignoredLaunchChecklistIds: Array.from(ignoredIds),
+        })),
+      },
+    });
+
+    revalidatePath("/pre-launch");
+  } catch (error) {
+    console.error("Error updating ignored checklist item:", error);
+    throw error;
+  }
+}
+
 export default async function PreLaunchPage({
   params,
 }: {
@@ -76,6 +122,11 @@ export default async function PreLaunchPage({
     where: { productId: product?.id },
     orderBy: [{ category: "asc" }, { order: "asc" }],
   });
+  const ignoredChecklistIds = new Set(
+    parseSavedMetricSetup(product?.launchGoals)?.ignoredLaunchChecklistIds ?? []
+  );
+  const activeChecklists = checklists.filter((item) => !ignoredChecklistIds.has(item.id));
+  const ignoredChecklistItems = checklists.filter((item) => ignoredChecklistIds.has(item.id));
 
   const tasks = await prisma.task.findMany({
     where: { productId: product?.id, status: { not: "DONE" } },
@@ -91,7 +142,7 @@ export default async function PreLaunchPage({
   };
 
   const categoryScores = Object.entries(categoryNames).map(([key, name]) => {
-    const items = checklists.filter(c => c.category === key);
+    const items = activeChecklists.filter(c => c.category === key);
     const completed = items.filter(c => c.completed).length;
     const total = items.length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -108,14 +159,23 @@ export default async function PreLaunchPage({
   });
 
   // Overall readiness score
-  const totalItems = checklists.length;
-  const completedItems = checklists.filter(item => item.completed).length;
+  const totalItems = activeChecklists.length;
+  const completedItems = activeChecklists.filter(item => item.completed).length;
   const overallScore = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   // Extract blockers (HIGH priority + not completed)
-  const blockers = checklists
+  const blockers = activeChecklists
     .filter(item => item.priority === "HIGH" && !item.completed)
     .map(item => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      priority: item.priority,
+      linkedTaskId: item.linkedTaskId || undefined,
+    }));
+  const ignoredBlockers = ignoredChecklistItems
+    .filter((item) => item.priority === "HIGH" && !item.completed)
+    .map((item) => ({
       id: item.id,
       title: item.title,
       category: item.category,
@@ -127,10 +187,10 @@ export default async function PreLaunchPage({
   const readyToLaunch = blockers.length === 0 && totalItems > 0;
 
   const checklistsByCategory = {
-    PRODUCT: checklists.filter(c => c.category === "PRODUCT"),
-    MARKETING: checklists.filter(c => c.category === "MARKETING"),
-    LEGAL: checklists.filter(c => c.category === "LEGAL"),
-    TECH: checklists.filter(c => c.category === "TECH"),
+    PRODUCT: activeChecklists.filter(c => c.category === "PRODUCT"),
+    MARKETING: activeChecklists.filter(c => c.category === "MARKETING"),
+    LEGAL: activeChecklists.filter(c => c.category === "LEGAL"),
+    TECH: activeChecklists.filter(c => c.category === "TECH"),
   };
 
   return (
@@ -153,14 +213,17 @@ export default async function PreLaunchPage({
         checklistsByCategory={checklistsByCategory}
         productId={product?.id || ""}
         onCreateTask={createTaskFromChecklistItem}
+        ignoredItems={ignoredChecklistItems}
       />
 
       {/* Blocker summary — only show when there are blockers */}
-      {blockers.length > 0 && (
+      {(blockers.length > 0 || ignoredBlockers.length > 0) && (
         <div className="mt-4">
           <BlockerSummary
             blockers={blockers}
+            ignoredBlockers={ignoredBlockers}
             onCreateTask={createTaskFromChecklistItem}
+            onIgnore={setChecklistItemIgnored}
           />
         </div>
       )}

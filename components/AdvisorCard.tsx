@@ -23,9 +23,10 @@ type FounderCoachResponse = {
 interface AdvisorCardProps {
   productId: string;
   productName: string;
+  eventType?: string;
 }
 
-export default function AdvisorCard({ productId }: AdvisorCardProps) {
+export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }: AdvisorCardProps) {
   const [suggestion, setSuggestion] = useState<FounderCoachSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState("");
@@ -35,7 +36,7 @@ export default function AdvisorCard({ productId }: AdvisorCardProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/products/${productId}/advice?event=DASHBOARD_VIEW`)
+    fetch(`/api/products/${productId}/advice?event=${encodeURIComponent(eventType)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: FounderCoachSuggestion | null) => {
         if (!cancelled) {
@@ -50,7 +51,7 @@ export default function AdvisorCard({ productId }: AdvisorCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [eventType, productId]);
 
   async function askCoach() {
     const trimmed = question.trim();

@@ -12,6 +12,7 @@ import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
 import AdvisorCard from "@/components/AdvisorCard";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export default async function GrowthPage({
@@ -74,6 +75,14 @@ export default async function GrowthPage({
   const hasGoals = goals.length > 0;
   const completedGrowthItems = growthChecklists.filter((item) => item.completed).length;
   const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+  const nextStep = getGrowthWorkspaceStep({
+    hasSetup,
+    hasMetricEntries,
+    hasGoals,
+    completedGrowthItems,
+    totalGrowthItems: growthChecklists.length,
+    locale,
+  });
 
   if (!isLaunched) {
     return (
@@ -130,34 +139,6 @@ export default async function GrowthPage({
     );
   }
 
-  const nextStep = !hasMetricEntries
-    ? {
-        title: "Şimdi ilk günlük veri girişini yap",
-        description: "Metrik setup tamam. Bir sonraki net adım metrics ekranında ilk gerçek değerlerini girmek.",
-        href: `/${locale}/metrics`,
-        cta: "Metrik girişine git",
-      }
-    : !hasGoals
-      ? {
-          title: "Şimdi bir hedef değeri tanımla",
-          description: "AARRR metriklerini seçmek neyi takip edeceğini söyler. Hedef eklemek ise ulaşmak istediğin sonucu netleştirir.",
-          href: "#goals",
-          cta: "Hedef alanına in",
-        }
-      : completedGrowthItems < growthChecklists.length
-        ? {
-            title: "Şimdi growth checklist'ini ilerlet",
-            description: "Veri girişi başladı. Sıradaki iş, seçtiğin metrikleri iyileştirecek gerçek growth aksiyonlarını tamamlamak.",
-            href: "#growth-checklist",
-            cta: "Checklist'e dön",
-          }
-        : {
-            title: "Şimdi koç önerisine göre odaklan",
-            description: "Temel setup ve checklist ilerliyor. Founder Coach önerisini kullanıp hangi hamlenin metriği hareket ettireceğini seç.",
-            href: "#coach",
-            cta: "Koç önerisini gör",
-          };
-
   return (
     <div>
       <PageHeader
@@ -171,6 +152,42 @@ export default async function GrowthPage({
       />
 
       <div className="space-y-4">
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[12px] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Growth durumu</p>
+              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+                {hasSetup ? "Setup net" : "Setup bekliyor"}
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+                {hasSetup
+                  ? "Hangi sayıları takip edeceğin tanımlı."
+                  : "AARRR boyunca her adım için tek ana metriği seçmen gerekiyor."}
+              </p>
+            </div>
+            <div className="rounded-[12px] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Metrics durumu</p>
+              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+                {hasMetricEntries ? "İlk veri var" : "İlk veri bekliyor"}
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+                {hasMetricEntries
+                  ? "Artık hangi sayının hareket ettiğini gün gün görebilirsin."
+                  : "Setup sonrası ilk gerçek sayıları girince growth kararları anlam kazanır."}
+              </p>
+            </div>
+            <div className="rounded-[12px] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Execution durumu</p>
+              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+                {completedGrowthItems}/{growthChecklists.length || 0} growth işi tamam
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+                Hedefler, checklist ve rutinler burada; yani sayıyı görmekle işi yapmak aynı yüzeyde birleşiyor.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[12px] bg-[#fafafa] p-4">
@@ -223,7 +240,7 @@ export default async function GrowthPage({
               </div>
               <div>
                 <div id="coach" className="mb-4">
-                  <AdvisorCard productId={product.id} productName={product.name} />
+                  <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
                 </div>
                 <TimelineFeed events={timelineEvents} productId={product.id} />
               </div>

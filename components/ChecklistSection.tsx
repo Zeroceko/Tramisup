@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface ChecklistItem {
   id: string;
   title: string;
+  category?: string;
   completed: boolean;
   priority: string;
   linkedTaskId: string | null;
@@ -15,6 +16,7 @@ interface ChecklistSectionProps {
   checklistsByCategory: Record<string, ChecklistItem[]>;
   productId: string;
   onCreateTask: (itemId: string) => Promise<void>;
+  ignoredItems: ChecklistItem[];
 }
 
 // Figma-matching labels for launch categories
@@ -52,6 +54,7 @@ export default function ChecklistSection({
   checklistsByCategory,
   productId: _productId,
   onCreateTask,
+  ignoredItems,
 }: ChecklistSectionProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -82,6 +85,20 @@ export default function ChecklistSection({
     setLoading(itemId);
     try {
       await onCreateTask(itemId);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleIgnore = async (itemId: string, ignored: boolean) => {
+    setLoading(itemId);
+    try {
+      await fetch(`/api/checklist/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ignored }),
+      });
+      router.refresh();
     } finally {
       setLoading(null);
     }
@@ -205,14 +222,28 @@ export default function ChecklistSection({
               {/* Action */}
               <div className="flex items-center gap-2 shrink-0">
                 {!item.completed && !item.linkedTaskId && (
-                  <button
-                    onClick={() => handleCreateTask(item.id)}
-                    disabled={loading === item.id}
-                    className="hidden h-6 items-center rounded-full bg-[#f6f6f6] px-3 text-[11px] font-medium text-[#666d80] transition hover:bg-[#ffd7ef] hover:text-[#0d0d12] sm:flex"
-                  >
-                    {loading === item.id ? "..." : "+ Görev"}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleCreateTask(item.id)}
+                      disabled={loading === item.id}
+                      className="hidden h-6 items-center rounded-full bg-[#f6f6f6] px-3 text-[11px] font-medium text-[#666d80] transition hover:bg-[#ffd7ef] hover:text-[#0d0d12] sm:flex"
+                    >
+                      {loading === item.id ? "..." : "Task oluştur"}
+                    </button>
+                    <button
+                      onClick={() => handleIgnore(item.id, true)}
+                      disabled={loading === item.id}
+                      className="hidden h-6 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#8a8fa0] transition hover:border-[#d5d9e2] hover:bg-[#fafafa] hover:text-[#0d0d12] sm:flex"
+                    >
+                      Yoksay
+                    </button>
+                  </>
                 )}
+                {item.linkedTaskId ? (
+                  <span className="hidden rounded-full bg-[#f6f6f6] px-3 py-1 text-[11px] font-medium text-[#666d80] sm:inline-flex">
+                    Tasklara eklendi
+                  </span>
+                ) : null}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b8c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M7 17L17 7M17 7H7M17 7v10" />
                 </svg>
@@ -221,6 +252,56 @@ export default function ChecklistSection({
           ))}
         </div>
       </div>
+
+      {ignoredItems.length > 0 ? (
+        <div className="mt-4 rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Yoksayılanlar</p>
+              <h3 className="mt-1 text-[16px] font-semibold text-[#0d0d12]">Şimdilik task’a çevrilmeyen maddeler</h3>
+              <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+                Buraya aldığın maddeler kaybolmaz. İstediğinde geri alıp tekrar değerlendirebilir ya da task oluşturabilirsin.
+              </p>
+            </div>
+            <span className="rounded-full bg-[#f6f6f6] px-3 py-1 text-[12px] font-medium text-[#4c5567]">
+              {ignoredItems.length} madde
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {ignoredItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 rounded-[12px] border border-[#f0f0f0] bg-[#fcfcfc] px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-[#0d0d12]">{item.title}</p>
+                  {item.category ? (
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#8a8fa0]">
+                      {CATEGORY_LABELS[item.category] ?? item.category}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleIgnore(item.id, false)}
+                  disabled={loading === item.id}
+                  className="inline-flex h-8 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+                >
+                  Geri al
+                </button>
+                {!item.linkedTaskId ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateTask(item.id)}
+                    disabled={loading === item.id}
+                    className="inline-flex h-8 items-center rounded-full bg-[#ffd7ef] px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+                  >
+                    Task oluştur
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

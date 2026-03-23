@@ -186,6 +186,42 @@ function fallbackReactive(context: FounderCoachContext): FounderCoachResponse {
     };
   }
 
+  if (!context.growthWorkspace.metricSetupComplete) {
+    return {
+      title: "Önce growth için hangi sayıları takip edeceğini seç",
+      summary: "Ürün launch sonrası aşamada görünüyor ama henüz net bir metric setup oluşmamış. Önce her AARRR adımı için tek ana metriği seçmek, sonraki growth kararlarını sağlamlaştırır.",
+      priorities: [
+        { title: "Her AARRR adımı için 1 ana metrik seç", why: "Hangi sayıya bakacağını netleştirmeden growth işi dağılır.", priority: "CRITICAL" },
+        { title: "Activation metriğini özellikle netleştir", why: "İlk değer anını anlamadan acquisition veya retention yorumları zayıf kalır.", priority: "IMPORTANT" }
+      ],
+      whatCanWait: ["Detaylı deney listeleri", "İleri seviye raporlama"]
+    };
+  }
+
+  if (context.growthWorkspace.entryCount === 0) {
+    return {
+      title: "Şimdi ilk gerçek metrik girişini yapma zamanı",
+      summary: "Metric setup hazır ama henüz sayılar sisteme girilmemiş. İlk veri gelmeden hangi aksiyonun işe yaradığını ayırt etmek zor olur.",
+      priorities: [
+        { title: "Bugünkü ana metrik değerlerini gir", why: "İlk baz çizgiyi görmeden ilerlemeyi ölçemezsin.", priority: "CRITICAL" },
+        { title: "Revenue ve activation tarafında başlangıç seviyesini not et", why: "İlk haftanın yorum çerçevesi bu başlangıç noktasına dayanır.", priority: "IMPORTANT" }
+      ],
+      whatCanWait: ["Yeni kanal açmak", "Geniş kapsamlı optimizasyon listesi"]
+    };
+  }
+
+  if (context.execution.goals === 0) {
+    return {
+      title: "Takip ettiğin sayılar için hedef koyma zamanı",
+      summary: "Artık veri girişi var. Sıradaki eksik halka, bu sayıların hangi seviyeye gelmesini istediğini net bir hedefe bağlamak.",
+      priorities: [
+        { title: "İlk 30 günlük hedefini yaz", why: "Hedef olmadan sayı takibi sadece gözlemde kalır.", priority: "CRITICAL" },
+        { title: "Tek bir ana başarı metriğini hedefe çevir", why: "Odak alanını daraltmak execution kalitesini yükseltir.", priority: "IMPORTANT" }
+      ],
+      whatCanWait: ["Paralel çok sayıda growth deneyi", "Detaylı vanity metric kıyasları"]
+    };
+  }
+
   return {
     title: "Şu an launch sonrası sinyalleri netleştirme zamanı",
     summary: "Ürün launch edilmiş görünüyor. Şimdi en önemli konu ilk kullanıcı davranışını ve aktivasyonu neyle ölçeceğini netleştirmek.",
@@ -207,10 +243,46 @@ function fallbackSuggestion(context: FounderCoachContext): FounderCoachSuggestio
     };
   }
 
+  if (!context.growthWorkspace.metricSetupComplete) {
+    return {
+      suggestedNextStep: "Growth ekranında metric setup'ı tamamla",
+      whyNow: "Launch sonrası dönemde hangi sayılarla karar vereceğin net değilse diğer growth işleri dağınık kalır.",
+      whatCanWait: "Detaylı growth checklist maddelerinin tamamı",
+      confidence: "HIGH"
+    };
+  }
+
+  if (context.growthWorkspace.entryCount === 0) {
+    return {
+      suggestedNextStep: "Metrics ekranında ilk günlük veri girişini yap",
+      whyNow: "Setup hazır ama henüz baz çizgi yok. İlk gerçek değerler gelmeden neyin hareket ettiğini anlayamazsın.",
+      whatCanWait: "Yeni deneyler açmak",
+      confidence: "HIGH"
+    };
+  }
+
+  if (context.execution.goals === 0) {
+    return {
+      suggestedNextStep: "İlk growth hedefini sayı bazlı tanımla",
+      whyNow: "Veri girişi başladıysa sıradaki ihtiyaç, hangi sonuca ulaşmaya çalıştığını netleştirmek.",
+      whatCanWait: "İkinci seviye dashboard detayları",
+      confidence: "HIGH"
+    };
+  }
+
+  if (context.execution.growthChecklist.total > context.execution.growthChecklist.completed) {
+    return {
+      suggestedNextStep: "Growth checklist'teki bir sonraki execution maddesini kapat",
+      whyNow: "Veriyi görüp hedef koyduktan sonra metrikleri oynatacak gerçek işler execution checklist tarafında duruyor.",
+      whatCanWait: "Yeni araç veya rapor eklemek",
+      confidence: "HIGH"
+    };
+  }
+
   return {
-    suggestedNextStep: "İlk aktivasyon metriğini tanımla",
-    whyNow: "Launch sonrası neyin çalıştığını anlamak için önce başarıyı hangi davranışın temsil ettiğini netleştirmen gerekiyor.",
-    whatCanWait: "Detaylı performans dashboard genişletmeleri",
+    suggestedNextStep: "Founder Coach önerisine göre tek bir growth hamlesine odaklan",
+    whyNow: "Temel setup ve execution yüzeyi oturduysa artık en önemli konu hangi hamlenin metriği hareket ettireceğini seçmek.",
+    whatCanWait: "Paralel çok sayıda optimizasyon denemesi",
     confidence: "HIGH"
   };
 }

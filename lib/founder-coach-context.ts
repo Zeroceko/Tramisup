@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getGrowthWorkspaceStep, type GrowthWorkspaceStepKey } from "@/lib/growth-workspace-step";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export type FounderCoachContext = {
@@ -20,6 +21,12 @@ export type FounderCoachContext = {
     goals: number;
     routines: number;
     integrationsConnected: number;
+  };
+  growthWorkspace: {
+    metricSetupComplete: boolean;
+    selectedMetricCount: number;
+    entryCount: number;
+    nextFocus: GrowthWorkspaceStepKey;
   };
   metrics: {
     hasActivationMetric: boolean;
@@ -89,6 +96,13 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
   });
 
   if (!product) throw new Error("Product not found");
+  const savedSetup = parseSavedMetricSetup(product.launchGoals);
+  const ignoredLaunchChecklistIds = savedSetup?.ignoredLaunchChecklistIds ?? [];
+  const selectedMetricCount = (savedSetup?.selections ?? []).reduce(
+    (total, selection) => total + selection.selectedMetricKeys.length,
+    0
+  );
+  const latestSavedEntry = savedSetup?.entries.at(-1) ?? null;
 
   const [
     launchTotal,
@@ -105,9 +119,33 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     latestRetention,
     latestActivation,
   ] = await Promise.all([
-    prisma.launchChecklist.count({ where: { productId } }),
-    prisma.launchChecklist.count({ where: { productId, completed: true } }),
-    prisma.launchChecklist.count({ where: { productId, completed: false, priority: "HIGH" } }),
+    prisma.launchChecklist.count({
+      where: {
+        productId,
+        ...(ignoredLaunchChecklistIds.length > 0
+          ? { id: { notIn: ignoredLaunchChecklistIds } }
+          : {}),
+      },
+    }),
+    prisma.launchChecklist.count({
+      where: {
+        productId,
+        completed: true,
+        ...(ignoredLaunchChecklistIds.length > 0
+          ? { id: { notIn: ignoredLaunchChecklistIds } }
+          : {}),
+      },
+    }),
+    prisma.launchChecklist.count({
+      where: {
+        productId,
+        completed: false,
+        priority: "HIGH",
+        ...(ignoredLaunchChecklistIds.length > 0
+          ? { id: { notIn: ignoredLaunchChecklistIds } }
+          : {}),
+      },
+    }),
     prisma.growthChecklist.count({ where: { productId } }),
     prisma.growthChecklist.count({ where: { productId, completed: true } }),
     prisma.task.count({ where: { productId, status: { not: "DONE" } } }),
@@ -119,6 +157,13 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     prisma.retentionCohort.findFirst({ where: { productId }, orderBy: { cohortDate: "desc" } }),
     prisma.activationFunnel.findFirst({ where: { productId, step: "ACTIVATED" }, orderBy: { date: "desc" } }),
   ]);
+  const nextGrowthStep = getGrowthWorkspaceStep({
+    hasSetup: selectedMetricCount > 0,
+    hasMetricEntries: (savedSetup?.entries.length ?? 0) > 0,
+    hasGoals: goals > 0,
+    completedGrowthItems: growthCompleted,
+    totalGrowthItems: growthTotal,
+  });
 
   return {
     product,
@@ -130,18 +175,51 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
       routines,
       integrationsConnected,
     },
+    growthWorkspace: {
+      metricSetupComplete: selectedMetricCount > 0,
+      selectedMetricCount,
+      entryCount: savedSetup?.entries.length ?? 0,
+      nextFocus: nextGrowthStep.key,
+    },
     metrics: {
-      hasActivationMetric: !!latestActivation || !!latestMetric?.activationRate,
-      hasRevenueMetric: latestMetric?.mrr != null,
-      hasRetentionMetric: !!latestRetention,
+      hasActivationMetric:
+        !!latestActivation ||
+        !!latestMetric?.activationRate ||
+        (savedSetup?.selections.some(
+          (selection) =>
+            selection.stage === "Activation" && selection.selectedMetricKeys.length > 0
+        ) ??
+          false),
+      hasRevenueMetric:
+        latestMetric?.mrr != null ||
+        latestSavedEntry?.values?.Revenue != null ||
+        (savedSetup?.selections.some(
+          (selection) =>
+            selection.stage === "Revenue" && selection.selectedMetricKeys.length > 0
+        ) ??
+          false),
+      hasRetentionMetric:
+        !!latestRetention ||
+        latestSavedEntry?.values?.Retention != null ||
+        (savedSetup?.selections.some(
+          (selection) =>
+            selection.stage === "Retention" && selection.selectedMetricKeys.length > 0
+        ) ??
+          false),
       latest: latestMetric
         ? {
             dau: latestMetric.dau,
             mrr: latestMetric.mrr,
             activationRate: latestMetric.activationRate,
           }
+        : latestSavedEntry
+          ? {
+              dau: latestSavedEntry.values.Acquisition ?? null,
+              mrr: latestSavedEntry.values.Revenue ?? null,
+              activationRate: latestSavedEntry.values.Activation ?? null,
+            }
         : null,
-      lastUpdatedAt: latestMetric?.date?.toISOString() ?? null,
+      lastUpdatedAt: latestMetric?.date?.toISOString() ?? latestSavedEntry?.date ?? null,
     },
     storeReadiness: {
       platforms: inferPlatforms(product),

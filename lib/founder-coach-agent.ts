@@ -38,6 +38,9 @@ function buildSyntheticPromptFromContext(
     return [
       context.product.status,
       context.product.launchStatus,
+      context.growthWorkspace.metricSetupComplete ? "metric setup complete" : "metric setup missing",
+      context.growthWorkspace.entryCount > 0 ? "metric entries present" : "metric entries missing",
+      context.growthWorkspace.nextFocus,
       context.metrics.hasActivationMetric ? "activation metric defined" : "activation metric missing",
       context.metrics.hasRetentionMetric ? "retention metric defined" : "retention metric missing",
       context.metrics.hasRevenueMetric ? "revenue metric defined" : "revenue metric missing",

@@ -13,10 +13,10 @@ type GrowthItem = {
 
 // Figma-matching labels for growth categories
 const CATEGORY_LABELS: Record<string, string> = {
-  ACQUISITION: "Analytics & Tracking",
-  ACTIVATION:  "Organic Growth",
-  RETENTION:   "Paid Acquisition",
-  REVENUE:     "Retention & Engagement",
+  ACQUISITION: "Acquisition & Distribution",
+  ACTIVATION: "Activation & Onboarding",
+  RETENTION: "Retention & Habit",
+  REVENUE: "Revenue & Monetization",
 };
 
 function SegmentBar({ completed, total, active }: { completed: number; total: number; active: boolean }) {
@@ -47,11 +47,14 @@ interface GrowthChecklistSectionProps {
 
 export default function GrowthChecklistSection({ items: initialItems }: GrowthChecklistSectionProps) {
   const [items, setItems] = useState(initialItems);
-
-  const categories = Object.keys(CATEGORY_LABELS).filter(
-    (cat) => items.some((i) => i.category === cat)
+  const categories = Object.keys(CATEGORY_LABELS).filter((cat) =>
+    items.some((i) => i.category === cat)
   );
-  const [activeCategory, setActiveCategory] = useState(categories[0] ?? "ACQUISITION");
+  const firstIncompleteCategory =
+    categories.find((cat) =>
+      items.some((item) => item.category === cat && !item.completed)
+    ) ?? categories[0] ?? "ACQUISITION";
+  const [activeCategory, setActiveCategory] = useState(firstIncompleteCategory);
 
   async function toggleItem(id: string, current: boolean) {
     setItems((prev) =>
@@ -72,8 +75,10 @@ export default function GrowthChecklistSection({ items: initialItems }: GrowthCh
   if (items.length === 0) {
     return (
       <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-10 text-center">
-        <p className="text-[14px] font-semibold text-[#0d0d12]">Growth checklist hazırlanıyor</p>
-        <p className="mt-1 text-[13px] text-[#666d80]">AI planın oluşturulmasını bekle.</p>
+        <p className="text-[14px] font-semibold text-[#0d0d12]">Henüz growth checklist oluşmadı</p>
+        <p className="mt-1 text-[13px] text-[#666d80]">
+          Bu ürün için growth execution maddeleri henüz üretilmedi. Metric setup yine çalışır; checklist hazır olduğunda burada görünür.
+        </p>
       </div>
     );
   }
