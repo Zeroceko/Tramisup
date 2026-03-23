@@ -132,6 +132,9 @@ export default function TasksList({ tasks }: TasksListProps) {
               <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
                 {nextTask.description || "Bu görev tamamlandığında task yüzeyindeki ilerlemen doğrudan değişir."}
               </p>
+              <p className="mt-2 text-[12px] text-[#8a8fa0]">
+                Dashboard sonraki adımı özetler, Metrics neyin değiştiğini gösterir, görevler ise bugün gerçekten ilerleteceğin işi görünür kılar.
+              </p>
             </div>
             <button
               type="button"

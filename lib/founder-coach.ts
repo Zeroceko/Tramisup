@@ -21,7 +21,7 @@ export type FounderCoachSuggestion = {
   confidence: "LOW" | "MEDIUM" | "HIGH";
 };
 
-const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
 function summarizeContext(context: FounderCoachContext) {
   return JSON.stringify(context, null, 2);

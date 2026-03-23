@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateAiPlan } from "@/lib/ai-plan";
 import { buildFounderSummary } from "@/lib/founder-summary";
-import { seedAiPlan, seedStaticChecklists, seedMetricsData } from "@/lib/seed";
+import { seedAiPlan, seedMetricsData } from "@/lib/seed";
 import { scrapeUrl } from "@/lib/url-scraper";
 
 export async function GET(request: Request) {
@@ -106,6 +106,15 @@ export async function POST(request: Request) {
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     }, aiPlan);
 
+    if (!aiPlan) {
+      return NextResponse.json(
+        {
+          error: "AI plan su anda olusturulamadi. Urun olusturma akisi Founder Coach olmadan devam etmemeli. AI provider anahtarlarini ve runtime config'ini kontrol et.",
+        },
+        { status: 503 }
+      );
+    }
+
     // 2. Create product + seed data in a transaction
     const product = await prisma.$transaction(async (tx) => {
       const productStatus = ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
@@ -134,12 +143,7 @@ export async function POST(request: Request) {
         },
       });
 
-      // Seed only AI-generated checklists; otherwise keep the workspace honest and blank.
-      if (aiPlan) {
-        await seedAiPlan(newProduct.id, aiPlan, tx);
-      } else {
-        await seedStaticChecklists(newProduct.id, tx);
-      }
+      await seedAiPlan(newProduct.id, aiPlan, tx);
 
       // Seed demo metrics only if user opted in
       if (seedData) {
@@ -149,7 +153,13 @@ export async function POST(request: Request) {
       return newProduct;
     });
 
-    return NextResponse.json(product, { status: 201 });
+    const response = NextResponse.json(product, { status: 201 });
+    response.cookies.set("activeProductId", product.id, {
+      path: "/",
+      sameSite: "lax",
+    });
+
+    return response;
   } catch (error) {
     console.error("Failed to create product:", error);
     return NextResponse.json(

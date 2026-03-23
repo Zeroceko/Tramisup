@@ -64,6 +64,9 @@ This is a **product logic chain reset** around:
 | Growth vs Metrics page framing | Implemented |
 | Metrics feedback loop improvements | Implemented |
 | Task spotlight surface | Implemented |
+| Stage-aware launched nav cleanup | Implemented |
+| Dashboard CTA/copy drift cleanup | Implemented |
+| Metrics → Tasks next-step bridge | Implemented |
 
 ---
 

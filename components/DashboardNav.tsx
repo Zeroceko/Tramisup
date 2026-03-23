@@ -24,12 +24,47 @@ export default function DashboardNav({
   const locale = pathname?.split("/")[1] || "tr";
 
   const hasProducts = products.length > 0;
+  const activeProduct = products.find((product) => product.id === activeProductId) ?? products[0];
+  const isLaunchedProduct =
+    activeProduct?.status === "LAUNCHED" || activeProduct?.status === "GROWING";
 
-  const navItems = [
-    { href: "/dashboard", label: "Overview", show: true },
-    { href: "/pre-launch", label: "Launch", show: true },
-    { href: "/growth", label: "Growth", show: true },
-  ].filter((i) => i.show || !hasProducts);
+  const labels = locale === "en"
+    ? {
+        overview: "Overview",
+        launch: "Launch",
+        tasks: "Tasks",
+        metrics: "Metrics",
+        growth: "Growth",
+        newProduct: "+ Add product",
+        settings: "Settings",
+        signOut: "Sign out",
+      }
+    : {
+        overview: "Genel Bakış",
+        launch: "Launch",
+        tasks: "Görevler",
+        metrics: "Metrikler",
+        growth: "Büyüme",
+        newProduct: "+ Ürün ekle",
+        settings: "Ayarlar",
+        signOut: "Çıkış yap",
+      };
+
+  const navItems = hasProducts
+    ? isLaunchedProduct
+      ? [
+          { href: "/dashboard", label: labels.overview },
+          { href: "/tasks", label: labels.tasks },
+          { href: "/metrics", label: labels.metrics },
+          { href: "/growth", label: labels.growth },
+          { href: "/pre-launch", label: labels.launch, preview: true },
+        ]
+      : [
+          { href: "/dashboard", label: labels.overview },
+          { href: "/pre-launch", label: labels.launch },
+          { href: "/growth", label: labels.growth },
+        ]
+    : [{ href: "/dashboard", label: labels.overview }];
 
   const withLocale = (href: string) => `/${locale}${href}`;
 
@@ -71,7 +106,9 @@ export default function DashboardNav({
                   className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors ${
                     active
                       ? "bg-[#ffd7ef] text-[#0d0d12]"
-                      : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
+                      : item.preview
+                        ? "border border-dashed border-[#e8e8e8] text-[#8a8fa0] hover:border-[#d9d9d9] hover:bg-[#fafafa] hover:text-[#0d0d12]"
+                        : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
                   }`}
                 >
                   {item.label}
@@ -87,7 +124,7 @@ export default function DashboardNav({
                   ? "bg-[#ffd7ef] text-[#0d0d12]"
                   : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
               }`}
-              aria-label="Ayarlar"
+              aria-label={labels.settings}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -99,18 +136,6 @@ export default function DashboardNav({
 
         {/* Right: Board + Product selector + Avatar */}
         <div className="flex items-center gap-2">
-          {/* Board button */}
-          <Link
-            href={withLocale("/tasks")}
-            className={`hidden h-9 items-center rounded-full border px-4 text-[13px] font-medium transition sm:inline-flex ${
-              pathname?.startsWith(withLocale("/tasks"))
-                ? "border-[#0d0d12] bg-[#0d0d12] text-white"
-                : "border-[#e8e8e8] text-[#0d0d12] hover:bg-[#f6f6f6]"
-            }`}
-          >
-            Board
-          </Link>
-
           <ProductSelector
             products={products.map(({ id, name }) => ({ id, name }))}
             activeProductId={activeProductId}
@@ -121,7 +146,7 @@ export default function DashboardNav({
               href={withLocale("/products/new")}
               className="hidden h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:inline-flex"
             >
-              + Ürün ekle
+              {labels.newProduct}
             </Link>
           )}
 
@@ -129,7 +154,7 @@ export default function DashboardNav({
           <button
             onClick={() => signOut({ callbackUrl: `/${locale}` })}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d0d12] text-[12px] font-bold text-white transition hover:bg-[#2e2e2e]"
-            title="Çıkış yap"
+            title={labels.signOut}
           >
             T
           </button>
@@ -148,23 +173,15 @@ export default function DashboardNav({
                 className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[12px] font-medium transition-colors ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"
-                    : "border border-[#e8e8e8] text-[#666d80]"
+                    : item.preview
+                      ? "border border-dashed border-[#e8e8e8] text-[#8a8fa0]"
+                      : "border border-[#e8e8e8] text-[#666d80]"
                 }`}
               >
                 {item.label}
               </Link>
             );
           })}
-          <Link
-            href={withLocale("/tasks")}
-            className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[12px] font-medium transition-colors ${
-              pathname?.startsWith(withLocale("/tasks"))
-                ? "bg-[#0d0d12] text-white"
-                : "border border-[#e8e8e8] text-[#666d80]"
-            }`}
-          >
-            Board
-          </Link>
         </nav>
       </div>
     </header>

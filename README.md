@@ -41,6 +41,7 @@ Tiramisup currently supports this focused MVP flow:
 8. **Daily metric entry** based on the selected metric set
 9. **Metrics feedback loop** with last-known value hints, save confirmation, and change vs previous entry
 10. **Task work surface** that highlights one main job first instead of behaving like a passive backlog
+11. **Stage-aware workspace navigation** that keeps launched products focused on overview, tasks, metrics, and growth while still preserving `Launch` as a lower-emphasis preview/history surface
 
 ---
 
@@ -194,7 +195,13 @@ It should clearly say:
 - here is the one action to take now
 
 ### Navigation rule
-For launched products, `Pre-Launch` should disappear from the main top navigation.
+For launched products, the primary navigation should stay focused on:
+- `Overview`
+- `Görevler`
+- `Metrikler`
+- `Büyüme`
+
+`Launch` can remain visible for launched products, but it should be positioned as a lower-emphasis stage-preview / history surface rather than the main working destination.
 `Integrations` should not compete with core daily work in the primary nav.
 
 ---

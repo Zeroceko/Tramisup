@@ -394,9 +394,9 @@ export default function NewProductWizard() {
         throw new Error(err.error || "Ürün oluşturulamadı");
       }
 
-      const product = await res.json();
-      document.cookie = `activeProductId=${product.id}; path=/`;
-      router.push(`/${locale}/dashboard`);
+      await res.json();
+      router.replace(`/${locale}/dashboard`);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setLoading(false);

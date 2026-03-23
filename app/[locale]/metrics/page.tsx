@@ -174,6 +174,20 @@ export default async function MetricsPage({
                 </div>
               )}
             </div>
+
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Sayıyı girdikten sonra işi ilerlet</h2>
+              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+                Metrics burada neyin değiştiğini gösterir. Bu değişime göre bugün hangi işi ele alacağını görmek için görevler yüzeyine geç.
+              </p>
+              <a
+                href={`/${locale}/tasks`}
+                className="mt-5 inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+              >
+                Görevlere geç
+              </a>
+            </div>
           </div>
 
           <div>

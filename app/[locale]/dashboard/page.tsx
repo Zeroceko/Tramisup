@@ -92,7 +92,7 @@ export default async function DashboardPage({
   const nextStep = !isLaunched
     ? {
         href: `/${locale}/pre-launch`,
-        label: "Launch board'a git →",
+        label: "Launch hazırlığına git →",
         title: "Yayına hazırlığı tamamla",
         description: `${completedLaunchChecklists}/${launchTotal} hazırlık maddesi tamamlandı`,
       }
@@ -263,10 +263,34 @@ export default async function DashboardPage({
             </p>
             <div className="space-y-2">
               {[
-                { href: `/${locale}/pre-launch`, label: "Launch checklist", icon: "🚀", sub: `${completedLaunchChecklists}/${launchTotal} tamamlandı` },
-                { href: `/${locale}/growth`, label: "Growth setup", icon: "📈", sub: `${completedGrowthChecklists}/${growthTotal} tamamlandı` },
-                { href: `/${locale}/tasks`, label: "Görevler / Board", icon: "✅", sub: `${totalTasks} görev` },
-                { href: `/${locale}/metrics`, label: "Metrikler", icon: "📊", sub: selectedMetricCount > 0 ? `${selectedMetricCount} metrik seçili` : "Henüz seçim yok" },
+                {
+                  href: `/${locale}/pre-launch`,
+                  label: "Launch hazırlığı",
+                  icon: "🚀",
+                  sub: `${completedLaunchChecklists}/${launchTotal} tamamlandı`,
+                },
+                {
+                  href: `/${locale}/growth`,
+                  label: isLaunched ? "Metrik odağı" : "Growth önizlemesi",
+                  icon: "📈",
+                  sub: isLaunched
+                    ? selectedMetricCount > 0
+                      ? `${selectedMetricCount} ana metrik seçili`
+                      : "Takip setini seç"
+                    : "Launch sonrası burada açılacak",
+                },
+                {
+                  href: `/${locale}/tasks`,
+                  label: "Görevler",
+                  icon: "✅",
+                  sub: totalTasks > 0 ? `${pendingTasks} sırada bekliyor` : "Henüz görev yok",
+                },
+                {
+                  href: `/${locale}/metrics`,
+                  label: "Metrikler",
+                  icon: "📊",
+                  sub: latestMetric ? "Bugünkü değişimi gör" : "İlk veri girişini başlat",
+                },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -323,10 +347,14 @@ export default async function DashboardPage({
                 : "Henüz metrik seçilmedi"}
             </p>
             <Link
-              href={`/${locale}/metrics`}
+              href={selectedMetricCount > 0 ? `/${locale}/metrics` : `/${locale}/growth`}
               className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
             >
-              {latestMetric ? "Bugünkü veriyi gir" : "Metrik setup →"}
+              {selectedMetricCount > 0
+                ? latestMetric
+                  ? "Bugünkü veriyi gir"
+                  : "İlk veriyi gir"
+                : "Takip setini seç"}
             </Link>
           </div>
         </div>

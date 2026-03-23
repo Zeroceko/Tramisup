@@ -65,7 +65,7 @@ function extractInsights(parsed: unknown): Insight[] {
   return [];
 }
 
-const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
 async function generateInsights(productName: string, website: string, content: string): Promise<Insight[]> {
   const prompt = INSIGHTS_PROMPT(productName, website, content);

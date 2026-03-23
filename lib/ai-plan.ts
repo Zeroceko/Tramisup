@@ -173,7 +173,7 @@ function parsePlan(text: string): AiPlan {
   return plan;
 }
 
-const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
 async function tryQwen(input: WizardInput): Promise<AiPlan> {
   const client = new OpenAI({

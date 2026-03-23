@@ -32,6 +32,8 @@ Agents read this before every unit. Add entries when you discover something wort
 | K023 | metrics-feedback-loop | After metric entry, the UI must clearly show where the saved value appears and how it compares with the previous entry when possible | Prevents the metrics page from feeling like a dead-end form | 2026-03 |
 | K024 | task-surface | Tasks should surface one main job first and behave like a daily work surface, not a passive backlog list | Helps the product answer “what should I do now?” more directly | 2026-03 |
 | K025 | docs-consistency | Sprint docs should be updated only after code verification, especially during product-logic resets | Prevents README/HANDOFF from drifting away from the actual product chain | 2026-03 |
+| K026 | figma-reference | Use Figma as a design-system/component reference for spacing, cards, nav rhythm, and CTA treatment; do not treat it as a literal screen-copy requirement for in-product surfaces | Preserves product logic while still improving visual/system consistency | 2026-03 |
+| K027 | launch-preview-nav | For launched products, keep `Launch` accessible as a lower-emphasis stage-preview/history surface instead of removing it entirely or letting it dominate the main working nav | Preserves stage continuity without confusing the daily work model | 2026-03 |
 
 ## Patterns
 

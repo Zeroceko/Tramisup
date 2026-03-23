@@ -64,7 +64,7 @@ function stageContext(launchStatus: string): string {
   return contexts[launchStatus] || "Ürününü büyütmeye odaklan.";
 }
 
-const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-model/v1";
+const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
 async function callAI(prompt: string): Promise<WeeklyAdvice | null> {
   // Qwen → DeepSeek → Gemini

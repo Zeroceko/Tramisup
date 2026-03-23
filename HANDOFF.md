@@ -94,6 +94,9 @@ The priority stack is:
 - The metrics entry form now confirms where saved numbers will show up
 - The metrics overview cards now compare the latest entry against the previous one when possible
 - Tasks now surface one main task first so the page behaves more like a work surface than a passive list
+- Main workspace nav now behaves more stage-aware for launched products by prioritizing overview, tasks, metrics, and growth while keeping `Launch` visible as a lower-emphasis preview/history surface
+- Dashboard quick links / CTA labels were cleaned up so old terms like `Growth setup`, `Board`, and `Metrik setup` no longer compete with the current product language
+- Metrics now points more explicitly toward Tasks after data entry so the feedback loop connects back to action
 
 ---
 
@@ -119,8 +122,13 @@ For launched products, the main top-level mental model is:
 - Metrikler
 - Büyüme
 
-`Pre-Launch` should not dominate the nav for a launched product.
+`Launch` should not dominate the nav for a launched product.
+It can remain visible, but it should read as a preview/history surface rather than the primary daily work area.
 `Integrations` should not be a first-class top-level destination for daily use; it belongs lower-priority / under setup.
+
+Figma note:
+- The current implementation used the Figma file as a component/system reference for nav pills, card rhythm, spacing, and CTA treatment.
+- It was not used as a screen-copy instruction set.
 
 ### 3. Evidence-first recommendations
 The system must not assume a problem exists unless it has supporting context.
