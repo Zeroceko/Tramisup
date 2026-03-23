@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
+import { getShellProducts } from "@/lib/shell-products";
 
 export default async function MetricsLayout({
   children,
@@ -19,11 +19,7 @@ export default async function MetricsLayout({
     redirect(`/${locale}/login`);
   }
 
-  const products = await prisma.product.findMany({
-    where: { userId: session.user.id },
-    select: { id: true, name: true, status: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const products = await getShellProducts(session.user.id);
 
   const activeProductId = await getActiveProductId();
 
