@@ -46,6 +46,206 @@ export type WizardInput = {
   storeGuidance?: string;
 };
 
+function inferContext(input: WizardInput) {
+  const launchStage = (input.launchStatus ?? "").toLowerCase();
+  const isLaunched = ["yayında", "büyüme aşamasında"].includes(launchStage);
+  const platforms = Array.from(new Set(input.mobilePlatforms ?? []));
+  const haystack = `${input.category ?? ""} ${input.targetAudience ?? ""} ${input.businessModel ?? ""} ${input.description ?? ""} ${input.websiteContent ?? ""}`.toLowerCase();
+
+  return {
+    launchStage,
+    isLaunched,
+    isMobile: platforms.length > 0 || /mobil uygulama|mobile app|app store|play store|ios|android/.test(haystack),
+    platforms,
+    isB2B: /team|teams|business|b2b|saas|company|startup|ekip|işletme/.test(haystack),
+    isContent: /content|newsletter|media|community|creator|blog/.test(haystack),
+    isSubscription: /subscription|abonelik|recurring|monthly|yearly|trial|freemium|paywall/.test(haystack),
+  };
+}
+
+function makeLaunchItem(
+  category: LaunchCategory,
+  title: string,
+  description: string,
+  priority: Priority
+): AiLaunchItem {
+  return { category, title, description, priority, order: 0 };
+}
+
+function makeGrowthItem(
+  category: GrowthCategory,
+  title: string,
+  description: string
+): AiGrowthItem {
+  return { category, title, description, order: 0 };
+}
+
+function assignOrder<T extends { order: number }>(items: T[]) {
+  return items.map((item, index) => ({ ...item, order: index + 1 }));
+}
+
+function dedupeByTitle<T extends { title: string }>(items: T[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = item.title.toLocaleLowerCase("tr-TR");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
+  const context = inferContext(input);
+  const productName = input.name;
+  const audience = input.targetAudience || "hedef kitlen";
+  const launchChecklist: AiLaunchItem[] = [];
+  const growthChecklist: AiGrowthItem[] = [];
+
+  if (context.isLaunched) {
+    launchChecklist.push(
+      makeLaunchItem(
+        "MARKETING",
+        "Store veya landing mesajini gercek degerle hizala",
+        `${productName} icin ilk gorulen mesaj ile gercek deneyim arasinda kopukluk varsa acquisition kalitesi dusurur. Ilk vaadi netlestir.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "PRODUCT",
+        "Ilk deger anina giden akis kopuslerini not et",
+        `${audience} urunu gordukten sonra ilk faydali aksiyona ne kadar rahat gidiyor, bu kopusleri gozden gecir.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "TECH",
+        "Acquisition ve activation eventlerini calisir halde tut",
+        `Yayindaki urunde Tiramisup artik submission degil sinyal kalitesi arar. Install, signup ve ilk deger eventleri olculmeli.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "MARKETING",
+        "Ilk screenshot veya hero alani en guclu use case'e gore yenile",
+        `Listing ya da landing ilk bakista ${productName}'in neden denenecegini anlatmali.`,
+        "MEDIUM"
+      )
+    );
+
+    if (context.isMobile) {
+      launchChecklist.push(
+        makeLaunchItem(
+          "MARKETING",
+          "ASO baslik ve screenshot sirasini yeniden kontrol et",
+          `Yayindaki mobil urunde artik odak submission degil, listing conversion. App Store / Play Store varliklarini en guclu use case'e gore duzenle.`,
+          "HIGH"
+        ),
+        makeLaunchItem(
+          "PRODUCT",
+          "Store listing vaadi ile uygulama ici deneyimi eslestir",
+          `Listing'de verilen soz ile uygulama ici ilk deneyim ayni hikayeyi anlatmali. Mesaj uyumsuzlugu retention'a zarar verir.`,
+          "HIGH"
+        ),
+        makeLaunchItem(
+          "MARKETING",
+          "Rating ve review sinyalini haftalik takip et",
+          `Store yorumlari ${productName} icin hem conversion hem retention sinyali verir. Tekrarlayan negatif temalari topla.`,
+          "MEDIUM"
+        )
+      );
+    }
+  } else {
+    launchChecklist.push(
+      makeLaunchItem(
+        "PRODUCT",
+        "Ilk deger anini launch oncesi netlestir",
+        `${productName} yayina ciktiginda ${audience} hangi ilk aksiyonla deger gordugunu anlamali.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "MARKETING",
+        "Launch gunu mesajini ve dagitim planini hazirla",
+        `Ilk trafik dalgasi geldigi anda hangi kanalda ne soylenecegi net olmali.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "TECH",
+        "Launch sonrasi temel eventleri olcmeye hazir ol",
+        `Acquisition, activation ve retention sinyallerini ilk gunden okuyabilmek icin temel eventler hazir olmali.`,
+        "HIGH"
+      ),
+      makeLaunchItem(
+        "LEGAL",
+        "Kullaniciya gorunen guven ve yasal linkleri tamamla",
+        `Privacy, terms ve destek kanali launch oncesi eksik kalmamali.`,
+        "MEDIUM"
+      )
+    );
+  }
+
+  if (context.isMobile && !context.isLaunched) {
+    launchChecklist.push(
+      makeLaunchItem(
+        "MARKETING",
+        "Store listing gorsellerinin gercek urunle eslestigini kontrol et",
+        `Mockup agirlikli listing yerine gercek deneyim gosteren ekranlar kullan.`,
+        "MEDIUM"
+      )
+    );
+  }
+
+  if (context.isB2B) {
+    growthChecklist.push(
+      makeGrowthItem("ACQUISITION", "Ilk kaynak bazli signup veya demo takibini kur", `${productName} icin hangi kanal nitelikli talep getiriyor, bunu ayirt etmeye basla.`),
+      makeGrowthItem("ACTIVATION", "Ilk faydali ekip aksiyonunu tek metrikte tanimla", `Ekip icinde gercek deger anini temsil eden ilk davranisi sec.`),
+      makeGrowthItem("RETENTION", "Haftalik geri donen ekip hesabini izle", `Tek seferlik deneme ile duzenli kullanim arasindaki farki burada gorursun.`),
+      makeGrowthItem("REVENUE", "Trial'dan ucretliye gecis ritmini izle", `Abonelik kararinin nerede guclendigini veya dustugunu burada anlarsin.`)
+    );
+  } else if (context.isContent) {
+    growthChecklist.push(
+      makeGrowthItem("ACQUISITION", "Icerik kanallarinin yeni signup katkisini ayir", `Hangi dagitim kanali daha verimli ilgi getiriyor, bunu sade bir setle gor.`),
+      makeGrowthItem("ACTIVATION", "Ilk icerik tuketimi veya ilk kaydi activation olarak tanimla", `${audience} ilk degeri hangi davranisla goruyor, onu sabitle.`),
+      makeGrowthItem("RETENTION", "Haftalik geri donen okuyucu oranini takip et", `Icerik urununde aliskanlik ritmi retention sinyalini belirler.`),
+      makeGrowthItem("REVENUE", "Ucretli uye veya sponsor donusumunu izle", `Gelirin hangi icerik davranisi etrafinda toplandigini netlestir.`)
+    );
+  } else {
+    growthChecklist.push(
+      makeGrowthItem("ACQUISITION", "Ilk trafik veya install kaynagini netlestir", `Yeni kullanicilarin hangi kanaldan geldigini ayirmadan growth karari bulanir.`),
+      makeGrowthItem("ACTIVATION", "Ilk deger aksiyonunu tek metrikte sabitle", `${productName} icin aha moment noktasini tek sayiyla izle.`),
+      makeGrowthItem("RETENTION", "Geri donen kullanici ritmini olc", `Ilk haftada tekrar gelen kullanici davranisi urunun kaliciligini gosterir.`),
+      makeGrowthItem("REVENUE", "Ucretliya gecis veya gelir ritmini izle", `Gelir davranisi acquisition kadar net okunmali.`)
+    );
+  }
+
+  growthChecklist.push(
+    makeGrowthItem("ACQUISITION", "Ilk kanal denemeleri icin haftalik ritim belirle", `Her hafta ayni dagitim veya kampanya setiyle sinyal toplamaya odaklan.`),
+    makeGrowthItem("ACTIVATION", "Onboarding kopuslerini haftalik gozden gecir", `Ilk deger oncesi kaybedilen kullanicilar growth verimini dusurur.`),
+    makeGrowthItem("RETENTION", "Ilk 7 gun aliskanlik veya tekrar kullanim sinyalini topla", `Retention buyumenin kalitesini belirler.`),
+    makeGrowthItem("REVENUE", context.isSubscription ? "Paywall veya fiyatlama mesajini test et" : "Gelire giden ana aksiyonu netlestir", context.isSubscription ? "Abonelik veya freemium urunde fiyatlama vaadi dogrudan donusumu etkiler." : "Parali davranisa giden yol net degilse growth okunamaz.")
+  );
+
+  const dedupedLaunch = dedupeByTitle(launchChecklist).slice(0, 12);
+  const dedupedGrowth = dedupeByTitle(growthChecklist).slice(0, 8);
+
+  const tasks = dedupeByTitle([
+    ...dedupedLaunch.slice(0, 2).map<AiTask>((item) => ({
+      title: item.title,
+      description: item.description,
+      priority: item.priority,
+      status: "TODO",
+    })),
+    ...dedupedGrowth.slice(0, 3).map<AiTask>((item, index) => ({
+      title: item.title,
+      description: item.description,
+      priority: index === 0 ? "HIGH" : "MEDIUM",
+      status: "TODO",
+    })),
+  ]).slice(0, 5);
+
+  return {
+    launchChecklist: assignOrder(dedupedLaunch),
+    growthChecklist: assignOrder(dedupedGrowth),
+    tasks,
+  };
+}
+
 function extractGuidanceSection(skill: string) {
   const lines = skill.split("\n");
   const start = lines.findIndex((line) => line.trim() === "## Required Recommendation Areas");
@@ -314,5 +514,10 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     }
   }
 
-  return null;
+  console.warn("[ai-plan] All providers failed — using skill-backed fallback plan");
+  return buildSkillBackedFallbackPlan({
+    ...input,
+    storeGuidance,
+    stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
+  });
 }
