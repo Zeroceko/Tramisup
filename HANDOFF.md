@@ -97,6 +97,9 @@ The priority stack is:
 - Main workspace nav now behaves more stage-aware for launched products by prioritizing overview, tasks, metrics, and growth while keeping `Launch` visible as a lower-emphasis preview/history surface
 - Dashboard quick links / CTA labels were cleaned up so old terms like `Growth setup`, `Board`, and `Metrik setup` no longer compete with the current product language
 - Metrics now points more explicitly toward Tasks after data entry so the feedback loop connects back to action
+- Product creation now shows a foreground “Tramisup önerileri hazırlanıyor” overlay instead of exposing raw provider/config language during AI preparation
+- Mobile app products now merge a deterministic iOS / Android store-readiness baseline into the AI-generated launch checklist
+- Post-signup routing now goes to product creation first, and shell product loading falls back safely instead of crashing the whole authenticated surface when the database pool is temporarily saturated
 
 ---
 
@@ -180,8 +183,12 @@ If `Yakında yayında` is selected:
 - not free-form month/year text
 
 ### Important current caveat
-Wizard currently redirects to dashboard after creation. There has been evidence of first navigation state lagging until refresh, especially around active-product/cookie synchronization.
-If this reappears, prefer product-id-driven transitions or explicit overview steps over relying only on client-set cookie + push.
+Wizard now uses server-set active-product cookies and redirects more safely after creation, but AI preparation can still take a few seconds under provider variability.
+The product-creation UI should prefer a calm foreground loading state over raw backend/provider errors.
+
+New-user caveat:
+- New signup should land in product creation, not bounce straight into a DB-heavy dashboard path.
+- The authenticated shell now fails softer if product-list queries hit temporary pool pressure.
 
 ---
 

@@ -436,7 +436,40 @@ export default function NewProductWizard() {
           </span>
         </div>
 
-        <div className="rounded-[28px] border border-[#ededed] bg-white px-6 py-6 shadow-card md:px-10 md:py-8">
+        <div className="relative">
+          {loading ? (
+            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[28px] bg-white/60 px-4 backdrop-blur-[2px]">
+              <div className="w-full max-w-xl rounded-[28px] border border-[#dff1ef] bg-white px-6 py-6 shadow-[0_24px_80px_rgba(13,13,18,0.16)] sm:px-7">
+                <div className="flex items-start gap-4">
+                  <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#95dbda]/18 text-[#0d0d12]">
+                    <svg className="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2.5" />
+                      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">Tramisup önerileri hazırlanıyor</p>
+                    <p className="mt-2 text-[14px] leading-6 text-[#5e6678]">
+                      Ürünün için ilk checklist, growth başlangıcı ve yönlendirme akışı hazırlanıyor. Bu adım birkaç saniye sürebilir.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <div className="h-2 overflow-hidden rounded-full bg-[#eef6f6]">
+                    <div className="h-full w-1/2 animate-pulse rounded-full bg-[#95dbda]" />
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[12px] text-[#4c5567]">
+                    <span className="rounded-full bg-[#f6fbfb] px-3 py-1">Ürün bağlamı okunuyor</span>
+                    <span className="rounded-full bg-[#f6fbfb] px-3 py-1">Öneriler sıralanıyor</span>
+                    <span className="rounded-full bg-[#f6fbfb] px-3 py-1">İlk çalışma yüzeyi kuruluyor</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+        <div className={`rounded-[28px] border border-[#ededed] bg-white px-6 py-6 shadow-card transition md:px-10 md:py-8 ${loading ? "pointer-events-none select-none opacity-40 blur-[1px]" : ""}`}>
           <div className="mb-8 flex items-start justify-between gap-4">
             <div>
               <h1 className="text-[34px] font-semibold tracking-[-0.04em] text-[#111111]">
@@ -456,30 +489,6 @@ export default function NewProductWizard() {
           </div>
 
           <StepPills currentPill={currentPill} onPillClick={goToPill} />
-
-          {loading ? (
-            <div className="mb-6 rounded-[20px] border border-[#e8f4f3] bg-[linear-gradient(135deg,#f7fffe_0%,#f0fbfb_100%)] px-5 py-5">
-              <div className="flex items-start gap-4">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-[#95dbda]/20 text-[#0d0d12]">
-                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2.5" />
-                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0d0d12]">Tramisup önerileri hazırlanıyor</p>
-                  <p className="mt-1 text-[13px] leading-6 text-[#5e6678]">
-                    Ürünün için ilk checklist, growth başlangıcı ve yönlendirme akışı hazırlanıyor. Bu adım birkaç saniye sürebilir.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[#4c5567]">
-                    <span className="rounded-full bg-white px-3 py-1">Ürün bağlamı okunuyor</span>
-                    <span className="rounded-full bg-white px-3 py-1">Öneriler sıralanıyor</span>
-                    <span className="rounded-full bg-white px-3 py-1">İlk çalışma yüzeyi kuruluyor</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {error ? (
             <div className="mb-5 rounded-[14px] border border-[#ffd9c7] bg-[#fff7f2] px-4 py-4 text-[13px] text-[#9a4d18]">
@@ -652,6 +661,7 @@ export default function NewProductWizard() {
                 : "Devam Et"}
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>
