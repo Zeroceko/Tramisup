@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       targetAudience,
       businessModel,
       launchStatus,
+      launchDate,
       website,
       stageContext,
       seedData = false,
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
           targetAudience,
           businessModel,
           website,
+          launchDate: launchDate ? new Date(launchDate) : undefined,
         },
       });
 

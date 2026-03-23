@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -8,13 +8,14 @@ import Link from "next/link";
 type WizardData = {
   name: string;
   description: string;
-  category: string;
-  targetAudience: string;
+  categories: string[];
+  categoryOther: string;
+  targetAudiences: string[];
+  audienceOther: string;
   businessModel: string;
   launchStatus: string;
+  launchDate: string;
   website?: string;
-  stageQ1?: string;
-  stageQ2?: string;
 };
 
 const PILLS = [
@@ -22,80 +23,73 @@ const PILLS = [
   { id: 2, label: "Kitle & Model" },
 ];
 
+const OTHER_OPTION = "Diğer";
+
 const CATEGORIES = [
   "SaaS",
-  "E-commerce",
+  "Mobil uygulama",
+  "E-ticaret",
   "Marketplace",
-  "Mobile App",
-  "Content/Media",
+  "İçerik / Medya",
   "Platform",
-  "Diğer",
+  OTHER_OPTION,
 ];
 
 const AUDIENCES = [
-  "Developers",
-  "KOBİ",
+  "Geliştiriciler",
+  "KOBİ'ler",
   "Tüketiciler",
-  "Kurumsal",
+  "Kurumsal ekipler",
   "Startup'lar",
   "Freelancer'lar",
-  "Diğer",
+  OTHER_OPTION,
 ];
 
 const BUSINESS_MODELS = [
   "Freemium",
-  "Subscription",
-  "One-time payment",
-  "Usage-based",
-  "Enterprise/Custom",
-  "Marketplace fee",
+  "Abonelik",
+  "Tek seferlik ödeme",
+  "Kullanıma göre ödeme",
+  "Kurumsal / özel teklif",
+  "Marketplace komisyonu",
 ];
 
 const LAUNCH_STATUSES = [
-  "Fikir aşamasında",
   "Geliştirme aşamasında",
-  "Beta'da",
-  "Yakında launch",
-  "Launch oldu",
+  "Test kullanıcıları var",
+  "Yakında yayında",
+  "Yayında",
   "Büyüme aşamasında",
 ];
 
-const STAGE_FOLLOW_UP: Record<string, [string, string]> = {
-  "Fikir aşamasında": [
-    "Bu problemi yaşayan kaç kişiyle konuştun?",
-    "Rakiplerinden farkın ne?",
-  ],
-  "Geliştirme aşamasında": [
-    "Beta listende kaç kişi var?",
-    "MVP ne zaman hazır olacak?",
-  ],
-  "Beta'da": [
-    "Kaç aktif beta kullanıcın var?",
-    "En çok aldığın feedback nedir?",
-  ],
-  "Yakında launch": [
-    "Launch tarihin var mı? (ay/yıl)",
-    "İlk 100 kullanıcıyı nereden bulacaksın?",
-  ],
-  "Launch oldu": [
-    "Şu an kaç aktif kullanıcın var?",
-    "Aylık geliriniz (MRR) nedir?",
-  ],
-  "Büyüme aşamasında": [
-    "Aylık büyüme oranınız nedir?",
-    "En iyi kullanıcı edinim kanalınız hangisi?",
-  ],
-};
-
-type Question = {
-  id: keyof WizardData;
-  type: "text" | "textarea" | "radio";
-  label: string;
-  description?: string;
-  placeholder?: string;
-  options?: string[];
-  required: boolean;
-};
+type Question =
+  | {
+      id: "name" | "businessModel" | "launchStatus";
+      type: "text" | "single-select";
+      label: string;
+      description?: string;
+      placeholder?: string;
+      options?: string[];
+      required: boolean;
+    }
+  | {
+      id: "description";
+      type: "textarea";
+      label: string;
+      description?: string;
+      placeholder?: string;
+      required: boolean;
+    }
+  | {
+      id: "categories" | "targetAudiences";
+      type: "multi-select";
+      label: string;
+      description?: string;
+      options: string[];
+      required: boolean;
+      otherField: "categoryOther" | "audienceOther";
+      otherPlaceholder: string;
+    };
 
 const PILL_QUESTIONS: Record<number, Question[]> = {
   1: [
@@ -110,66 +104,48 @@ const PILL_QUESTIONS: Record<number, Question[]> = {
       id: "description",
       type: "textarea",
       label: "Ne işe yarıyor?",
-      placeholder: "Hangi sorunu çözüyor, kısaca anlatın",
+      placeholder: "Kullanıcı kendi cümleleriyle hangi sorunu çözdüğünü anlatsın",
       required: true,
     },
     {
-      id: "category",
-      type: "radio",
+      id: "categories",
+      type: "multi-select",
       label: "Hangi kategoriye giriyor?",
+      description: "Birden fazla seçim yapabilirsin. Örn: hem SaaS hem mobil uygulama.",
       options: CATEGORIES,
       required: true,
+      otherField: "categoryOther",
+      otherPlaceholder: "Kategori belirtin",
     },
   ],
   2: [
     {
-      id: "targetAudience",
-      type: "radio",
+      id: "targetAudiences",
+      type: "multi-select",
       label: "Kime satıyorsunuz?",
+      description: "Birden fazla müşteri tipi seçebilirsin.",
       options: AUDIENCES,
       required: true,
+      otherField: "audienceOther",
+      otherPlaceholder: "Hedef kitleyi belirtin",
     },
     {
       id: "businessModel",
-      type: "radio",
+      type: "single-select",
       label: "Para nasıl kazanıyorsunuz?",
       options: BUSINESS_MODELS,
       required: true,
     },
     {
       id: "launchStatus",
-      type: "radio",
-      label: "Şu an nerede?",
-      description: "Tiramisup buna göre plan yapacak",
+      type: "single-select",
+      label: "Şu an hangi aşamadasın?",
+      description: "Tiramisup buna göre plan ve growth hazırlığı yapacak.",
       options: LAUNCH_STATUSES,
       required: true,
     },
   ],
 };
-
-function OptionButton({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
-        selected
-          ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
-          : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function StepPills({
   currentPill,
@@ -195,8 +171,8 @@ function StepPills({
               isActive
                 ? "bg-[#95dbda] text-[#111111] shadow-[0_6px_18px_rgba(149,219,218,0.28)]"
                 : isCompleted
-                ? "bg-[#d0d0d0] text-white hover:bg-[#bdbdbd] cursor-pointer"
-                : "bg-[#d0d0d0] text-white/95 cursor-not-allowed"
+                  ? "bg-[#d0d0d0] text-white hover:bg-[#bdbdbd] cursor-pointer"
+                  : "bg-[#d0d0d0] text-white/95 cursor-not-allowed"
             }`}
           >
             {pill.label}
@@ -207,13 +183,55 @@ function StepPills({
   );
 }
 
+function OptionButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-[20px] border px-5 py-4 text-left text-[14px] font-medium transition ${
+        selected
+          ? "border-[#95dbda] bg-[#f0fafa] text-[#111111]"
+          : "border-[#ececec] bg-[#fafafa] text-[#666d80] hover:border-[#95dbda] hover:bg-white hover:text-[#111111]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function serializeMultiSelect(values: string[], otherValue: string) {
+  const base = values.filter((value) => value !== OTHER_OPTION);
+  if (values.includes(OTHER_OPTION) && otherValue.trim()) {
+    base.push(`Diğer: ${otherValue.trim()}`);
+  }
+  return base.join(", ");
+}
+
 export default function NewProductWizard() {
   const router = useRouter();
   const locale = useLocale();
   const [currentPill, setCurrentPill] = useState(1);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [showStageContext, setShowStageContext] = useState(false);
-  const [data, setData] = useState<Partial<WizardData>>({});
+  const [data, setData] = useState<WizardData>({
+    name: "",
+    description: "",
+    categories: [],
+    categoryOther: "",
+    targetAudiences: [],
+    audienceOther: "",
+    businessModel: "",
+    launchStatus: "",
+    launchDate: "",
+    website: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -222,93 +240,120 @@ export default function NewProductWizard() {
   const isLastQuestionInPill = questionIndex === pillQuestions.length - 1;
   const isLastPill = currentPill === PILLS.length;
 
-  // The stageContext step is injected after launchStatus (last question of pill 2)
-  const isLaunchStatusQuestion =
-    currentPill === 2 && currentQuestion?.id === "launchStatus";
+  const launchAdvice = useMemo(() => {
+    switch (data.launchStatus) {
+      case "Yakında yayında":
+        return "Henüz tarih net değilse sorun değil. Ama gerçekçi bir yayın tarihi seçmek checklist önceliklerini daha doğru kurar.";
+      case "Yayında":
+        return "Bu aşamada Tiramisup, growth hazırlığını activation, retention ve revenue sinyallerine göre öne çeker.";
+      case "Büyüme aşamasında":
+        return "Bu aşamada founder coach özellikle acquisition, activation ve retention metriklerini birlikte kurmaya çalışır.";
+      default:
+        return null;
+    }
+  }, [data.launchStatus]);
 
-  const getValue = (id: string) => (data as Record<string, string>)[id] || "";
-
-  const setValue = (id: string, value: string) => {
+  function setValue<K extends keyof WizardData>(id: K, value: WizardData[K]) {
     setData((prev) => ({ ...prev, [id]: value }));
-  };
+  }
 
-  const canProceed = () => {
-    if (showStageContext) return true; // follow-up questions are optional
+  function toggleMultiValue(field: "categories" | "targetAudiences", value: string) {
+    setData((prev) => {
+      const current = prev[field];
+      const exists = current.includes(value);
+      const next = exists ? current.filter((item) => item !== value) : [...current, value];
+
+      if (field === "categories" && value === OTHER_OPTION && exists) {
+        return { ...prev, categories: next, categoryOther: "" };
+      }
+
+      if (field === "targetAudiences" && value === OTHER_OPTION && exists) {
+        return { ...prev, targetAudiences: next, audienceOther: "" };
+      }
+
+      return { ...prev, [field]: next };
+    });
+  }
+
+  function canProceed() {
     if (!currentQuestion) return true;
-    const val = getValue(currentQuestion.id);
-    return val && val.toString().trim() !== "";
-  };
 
-  const handleNext = () => {
+    if (currentQuestion.type === "text" || currentQuestion.type === "textarea") {
+      return data[currentQuestion.id].trim() !== "";
+    }
+
+    if (currentQuestion.type === "single-select") {
+      if (currentQuestion.id === "launchStatus") {
+        if (!data.launchStatus) return false;
+        if (data.launchStatus === "Yakında yayında") {
+          return data.launchDate.trim() !== "";
+        }
+        return true;
+      }
+
+      return data[currentQuestion.id].trim() !== "";
+    }
+
+    if (currentQuestion.type === "multi-select") {
+      const values = data[currentQuestion.id];
+      if (values.length === 0) return false;
+      if (values.includes(OTHER_OPTION)) {
+        return data[currentQuestion.otherField].trim() !== "";
+      }
+      return true;
+    }
+
+    return true;
+  }
+
+  function handleNext() {
     if (!canProceed()) {
       setError("Bu alanı doldurmak gerekiyor.");
       return;
     }
+
     setError("");
-
-    // If we just answered launchStatus and haven't shown follow-ups yet, show them
-    if (isLaunchStatusQuestion && isLastQuestionInPill && isLastPill && !showStageContext) {
-      setShowStageContext(true);
-      return;
-    }
-
-    // If we're on the stageContext step, submit
-    if (showStageContext) {
-      handleSubmit();
-      return;
-    }
 
     if (isLastQuestionInPill) {
       if (isLastPill) {
-        handleSubmit();
+        void handleSubmit();
       } else {
-        setCurrentPill((p) => p + 1);
+        setCurrentPill((prev) => prev + 1);
         setQuestionIndex(0);
       }
-    } else {
-      setQuestionIndex((i) => i + 1);
-    }
-  };
-
-  const handleBack = () => {
-    setError("");
-    if (showStageContext) {
-      setShowStageContext(false);
       return;
     }
+
+    setQuestionIndex((prev) => prev + 1);
+  }
+
+  function handleBack() {
+    setError("");
     if (questionIndex > 0) {
-      setQuestionIndex((i) => i - 1);
-    } else if (currentPill > 1) {
+      setQuestionIndex((prev) => prev - 1);
+      return;
+    }
+
+    if (currentPill > 1) {
       const prevPill = currentPill - 1;
       const prevQuestions = PILL_QUESTIONS[prevPill] || [];
       setCurrentPill(prevPill);
       setQuestionIndex(prevQuestions.length - 1);
     }
-  };
+  }
 
-  const goToPill = (targetPill: number) => {
+  function goToPill(targetPill: number) {
     if (targetPill <= currentPill) {
       setError("");
-      setShowStageContext(false);
       setCurrentPill(targetPill);
       setQuestionIndex(0);
     }
-  };
+  }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     try {
       setLoading(true);
       setError("");
-
-      // Build stageContext JSON from the two optional follow-up answers
-      const followUps = data.launchStatus ? STAGE_FOLLOW_UP[data.launchStatus] : undefined;
-      const stageContext =
-        followUps && (data.stageQ1 || data.stageQ2)
-          ? JSON.stringify({
-              [followUps[0]]: data.stageQ1 || "",
-              [followUps[1]]: data.stageQ2 || "",
-            })
-          : undefined;
 
       const res = await fetch("/api/products", {
         method: "POST",
@@ -316,12 +361,12 @@ export default function NewProductWizard() {
         body: JSON.stringify({
           name: data.name,
           description: data.description,
-          category: data.category,
-          targetAudience: data.targetAudience,
+          category: serializeMultiSelect(data.categories, data.categoryOther),
+          targetAudience: serializeMultiSelect(data.targetAudiences, data.audienceOther),
           businessModel: data.businessModel,
           launchStatus: data.launchStatus,
+          launchDate: data.launchDate || undefined,
           website: data.website,
-          stageContext,
           seedData: false,
         }),
       });
@@ -338,24 +383,15 @@ export default function NewProductWizard() {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setLoading(false);
     }
-  };
-
-  // Progress counter — stageContext counts as one extra step
-  let totalQuestions = 0;
-  let completedQuestions = 0;
-  for (let i = 1; i <= PILLS.length; i++) {
-    const qs = PILL_QUESTIONS[i] || [];
-    totalQuestions += qs.length;
-    if (i < currentPill) completedQuestions += qs.length;
-    else if (i === currentPill) completedQuestions += questionIndex;
   }
-  // Add stageContext step to total and mark it completed when we're past it
-  totalQuestions += 1;
-  if (showStageContext) completedQuestions += PILL_QUESTIONS[2].length; // all pill-2 questions done
 
-  const followUpQuestions = data.launchStatus
-    ? STAGE_FOLLOW_UP[data.launchStatus]
-    : undefined;
+  const totalQuestions = Object.values(PILL_QUESTIONS).reduce((sum, questions) => sum + questions.length, 0);
+  const completedQuestions = Object.entries(PILL_QUESTIONS).reduce((sum, [pillId, questions]) => {
+    const numericPill = Number(pillId);
+    if (numericPill < currentPill) return sum + questions.length;
+    if (numericPill === currentPill) return sum + questionIndex;
+    return sum;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-[#f6f6f6] px-4 py-8 md:px-8 md:py-10">
@@ -388,7 +424,7 @@ export default function NewProductWizard() {
                 Ürününüzü tanıyalım
               </h1>
               <p className="mt-1 text-[14px] text-[#666d80]">
-                Tiramisup size özel launch ve büyüme planı hazırlayacak
+                Founder Coach, anlattığın ürüne göre checklist ve growth başlangıcını hazırlayacak.
               </p>
             </div>
             <Link
@@ -408,57 +444,14 @@ export default function NewProductWizard() {
             </div>
           ) : null}
 
-          {/* Stage context follow-up step */}
-          {showStageContext && followUpQuestions ? (
-            <div className="mx-auto max-w-3xl space-y-6">
-              <div className="text-center">
-                <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[32px]">
-                  Biraz daha anlatalım
-                </h2>
-                <p className="mt-2 text-[14px] text-[#6b7280]">
-                  Opsiyonel — atlamak istersen &ldquo;Geç&rdquo;e basabilirsin
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-[13px] font-semibold text-[#111111]">
-                    {followUpQuestions[0]}
-                  </label>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={getValue("stageQ1")}
-                    onChange={(e) => setValue("stageQ1", e.target.value)}
-                    placeholder="Opsiyonel"
-                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[13px] font-semibold text-[#111111]">
-                    {followUpQuestions[1]}
-                  </label>
-                  <input
-                    type="text"
-                    value={getValue("stageQ2")}
-                    onChange={(e) => setValue("stageQ2", e.target.value)}
-                    placeholder="Opsiyonel"
-                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-          ) : currentQuestion ? (
+          {currentQuestion ? (
             <div className="mx-auto max-w-3xl space-y-6">
               <div className="text-center">
                 <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#111111] md:text-[36px]">
                   {currentQuestion.label}
                 </h2>
                 {currentQuestion.description ? (
-                  <p className="mt-2 text-[14px] text-[#6b7280]">
-                    {currentQuestion.description}
-                  </p>
+                  <p className="mt-2 text-[14px] text-[#6b7280]">{currentQuestion.description}</p>
                 ) : null}
               </div>
 
@@ -467,7 +460,7 @@ export default function NewProductWizard() {
                   <input
                     autoFocus
                     type="text"
-                    value={getValue(currentQuestion.id)}
+                    value={data[currentQuestion.id]}
                     onChange={(e) => setValue(currentQuestion.id, e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleNext()}
                     placeholder={currentQuestion.placeholder}
@@ -480,46 +473,89 @@ export default function NewProductWizard() {
                     <textarea
                       autoFocus
                       rows={4}
-                      value={getValue(currentQuestion.id)}
-                      onChange={(e) => setValue(currentQuestion.id, e.target.value)}
+                      value={data.description}
+                      onChange={(e) => setValue("description", e.target.value)}
                       placeholder={currentQuestion.placeholder}
                       className="w-full resize-none rounded-[22px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
                     />
-                    {currentQuestion.id === "description" && (
-                      <div className="flex items-center gap-2 rounded-[18px] border border-[#efefef] bg-[#fafafa] px-4 py-3 transition focus-within:border-[#95dbda] focus-within:bg-white">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#b6bcc6]">
-                          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <input
-                          type="url"
-                          value={getValue("website")}
-                          onChange={(e) => setValue("website", e.target.value)}
-                          placeholder="URL ekle (opsiyonel) — landing page, GitHub, App Store…"
-                          className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#b6bcc6] outline-none"
-                        />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 rounded-[18px] border border-[#efefef] bg-[#fafafa] px-4 py-3 transition focus-within:border-[#95dbda] focus-within:bg-white">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#b6bcc6]">
+                        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <input
+                        type="url"
+                        value={data.website}
+                        onChange={(e) => setValue("website", e.target.value)}
+                        placeholder="URL ekle (opsiyonel) — landing page, GitHub, App Store…"
+                        className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#b6bcc6] outline-none"
+                      />
+                    </div>
                   </>
                 ) : null}
 
-                {currentQuestion.type === "radio" && currentQuestion.options
+                {currentQuestion.type === "single-select" && currentQuestion.options
                   ? currentQuestion.options.map((option) => (
                       <OptionButton
                         key={option}
-                        selected={getValue(currentQuestion.id) === option}
+                        selected={data[currentQuestion.id] === option}
                         onClick={() => setValue(currentQuestion.id, option)}
                       >
                         {option}
                       </OptionButton>
                     ))
                   : null}
+
+                {currentQuestion.type === "multi-select"
+                  ? currentQuestion.options.map((option) => {
+                      const selected = data[currentQuestion.id].includes(option);
+                      return (
+                        <OptionButton
+                          key={option}
+                          selected={selected}
+                          onClick={() => toggleMultiValue(currentQuestion.id, option)}
+                        >
+                          {option}
+                        </OptionButton>
+                      );
+                    })
+                  : null}
+
+                {currentQuestion.type === "multi-select" &&
+                data[currentQuestion.id].includes(OTHER_OPTION) ? (
+                  <input
+                    type="text"
+                    value={data[currentQuestion.otherField]}
+                    onChange={(e) => setValue(currentQuestion.otherField, e.target.value)}
+                    placeholder={currentQuestion.otherPlaceholder}
+                    className="w-full rounded-[18px] border border-[#efefef] bg-[#fafafa] px-5 py-4 text-[14px] text-[#111111] placeholder-[#b6bcc6] outline-none transition focus:border-[#95dbda] focus:bg-white"
+                  />
+                ) : null}
+
+                {currentQuestion.id === "launchStatus" && data.launchStatus === "Yakında yayında" ? (
+                  <div className="space-y-3 rounded-[20px] border border-[#efefef] bg-[#fafafa] p-4">
+                    <label className="block text-[13px] font-semibold text-[#111111]">Planlanan yayın tarihi</label>
+                    <input
+                      type="date"
+                      value={data.launchDate}
+                      onChange={(e) => setValue("launchDate", e.target.value)}
+                      className="w-full rounded-[16px] border border-[#e6e6e6] bg-white px-4 py-3 text-[14px] text-[#111111] outline-none transition focus:border-[#95dbda]"
+                    />
+                    {launchAdvice ? <p className="text-[12px] leading-5 text-[#666d80]">{launchAdvice}</p> : null}
+                  </div>
+                ) : null}
+
+                {currentQuestion.id === "launchStatus" && data.launchStatus !== "Yakında yayında" && launchAdvice ? (
+                  <div className="rounded-[18px] border border-[#efefef] bg-[#fafafa] px-4 py-3 text-[12px] leading-5 text-[#666d80]">
+                    {launchAdvice}
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-center gap-3 md:justify-end">
-            {(currentPill > 1 || questionIndex > 0 || showStageContext) ? (
+            {(currentPill > 1 || questionIndex > 0) ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -530,28 +566,17 @@ export default function NewProductWizard() {
               </button>
             ) : null}
 
-            {/* Skip button only on stageContext step */}
-            {showStageContext && !loading && (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="h-11 rounded-full border border-[#ececec] px-5 text-[13px] font-medium text-[#666d80] transition hover:bg-[#fafafa]"
-              >
-                Geç
-              </button>
-            )}
-
             <button
               type="button"
               onClick={handleNext}
-              disabled={(!canProceed() && !showStageContext) || loading}
+              disabled={!canProceed() || loading}
               className={`min-w-[180px] rounded-full px-6 py-3 text-[14px] font-semibold transition ${
-                (canProceed() || showStageContext) && !loading
+                canProceed() && !loading
                   ? "bg-[#ffd7ef] text-[#111111] hover:bg-[#f7c8e2]"
                   : "bg-[#f1f1f1] text-[#a0a0a0] cursor-not-allowed"
               }`}
             >
-              {showStageContext
+              {isLastQuestionInPill && isLastPill
                 ? loading
                   ? "Plan hazırlanıyor…"
                   : "Planımı Oluştur ✦"
@@ -559,13 +584,6 @@ export default function NewProductWizard() {
             </button>
           </div>
         </div>
-
-        {showStageContext && !loading && (
-          <p className="mt-4 text-center text-[12px] text-[#999]">
-            Tiramisup ürününüzü analiz edip size özel launch & büyüme planı
-            hazırlayacak
-          </p>
-        )}
       </div>
     </div>
   );

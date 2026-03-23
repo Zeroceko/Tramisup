@@ -9,6 +9,8 @@ import MetricEntryForm from "@/components/MetricEntryForm";
 import RetentionCohortTable from "@/components/RetentionCohortTable";
 import ActivationFunnelChart from "@/components/ActivationFunnelChart";
 import PageHeader from "@/components/PageHeader";
+import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export default async function MetricsPage({
   params,
@@ -53,6 +55,23 @@ export default async function MetricsPage({
     orderBy: { date: "desc" },
   });
 
+  const metricPlan = getGrowthMetricRecommendations({
+    name: product.name,
+    status: product.status,
+    category: product.category,
+    description: product.description,
+    targetAudience: product.targetAudience,
+    businessModel: product.businessModel,
+    website: product.website,
+  });
+  const savedSetup = parseSavedMetricSetup(product.launchGoals);
+  const selectedMetrics = metricPlan.sections.flatMap((section) => {
+    const selectedKeys = savedSetup?.selections.find((item) => item.stage === section.stage)?.selectedMetricKeys ?? [];
+    return section.metrics
+      .filter((metric) => selectedKeys.includes(metric.key))
+      .map((metric) => ({ stage: section.stage, name: metric.name }));
+  });
+
   const kpiItems = [
     { label: "Günlük Aktif Kullanıcı", value: latestMetric?.dau?.toLocaleString() || "—" },
     { label: "Aylık Aktif Kullanıcı",  value: latestMetric?.mau?.toLocaleString() || "—" },
@@ -69,7 +88,23 @@ export default async function MetricsPage({
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
+          {selectedMetrics.length > 0 ? (
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen funnel metrikleri</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Seçtiğin metrik seti</h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {selectedMetrics.map((metric) => (
+                  <span
+                    key={`${metric.stage}-${metric.name}`}
+                    className="inline-flex rounded-full bg-[#f6f6f6] px-3 py-1.5 text-[12px] text-[#0d0d12]"
+                  >
+                    {metric.stage}: {metric.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <MetricsOverview metrics={metrics} />
         </div>
         <div>

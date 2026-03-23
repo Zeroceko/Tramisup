@@ -6,7 +6,6 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import InsightsCard from "@/components/InsightsCard";
-import AdvisorCard from "@/components/AdvisorCard";
 
 export default async function DashboardPage({
   params,
@@ -29,7 +28,6 @@ export default async function DashboardPage({
     },
   } as const;
 
-  // Try active product first, fall back to first product for user
   let product = await prisma.product.findFirst({
     where: { userId: session?.user?.id, ...(activeId ? { id: activeId } : {}) },
     include: productInclude,
@@ -51,7 +49,7 @@ export default async function DashboardPage({
           description="İlk ürününü oluşturarak launch hazırlığını, metriklerini ve büyüme akışını başlat."
         />
 
-        <section className="mt-6 rounded-[20px] border border-dashed border-[#d9d9d9] bg-white p-8 sm:p-10 text-center">
+        <section className="mt-6 rounded-[20px] border border-dashed border-[#d9d9d9] bg-white p-8 text-center sm:p-10">
           <div className="mx-auto max-w-2xl">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0fafa] text-[24px]">
               🚀
@@ -65,13 +63,13 @@ export default async function DashboardPage({
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href={`/${locale}/products/new`}
-                className="inline-flex items-center justify-center rounded-full bg-[#ffd7ef] px-5 h-11 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
                 İlk ürününü oluştur
               </Link>
               <Link
                 href={`/${locale}/products`}
-                className="inline-flex items-center justify-center rounded-full border border-[#e8e8e8] px-5 h-11 text-[14px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[14px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
               >
                 Ürünler sayfasına git
               </Link>
@@ -102,30 +100,24 @@ export default async function DashboardPage({
       <PageHeader
         eyebrow="Genel Bakış"
         title={`Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
-        description="Launch hazırlığını, metrikleri ve büyümeyi tek yerden takip et."
+        description="Launch hazırlığını, metrikleri ve büyümeyi tek yerden takip et. Founder Coach planlama ve growth hazırlığı içinde çalışır."
         actions={
           <>
             <Link
               href={`/${locale}/metrics`}
-              className="inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#666d80] hover:bg-[#f6f6f6] transition"
+              className="inline-flex h-9 items-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
             >
               Metrik gir
             </Link>
             <Link
               href={product?.status === "LAUNCHED" ? `/${locale}/growth` : `/${locale}/pre-launch`}
-              className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
+              className="inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
             >
               {product?.status === "LAUNCHED" ? "Growth" : "Launch board"}
             </Link>
           </>
         }
       />
-
-      {product && (
-        <section className="mt-6">
-          <AdvisorCard productId={product.id} productName={product.name} />
-        </section>
-      )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -155,16 +147,15 @@ export default async function DashboardPage({
       </section>
 
       <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        {/* Quick actions */}
-        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
-          <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hızlı erişim</p>
-              <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">
+              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
                 {product?.status === "LAUNCHED" ? "Büyümeyi sürdür" : "Döngüyü canlı tut"}
               </h2>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#f6f6f6] text-[11px] font-semibold text-[#666d80]">
+            <span className="inline-flex items-center rounded-full bg-[#f6f6f6] px-3 py-1 text-[11px] font-semibold text-[#666d80]">
               Bu hafta
             </span>
           </div>
@@ -175,7 +166,7 @@ export default async function DashboardPage({
                   {
                     href: `/${locale}/growth`,
                     title: "Growth checklist",
-                    description: "Büyüme adımlarını takip et ve işaretle.",
+                    description: "Büyüme adımlarını ve önerilen funnel metriklerini gözden geçir.",
                   },
                   {
                     href: `/${locale}/metrics`,
@@ -195,9 +186,9 @@ export default async function DashboardPage({
                     description: `${product?._count.tasks ?? 0} bekleyen görev var`,
                   },
                   {
-                    href: `/${locale}/metrics`,
-                    title: "Bugünün metriklerini gir",
-                    description: "DAU, MRR ve aktivasyonu güncel tut.",
+                    href: `/${locale}/products/new`,
+                    title: "Planı yeniden oluştur",
+                    description: "Founder Coach checklist mantığını ürün bağlamına göre şekillendirir.",
                   },
                   {
                     href: `/${locale}/integrations`,
@@ -211,7 +202,7 @@ export default async function DashboardPage({
                 href={item.href}
                 className="flex items-start gap-3 rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 transition hover:border-[#d0d0d0] hover:bg-[#fafafa]"
               >
-                <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#95dbda] shrink-0" />
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#95dbda]" />
                 <div>
                   <p className="text-[14px] font-semibold text-[#0d0d12]">{item.title}</p>
                   <p className="mt-0.5 text-[13px] text-[#666d80]">{item.description}</p>
@@ -221,10 +212,9 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        {/* Goal pulse */}
-        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hedef nabzı</p>
-          <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Aktif büyüme hedefleri</h2>
+          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">Aktif büyüme hedefleri</h2>
 
           {product?._count.goals === 0 ? (
             <div className="mt-6 rounded-[12px] border border-dashed border-[#e8e8e8] bg-[#f6f6f6] px-5 py-10 text-center">
@@ -234,22 +224,22 @@ export default async function DashboardPage({
               </p>
               <Link
                 href={`/${locale}/growth`}
-                className="mt-5 inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
+                className="mt-5 inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
                 İlk hedefi oluştur
               </Link>
             </div>
           ) : (
             <div className="mt-6 rounded-[12px] border border-[#e8e8e8] bg-white px-5 py-5">
-              <p className="text-[36px] font-bold text-[#0d0d12] leading-none tracking-[-0.03em]">
+              <p className="text-[36px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
                 {product?._count.goals}
               </p>
               <p className="mt-2 text-[13px] text-[#666d80]">
-                Aktif hedef{product?._count.goals !== 1 ? "" : ""} growth workspace&apos;te takip ediliyor.
+                Aktif hedefler growth workspace&apos;te takip ediliyor.
               </p>
               <Link
                 href={`/${locale}/growth`}
-                className="mt-4 inline-flex text-[13px] font-semibold text-[#0d0d12] hover:text-[#666d80] transition"
+                className="mt-4 inline-flex text-[13px] font-semibold text-[#0d0d12] transition hover:text-[#666d80]"
               >
                 Hedeflere git →
               </Link>
@@ -258,7 +248,6 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      {/* AI Insights — only for products with a URL */}
       {product?.website && (
         <section className="mt-4">
           <InsightsCard productId={product.id} website={product.website} />

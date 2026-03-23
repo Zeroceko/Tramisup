@@ -9,6 +9,10 @@ import GoalsSection from "@/components/GoalsSection";
 import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
+import GrowthMetricRecommendations from "@/components/GrowthMetricRecommendations";
+import MetricSetupSelector from "@/components/MetricSetupSelector";
+import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export default async function GrowthPage({
   params,
@@ -30,7 +34,7 @@ export default async function GrowthPage({
 
   if (!product) {
     return (
-      <div className="text-center py-20 text-[#666d80]">Ürün bulunamadı</div>
+      <div className="py-20 text-center text-[#666d80]">Ürün bulunamadı</div>
     );
   }
 
@@ -55,6 +59,17 @@ export default async function GrowthPage({
     take: 20,
   });
 
+  const metricPlan = getGrowthMetricRecommendations({
+    name: product.name,
+    status: product.status,
+    category: product.category,
+    description: product.description,
+    targetAudience: product.targetAudience,
+    businessModel: product.businessModel,
+    website: product.website,
+  });
+  const savedMetricSetup = parseSavedMetricSetup(product.launchGoals);
+
   return (
     <div>
       <PageHeader
@@ -63,14 +78,23 @@ export default async function GrowthPage({
         description={t("description")}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <GrowthChecklistSection items={growthChecklists} />
-          <GoalsSection goals={goals} productId={product.id} />
-          <GrowthRoutines routines={routines} productId={product.id} />
-        </div>
-        <div>
-          <TimelineFeed events={timelineEvents} productId={product.id} />
+      <div className="space-y-4">
+        <GrowthMetricRecommendations plan={metricPlan} />
+        <MetricSetupSelector
+          productId={product.id}
+          plan={metricPlan}
+          initialSetup={savedMetricSetup}
+        />
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+            <GrowthChecklistSection items={growthChecklists} />
+            <GoalsSection goals={goals} productId={product.id} />
+            <GrowthRoutines routines={routines} productId={product.id} />
+          </div>
+          <div>
+            <TimelineFeed events={timelineEvents} productId={product.id} />
+          </div>
         </div>
       </div>
     </div>
