@@ -12,6 +12,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | K003 | docs | Treat README/HANDOFF claims as suspect until checked against code | Project docs have drifted ahead of implementation before | 2026-03 |
 | K004 | auth | If `NEXTAUTH_SECRET` changes, expect stale cookie/JWT issues and clear browser session state before debugging deeper | Prevents wasting time on false auth regressions | 2026-03 |
 | K005 | recommendations | Store-readiness guidance shown to users must include legal pages, paywall/subscription disclosure, review-account readiness, privacy/SDK disclosures, accessibility checks, ASO metadata, and IAP/subscription completeness | Prevents shallow or incomplete App Store preparation advice in user-facing recommendations | 2026-03 |
+| K006 | ai-guidance | User-facing AI must reason from verified product state, not invented context, and should prefer suggested next actions over silent automatic mutations | Prevents irrelevant or hallucinated guidance that breaks trust | 2026-03 |
 
 ## Patterns
 

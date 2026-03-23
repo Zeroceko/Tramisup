@@ -161,6 +161,8 @@ Its role is to act as a user-facing guidance model for Tiramisup users. It is de
 - provide launch/growth/store-readiness guidance
 - proactively suggest next steps when user context is clear enough
 - use the store-submission advisor skills when relevant
+- reason from verified product state instead of invented context
+- prefer suggested next actions/drafts over silent automatic mutations
 
 This is the correct home for customer-facing “what should I do next?” intelligence.
 

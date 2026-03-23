@@ -2,10 +2,11 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateWeeklyAdvice } from "@/lib/ai-advice";
+import { getFounderCoachContext } from "@/lib/founder-coach-context";
+import { getFounderCoachAnswer, getFounderCoachSuggestion } from "@/lib/founder-coach";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -15,35 +16,50 @@ export async function GET(
     const { id } = await params;
     const product = await prisma.product.findFirst({
       where: { id, userId: session.user.id },
-      include: {
-        _count: { select: { launchChecklists: true } },
-      },
+      select: { id: true },
     });
     if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const [completedCount, highBlocked, latestMetric] = await Promise.all([
-      prisma.launchChecklist.count({ where: { productId: id, completed: true } }),
-      prisma.launchChecklist.count({ where: { productId: id, completed: false, priority: "HIGH" } }),
-      prisma.metric.findFirst({ where: { productId: id }, orderBy: { date: "desc" } }),
-    ]);
+    const url = new URL(request.url);
+    const eventType = url.searchParams.get("event") ?? undefined;
+    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined);
+    const suggestion = await getFounderCoachSuggestion(context);
 
-    const daysSinceMetric = latestMetric
-      ? Math.floor((Date.now() - new Date(latestMetric.date).getTime()) / (1000 * 60 * 60 * 24))
-      : null;
-
-    const advice = await generateWeeklyAdvice({
-      name: product.name,
-      launchStatus: product.launchStatus ?? product.status,
-      checklistTotal: product._count.launchChecklists,
-      checklistCompleted: completedCount,
-      highPriorityBlocked: highBlocked,
-      daysSinceMetric,
-      hasWebsite: !!product.website,
-    });
-
-    return NextResponse.json(advice);
+    return NextResponse.json(suggestion);
   } catch (error) {
-    console.error("Failed to generate advice:", error);
-    return NextResponse.json({ error: "Failed to generate advice" }, { status: 500 });
+    console.error("Failed to generate founder-coach suggestion:", error);
+    return NextResponse.json({ error: "Failed to generate suggestion" }, { status: 500 });
+  }
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+    const product = await prisma.product.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const body = await request.json();
+    const message = String(body?.message ?? "").trim();
+    if (!message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    const eventType = body?.recentEvent?.type ? String(body.recentEvent.type) : undefined;
+    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined);
+    const answer = await getFounderCoachAnswer(context, message);
+
+    return NextResponse.json(answer);
+  } catch (error) {
+    console.error("Failed to generate founder-coach answer:", error);
+    return NextResponse.json({ error: "Failed to generate answer" }, { status: 500 });
   }
 }

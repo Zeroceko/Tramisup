@@ -1,17 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-type Action = {
-  title: string;
-  why: string;
-  priority: "high" | "medium";
+type FounderCoachSuggestion = {
+  suggestedNextStep: string;
+  whyNow: string;
+  whatCanWait?: string;
+  confidence: "LOW" | "MEDIUM" | "HIGH";
 };
 
-type WeeklyAdvice = {
-  focus: string;
-  actions: Action[];
-  encouragement: string;
+type FounderCoachResponse = {
+  title: string;
+  summary: string;
+  priorities: Array<{
+    title: string;
+    why: string;
+    priority: "CRITICAL" | "IMPORTANT" | "NICE";
+  }>;
+  whatCanWait?: string[];
 };
 
 interface AdvisorCardProps {
@@ -19,76 +25,158 @@ interface AdvisorCardProps {
   productName: string;
 }
 
-export default function AdvisorCard({
-  productId,
-  productName: _productName,
-}: AdvisorCardProps) {
-  const [advice, setAdvice] = useState<WeeklyAdvice | null>(null);
+export default function AdvisorCard({ productId }: AdvisorCardProps) {
+  const [suggestion, setSuggestion] = useState<FounderCoachSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<FounderCoachResponse | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/products/${productId}/advice`)
-      .then((r) => r.json())
-      .then((data: WeeklyAdvice) => {
-        setAdvice(data);
-        setLoading(false);
+    let cancelled = false;
+    fetch(`/api/products/${productId}/advice?event=DASHBOARD_VIEW`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: FounderCoachSuggestion | null) => {
+        if (!cancelled) {
+          setSuggestion(data);
+          setLoading(false);
+        }
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [productId]);
+
+  async function askCoach() {
+    const trimmed = question.trim();
+    if (!trimmed) return;
+
+    setAsking(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/products/${productId}/advice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed, recentEvent: { type: "MANUAL_QUESTION" } }),
+      });
+
+      if (!res.ok) throw new Error("request failed");
+      const data = (await res.json()) as FounderCoachResponse;
+      setAnswer(data);
+    } catch {
+      setError("Koç önerisi şu an alınamadı. Biraz sonra tekrar dene.");
+    } finally {
+      setAsking(false);
+    }
+  }
 
   if (loading) {
     return (
       <div className="rounded-[20px] bg-[#0d0d12] p-6 animate-pulse">
-        <div className="h-4 w-32 bg-white/10 rounded mb-3" />
-        <div className="h-6 w-3/4 bg-white/10 rounded mb-6" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 bg-white/5 rounded-[10px]" />
-          ))}
-        </div>
+        <div className="mb-3 h-4 w-32 rounded bg-white/10" />
+        <div className="mb-4 h-6 w-3/4 rounded bg-white/10" />
+        <div className="h-20 rounded-[12px] bg-white/5" />
       </div>
     );
   }
 
-  if (!advice) return null;
-
   return (
     <div className="rounded-[20px] bg-[#0d0d12] p-6 text-white">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
-          AI Danışman
+          Founder coach
         </span>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">
-          Bu hafta
-        </span>
+        {suggestion?.confidence && (
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
+            {suggestion.confidence}
+          </span>
+        )}
       </div>
 
-      <p className="text-[18px] font-semibold leading-snug tracking-[-0.01em] mb-5">
-        {advice.focus}
-      </p>
+      {suggestion && (
+        <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
+            Suggested next step
+          </p>
+          <p className="mt-2 text-[18px] font-semibold leading-snug tracking-[-0.01em]">
+            {suggestion.suggestedNextStep}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-white/70">{suggestion.whyNow}</p>
+          {suggestion.whatCanWait && (
+            <p className="mt-2 text-[12px] text-white/45">Şimdilik bekleyebilir: {suggestion.whatCanWait}</p>
+          )}
+        </div>
+      )}
 
-      <div className="space-y-2 mb-5">
-        {advice.actions.map((action, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-3 rounded-[12px] bg-white/5 px-4 py-3 border border-white/5"
+      <div className="mb-4">
+        <label className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
+          Ürününle ilgili sor
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void askCoach();
+            }}
+            placeholder="Örn: Şimdi hangi metriği tanımlamalıyım?"
+            className="h-11 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-[13px] text-white placeholder:text-white/35 outline-none transition focus:border-white/25"
+          />
+          <button
+            onClick={() => void askCoach()}
+            disabled={asking || !question.trim()}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span
-              className={`mt-0.5 shrink-0 w-1.5 h-1.5 rounded-full ${action.priority === "high" ? "bg-[#ffd7ef]" : "bg-white/30"}`}
-            />
-            <div>
-              <p className="text-[13px] font-semibold text-white">
-                {action.title}
-              </p>
-              <p className="mt-0.5 text-[12px] text-white/50 leading-5">
-                {action.why}
-              </p>
-            </div>
-          </div>
-        ))}
+            {asking ? "Soruluyor…" : "Sor"}
+          </button>
+        </div>
+        {error && <p className="mt-2 text-[12px] text-[#ffd7ef]">{error}</p>}
       </div>
 
-      <p className="text-[12px] text-white/40 italic">{advice.encouragement}</p>
+      {answer && (
+        <div className="space-y-3 rounded-[14px] border border-white/10 bg-white/5 p-4">
+          <div>
+            <p className="text-[16px] font-semibold text-white">{answer.title}</p>
+            <p className="mt-1 text-[13px] leading-6 text-white/70">{answer.summary}</p>
+          </div>
+
+          <div className="space-y-2">
+            {answer.priorities.map((item, i) => (
+              <div key={`${item.title}-${i}`} className="rounded-[12px] border border-white/8 bg-black/20 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      item.priority === "CRITICAL"
+                        ? "bg-[#ffd7ef]"
+                        : item.priority === "IMPORTANT"
+                          ? "bg-[#95dbda]"
+                          : "bg-white/35"
+                    }`}
+                  />
+                  <p className="text-[13px] font-semibold text-white">{item.title}</p>
+                </div>
+                <p className="mt-1 text-[12px] leading-5 text-white/55">{item.why}</p>
+              </div>
+            ))}
+          </div>
+
+          {answer.whatCanWait && answer.whatCanWait.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">What can wait</p>
+              <ul className="mt-2 space-y-1 text-[12px] text-white/55">
+                {answer.whatCanWait.map((item, i) => (
+                  <li key={`${item}-${i}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
