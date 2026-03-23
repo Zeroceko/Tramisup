@@ -15,6 +15,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | K006 | ai-guidance | User-facing AI must reason from verified product state, not invented context, and should prefer suggested next actions over silent automatic mutations | Prevents irrelevant or hallucinated guidance that breaks trust | 2026-03 |
 | K007 | ux-flow | For launched products, force a calm order: metric setup → daily metric entry → progress view; do not dump checklist/goals/routines/integrations before tracking is configured | Prevents overwhelming first-run growth users and keeps the product action-oriented | 2026-03 |
 | K008 | navigation | For launched products, remove `Pre-Launch` from the primary top nav and keep the main working surface focused on overview, tasks, metrics, and growth | Prevents launched users from feeling trapped in the wrong stage model | 2026-03 |
+| K009 | founder-coach | Founder Coach is now a lightweight skill-routed decision engine, not just a single prompt; keep routing context-driven and avoid turning it into a generic autonomous agent loop | Preserves product usefulness without overbuilding AI infrastructure | 2026-03 |
 
 ## Patterns
 

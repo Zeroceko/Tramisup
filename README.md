@@ -214,6 +214,7 @@ Founder Coach is not meant to be a loud always-on chat widget.
 Its current correct role is:
 - planning support during product creation
 - growth metric setup guidance
+- skill-routed advisory help when product strategy / metrics / store readiness / legal context is relevant
 - future evidence-based recommendation layer once real signals exist
 
 ### Important rule

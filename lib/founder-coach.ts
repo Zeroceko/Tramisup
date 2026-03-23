@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { FounderCoachContext } from "@/lib/founder-coach-context";
-import { loadProjectSkill } from "@/lib/project-skill-loader";
+import { buildFounderCoachDecision } from "@/lib/founder-coach-agent";
 
 export type FounderCoachResponse = {
   title: string;
@@ -41,21 +41,27 @@ function detectStoreNeed(message: string, context: FounderCoachContext) {
 }
 
 async function buildReactivePrompt(context: FounderCoachContext, message: string) {
-  const needs = detectStoreNeed(message, context);
-  const skills: string[] = [];
-  if (needs.appStore) skills.push(await loadProjectSkill("app-store-submission-advisor"));
-  if (needs.playStore) skills.push(await loadProjectSkill("play-store-submission-advisor"));
+  const decision = await buildFounderCoachDecision({
+    context,
+    message,
+    mode: "REACTIVE_ANSWER",
+  });
+  const advisoryKnowledge = decision.skills
+    .map(
+      (skill) => `SKILL: ${skill.name}\nWHY LOADED: ${skill.reason}\n${skill.content}`
+    )
+    .join("\n\n---\n\n");
 
   return `You are Founder Coach inside Tiramisup.
 Answer only from the verified product state provided below. Do not invent unsupported context.
 If context is incomplete, state assumptions briefly.
 Prioritize what matters now. Prefer specific, founder-friendly, stage-aware guidance.
-If store submission guidance is relevant, use the loaded advisory skill text as policy/readiness guidance.
+If advisory skill knowledge is loaded, treat it as relevant guidance and use it deliberately.
 
 VERIFIED PRODUCT STATE:
 ${summarizeContext(context)}
 
-${skills.length ? `RELEVANT ADVISORY KNOWLEDGE:\n${skills.join("\n\n---\n\n")}` : ""}
+${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 
 USER QUESTION:
 ${message}
@@ -80,17 +86,29 @@ Rules:
 - no markdown
 - no generic startup fluff
 - tie advice to actual stage/status and known state
-- if store readiness is relevant, include blockers vs non-blockers implicitly via priority
+- if store readiness, legal risk, metric interpretation, or prioritization is relevant, use the loaded skill guidance instead of guessing
 `;
 }
 
-function buildProactivePrompt(context: FounderCoachContext) {
+async function buildProactivePrompt(context: FounderCoachContext) {
+  const decision = await buildFounderCoachDecision({
+    context,
+    mode: "PROACTIVE_SUGGESTION",
+  });
+  const advisoryKnowledge = decision.skills
+    .map(
+      (skill) => `SKILL: ${skill.name}\nWHY LOADED: ${skill.reason}\n${skill.content}`
+    )
+    .join("\n\n---\n\n");
+
   return `You are Founder Coach inside Tiramisup.
 You are generating one short proactive suggestion card from verified product state.
 Do not invent unsupported context. Suggest one high-value next step only.
 
 VERIFIED PRODUCT STATE:
 ${summarizeContext(context)}
+
+${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 
 Return valid JSON only in this shape:
 {
@@ -107,6 +125,7 @@ Rules:
 - prefer launch blockers in PRE_LAUNCH
 - prefer activation/metric clarity in LAUNCHED
 - prefer suggestion over broad checklist
+- use loaded advisory knowledge when it sharpens the next-step recommendation
 `;
 }
 
@@ -204,7 +223,7 @@ export async function getFounderCoachAnswer(context: FounderCoachContext, userMe
 }
 
 export async function getFounderCoachSuggestion(context: FounderCoachContext): Promise<FounderCoachSuggestion | null> {
-  const prompt = buildProactivePrompt(context);
+  const prompt = await buildProactivePrompt(context);
   const result = await callModels<FounderCoachSuggestion>(prompt);
   if (result?.suggestedNextStep && result?.whyNow && result?.confidence) return result;
   return fallbackSuggestion(context);

@@ -51,6 +51,7 @@ Founder Coach is no longer intended to be a loud always-on chat widget.
 It is now being positioned as:
 - a **planning layer** during product setup
 - a **metric-setup guide** during growth preparation
+- a **skill-routed decision engine** that can load project advisory knowledge when needed
 - a future **evidence-based recommendation layer** once real signals exist
 
 This is important. The product should not regress back into “big dark AI card with generic advice.”
@@ -252,6 +253,7 @@ Do **not** treat the current `launchGoals` storage as the ideal architecture. Tr
 5. Make Founder Coach progressively smarter once actual metric history exists
 6. Reintroduce website / SEO / onboarding advice only when triggered by context or explicit user path
 7. Refine multi-product switching UX
+8. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists) without allowing silent automatic mutations
 
 ---
 
