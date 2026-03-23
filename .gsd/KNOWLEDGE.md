@@ -16,6 +16,8 @@ Agents read this before every unit. Add entries when you discover something wort
 | K007 | ux-flow | For launched products, force a calm order: metric setup → daily metric entry → progress view; do not dump checklist/goals/routines/integrations before tracking is configured | Prevents overwhelming first-run growth users and keeps the product action-oriented | 2026-03 |
 | K008 | navigation | For launched products, remove `Pre-Launch` from the primary top nav and keep the main working surface focused on overview, tasks, metrics, and growth | Prevents launched users from feeling trapped in the wrong stage model | 2026-03 |
 | K009 | founder-coach | Founder Coach is now a lightweight skill-routed decision engine, not just a single prompt; keep routing context-driven and avoid turning it into a generic autonomous agent loop | Preserves product usefulness without overbuilding AI infrastructure | 2026-03 |
+| K010 | figma-workflow | If Figma MCP works in VS Code/Codex but not in this terminal harness, continue design implementation there and use README/HANDOFF as the handoff boundary | Prevents wasting time on runtime-specific MCP auth mismatches | 2026-03 |
+| K011 | first-run | When the user has no product yet, the dashboard should show a short welcome/profile onboarding plus a single “start product journey” CTA instead of a barren empty state | Keeps first login calm, staged, and beginner-friendly without fake data | 2026-03 |
 
 ## Patterns
 
@@ -27,6 +29,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | P004 | Progressive interactivity | Server page fetches data, client component mutates via API then `router.refresh()` | Used in checklist, tasks, goals, routines, integrations |
 | P005 | Selected-metric-first growth flow | `app/[locale]/growth/page.tsx`, `components/MetricSetupSelector.tsx`, `app/[locale]/metrics/page.tsx` | Launched products first choose one primary metric per AARRR category, then enter daily values only for those selected metrics |
 | P006 | Task work surface | `app/[locale]/tasks/page.tsx`, `components/TasksList.tsx`, `app/api/actions/[id]/route.ts` | Tasks should be actively moved through yapılacak / yapılıyor / tamamlandı, not shown as a passive list |
+| P007 | First-run onboarding dashboard | `app/[locale]/dashboard/page.tsx`, `components/FirstRunOnboarding.tsx` | No-product users now see welcome/profile context, staged journey steps, and one primary CTA into product creation |
 
 ## Lessons Learned
 

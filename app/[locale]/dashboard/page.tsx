@@ -5,6 +5,7 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
+import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export default async function DashboardPage({
@@ -42,41 +43,26 @@ export default async function DashboardPage({
   }
 
   if (!product) {
+    const copy = locale === "en"
+      ? {
+          eyebrow: "Overview",
+          title: `Welcome${session?.user?.name ? `, ${session.user.name}` : ""}`,
+          description: "Start with a short profile check-in, then add your first product so Tiramisup can guide the next correct step.",
+        }
+      : {
+          eyebrow: "Genel Bakış",
+          title: `Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`,
+          description: "Kısa bir profil check-in'i yap, sonra ilk ürününü ekleyip Tiramisup'ın sonraki doğru adımı göstermesine izin ver.",
+        };
+
     return (
       <div>
         <PageHeader
-          eyebrow="Genel Bakış"
-          title={`Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
-          description="İlk ürününü oluşturarak launch hazırlığını, metriklerini ve büyüme akışını başlat."
+          eyebrow={copy.eyebrow}
+          title={copy.title}
+          description={copy.description}
         />
-
-        <section className="mt-6 rounded-[20px] border border-dashed border-[#d9d9d9] bg-white p-8 text-center sm:p-10">
-          <div className="mx-auto max-w-2xl">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#f0fafa] text-[24px]">
-              🚀
-            </div>
-            <h2 className="text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-              Henüz bir ürünün yok
-            </h2>
-            <p className="mt-3 text-[14px] leading-7 text-[#666d80]">
-              İlk ürünü oluşturduğunda Founder Coach buna göre checklist ve growth başlangıcını hazırlar.
-            </p>
-            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                href={`/${locale}/products/new`}
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-              >
-                İlk ürününü oluştur
-              </Link>
-              <Link
-                href={`/${locale}/products`}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[14px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
-              >
-                Ürünler sayfasına git
-              </Link>
-            </div>
-          </div>
-        </section>
+        <FirstRunOnboarding locale={locale} userName={session?.user?.name} userEmail={session?.user?.email} />
       </div>
     );
   }

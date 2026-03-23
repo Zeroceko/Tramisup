@@ -30,7 +30,7 @@ Tiramisup currently supports this focused MVP flow:
 1. **Public landing page** (`/tr`, `/en`)
 2. **Waitlist capture** from the landing page CTA
 3. **Early-access signup** with access code (`TT31623SEN`)
-4. **Authenticated dashboard** with a safe empty state when no product exists
+4. **Authenticated dashboard** with a short welcome/profile onboarding when no product exists
 5. **Product creation wizard** (`/{locale}/products/new`)
 6. **Stage-aware product workspace** for launch and growth
 7. **Growth metric setup** where one primary metric is chosen for each AARRR category
@@ -63,9 +63,9 @@ TT31623SEN
 ```
 
 ### C. First authenticated session
-- If user has **no product**, dashboard shows a clean empty state
+- If user has **no product**, dashboard shows a short welcome/profile onboarding
 - No fake metrics, fake tasks, or fake checklist data are shown
-- User is prompted to create the first product
+- One primary CTA moves the user into the first product journey
 
 ### D. Product creation wizard
 Wizard now collects better product context:
@@ -158,7 +158,7 @@ The dashboard should now answer one question:
 > What is the next correct step for this product right now?
 
 Examples:
-- no product → create first product
+- no product → welcome/profile onboarding, then create first product
 - pre-launch product → continue launch preparation
 - launched product with no metric setup → set up tracking first
 - launched product with setup but no daily data → make first metric entry
@@ -166,6 +166,7 @@ Examples:
 
 ### Dashboard should avoid
 - multiple competing CTA blocks
+- barren first-login screens with no orientation
 - launched users feeling stuck in pre-launch language
 - generic website-analysis noise too early
 - heavy AI explanation walls
@@ -216,6 +217,11 @@ Its current correct role is:
 - growth metric setup guidance
 - skill-routed advisory help when product strategy / metrics / store readiness / legal context is relevant
 - future evidence-based recommendation layer once real signals exist
+
+Current implementation note:
+- Founder Coach now has a lightweight agent-framework layer (`.gsd/FOUNDER_COACH_AGENT_FRAMEWORK.md`)
+- routing currently supports store, analytics, product-strategy, and legal skills
+- proposal modes (draft tasks / draft metrics / draft checklists) are still future work
 
 ### Important rule
 Founder Coach should not default to speculative optimization advice.
@@ -319,6 +325,7 @@ Do not build long-term complexity on top of the current shortcut unless intentio
 3. Improve metric trend visualization for selected AARRR metrics
 4. Add a proper post-wizard product overview step if stale first navigation keeps appearing
 5. Keep secondary surfaces (integrations, website analysis, heavy checklisting) from overwhelming first-run users
+6. Continue design implementation from Figma using a client/runtime that already has working MCP auth if needed
 
 ---
 

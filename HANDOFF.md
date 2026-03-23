@@ -1,6 +1,6 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 22 March 2026  
+**Last Updated:** 23 March 2026  
 **Status:** Live MVP; onboarding, stage-aware navigation, and growth metric setup are now product-critical. The system is moving from “many surfaces” toward a calmer, step-by-step founder workflow.
 
 ---
@@ -33,7 +33,7 @@ This is the most important current product memory.
 A real user can now:
 1. Discover the landing page
 2. Join waitlist or use early-access signup
-3. Reach a clean empty dashboard when no product exists
+3. Reach a short welcome/profile onboarding dashboard when no product exists
 4. Create a product through the wizard
 5. Have product context seed the initial plan/checklist structure
 6. If the product is already **Yayında**, the top navigation now shifts away from `Pre-Launch` and keeps the working surface focused on:
@@ -45,6 +45,7 @@ A real user can now:
 8. User saves one selected metric per AARRR category
 9. User enters daily values only for those selected metrics
 10. Tasks can now be explicitly moved between yapılacak / yapılıyor / tamamlandı, so the work surface is no longer a passive list
+11. Founder Coach now runs as a lightweight skill-routed decision engine rather than a single prompt-only helper
 
 ### Founder Coach current role
 Founder Coach is no longer intended to be a loud always-on chat widget.
@@ -145,6 +146,7 @@ The dashboard should answer only one question:
 **What is the next correct step for this product right now?**
 
 Examples:
+- no product yet → quick welcome/profile onboarding, then create first product
 - pre-launch product → finish launch preparation
 - launched product with no metric setup → set up tracking first
 - launched product with tracking chosen but no entries → make first daily metric entry
@@ -152,9 +154,19 @@ Examples:
 
 ### What the dashboard should avoid
 - multiple competing CTA blocks
+- a barren first-login empty state with no orientation
 - website analysis noise too early in the flow
 - showing launched users mostly pre-launch language
 - generic “growth” directions before metric setup exists
+
+### First-run no-product behavior
+When the user has no product yet, the dashboard should now show:
+- a short welcome surface
+- a lightweight profile snapshot (name, email, locale context)
+- one primary CTA into product creation
+- a simple staged preview of what happens after the first product is created
+
+This should still avoid fake metrics, fake tasks, or fake checklist data.
 
 ---
 
@@ -248,12 +260,13 @@ Do **not** treat the current `launchGoals` storage as the ideal architecture. Tr
 2. Improve metrics trend visualization for selected AARRR metrics so users immediately see what they entered on a chart, not only in tables
 3. Add a proper product overview / post-wizard summary step if stale first-load behavior returns
 4. Simplify growth metric options further toward beginner-friendly, manually-enterable metrics and reduce jargon like retention/WAU/MAU where possible
+5. Continue the current design pass using Figma references from VS Code / Codex if needed; this terminal agent could not use Figma MCP because the MCP auth context did not carry over here
 
 ### Medium priority
-5. Make Founder Coach progressively smarter once actual metric history exists
-6. Reintroduce website / SEO / onboarding advice only when triggered by context or explicit user path
-7. Refine multi-product switching UX
-8. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists) without allowing silent automatic mutations
+1. Make Founder Coach progressively smarter once actual metric history exists
+2. Reintroduce website / SEO / onboarding advice only when triggered by context or explicit user path
+3. Refine multi-product switching UX
+4. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists) without allowing silent automatic mutations
 
 ---
 
