@@ -47,7 +47,7 @@ export function getGrowthMetricRecommendations(product: ProductInput & { descrip
     sections: [
       {
         stage: "Awareness",
-        whyItMatters: "İnsanlar seni hiç görmüyorsa diğer funnel katmanları çalışmaz.",
+        whyItMatters: "İnsanlar senden haberdar olmuyorsa diğer adımlar hiç başlamaz.",
         metrics: [
           {
             key: "ad-impressions",
@@ -65,14 +65,15 @@ export function getGrowthMetricRecommendations(product: ProductInput & { descrip
             key: "reach",
             name: contentDriven ? "İçerik erişimi" : "Toplam erişim",
             description: contentDriven
-              ? "İçeriklerinin kaç kişiye ulaştığını gör.": "Organik ve paid görünürlüğün toplam etkisini izle.",
+              ? "İçeriklerinin kaç kişiye ulaştığını gör."
+              : "Organik ve reklam kaynaklı görünürlüğünün toplam etkisini izle.",
             whenToUse: "Organik içerik, launch postu veya topluluk dağıtımı yapıyorsan.",
           },
         ],
       },
       {
         stage: "Acquisition",
-        whyItMatters: "Gören kişilerin ürüne yaklaşmasını ölçer.",
+        whyItMatters: "Seni gören kişilerin kayıt, demo ya da bekleme listesine geçmesini ölçer.",
         metrics: [
           {
             key: "visitor-to-signup",
@@ -88,25 +89,25 @@ export function getGrowthMetricRecommendations(product: ProductInput & { descrip
           },
           {
             key: "cac",
-            name: b2b ? "Lead başı maliyet / CAC" : "Kullanıcı edinme maliyeti",
-            description: "Bir kullanıcı veya lead kazanmak için ne harcadığını ölçer.",
+            name: b2b ? "Lead başı maliyet" : "Yeni kullanıcı başı maliyet",
+            description: "Bir yeni kullanıcı veya lead kazanmak için ortalama ne harcadığını ölçer.",
             whenToUse: "Paid acquisition kullanıyorsan.",
           },
         ],
       },
       {
         stage: "Activation",
-        whyItMatters: "Kullanıcının gerçek değeri ilk kez ne zaman gördüğünü tanımlar.",
+        whyItMatters: "Yeni kullanıcının üründe ilk faydayı görüp görmediğini anlatır.",
         metrics: [
           {
             key: "onboarding-completion",
-            name: "Onboarding tamamlama oranı",
-            description: "Kayıt olanların ne kadarının onboarding’i bitirdiğini gösterir.",
+            name: "Onboarding'i tamamlayan kullanıcı",
+            description: "Kayıt olanlardan kaç kişinin kurulum veya başlangıç adımlarını bitirdiğini gösterir.",
             whenToUse: "Onboarding adımların varsa.",
           },
           {
             key: "first-value-action",
-            name: b2b ? "İlk değerli iş aksiyonu" : "İlk değerli kullanıcı aksiyonu",
+            name: b2b ? "İlk faydalı iş aksiyonu" : "İlk faydalı kullanıcı aksiyonu",
             description: b2b
               ? "Örn: ilk kampanya oluşturma, ilk ürün ekleme, ilk dashboard kurma."
               : "Örn: ilk içerik oluşturma, ilk paylaşım, ilk hedef tamamlama.",
@@ -114,39 +115,39 @@ export function getGrowthMetricRecommendations(product: ProductInput & { descrip
           },
           {
             key: "activation-rate",
-            name: "Activation rate",
-            description: "Signup olanların ne kadarının değerli ilk aksiyona ulaştığını ölçer.",
-            whenToUse: "Growth takibinde tek ana erken başarı metriği istiyorsan.",
+            name: "İlk faydaya ulaşan kullanıcı oranı",
+            description: "Kayıt olanların ne kadarının gerçekten değerli ilk adıma ulaştığını ölçer.",
+            whenToUse: "Tek bir erken başarı metriği seçmek istiyorsan.",
           },
         ],
       },
       {
         stage: "Retention",
-        whyItMatters: "İlk değer gördükten sonra kullanıcı neden kalıyor veya düşüyor sorusunu yanıtlar.",
+        whyItMatters: "Kullanıcıların tekrar geri gelip gelmediğini gösterir.",
         metrics: [
           {
             key: "d1-d7-d30",
-            name: "D1 / D7 / D30 retention",
-            description: "İlk gün, ilk hafta ve ilk ay geri dönüş oranlarını takip et.",
-            whenToUse: "Temel retention resmi kurmak istiyorsan.",
+            name: "Ertesi gün / hafta / ay geri gelen kullanıcı",
+            description: "İlk gün, ilk hafta ve ilk ay içinde geri dönen kullanıcı oranını takip et.",
+            whenToUse: "Kullanıcıların geri gelip gelmediğini basit şekilde görmek istiyorsan.",
           },
           {
             key: "wau-mau",
-            name: "WAU / MAU veya kullanım sıklığı",
-            description: "Ürünün ne kadar tekrar kullanıldığını gösterir.",
+            name: "Bu hafta geri gelen kullanıcı",
+            description: "Ürünün bir hafta içinde ne kadar tekrar kullanıldığını gösterir.",
             whenToUse: "Düzenli kullanım beklenen ürünlerde.",
           },
           {
             key: "churn",
-            name: b2b ? "Logo churn / account churn" : "User churn",
-            description: "Kaybedilen kullanıcı veya müşteri oranı.",
-            whenToUse: "Launch sonrası düşüşü görünür kılmak istiyorsan.",
+            name: b2b ? "Kaybedilen müşteri hesabı" : "Kaybedilen kullanıcı",
+            description: "Belli bir dönemde artık dönmeyen veya ödeme yapmayan kullanıcı/müşteri sayısı.",
+            whenToUse: "Düşüşü görünür kılmak istiyorsan.",
           },
         ],
       },
       {
         stage: "Referral",
-        whyItMatters: "Memnun kullanıcıların seni büyütme etkisini ölçer.",
+        whyItMatters: "Mevcut kullanıcıların yeni kullanıcı getirip getirmediğini gösterir.",
         metrics: [
           {
             key: "invites-sent",
@@ -162,33 +163,33 @@ export function getGrowthMetricRecommendations(product: ProductInput & { descrip
           },
           {
             key: "viral-coefficient",
-            name: "Viral coefficient",
-            description: "Bir kullanıcının ortalama kaç yeni kullanıcı getirdiğini ölçer.",
-            whenToUse: "Ürün doğası gereği paylaşılabilir veya team-based ise.",
+            name: "Bir kullanıcının getirdiği yeni kullanıcı",
+            description: "Ortalama bir kullanıcının kaç yeni kullanıcı getirdiğini ölçer.",
+            whenToUse: "Ürün doğası gereği paylaşılabilir veya ekip tabanlıysa.",
           },
         ],
       },
       {
         stage: "Revenue",
-        whyItMatters: "Büyümenin finansal kaliteye dönüşüp dönüşmediğini gösterir.",
+        whyItMatters: "Büyümenin gelire dönüşüp dönüşmediğini gösterir.",
         metrics: [
           {
             key: "trial-to-paid",
-            name: "Trial → paid dönüşümü",
+            name: "Ücretli kullanıcıya geçenler",
             description: "Deneme veya ücretsiz kullanıcıların ne kadarının ödeme yaptığını ölçer.",
             whenToUse: "Freemium veya trial varsa.",
           },
           {
             key: "mrr",
-            name: "MRR / recurring gelir",
-            description: "Aylık tekrar eden gelirin temel north star finans metriği.",
+            name: "Aylık düzenli gelir",
+            description: "Her ay tekrar eden toplam geliri gösterir.",
             whenToUse: "Abonelik veya düzenli ödeme modeli varsa.",
           },
           {
             key: "arpu",
-            name: b2b ? "ARPA / hesap başı gelir" : "ARPU / kullanıcı başı gelir",
-            description: "Gelir kalitesinin kullanıcı veya hesap bazında değişimini gösterir.",
-            whenToUse: "Gelirin sadece toplamına değil kalite dağılımına da bakmak istiyorsan.",
+            name: b2b ? "Hesap başı ortalama gelir" : "Kullanıcı başı ortalama gelir",
+            description: "Toplam gelirin kullanıcı veya müşteri hesabı başına nasıl dağıldığını gösterir.",
+            whenToUse: "Gelirin sadece toplamına değil kişi/hesap başına kalitesine de bakmak istiyorsan.",
           },
         ],
       },

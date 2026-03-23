@@ -46,9 +46,11 @@ export async function POST(request: Request) {
     nextEntries.sort((a, b) => a.date.localeCompare(b.date));
 
     const nextPayload: SavedMetricSetup = {
-      version: 2,
+      version: existing.founderSummary ? 3 : 2,
       selections: existing.selections,
       entries: nextEntries,
+      ...(existing.platforms?.length ? { platforms: existing.platforms } : {}),
+      ...(existing.founderSummary ? { founderSummary: existing.founderSummary } : {}),
     };
 
     await prisma.product.update({

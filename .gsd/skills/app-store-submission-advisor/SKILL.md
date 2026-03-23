@@ -55,6 +55,16 @@ Always check whether the user has:
 - screenshots that reflect the current shipped experience
 - localized pricing and localized IAP/subscription copy if the product supports multiple markets
 
+### 2.5 Visual Asset Readiness
+
+Always check whether the user has:
+- a readable app icon at small size
+- a screenshot set that tells a clear story from first to last frame
+- screenshots that show the real shipped UI, not only polished mockups
+- optional preview video only if it helps explain the product faster
+- localized screenshot sets where the app serves multiple markets
+- iPhone/iPad visual assets aligned with the devices the app actually supports
+
 ### 3. Subscription / IAP Readiness
 
 If the app uses subscriptions or in-app purchases, always check whether the user has:
@@ -100,6 +110,7 @@ Flag these as high-risk when advising users:
 - hidden subscription requirement
 - login required but no review account provided
 - screenshots that look mocked/fake or do not represent the current app
+- visual assets that do not match the current in-app flow or device support
 - privacy policy missing or inconsistent with actual SDK usage
 - social login present without Sign in with Apple where parity is expected
 - app store metadata that sounds generic, misleading, or copied

@@ -4,7 +4,7 @@
 
 Tiramisup, founder ve küçük startup ekipleri için launch-to-growth operating workspace. Tek bir ürün veya ileride birden fazla ürün için launch hazırlığı, growth readiness, görev takibi, metrik takibi, hedefler, rutinler ve entegrasyon durumunu tek sistemde toplamayı hedefler.
 
-Bugün ürünün çalışan çekirdeği şudur: kullanıcı kayıt olur, bir varsayılan ürün oluşturulur, bu ürün için seed veri yüklenir, kullanıcı dashboard, pre-launch, metrics, growth, integrations ve settings yüzeylerine girip temel akışları kullanabilir.
+Bugün ürünün çalışan çekirdeği şudur: kullanıcı kayıt olur, ilk login’de kısa bir welcome/onboarding yüzeyi görür, ilk ürününü wizard ile oluşturur, ürün stage’ine göre launch veya growth yüzeylerine ilerler, launched ürünlerde önce hangi sayıları takip edeceğini seçer, sonra günlük metrik girişi yapar, sonra değişimi ve görev yüzeyini takip eder.
 
 ## Core Value
 
@@ -13,12 +13,12 @@ Founder’ın “ürünüm şu an nerede, risk nerede ve sıradaki doğru adım 
 ## Current State
 
 - Credentials tabanlı auth çalışıyor (signup/login/next-auth JWT session)
-- Signup sonrası varsayılan `Product` yaratılıyor ve demo veri seed ediliyor
+- Signup sonrası varsayılan `Product` yaratılmıyor; ilk ürün kullanıcı tarafından wizard içinde oluşturuluyor
 - Multi-product veri modeli schema’de hazır (`User -> Product[]`), ama UX hâlâ büyük ölçüde tek aktif ürün varsayıyor
-- Dashboard özet yüzeyi çalışıyor: launch readiness, latest metrics, goal pulse, quick actions
+- Dashboard stage-aware çalışıyor: no-product durumda welcome/profile onboarding, pre-launch durumda launch yönlendirmesi, launched durumda next-step yönlendirmesi
 - Pre-launch yüzeyi çalışıyor: launch checklist + task listesi + readiness score
-- Metrics yüzeyi çalışıyor: manuel metrik girişi, retention cohorts, activation funnel, trend görünümü
-- Growth yüzeyi çalışıyor: goals, progress update, routines, timeline
+- Metrics yüzeyi çalışıyor: seçilen ana metrikler için günlük giriş, last-value yardımı, trend görünümü ve previous-entry karşılaştırması
+- Growth yüzeyi çalışıyor: neyin takip edileceğini seçme ve takip odağını yönetme yüzeyi
 - Integrations yüzeyi çalışıyor ama mostly façade: bağlanma/test shell’i var, gerçek veri senkronu yok
 - Settings yüzeyi çalışıyor: user + ilk ürün ayarları güncellenebiliyor
 - `GrowthChecklist` ve gerçek kanban board deneyimi schema’de var ama ayrı ürün akışı olarak tamamlanmış değil
@@ -33,7 +33,7 @@ Founder’ın “ürünüm şu an nerede, risk nerede ve sıradaki doğru adım 
 - Ana domain modeli `Product`; feature verilerinin çoğu `productId` ile bağlı
 - Authenticated sayfalar `AppShell` ile sarılıyor
 - Tasarım sistemi çekirdeği: `PageHeader`, `StatCard`, `DashboardNav`, `AppShell`
-- Seed mantığı `lib/seed.ts` içinde; demo product workspace’i hızlı ayağa kaldırmak için kullanılıyor
+- Seed mantığı `lib/seed.ts` içinde; ancak AI unavailable olduğunda generic fake workspace verisi üretmemek artık ürün kuralı
 - Integrations için `Integration` + `SyncJob` modeli var; gerçek sync orchestration henüz yok
 
 ## Capability Contract

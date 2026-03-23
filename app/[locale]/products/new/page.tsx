@@ -10,6 +10,7 @@ type WizardData = {
   description: string;
   categories: string[];
   categoryOther: string;
+  mobilePlatforms: string[];
   targetAudiences: string[];
   audienceOther: string;
   businessModel: string;
@@ -53,6 +54,8 @@ const BUSINESS_MODELS = [
   "Kurumsal / özel teklif",
   "Marketplace komisyonu",
 ];
+
+const MOBILE_PLATFORMS = ["iOS", "Android"];
 
 const LAUNCH_STATUSES = [
   "Geliştirme aşamasında",
@@ -225,6 +228,7 @@ export default function NewProductWizard() {
     description: "",
     categories: [],
     categoryOther: "",
+    mobilePlatforms: [],
     targetAudiences: [],
     audienceOther: "",
     businessModel: "",
@@ -275,6 +279,16 @@ export default function NewProductWizard() {
     });
   }
 
+  function toggleMobilePlatform(value: string) {
+    setData((prev) => {
+      const exists = prev.mobilePlatforms.includes(value);
+      const next = exists
+        ? prev.mobilePlatforms.filter((item) => item !== value)
+        : [...prev.mobilePlatforms, value];
+      return { ...prev, mobilePlatforms: next };
+    });
+  }
+
   function canProceed() {
     if (!currentQuestion) return true;
 
@@ -299,6 +313,9 @@ export default function NewProductWizard() {
       if (values.length === 0) return false;
       if (values.includes(OTHER_OPTION)) {
         return data[currentQuestion.otherField].trim() !== "";
+      }
+      if (currentQuestion.id === "categories" && values.includes("Mobil uygulama")) {
+        return data.mobilePlatforms.length > 0;
       }
       return true;
     }
@@ -362,6 +379,7 @@ export default function NewProductWizard() {
           name: data.name,
           description: data.description,
           category: serializeMultiSelect(data.categories, data.categoryOther),
+          mobilePlatforms: data.mobilePlatforms,
           targetAudience: serializeMultiSelect(data.targetAudiences, data.audienceOther),
           businessModel: data.businessModel,
           launchStatus: data.launchStatus,
@@ -520,6 +538,31 @@ export default function NewProductWizard() {
                       );
                     })
                   : null}
+
+                {currentQuestion.id === "categories" && data.categories.includes("Mobil uygulama") ? (
+                  <div className="rounded-[18px] border border-[#e8e8e8] bg-[#fbfbfb] p-4">
+                    <p className="text-[13px] font-semibold text-[#111111]">
+                      Mobil uygulama için platform seç
+                    </p>
+                    <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+                      Founder Coach App Store ve Google Play gerekliliklerini buna göre ekleyecek.
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {MOBILE_PLATFORMS.map((platform) => {
+                        const selected = data.mobilePlatforms.includes(platform);
+                        return (
+                          <OptionButton
+                            key={platform}
+                            selected={selected}
+                            onClick={() => toggleMobilePlatform(platform)}
+                          >
+                            {platform}
+                          </OptionButton>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
                 {currentQuestion.type === "multi-select" &&
                 data[currentQuestion.id].includes(OTHER_OPTION) ? (

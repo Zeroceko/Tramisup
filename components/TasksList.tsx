@@ -37,6 +37,7 @@ export default function TasksList({ tasks }: TasksListProps) {
   const todoTasks = tasks.filter((task) => task.status === "TODO");
   const inProgressTasks = tasks.filter((task) => task.status === "IN_PROGRESS");
   const doneTasks = tasks.filter((task) => task.status === "DONE");
+  const nextTask = inProgressTasks[0] ?? todoTasks[0] ?? null;
 
   async function updateTaskStatus(taskId: string, status: Task["status"]) {
     setLoading(taskId);
@@ -119,6 +120,40 @@ export default function TasksList({ tasks }: TasksListProps) {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bugünün çalışma yüzeyi</p>
+        {nextTask ? (
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <h2 className="text-[18px] font-semibold text-[#0d0d12]">
+                {nextTask.status === "IN_PROGRESS" ? "Üzerinde çalıştığın ana iş" : "Sıradaki en net iş"}
+              </h2>
+              <p className="mt-1 text-[14px] font-medium text-[#0d0d12]">{nextTask.title}</p>
+              <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+                {nextTask.description || "Bu görev tamamlandığında task yüzeyindeki ilerlemen doğrudan değişir."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                updateTaskStatus(
+                  nextTask.id,
+                  nextTask.status === "TODO" ? "IN_PROGRESS" : "DONE"
+                )
+              }
+              disabled={loading === nextTask.id}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-60"
+            >
+              {nextTask.status === "TODO" ? "Bu işe başla" : "Tamamlandı olarak işaretle"}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 text-[13px] text-[#666d80]">
+            Henüz aktif görev yok. Ürün planı oluştukça ana çalışma yüzeyin burada şekillenecek.
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-[12px] border border-[#e8e8e8] bg-white p-4">
           <p className="text-[12px] text-[#666d80]">Yapılacak</p>

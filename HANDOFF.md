@@ -1,7 +1,7 @@
 # Tiramisup - Handoff
 
 **Last Updated:** 23 March 2026  
-**Status:** Live MVP; onboarding, stage-aware navigation, and growth metric setup are now product-critical. The system is moving from “many surfaces” toward a calmer, step-by-step founder workflow.
+**Status:** Live MVP; the current sprint is a product-logic reset focused on first-login onboarding, a clearer Growth vs Metrics split, beginner-friendly metric language, stronger metrics feedback loops, and a more action-oriented task surface.
 
 ---
 
@@ -15,13 +15,18 @@ Tiramisup is now a real launch-to-growth workspace with an opinionated first-run
 4. If the product is already **Yayında**, the product should move the user toward:
    - choosing one primary metric for each AARRR category
    - entering daily values for those selected metrics
+   - seeing a real trend chart, not only a table
    - viewing early progress without being flooded by secondary surfaces
+5. If the product is still pre-launch, `Growth` should remain visible as the next stage, but the page should act like a locked/preview surface instead of a full working workspace
 
 The core product direction is now clearer:
 - **Do not dump everything on the user at once**
 - **Do not default to generic growth advice without evidence**
 - **Do not treat pre-launch and launched products the same**
 - **Do not show metric forms unrelated to the metrics the user chose**
+- **Do not fabricate fallback workspace data when AI is unavailable**
+- **Do explain Growth and Metrics in plain language**
+- **Do make the metrics page answer “I entered numbers, now what changed?”**
 
 This is the most important current product memory.
 
@@ -44,8 +49,14 @@ A real user can now:
 7. Launched products move toward a growth setup flow where the system asks: **what should we track first?**
 8. User saves one selected metric per AARRR category
 9. User enters daily values only for those selected metrics
-10. Tasks can now be explicitly moved between yapılacak / yapılıyor / tamamlandı, so the work surface is no longer a passive list
-11. Founder Coach now runs as a lightweight skill-routed decision engine rather than a single prompt-only helper
+10. User sees a real trend chart on the metrics page once enough entries exist
+11. Tasks now have their own shell under the locale route, so the work surface stays consistent
+12. Founder Coach now runs as a lightweight skill-routed decision engine rather than a single prompt-only helper
+13. `Launch` stays visible even after launch so non-critical items can still be reviewed and completed
+14. Mobile app products must capture platform selection and surface App Store / Google Play readiness guidance during setup
+15. ASO now has its own skill boundary so listing optimization stays separate from compliance/review guidance
+16. Launch readiness and analytics instrumentation now also have dedicated skills so blocker logic and measurement design stay separate
+17. A project-level `skill-gateway` skill now exists to route ambiguous or multi-domain skill requests
 
 ### Founder Coach current role
 Founder Coach is no longer intended to be a loud always-on chat widget.
@@ -54,8 +65,35 @@ It is now being positioned as:
 - a **metric-setup guide** during growth preparation
 - a **skill-routed decision engine** that can load project advisory knowledge when needed
 - a future **evidence-based recommendation layer** once real signals exist
+- a store-readiness guide for mobile products when iOS / Android distribution is relevant
+- an ASO-aware listing optimization layer when store metadata and screenshots need tightening
+- a launch-readiness layer for blocker-first release sequencing
+- an analytics instrumentation layer for event schema / tracking plan design
 
 This is important. The product should not regress back into “big dark AI card with generic advice.”
+
+---
+
+## Current Sprint Priority
+
+This sprint should be treated as a **product logic chain reset**, not as a visual polish sprint.
+
+The priority stack is:
+1. **First-login onboarding**
+2. **Growth vs Metrics separation**
+3. **Beginner-friendly metric language**
+4. **Metrics feedback loop**
+5. **Tasks as the daily work surface**
+6. **Docs consistency**
+
+### What shipped in this reset
+- First-run onboarding copy is warmer and more clearly welcome-oriented instead of feeling like a generic empty dashboard
+- Growth now explains that it is the place to choose and manage **which numbers matter**
+- Metrics now explains that it is the place to **enter today’s numbers and see what changed**
+- Metric naming and explanations were rewritten in simpler Turkish so early-stage founders are not forced into raw analytics jargon immediately
+- The metrics entry form now confirms where saved numbers will show up
+- The metrics overview cards now compare the latest entry against the previous one when possible
+- Tasks now surface one main task first so the page behaves more like a work surface than a passive list
 
 ---
 
@@ -190,14 +228,31 @@ The user should make the choice **where they see the metric**, not after reading
 - save CTA must be visible near the current action context
 - after save, user should be taken to the metrics input flow
 
+### Pre-launch behavior
+For pre-launch products, Growth should stay visible as the next stage, but the page should explain that it is coming next and point back to launch readiness.
+Do not hide the section completely unless the stage model changes again.
+
 ### Secondary content rule
 Before setup is completed, avoid dumping:
 - growth checklist
-n- goals
+- goals
 - routines
 - timeline
 
 These should only appear after the primary setup step is done.
+
+### Important framing rule
+Growth is now the answer to:
+- **“Neyi takip edeceğiz?”**
+
+Metrics is now the answer to:
+- **“Bugün ne oldu ve ne değişti?”**
+
+This distinction should stay visible in:
+- page headers
+- helper copy
+- save confirmations
+- next-step CTA logic
 
 ---
 
@@ -209,12 +264,26 @@ If the user chose six primary AARRR metrics, the daily input form should show on
 
 Bad behavior:
 - generic giant metric form with unrelated inputs
+- unexplained jargon
+- no visible feedback after save
 
 Correct behavior:
 - selected metric set
 - date
 - one input per chosen category metric
 - recent entries / simple progress view
+- trend chart once enough entries exist
+- visible comparison against the prior entry when available
+- clear guidance about where the saved data appears
+
+### Beginner-friendly language rule
+Metric labels and descriptions should reduce analytics jargon where possible.
+
+Examples:
+- explain acquisition cost in plain Turkish instead of relying only on `CAC`
+- explain retention as users coming back later
+- explain activation as reaching the first real value moment
+- explain revenue metrics as recurring income, not only acronyms
 
 ### Current implementation note
 To move quickly without a DB migration, selected metric setup and daily AARRR entries are currently being stored in `Product.launchGoals` as JSON payload.
@@ -226,6 +295,31 @@ Future cleanup should split this into explicit entities such as:
 - maybe `MetricDefinition`
 
 Do **not** treat the current `launchGoals` storage as the ideal architecture. Treat it as a temporary bridge that protects UX momentum.
+
+### Feedback loop rule
+After metric entry, the product should help the user answer:
+- what did I just save?
+- where can I see it?
+- how is today different from the last entry?
+
+The current UI direction now includes:
+- a simple explainer section at the top of Metrics
+- last-known-value hints inside the form
+- a success message after save
+- summary cards that compare the latest value with the previous entry
+
+---
+
+## Tasks Surface State (Current)
+
+### Critical direction
+Tasks should feel like the user’s **daily work surface**, not a backlog dump.
+
+### Current implementation direction
+- surface one clear main task at the top
+- show whether that task is the next logical step or the current in-progress item
+- make it easy to start or complete that task directly
+- keep remaining tasks underneath as supporting context
 
 ---
 
@@ -245,7 +339,7 @@ Do **not** treat the current `launchGoals` storage as the ideal architecture. Tr
 
 1. **No fake workspace on signup**
 2. **Launched products must not feel trapped in pre-launch UX**
-3. **Growth setup must stay calm and single-purpose**
+3. **Growth must stay staged: preview for pre-launch, workspace for launched**
 4. **Metric entry must stay tied to selected setup**
 5. **Advice/checklists must not assume problems without evidence**
 6. **Project context from user-written description must remain central**
@@ -257,10 +351,11 @@ Do **not** treat the current `launchGoals` storage as the ideal architecture. Tr
 
 ### High priority
 1. Replace temporary `launchGoals` JSON storage with real metric setup / entry tables
-2. Improve metrics trend visualization for selected AARRR metrics so users immediately see what they entered on a chart, not only in tables
-3. Add a proper product overview / post-wizard summary step if stale first-load behavior returns
-4. Simplify growth metric options further toward beginner-friendly, manually-enterable metrics and reduce jargon like retention/WAU/MAU where possible
-5. Continue the current design pass using Figma references from VS Code / Codex if needed; this terminal agent could not use Figma MCP because the MCP auth context did not carry over here
+2. Strengthen next-step orchestration across dashboard, tasks, growth, and metrics so the whole product answers one question consistently
+3. Improve metrics trend visualization and drill-down so users can read what changed, not only that something changed
+4. Convert pre-launch Growth preview into a cleaner launch-readiness gate if future feedback says the mixed stage is still confusing
+5. Keep the no-fake-data rule strict: only AI-generated or user-created records should appear in the workspace
+6. Continue the current design pass using Figma references from VS Code / Codex if needed; this terminal agent could not use Figma MCP because the MCP auth context did not carry over here
 
 ### Medium priority
 1. Make Founder Coach progressively smarter once actual metric history exists

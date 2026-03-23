@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import MetricEntryForm from "@/components/MetricEntryForm";
+import MetricsTrendChart from "@/components/MetricsTrendChart";
 import PageHeader from "@/components/PageHeader";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
@@ -50,7 +51,14 @@ export default async function MetricsPage({
       .map((metric) => ({ stage: section.stage, metricKey: metric.key, metricName: metric.name }));
   });
   const latestEntry = savedSetup?.entries.at(-1) ?? null;
+  const previousEntry = savedSetup && savedSetup.entries.length > 1
+    ? savedSetup.entries[savedSetup.entries.length - 2]
+    : null;
   const recentEntries = [...(savedSetup?.entries ?? [])].reverse().slice(0, 7);
+  const chartEntries = (savedSetup?.entries ?? []).slice(-14).map((entry) => ({
+    date: entry.date.slice(5),
+    ...entry.values,
+  }));
 
   return (
     <div>
@@ -81,6 +89,25 @@ export default async function MetricsPage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Metrics ne işe yarıyor?</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Girdiğin sayıların yeri burası</h2>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-[12px] bg-[#fafafa] p-4">
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">1. Bugünkü değerleri gir</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Sağdaki formdan sadece seçtiğin sayıları girersin.</p>
+                </div>
+                <div className="rounded-[12px] bg-[#fafafa] p-4">
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">2. Son durumu gör</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Aşağıdaki kartlarda son girilen değer hemen görünür.</p>
+                </div>
+                <div className="rounded-[12px] bg-[#fafafa] p-4">
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">3. Değişimi takip et</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Yeterli veri girince trend grafiği ve geçmiş tablo oluşur.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen metrikler</p>
               <h2 className="text-[16px] font-semibold text-[#0d0d12]">Seçtiğin ana set</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -91,7 +118,11 @@ export default async function MetricsPage({
                     <p className="mt-2 text-[24px] font-bold tracking-[-0.02em] text-[#0d0d12]">
                       {latestEntry?.values?.[metric.stage] ?? "—"}
                     </p>
-                    <p className="mt-1 text-[12px] text-[#666d80]">Son girilen değer</p>
+                    <p className="mt-1 text-[12px] text-[#666d80]">
+                      {previousEntry?.values?.[metric.stage] != null && latestEntry?.values?.[metric.stage] != null
+                        ? `Önceki girişe göre ${Number(latestEntry.values[metric.stage]) - Number(previousEntry.values[metric.stage]) >= 0 ? "+" : ""}${Number(latestEntry.values[metric.stage]) - Number(previousEntry.values[metric.stage])}`
+                        : "Son girilen değer"}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -99,6 +130,20 @@ export default async function MetricsPage({
 
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Gidişat</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Trend görünümü</h2>
+              {chartEntries.length < 2 ? (
+                <p className="mt-4 text-[13px] text-[#666d80]">
+                  Grafik en az 2 günlük girişten sonra görünür. Şimdilik aşağıda son girişlerini tablo halinde tutuyorum.
+                </p>
+              ) : (
+                <div className="mt-4">
+                  <MetricsTrendChart entries={chartEntries} series={selectedMetrics} />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Geçmiş</p>
               <h2 className="text-[16px] font-semibold text-[#0d0d12]">Son girişler</h2>
               {recentEntries.length === 0 ? (
                 <p className="mt-4 text-[13px] text-[#666d80]">Henüz veri girişi yok. Sağdaki formdan ilk gününü gir.</p>

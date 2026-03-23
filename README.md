@@ -2,8 +2,8 @@
 
 Launch-to-growth dönemindeki startup ekipleri için sakin, aşamalı ve yönlendirici tek workspace.
 
-**Status:** Live MVP, onboarding + stage-aware growth setup stabilized  
-**Last Updated:** 22 March 2026
+**Status:** Live MVP, with the current sprint focused on first-login clarity, Growth vs Metrics separation, beginner-friendly metric language, metrics feedback loops, and task-surface clarity  
+**Last Updated:** 23 March 2026
 
 ---
 
@@ -16,10 +16,14 @@ Tiramisup kullanıcıya her şeyi aynı anda göstermez.
 2. Founder Coach buna göre ilk çalışma sistemini kurar
 3. kullanıcı önce neyi takip edeceğini seçer
 4. sonra yalnızca seçtiği metrikler için günlük veri girer
-5. sonra gidişatı görür
+5. sonra neyin değiştiğini görür
 6. ancak ondan sonra daha derin öneriler / hedefler / optimizasyonlar gelir
 
 Bu sırayı bozmak ürün kalitesini hızla düşürür.
+
+Bu sprintte ürün dili şu iki soruyu net ayırmalıdır:
+- `Growth`: Neyi takip edeceğiz?
+- `Metrics`: Bugün ne oldu ve ne değişti?
 
 ---
 
@@ -35,6 +39,8 @@ Tiramisup currently supports this focused MVP flow:
 6. **Stage-aware product workspace** for launch and growth
 7. **Growth metric setup** where one primary metric is chosen for each AARRR category
 8. **Daily metric entry** based on the selected metric set
+9. **Metrics feedback loop** with last-known value hints, save confirmation, and change vs previous entry
+10. **Task work surface** that highlights one main job first instead of behaving like a passive backlog
 
 ---
 
@@ -66,6 +72,7 @@ TT31623SEN
 - If user has **no product**, dashboard shows a short welcome/profile onboarding
 - No fake metrics, fake tasks, or fake checklist data are shown
 - One primary CTA moves the user into the first product journey
+- The page should feel like orientation, not a tiny overview dashboard
 
 ### D. Product creation wizard
 Wizard now collects better product context:
@@ -123,6 +130,14 @@ Not:
 
 all at once.
 
+### Beginner-friendly metric language
+Metric labels should not assume the user is fluent in raw analytics acronyms.
+
+The product should prefer:
+- plain Turkish explanations
+- examples of what the number means
+- helper copy that reduces fear of “entering the wrong thing”
+
 ---
 
 ## Current launched-product flow
@@ -143,7 +158,7 @@ For a launched product, the intended order is now:
 
 4. **Enter daily values only for the selected metrics**
 
-5. **Review progress / trend**
+5. **Review what changed / trend**
 
 6. **Work through real tasks and mark them as yapılacak / yapılıyor / tamamlandı**
 
@@ -171,6 +186,13 @@ Examples:
 - generic website-analysis noise too early
 - heavy AI explanation walls
 
+### First-run emphasis
+The first authenticated screen should feel welcoming and staged.
+It should clearly say:
+- you are in the right place
+- here is what happens next
+- here is the one action to take now
+
 ### Navigation rule
 For launched products, `Pre-Launch` should disappear from the main top navigation.
 `Integrations` should not compete with core daily work in the primary nav.
@@ -190,6 +212,10 @@ No giant explanation block first, then a long scroll, then selection.
 The save CTA should stay visible and near the action context.
 After saving, the user moves into daily metric entry.
 
+### Conceptual rule
+Growth is the place to choose and manage tracking focus.
+Metrics is the place to enter numbers and observe movement.
+
 ---
 
 ## Metrics page behavior
@@ -202,10 +228,32 @@ Correct behavior:
 - show one input per chosen category metric
 - show recent entries / simple progress
 - make it obvious where the user will see what they entered
+- show the last known value when possible
+- highlight what changed compared with the previous entry
 
 Wrong behavior:
 - show unrelated fields the user never selected
 - ask for technical jargon without enough explanation
+
+### Metrics feedback loop
+After the user saves numbers, the page should answer:
+- what was saved
+- where it appears
+- how it compares with the previous entry
+
+This rule is now product-critical.
+
+---
+
+## Tasks page behavior
+
+The tasks page should no longer feel like a detached list view.
+
+Correct behavior:
+- surface one main task first
+- tell the user whether it is the next logical task or the in-progress task
+- let the user start or complete it quickly
+- keep the rest as supporting context
 
 ---
 

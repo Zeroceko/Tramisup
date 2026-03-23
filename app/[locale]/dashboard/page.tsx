@@ -43,187 +43,292 @@ export default async function DashboardPage({
   }
 
   if (!product) {
-    const copy = locale === "en"
-      ? {
-          eyebrow: "Overview",
-          title: `Welcome${session?.user?.name ? `, ${session.user.name}` : ""}`,
-          description: "Start with a short profile check-in, then add your first product so Tiramisup can guide the next correct step.",
-        }
-      : {
-          eyebrow: "Genel Bakış",
-          title: `Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`,
-          description: "Kısa bir profil check-in'i yap, sonra ilk ürününü ekleyip Tiramisup'ın sonraki doğru adımı göstermesine izin ver.",
-        };
-
     return (
       <div>
         <PageHeader
-          eyebrow={copy.eyebrow}
-          title={copy.title}
-          description={copy.description}
+          eyebrow={locale === "en" ? "Overview" : "Ürünün laucha ne kadar hazır?"}
+          title={locale === "en"
+            ? `Welcome${session?.user?.name ? `, ${session.user.name}` : ""}`
+            : `Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
+          titleSuffix="👋"
         />
         <FirstRunOnboarding locale={locale} userName={session?.user?.name} userEmail={session?.user?.email} />
       </div>
     );
   }
 
-  const [completedLaunchChecklists, completedGrowthChecklists, latestMetric] = await Promise.all([
-    prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
-    prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
-    prisma.metric.findFirst({ where: { productId: product.id }, orderBy: { date: "desc" } }),
-  ]);
+  const [completedLaunchChecklists, completedGrowthChecklists, latestMetric, taskCounts] =
+    await Promise.all([
+      prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
+      prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
+      prisma.metric.findFirst({ where: { productId: product.id }, orderBy: { date: "desc" } }),
+      prisma.task.groupBy({
+        by: ["status"],
+        where: { productId: product.id },
+        _count: true,
+      }),
+    ]);
 
   const launchTotal = product._count.launchChecklists || 0;
   const growthTotal = product._count.growthChecklists || 0;
   const savedMetricSetup = parseSavedMetricSetup(product.launchGoals);
-  const selectedMetricCount = savedMetricSetup?.selections.reduce(
-    (sum, item) => sum + item.selectedMetricKeys.length,
-    0
-  ) ?? 0;
+  const founderSummary = savedMetricSetup?.founderSummary;
+  const selectedMetricCount =
+    savedMetricSetup?.selections.reduce(
+      (sum, item) => sum + item.selectedMetricKeys.length,
+      0
+    ) ?? 0;
 
-  const isLaunched = product.status === "LAUNCHED";
-  const readinessScore = launchTotal > 0 ? Math.round((completedLaunchChecklists / launchTotal) * 100) : 0;
-  const growthScore = growthTotal > 0 ? Math.round((completedGrowthChecklists / growthTotal) * 100) : 0;
+  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+  const readinessScore =
+    launchTotal > 0 ? Math.round((completedLaunchChecklists / launchTotal) * 100) : 0;
+  const growthScore =
+    growthTotal > 0 ? Math.round((completedGrowthChecklists / growthTotal) * 100) : 0;
 
-  const metricStatusLabel = selectedMetricCount > 0
-    ? `${selectedMetricCount} metrik seçildi`
-    : "Henüz seçim yok";
+  const totalTasks = product._count.tasks;
+  const pendingTasks = taskCounts.find((t) => t.status === "TODO")?._count ?? 0;
+  const doneTasks = taskCounts.find((t) => t.status === "DONE")?._count ?? 0;
+
   const nextStep = !isLaunched
     ? {
         href: `/${locale}/pre-launch`,
+        label: "Launch board'a git →",
         title: "Yayına hazırlığı tamamla",
-        description: `${completedLaunchChecklists}/${launchTotal} hazırlık maddesi tamamlandı. Önce kritik eksikleri kapat.`,
+        description: `${completedLaunchChecklists}/${launchTotal} hazırlık maddesi tamamlandı`,
       }
     : selectedMetricCount === 0
       ? {
           href: `/${locale}/growth`,
+          label: "Growth setup'a git →",
           title: "Büyüme takibini kur",
-          description: "Önce her kategori için 1 ana metrik seç. Sonraki adım günlük veri girişi olacak.",
+          description: "Her kategori için 1 metrik seç",
         }
-      : !latestMetric && !(savedMetricSetup?.entries?.length)
+      : !latestMetric
         ? {
             href: `/${locale}/metrics`,
+            label: "Metrik gir →",
             title: "İlk metrik girişini yap",
-            description: "Seçtiğin metrikler hazır. Şimdi bugünkü ilk değerleri gir.",
+            description: "Seçtiğin metrikler hazır, bugünkü değerleri gir",
           }
         : {
             href: `/${locale}/metrics`,
+            label: "Performansı gör →",
             title: "Bugünkü performansı kontrol et",
-            description: "Günlük veri girişini güncelle ve seçtiğin AARRR metriklerinin nasıl gittiğini gör.",
+            description: "Günlük AARRR verilerini güncelle",
           };
 
   return (
     <div>
+      {/* Page header — Figma style */}
       <PageHeader
-        eyebrow="Genel Bakış"
-        title={`Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
+        eyebrow="Ürünün laucha ne kadar hazır?"
+        title={product.name}
+        titleSuffix="👋"
         description={
-          isLaunched
-            ? "Yayındaki ürünün için growth setup'ını, hedeflerini ve takip düzenini buradan yönet."
-            : "Founder Coach’un hazırladığı launch checklist'i tamamlayıp yayına hazırlığını buradan ilerlet."
-        }
-        actions={
-          <>
-            <Link
-              href={isLaunched ? `/${locale}/growth` : `/${locale}/pre-launch`}
-              className="inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-            >
-              {isLaunched ? "Growth setup" : "Launch board"}
-            </Link>
-            <Link
-              href={`/${locale}/metrics`}
-              className="inline-flex h-9 items-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
-            >
-              Metrics ekranı
-            </Link>
-          </>
+          founderSummary?.summary
+            ?? (isLaunched
+              ? "Yayındaki ürünün için growth ve hedef takibini buradan yönet."
+              : "Launch checklist'i tamamlayıp yayına hazırlığını ilerlet.")
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* Stat cards row — 3 cards like Figma */}
+      <section className="grid gap-4 sm:grid-cols-3 xl:grid-cols-3">
         <StatCard
-          label="Ürün durumu"
-          value={product.launchStatus || product.status.replace("_", " ")}
-          hint="Seçtiğin mevcut aşama"
-          accent="pink"
+          label="Toplam Görev"
+          value={String(totalTasks)}
+          hint={`${pendingTasks} bekliyor`}
+          accent="teal"
+          progress={totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0}
         />
         <StatCard
-          label={isLaunched ? "Growth checklist" : "Hazırlık skoru"}
+          label="Bekleyen Görev"
+          value={String(pendingTasks)}
+          hint="Henüz başlanmadı"
+          accent="pink"
+          progress={totalTasks > 0 ? Math.round((pendingTasks / totalTasks) * 100) : 0}
+        />
+        <StatCard
+          label={isLaunched ? "Growth skoru" : "Hazırlık skoru"}
           value={isLaunched ? `${growthScore}%` : `${readinessScore}%`}
           hint={
             isLaunched
-              ? `${completedGrowthChecklists}/${growthTotal} growth maddesi tamamlandı`
-              : `${completedLaunchChecklists}/${launchTotal} launch maddesi tamamlandı`
+              ? `${completedGrowthChecklists}/${growthTotal} growth maddesi`
+              : `${completedLaunchChecklists}/${launchTotal} launch maddesi`
           }
-          accent="teal"
-        />
-        <StatCard
-          label="Takip setup'ı"
-          value={metricStatusLabel}
-          hint="Growth sayfasında seçilen funnel metrikleri"
-          accent="green"
-        />
-        <StatCard
-          label="Aktif hedefler"
-          value={product._count.goals ? String(product._count.goals) : "—"}
-          hint={product._count.goals ? "Tanımlanmış hedef sayısı" : "Henüz hedef eklenmedi"}
           accent="yellow"
+          progress={isLaunched ? growthScore : readinessScore}
         />
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-          <div className="mb-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Sıradaki adım</p>
-            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-              {nextStep.title}
-            </h2>
-            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">{nextStep.description}</p>
+      {/* Main 2-col layout */}
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_360px]">
+
+        {/* Left col */}
+        <div className="space-y-4">
+
+          {/* Founder Coach summary (if available) */}
+          {founderSummary && (
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                Founder Coach özeti
+              </p>
+              <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                {founderSummary.headline}
+              </h2>
+              <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
+                {founderSummary.summary}
+              </p>
+              <div className="mt-4 rounded-[12px] bg-[#f8fbfb] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                  Bir sonraki doğru adım
+                </p>
+                <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
+                  {founderSummary.nextStep}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Next step card */}
+          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                  Sıradaki adım
+                </p>
+                <h2 className="mt-1.5 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
+                  {nextStep.title}
+                </h2>
+                <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+                  {nextStep.description}
+                </p>
+              </div>
+            </div>
+            <Link
+              href={nextStep.href}
+              className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+            >
+              {nextStep.label}
+            </Link>
           </div>
 
-          <Link
-            href={nextStep.href}
-            className="inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-          >
-            Devam et
-          </Link>
+          {/* Product details card */}
+          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
+              Ürün özeti
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
+                <p className="text-[11px] text-[#666d80]">Aşama</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
+                  {product.launchStatus || product.status.replace("_", " ")}
+                </p>
+              </div>
+              {product.category && (
+                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
+                  <p className="text-[11px] text-[#666d80]">Kategori</p>
+                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
+                    {product.category}
+                  </p>
+                </div>
+              )}
+              {product.targetAudience && (
+                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
+                  <p className="text-[11px] text-[#666d80]">Kitle</p>
+                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
+                    {product.targetAudience}
+                  </p>
+                </div>
+              )}
+              {product.businessModel && (
+                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
+                  <p className="text-[11px] text-[#666d80]">Model</p>
+                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
+                    {product.businessModel}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Hedef nabzı</p>
-          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">Aktif büyüme hedefleri</h2>
+        {/* Right col — Figma: notes/quick links panel */}
+        <div className="space-y-4">
 
-          {product._count.goals === 0 ? (
-            <div className="mt-6 rounded-[12px] border border-dashed border-[#e8e8e8] bg-[#f6f6f6] px-5 py-10 text-center">
-              <p className="text-[14px] font-semibold text-[#0d0d12]">Henüz hedef yok</p>
-              <p className="mt-1 text-[13px] text-[#666d80]">
-                {isLaunched
-                  ? "Metrik setup'ını seçtikten sonra bunları bir growth hedefine bağla."
-                  : "Şimdilik normal. Önce yayına hazırlığı bitir, sonra hedef koy."}
-              </p>
-              <Link
-                href={isLaunched ? `/${locale}/growth` : `/${locale}/pre-launch`}
-                className="mt-5 inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-              >
-                {isLaunched ? "Growth alanına git" : "Launch board'a git"}
-              </Link>
+          {/* Quick links panel */}
+          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
+              Hızlı erişim
+            </p>
+            <div className="space-y-2">
+              {[
+                { href: `/${locale}/pre-launch`, label: "Launch checklist", icon: "🚀", sub: `${completedLaunchChecklists}/${launchTotal} tamamlandı` },
+                { href: `/${locale}/growth`, label: "Growth setup", icon: "📈", sub: `${completedGrowthChecklists}/${growthTotal} tamamlandı` },
+                { href: `/${locale}/tasks`, label: "Görevler / Board", icon: "✅", sub: `${totalTasks} görev` },
+                { href: `/${locale}/metrics`, label: "Metrikler", icon: "📊", sub: selectedMetricCount > 0 ? `${selectedMetricCount} metrik seçili` : "Henüz seçim yok" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="flex items-center gap-3 rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 transition hover:border-[#e0e0e0] hover:bg-white"
+                >
+                  <span className="text-[18px]">{link.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-[#0d0d12]">{link.label}</p>
+                    <p className="text-[11px] text-[#666d80]">{link.sub}</p>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0b8c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 17L17 7M17 7H7M17 7v10" />
+                  </svg>
+                </Link>
+              ))}
             </div>
-          ) : (
-            <div className="mt-6 rounded-[12px] border border-[#e8e8e8] bg-white px-5 py-5">
-              <p className="text-[36px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
-                {product._count.goals}
+          </div>
+
+          {/* Goals panel */}
+          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                Aktif hedefler
               </p>
-              <p className="mt-2 text-[13px] text-[#666d80]">
-                Aktif hedefler growth workspace&apos;te takip ediliyor.
+              <span className="text-[20px] font-bold text-[#0d0d12] leading-none">
+                {product._count.goals || "—"}
+              </span>
+            </div>
+            {product._count.goals === 0 ? (
+              <p className="text-[13px] text-[#666d80]">
+                {isLaunched
+                  ? "Growth setup'ını seç, sonra hedef koy."
+                  : "Önce yayına hazırlığı bitir, sonra hedef koy."}
               </p>
+            ) : (
               <Link
                 href={`/${locale}/growth`}
-                className="mt-4 inline-flex text-[13px] font-semibold text-[#0d0d12] transition hover:text-[#666d80]"
+                className="text-[13px] font-semibold text-[#0d0d12] hover:text-[#666d80] transition"
               >
                 Hedeflere git →
               </Link>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Metric tracking panel */}
+          <div className="rounded-[15px] border border-[#0d0d12] bg-[#0d0d12] p-5 text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-2">
+              Metrik takibi
+            </p>
+            <p className="text-[16px] font-semibold leading-snug">
+              {selectedMetricCount > 0
+                ? `${selectedMetricCount} metrik aktif takipte`
+                : "Henüz metrik seçilmedi"}
+            </p>
+            <Link
+              href={`/${locale}/metrics`}
+              className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+            >
+              {latestMetric ? "Bugünkü veriyi gir" : "Metrik setup →"}
+            </Link>
+          </div>
         </div>
       </section>
     </div>

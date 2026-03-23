@@ -34,6 +34,7 @@ export default function MetricEntryForm({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     values: initialValues,
@@ -43,6 +44,7 @@ export default function MetricEntryForm({
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSavedMessage("");
 
     const values = Object.values(formData.values).filter(Boolean);
     if (values.length !== selectedMetrics.length) {
@@ -69,6 +71,7 @@ export default function MetricEntryForm({
         throw new Error(data.error || "Failed to save metrics");
       }
 
+      setSavedMessage("Bugünkü sayıların kaydedildi. Şimdi soldaki kartlar, trend ve son girişler kısmında görünecek.");
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
@@ -79,14 +82,26 @@ export default function MetricEntryForm({
 
   return (
     <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6 sticky top-4">
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Günlük veri girişi</p>
-      <h2 className="mb-2 text-[16px] font-semibold text-[#0d0d12]">Bugünkü metriklerini gir</h2>
-      <p className="mb-5 text-[12px] leading-5 text-[#666d80]">Sadece seçtiğin ana AARRR metriklerini gösteriyorum.</p>
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Metrics = bugünkü sayıları gir</p>
+      <h2 className="mb-2 text-[16px] font-semibold text-[#0d0d12]">Bugün neler oldu?</h2>
+      <p className="mb-5 text-[12px] leading-5 text-[#666d80]">Burada sadece seçtiğin ana sayıları giriyorsun. Kaydettikten sonra sol tarafta son durumunu hemen göreceksin.</p>
+
+      <div className="mb-5 rounded-[12px] bg-[#f8fbfb] px-4 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Kısa rehber</p>
+        <p className="mt-1 text-[12px] leading-5 text-[#5e6678]">
+          Growth ekranında neyi takip edeceğini seçtin. Metrics ekranında ise o seçtiğin sayıları her gün ya da her hafta girip gidişatı görüyorsun.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {error && (
           <div className="rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">
             {error}
+          </div>
+        )}
+        {savedMessage && (
+          <div className="rounded-[10px] border border-[#cce8d3] bg-[#f4fbf6] px-4 py-3 text-[13px] text-[#2f6d46]">
+            {savedMessage}
           </div>
         )}
 
@@ -104,6 +119,9 @@ export default function MetricEntryForm({
         {selectedMetrics.map((metric) => (
           <div key={metric.stage}>
             <label className={labelCls}>{metric.stage}: {metric.metricName}</label>
+            <p className="mb-1.5 text-[11px] text-[#8a8fa0]">
+              Son değer: {latestEntry?.values?.[metric.stage] ?? "Henüz yok"}
+            </p>
             <input
               type="number"
               step="0.01"

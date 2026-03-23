@@ -11,19 +11,35 @@ type GrowthItem = {
   order: number;
 };
 
+// Figma-matching labels for growth categories
 const CATEGORY_LABELS: Record<string, string> = {
-  ACQUISITION: "Edinim",
-  ACTIVATION: "Aktivasyon",
-  RETENTION: "Tutma",
-  REVENUE: "Gelir",
+  ACQUISITION: "Analytics & Tracking",
+  ACTIVATION:  "Organic Growth",
+  RETENTION:   "Paid Acquisition",
+  REVENUE:     "Retention & Engagement",
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  ACQUISITION: "bg-[#ffd7ef]",
-  ACTIVATION: "bg-[#d7f0ff]",
-  RETENTION: "bg-[#d7ffd7]",
-  REVENUE: "bg-[#fff3d7]",
-};
+function SegmentBar({ completed, total, active }: { completed: number; total: number; active: boolean }) {
+  const segments = Math.max(total, 1);
+  return (
+    <div className="flex gap-[3px]">
+      {Array.from({ length: segments }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-[6px] flex-1 rounded-[2px] transition-colors ${
+            i < completed
+              ? active
+                ? "bg-white"
+                : "bg-[#95dbda]"
+              : active
+                ? "bg-white/20"
+                : "bg-[#e8e8e8]"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface GrowthChecklistSectionProps {
   items: GrowthItem[];
@@ -32,101 +48,143 @@ interface GrowthChecklistSectionProps {
 export default function GrowthChecklistSection({ items: initialItems }: GrowthChecklistSectionProps) {
   const [items, setItems] = useState(initialItems);
 
-  async function toggleItem(id: string, current: boolean) {
-    // Optimistic update
-    setItems(prev => prev.map(item => item.id === id ? { ...item, completed: !current } : item));
+  const categories = Object.keys(CATEGORY_LABELS).filter(
+    (cat) => items.some((i) => i.category === cat)
+  );
+  const [activeCategory, setActiveCategory] = useState(categories[0] ?? "ACQUISITION");
 
+  async function toggleItem(id: string, current: boolean) {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, completed: !current } : item))
+    );
     const res = await fetch(`/api/growth-checklist/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: !current }),
     });
-
     if (!res.ok) {
-      // Revert on failure
-      setItems(prev => prev.map(item => item.id === id ? { ...item, completed: current } : item));
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, completed: current } : item))
+      );
     }
   }
 
-  const categories = ["ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE"];
-  const completedCount = items.filter(i => i.completed).length;
-  const totalCount = items.length;
-
-  if (totalCount === 0) {
+  if (items.length === 0) {
     return (
-      <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-8 text-center">
+      <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-10 text-center">
         <p className="text-[14px] font-semibold text-[#0d0d12]">Growth checklist hazırlanıyor</p>
         <p className="mt-1 text-[13px] text-[#666d80]">AI planın oluşturulmasını bekle.</p>
       </div>
     );
   }
 
+  const activeItems = items
+    .filter((i) => i.category === activeCategory)
+    .sort((a, b) => a.order - b.order);
+  const activeCompleted = activeItems.filter((i) => i.completed).length;
+  const totalCompleted = items.filter((i) => i.completed).length;
+
   return (
-    <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Büyüme planı</p>
-          <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Growth checklist</h2>
-        </div>
-        <span className="text-[13px] font-semibold text-[#666d80]">
-          {completedCount}/{totalCount}
-        </span>
-      </div>
+    <div>
+      {/* Horizontal category cards — Figma style */}
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {categories.map((cat) => {
+          const catItems = items.filter((i) => i.category === cat);
+          const done = catItems.filter((i) => i.completed).length;
+          const isActive = cat === activeCategory;
 
-      {/* Progress bar */}
-      <div className="w-full h-1.5 bg-[#f6f6f6] rounded-full overflow-hidden mb-6">
-        <div
-          className="h-full rounded-full bg-[#95dbda] transition-all"
-          style={{ width: totalCount > 0 ? `${Math.round((completedCount / totalCount) * 100)}%` : "0%" }}
-        />
-      </div>
-
-      <div className="space-y-6">
-        {categories.map(cat => {
-          const catItems = items.filter(i => i.category === cat);
-          if (catItems.length === 0) return null;
           return (
-            <div key={cat}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold text-[#0d0d12] ${CATEGORY_COLORS[cat]}`}>
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`rounded-[15px] p-4 text-left transition ${
+                isActive
+                  ? "bg-[#0d0d12] text-white"
+                  : "border border-[#e8e8e8] bg-white text-[#0d0d12] hover:border-[#d0d0d0]"
+              }`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <p className={`text-[13px] font-semibold leading-snug ${isActive ? "text-white" : "text-[#0d0d12]"}`}>
                   {CATEGORY_LABELS[cat]}
-                </span>
-                <span className="text-[11px] text-[#666d80]">
-                  {catItems.filter(i => i.completed).length}/{catItems.length}
-                </span>
+                </p>
+                {isActive && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                )}
               </div>
-              <div className="space-y-2">
-                {catItems.sort((a, b) => a.order - b.order).map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleItem(item.id, item.completed)}
-                    className="w-full flex items-start gap-3 rounded-[10px] border border-[#e8e8e8] px-4 py-3 text-left transition hover:border-[#d0d0d0] hover:bg-[#fafafa]"
-                  >
-                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                      item.completed
-                        ? "border-[#75fc96] bg-[#75fc96]"
-                        : "border-[#d9d9d9]"
-                    }`}>
-                      {item.completed && (
-                        <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                          <path d="M1 3L3 5L7 1" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </span>
-                    <div className="min-w-0">
-                      <p className={`text-[13px] font-semibold ${item.completed ? "line-through text-[#999]" : "text-[#0d0d12]"}`}>
-                        {item.title}
-                      </p>
-                      {item.description && (
-                        <p className="mt-0.5 text-[12px] text-[#666d80] leading-5">{item.description}</p>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+              <p className={`text-[11px] mb-2 ${isActive ? "text-white/60" : "text-[#666d80]"}`}>
+                Tamamlandı
+              </p>
+              <p className={`text-[13px] font-bold mb-3 ${isActive ? "text-white" : "text-[#0d0d12]"}`}>
+                {done}/{catItems.length}
+              </p>
+              <SegmentBar completed={done} total={catItems.length} active={isActive} />
+            </button>
           );
         })}
+      </div>
+
+      {/* Checklist for active category */}
+      <div className="rounded-[15px] border border-[#e8e8e8] bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0]">
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d0d12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <p className="text-[14px] font-semibold text-[#0d0d12]">
+              {CATEGORY_LABELS[activeCategory]} Checklist
+            </p>
+          </div>
+          <span className="text-[12px] text-[#666d80]">
+            {activeCompleted}/{activeItems.length}
+          </span>
+        </div>
+
+        <div className="border-b border-[#f5f5f5] bg-[#fbfbfb] px-6 py-3">
+          <p className="text-[12px] text-[#666d80]">
+            Toplam ilerleme: <span className="font-semibold text-[#0d0d12]">{totalCompleted}/{items.length}</span>
+          </p>
+        </div>
+
+        <div className="divide-y divide-[#f6f6f6]">
+          {activeItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => toggleItem(item.id, item.completed)}
+              className="flex w-full items-center gap-4 px-6 py-4 text-left transition hover:bg-[#fafafa]"
+            >
+              {/* Checkbox */}
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition ${
+                  item.completed
+                    ? "border-[#95dbda] bg-[#95dbda]"
+                    : "border-[#d9d9d9]"
+                }`}
+              >
+                {item.completed && (
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </span>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0 text-left">
+                <p className={`text-[14px] ${item.completed ? "line-through text-[#9ca3af]" : "text-[#0d0d12]"}`}>
+                  {item.title}
+                </p>
+                {item.description && !item.completed && (
+                  <p className="mt-0.5 text-[12px] text-[#666d80] leading-5">{item.description}</p>
+                )}
+              </div>
+
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b8c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <path d="M7 17L17 7M17 7H7M17 7v10" />
+              </svg>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

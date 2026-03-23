@@ -51,6 +51,17 @@ Always check whether the user has:
 - localized listing copy where the product targets multiple markets
 - clear explanation of the app’s core user value in the first lines of the listing
 
+### 2.5 Visual Asset Readiness
+
+Always check whether the user has:
+- a readable app icon at small size
+- a feature graphic if the listing surface expects it
+- a screenshot set that tells a clear product story
+- screenshots that show real Android flows, not only marketing slides
+- optional promo video only if it improves clarity
+- localized image/copy sets where the product targets multiple markets
+- tablet-aware visuals if the app supports tablets
+
 ### 3. Subscription / IAP Readiness
 
 If the app uses subscriptions or billing, always check whether the user has:
@@ -97,6 +108,7 @@ Flag these as high-risk when advising users:
 - privacy policy missing or inconsistent with real SDK/data behavior
 - Data safety form not matching actual data collection or SDK usage
 - screenshots that do not reflect the real app
+- visual assets that do not match the current Android experience or device support
 - subscription requirement hidden or unclear
 - misleading listing text or unsupported claims
 - permissions requested too early or without clear user benefit

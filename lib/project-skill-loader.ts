@@ -28,6 +28,30 @@ export async function loadRelevantFounderCoachSkills(
   const platformsText = context.storeReadiness.platforms.join(" ").toLowerCase();
   const looksLikeStoreQuestion =
     /app store|ios|apple|play store|android|google play|review|rejection|rejected|privacy policy|terms|subscription|abonelik|billing|data safety|permissions|paywall/.test(lower);
+  const looksLikeAsoQuestion =
+    /aso|app store optimization|keywords?|subtitle|short description|description|screenshot|screenshots|icon|metadata|listing|app title|store page|preview video/.test(lower);
+  const looksLikeLaunchQuestion =
+    /launch readiness|pre-launch|blocker|blockers|ready to launch|launch review|release readiness|launch checklist|what still blocks|launch score|go live/.test(lower);
+  const looksLikeInstrumentationQuestion =
+    /instrumentation|tracking plan|event schema|event taxonomy|events?|telemetry|measurement|tagging|product analytics|analytics setup|funnel schema|conversion|segment|mixpanel|amplitude|posthog/.test(lower);
+  const looksLikeSkillQuestion =
+    /skill gateway|which skill|what skill|find a skill|skill(s)?|route|routing|handoff/.test(lower);
+
+  if (looksLikeAsoQuestion) {
+    pushUnique("aso-advisor", "The user is asking about app listing optimization, discoverability, or conversion.");
+  }
+
+  if (looksLikeSkillQuestion) {
+    pushUnique("skill-gateway", "The user is asking about skill routing, selection, or gateway behavior.");
+  }
+
+  if (looksLikeLaunchQuestion || context.execution.launchChecklist.blockers > 0) {
+    pushUnique("launch-readiness-advisor", "The user needs launch sequencing, blocker prioritization, or release readiness guidance.");
+  }
+
+  if (looksLikeInstrumentationQuestion) {
+    pushUnique("analytics-instrumentation-advisor", "The user is asking about tracking plans, event design, or analytics instrumentation.");
+  }
 
   if (/app store|ios|apple|sign in with apple/.test(lower) || platformsText.includes("ios")) {
     pushUnique("app-store-submission-advisor", "iOS / App Store readiness or review guidance is relevant.");

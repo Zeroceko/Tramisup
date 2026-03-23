@@ -11,9 +11,17 @@ export type MetricEntryRow = {
 };
 
 export type SavedMetricSetup = {
-  version: 2;
+  version: 2 | 3;
   selections: FunnelMetricSelection[];
   entries: MetricEntryRow[];
+  platforms?: string[];
+  founderSummary?: {
+    headline: string;
+    summary: string;
+    nextStep: string;
+    strengths: string[];
+    focusAreas: string[];
+  };
 };
 
 export function parseSavedMetricSetup(value: string | null | undefined): SavedMetricSetup | null {
@@ -28,7 +36,7 @@ export function parseSavedMetricSetup(value: string | null | undefined): SavedMe
       };
     }
 
-    if (parsed?.version !== 2 || !Array.isArray((parsed as SavedMetricSetup)?.selections) || !Array.isArray((parsed as SavedMetricSetup)?.entries)) {
+    if (![2, 3].includes(parsed?.version as number) || !Array.isArray((parsed as SavedMetricSetup)?.selections) || !Array.isArray((parsed as SavedMetricSetup)?.entries)) {
       return null;
     }
 

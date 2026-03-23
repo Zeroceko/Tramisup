@@ -9,6 +9,7 @@ interface LaunchReviewSummaryProps {
   readyToLaunch: boolean;
   categories: CategoryScore[];
   blockersCount: number;
+  nonCriticalRemaining: number;
 }
 
 export default function LaunchReviewSummary({
@@ -16,6 +17,7 @@ export default function LaunchReviewSummary({
   readyToLaunch,
   categories,
   blockersCount,
+  nonCriticalRemaining,
 }: LaunchReviewSummaryProps) {
   return (
     <div className="mb-6 rounded-[15px] border border-[#e8e8e8] bg-white p-6">
@@ -41,18 +43,23 @@ export default function LaunchReviewSummary({
                 <>
                   <span className="text-[16px]">✅</span>
                   <span className="text-[13px] font-semibold text-[#0d0d12]">
-                    Ready to Launch
+                    Launch&apos;a hazır
                   </span>
                 </>
               ) : (
                 <>
                   <span className="text-[16px]">📋</span>
                   <span className="text-[13px] font-semibold text-[#0d0d12]">
-                    Not Yet
+                    Henüz tam değil
                   </span>
                 </>
               )}
             </div>
+            {readyToLaunch && nonCriticalRemaining > 0 ? (
+              <p className="mt-3 text-[13px] leading-6 text-[#666d80]">
+                Kritik blocker yok. Ancak {nonCriticalRemaining} kritik olmayan madde hâlâ açık; launch sonrası bu sayfada onları tamamlamaya devam edebilirsin.
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -81,15 +88,42 @@ export default function LaunchReviewSummary({
                 <span className="text-[20px]">✨</span>
                 <div>
                   <p className="text-[14px] font-semibold text-[#2d9d9b]">
-                    All Clear
+                    Kritik blokaj yok
                   </p>
                   <p className="text-[12px] text-[#6bc4c1]">
-                    No blocking items
+                    Launch sayfası hâlâ kalan işleri gösterebilir
                   </p>
                 </div>
               </div>
             )}
           </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {categories.map((category) => (
+            <div
+              key={category.name}
+              className={`rounded-[12px] border px-3 py-3 ${
+                category.status === "READY"
+                  ? "border-[#95dbda] bg-[#f0fffe]"
+                  : category.status === "BLOCKED"
+                    ? "border-[#ffccc7] bg-[#fff1f0]"
+                    : "border-[#e8e8e8] bg-[#fafafa]"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12px] font-semibold text-[#0d0d12]">{category.name}</p>
+                <span className="text-[12px] font-semibold text-[#666d80]">{category.score}%</span>
+              </div>
+              <p className="mt-1 text-[11px] text-[#666d80]">
+                {category.status === "READY"
+                  ? "Hazır"
+                  : category.status === "BLOCKED"
+                    ? "Kritik eksik var"
+                    : "İlerliyor"}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

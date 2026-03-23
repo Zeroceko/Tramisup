@@ -10,6 +10,7 @@ import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
+import AdvisorCard from "@/components/AdvisorCard";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
@@ -69,20 +70,124 @@ export default async function GrowthPage({
   });
   const savedMetricSetup = parseSavedMetricSetup(product.launchGoals);
   const hasSetup = !!savedMetricSetup?.selections?.length;
+  const hasMetricEntries = (savedMetricSetup?.entries?.length ?? 0) > 0;
+  const hasGoals = goals.length > 0;
+  const completedGrowthItems = growthChecklists.filter((item) => item.completed).length;
+  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+
+  if (!isLaunched) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          eyebrow={t("eyebrow")}
+          title="Growth"
+          description="Bu ürün henüz launch öncesi aşamada. Growth alanı burada ama bir sonraki aşama olarak konumlanıyor."
+        />
+
+        <section className="rounded-[20px] border border-[#e8e8e8] bg-white p-6">
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Next stage</p>
+              <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                Growth burada kilitli değil, sıradaki aşama olarak bekliyor
+              </h2>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-[#5e6678]">
+                Launch hazırlığını tamamladığında burası senin metrik setup, günlük veri girişi ve growth checklist çalışma alanına dönüşecek.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                <div className="rounded-[16px] bg-[#f8fbfb] px-4 py-4">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">Şimdi ne yapmalısın?</p>
+                  <p className="mt-1 text-[14px] leading-6 text-[#3d4658]">
+                    Önce `Launch` tarafındaki kritik maddeleri kapat. Yayına yaklaştığında Growth için takip edeceğin AARRR metriklerini seçmeye başlayabilirsin.
+                  </p>
+                </div>
+                <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-[#fcfcfc] px-4 py-4">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">Growth açılınca</p>
+                  <p className="mt-1 text-[14px] leading-6 text-[#3d4658]">
+                    Önce tracking seçimi, sonra ilk günlük veri girişi, sonra trend görünümü, en son optimizasyon önerileri.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-[#eef1f2] bg-[#fbfcfc] p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Launch readiness link</p>
+              <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">Buradan launch board&apos;a geçebilirsin</h3>
+              <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
+                Launch tarafı tamamlandığında growth sekmesi otomatik olarak ana çalışma alanına dönüşür.
+              </p>
+              <a
+                href={`/${locale}/pre-launch`}
+                className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+              >
+                Launch board&apos;a git
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  const nextStep = !hasMetricEntries
+    ? {
+        title: "Şimdi ilk günlük veri girişini yap",
+        description: "Metrik setup tamam. Bir sonraki net adım metrics ekranında ilk gerçek değerlerini girmek.",
+        href: `/${locale}/metrics`,
+        cta: "Metrik girişine git",
+      }
+    : !hasGoals
+      ? {
+          title: "Şimdi bir hedef değeri tanımla",
+          description: "AARRR metriklerini seçmek neyi takip edeceğini söyler. Hedef eklemek ise ulaşmak istediğin sonucu netleştirir.",
+          href: "#goals",
+          cta: "Hedef alanına in",
+        }
+      : completedGrowthItems < growthChecklists.length
+        ? {
+            title: "Şimdi growth checklist'ini ilerlet",
+            description: "Veri girişi başladı. Sıradaki iş, seçtiğin metrikleri iyileştirecek gerçek growth aksiyonlarını tamamlamak.",
+            href: "#growth-checklist",
+            cta: "Checklist'e dön",
+          }
+        : {
+            title: "Şimdi koç önerisine göre odaklan",
+            description: "Temel setup ve checklist ilerliyor. Founder Coach önerisini kullanıp hangi hamlenin metriği hareket ettireceğini seç.",
+            href: "#coach",
+            cta: "Koç önerisini gör",
+          };
 
   return (
     <div>
       <PageHeader
         eyebrow={t("eyebrow")}
-        title={hasSetup ? "Büyüme takibini yönet" : "Önce neyi takip edeceğini seç"}
+        title={hasSetup ? "Neyi takip ettiğini yönet" : "Önce hangi sayıları takip edeceğini seç"}
         description={
           hasSetup
-            ? "Metric setup'ın hazır. Şimdi günlük veri girişi, hedefler ve growth ritmi tarafını ilerletebilirsin."
-            : "Sana her şeyi aynı anda yüklemiyorum. Önce her kategori için tek bir ana metrik seçelim."
+            ? "Growth ekranı seçimini ve odak alanını yönetir. Günlük sayı girişi ve değişimi görmek için bir sonraki adım Metrics ekranıdır."
+            : "Burada amacımız optimizasyon yapmak değil. Önce her adım için tek bir ana sayı seçiyoruz."
         }
       />
 
       <div className="space-y-4">
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[12px] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Growth burada ne yapar?</p>
+              <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+                Hangi sayıları takip edeceğini seçer, odak alanını netleştirir ve sonraki growth aksiyonlarını planlar.
+              </p>
+            </div>
+            <div className="rounded-[12px] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Metrics ne yapar?</p>
+              <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+                Seçtiğin sayılar için bugünkü değerleri girer, son durumunu ve trendi görürsün.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <MetricSetupSelector
           productId={product.id}
           plan={metricPlan}
@@ -94,25 +199,32 @@ export default async function GrowthPage({
           <>
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
-              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">Şimdi günlük metrik girişini başlat</h2>
+              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{nextStep.title}</h2>
               <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-                Setup tamam. Bundan sonra metrics ekranında gün gün veri girip AARRR performansının nasıl gittiğini görebilirsin.
+                {nextStep.description}
               </p>
               <a
-                href={`/${locale}/metrics`}
+                href={nextStep.href}
                 className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
-                Metrik girişine git
+                {nextStep.cta}
               </a>
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="space-y-4 lg:col-span-2">
-                <GrowthChecklistSection items={growthChecklists} />
-                <GoalsSection goals={goals} productId={product.id} />
+                <div id="growth-checklist">
+                  <GrowthChecklistSection items={growthChecklists} />
+                </div>
+                <div id="goals">
+                  <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} />
+                </div>
                 <GrowthRoutines routines={routines} productId={product.id} />
               </div>
               <div>
+                <div id="coach" className="mb-4">
+                  <AdvisorCard productId={product.id} productName={product.name} />
+                </div>
                 <TimelineFeed events={timelineEvents} productId={product.id} />
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export type FounderCoachContext = {
   product: {
@@ -43,13 +44,20 @@ function inferPlatforms(product: {
   website: string | null;
   launchStatus: string | null;
   category: string | null;
+  launchGoals: string | null;
 }) {
   const haystack = `${product.launchStatus ?? ""} ${product.category ?? ""} ${product.website ?? ""}`.toLowerCase();
-  const platforms: string[] = [];
-  if (/ios|app store|apple/.test(haystack)) platforms.push("iOS");
-  if (/android|play store|google play/.test(haystack)) platforms.push("Android");
-  if (!platforms.length) platforms.push("Web");
-  return platforms;
+  const savedSetup = parseSavedMetricSetup(product.launchGoals);
+  const storedPlatforms = Array.from(new Set(savedSetup?.platforms ?? []));
+  if (storedPlatforms.length > 0) return storedPlatforms;
+  const inferred: string[] = [];
+  if (/ios|app store|apple/.test(haystack)) inferred.push("iOS");
+  if (/android|play store|google play/.test(haystack)) inferred.push("Android");
+  if (/mobil uygulama|mobile app/.test(haystack) && inferred.length === 0) {
+    inferred.push("iOS", "Android");
+  }
+  if (!inferred.length) inferred.push("Web");
+  return inferred;
 }
 
 function inferSubscription(product: { businessModel: string | null; description: string | null }) {
@@ -75,6 +83,7 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
       businessModel: true,
       website: true,
       launchStatus: true,
+      launchGoals: true,
       status: true,
     },
   });

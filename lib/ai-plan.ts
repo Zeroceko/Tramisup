@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
+import { loadProjectSkill } from "@/lib/project-skill-loader";
 
 export type AiLaunchItem = {
   category: LaunchCategory;
@@ -38,9 +39,59 @@ export type WizardInput = {
   businessModel?: string;
   launchStatus?: string;
   website?: string;
+  mobilePlatforms?: string[];
   websiteContent?: string;
   stageContext?: string;
+  storeGuidance?: string;
 };
+
+function extractGuidanceSection(skill: string) {
+  const lines = skill.split("\n");
+  const start = lines.findIndex((line) => line.trim() === "## Required Recommendation Areas");
+  const end = lines.findIndex((line) => line.trim() === "## Output Style");
+  if (start === -1) return skill;
+  return lines.slice(start, end === -1 ? undefined : end).join("\n");
+}
+
+async function loadStoreGuidance(input: WizardInput) {
+  const category = (input.category ?? "").toLowerCase();
+  const platforms = input.mobilePlatforms ?? [];
+  const shouldLoadAppStore = platforms.includes("iOS") || /mobil uygulama|mobile app|ios|apple|app store/.test(category);
+  const shouldLoadPlayStore = platforms.includes("Android") || /mobil uygulama|mobile app|android|google play|play store/.test(category);
+  const shouldLoadAso = shouldLoadAppStore || shouldLoadPlayStore;
+
+  const parts: string[] = [];
+  if (shouldLoadAso) {
+    const skill = await loadProjectSkill("aso-advisor");
+    parts.push(`ASO ADVISOR\n${extractGuidanceSection(skill)}`);
+  }
+  if (shouldLoadAppStore) {
+    const skill = await loadProjectSkill("app-store-submission-advisor");
+    parts.push(`APP STORE SUBMISSION ADVISOR\n${extractGuidanceSection(skill)}`);
+  }
+  if (shouldLoadPlayStore) {
+    const skill = await loadProjectSkill("play-store-submission-advisor");
+    parts.push(`PLAY STORE SUBMISSION ADVISOR\n${extractGuidanceSection(skill)}`);
+  }
+  return parts.join("\n\n---\n\n");
+}
+
+async function loadLaunchAndAnalyticsGuidance(input: WizardInput) {
+  const stage = (input.launchStatus ?? "").toLowerCase();
+  const parts: string[] = [];
+
+  if (!["yayında", "büyüme aşamasında"].includes(stage)) {
+    const skill = await loadProjectSkill("launch-readiness-advisor");
+    parts.push(`LAUNCH READINESS ADVISOR\n${extractGuidanceSection(skill)}`);
+  }
+
+  if (["yayında", "büyüme aşamasında"].includes(stage)) {
+    const skill = await loadProjectSkill("analytics-instrumentation-advisor");
+    parts.push(`ANALYTICS INSTRUMENTATION ADVISOR\n${extractGuidanceSection(skill)}`);
+  }
+
+  return parts.join("\n\n---\n\n");
+}
 
 const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach'sun. Bir kurucunun ürün bağlamını okuyup onun için gerçekten işe yarayacak ilk çalışma sistemini kuruyorsun.
 
@@ -52,6 +103,7 @@ const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach'su
 - İş modeli: ${input.businessModel || "belirtilmemiş"}
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
+${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n\nBu store rehberini launch checklist ve görevlerde açık, kullanıcıya dönük maddelere dönüştür.` : ""}
 ${input.websiteContent ? `\nWEBSITE İÇERİĞİ (${input.website}):\n${input.websiteContent}\n\nBu içeriği de analiz ederek plana dahil et.` : ""}
 
 GÖREVİN:
@@ -168,9 +220,16 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     return null;
   }
 
+  const storeGuidance = await loadStoreGuidance(input);
+  const launchGuidance = await loadLaunchAndAnalyticsGuidance(input);
+
   if (hasQwen) {
     try {
-      const plan = await tryQwen(input);
+      const plan = await tryQwen({
+        ...input,
+        storeGuidance,
+        stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
+      });
       console.log("[ai-plan] Generated via Qwen");
       return plan;
     } catch (err) {
@@ -180,7 +239,11 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
 
   if (hasDeepSeek) {
     try {
-      const plan = await tryDeepSeek(input);
+      const plan = await tryDeepSeek({
+        ...input,
+        storeGuidance,
+        stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
+      });
       console.log("[ai-plan] Generated via DeepSeek");
       return plan;
     } catch (err) {
@@ -190,7 +253,11 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
 
   if (hasGemini) {
     try {
-      const plan = await tryGemini(input);
+      const plan = await tryGemini({
+        ...input,
+        storeGuidance,
+        stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
+      });
       console.log("[ai-plan] Generated via Gemini (fallback)");
       return plan;
     } catch (err) {

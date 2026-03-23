@@ -15,14 +15,23 @@ interface Goal {
   completed: boolean;
 }
 
+interface MetricSetupLike {
+  selections: Array<{
+    stage: string;
+    selectedMetricKeys: string[];
+  }>;
+}
+
 const inputCls = "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 
 export default function GoalsSection({
   goals,
   productId,
+  metricSetup,
 }: {
   goals: Goal[];
   productId: string;
+  metricSetup?: MetricSetupLike | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -72,6 +81,9 @@ export default function GoalsSection({
 
   const activeGoals = goals.filter((g) => !g.completed);
   const completedGoals = goals.filter((g) => g.completed);
+  const trackedStages = metricSetup?.selections
+    .filter((item) => item.selectedMetricKeys.length > 0)
+    .map((item) => item.stage) ?? [];
 
   return (
     <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
@@ -79,6 +91,9 @@ export default function GoalsSection({
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">Büyüme</p>
           <h2 className="text-[16px] font-semibold text-[#0d0d12]">Hedefler</h2>
+          <p className="mt-1 max-w-2xl text-[12px] leading-5 text-[#666d80]">
+            AARRR metriklerini seçmek neyi takip edeceğini belirler. Buradaki hedefler ise o metriklerde hangi sonuca ulaşmak istediğini netleştirir.
+          </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -87,6 +102,15 @@ export default function GoalsSection({
           {showAddForm ? "İptal" : "+ Hedef Ekle"}
         </button>
       </div>
+
+      {trackedStages.length > 0 && !showAddForm ? (
+        <div className="mb-4 rounded-[12px] border border-[#eef1f2] bg-[#fbfcfc] px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">Takip ettiğin alanlar</p>
+          <p className="mt-1 text-[13px] leading-6 text-[#4c5567]">
+            Şu anda {trackedStages.join(", ")} için ana metrik seçtin. Buraya örneğin “30 günde Activation metriğini 120’ye çıkar” gibi ulaşılacak hedefler ekleyebilirsin.
+          </p>
+        </div>
+      ) : null}
 
       {showAddForm && (
         <form onSubmit={addGoal} className="mb-4 p-4 bg-[#f6f6f6] rounded-[12px] space-y-3">

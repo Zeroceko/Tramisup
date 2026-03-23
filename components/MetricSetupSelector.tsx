@@ -77,12 +77,12 @@ export default function MetricSetupSelector({
   return (
     <section className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
       <div className="mb-6 max-w-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Metric setup</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Growth = neyi takip edeceğiz?</p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          Şimdi sadece 6 ana metriği seçelim
+          Önce her adım için tek bir ana sayı seçelim
         </h2>
         <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-          Her kategori için tek bir ana metrik seç. Hepsini mükemmel kurmaya çalışma; önce neyi takip edeceğini netleştir, sonra günlük veri girişine geçeceğiz.
+          Growth ekranında amacımız optimizasyon yapmak değil. Önce neyi takip edeceğini netleştiriyoruz. Kaydedince seni Metrics ekranına götürüp bugünkü sayılarını gireceğiz.
         </p>
       </div>
 
@@ -125,6 +125,7 @@ export default function MetricSetupSelector({
                         </span>
                       </div>
                       <p className="mt-2 text-[12px] leading-5 text-[#666d80]">{metric.description}</p>
+                      <p className="mt-2 text-[11px] leading-5 text-[#8a8fa0]">{metric.whenToUse}</p>
                     </button>
                   );
                 })}
@@ -138,7 +139,7 @@ export default function MetricSetupSelector({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[13px] font-semibold text-[#0d0d12]">{completedStages} / {plan.sections.length} kategori tamamlandı</p>
-            <p className="mt-1 text-[12px] text-[#666d80]">Kaydedince seni günlük metrik girişine götüreceğim.</p>
+            <p className="mt-1 text-[12px] text-[#666d80]">Burada seçim yapıyoruz. Sayı girişi bir sonraki adımda Metrics ekranında olacak.</p>
           </div>
           <button
             type="button"

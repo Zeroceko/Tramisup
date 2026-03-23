@@ -9,21 +9,23 @@ type FirstRunOnboardingProps = {
 const COPY = {
   tr: {
     eyebrow: "İlk adım",
-    title: "Hoş geldin",
-    description: "Kısa bir profile check-in yap, sonra ilk ürününü ekleyip Tiramisup'ın sana doğru çalışma akışını kurmasına izin ver.",
+    title: "Ürün yolculuğuna başla",
+    description: "Sade bir başlangıçla ilerleyelim. Önce birkaç kısa soruyla ürününü tanıyalım, sonra Founder Coach sana ürününün ilk özetini çıkarsın.",
+    welcomeTitle: "Hoş geldin, ilk adımı birlikte netleştirelim",
+    welcomeDescription: "Bu ilk ekranın amacı seni boş bir dashboard ile karşılamak değil. Önce kim olduğunu ve nasıl ilerleyeceğini netleştiriyoruz.",
     calmStart: "Sakin başlangıç",
-    calmTitle: "Boş dashboard yerine kısa bir başlangıç akışı",
-    calmDescription: "Seni sahte kartlar ya da örnek verilerle karşılamıyoruz. Önce hesabını doğrula, sonra ürün yolculuğunu başlat.",
+    calmTitle: "Önce ürününü tanıyalım",
+    calmDescription: "Bu ekranda tek ana adım var: soru akışını başlatmak. Fake dashboard ya da örnek veri göstermiyoruz.",
     principles: [
-      "Önce kim olduğunu ve hangi dilde çalıştığını net gör.",
-      "Tek ana adım: ilk ürününü eklemek.",
-      "Ürünü ekledikten sonra bir sonraki doğru ekran otomatik netleşsin.",
+      "Sorular ürününü, kitleni ve aşamanı anlamak için var.",
+      "Cevaplarından sonra Founder Coach sana kısa bir ürün özeti çıkarır.",
+      "Sonraki ekran doğrudan ürününün gerçek genel bakışı olur.",
     ],
     createProduct: "Ürün yolculuğuna başla",
-    productsLink: "Ürünler sayfasını aç",
+    productsLink: "Daha sonra",
     profileEyebrow: "Profil özeti",
-    profileTitle: "İlk check-in",
-    profileDescription: "İsim ve hesap bilgilerin hazır görünüyor. İstersen ayarlardan düzenleyebilirsin.",
+    profileTitle: "Hazır profil",
+    profileDescription: "Hesabın hazır. Ürün oluştuktan sonra header'da o ürün aktif görünür, istersen oradan başka ürüne geçebilirsin.",
     nameLabel: "İsim",
     emailLabel: "E-posta",
     localeLabel: "Workspace dili",
@@ -33,7 +35,7 @@ const COPY = {
     settingsLink: "Profili düzenle",
     journeyEyebrow: "Ürün yolculuğu",
     journeyTitle: "Bundan sonra ne olacak?",
-    journeyDescription: "İlk ürün oluşturulduğunda Tiramisup yüzeyleri ürün aşamana göre açılır. Böylece ilk günden kalabalık yerine net bir sıra görürsün.",
+    journeyDescription: "İlk ürün oluşturulduğunda dashboard artık boş görünmez. Founder Coach özetin, ürün bağlamın ve bir sonraki doğru adım tek yerde görünür.",
     steps: [
       {
         title: "Ürünü anlat",
@@ -52,21 +54,23 @@ const COPY = {
   },
   en: {
     eyebrow: "First step",
-    title: "Welcome",
-    description: "Do a quick profile check-in, then add your first product so Tiramisup can set up the right working flow for you.",
+    title: "Start the product journey",
+    description: "Let’s keep the start simple. We’ll ask a few short product questions, then Founder Coach will turn your answers into a first summary.",
+    welcomeTitle: "Welcome, let’s make the first step obvious",
+    welcomeDescription: "This first screen should not feel like an empty dashboard. We first make your role and next move clear.",
     calmStart: "Calm start",
-    calmTitle: "A short starting flow instead of an empty dashboard",
-    calmDescription: "We do not greet you with fake cards or sample data. First confirm your account context, then start your product journey.",
+    calmTitle: "First, let’s understand the product",
+    calmDescription: "There is one main action here: start the question flow. No fake dashboard and no sample data.",
     principles: [
-      "See who you are and which workspace language you are using.",
-      "Keep one main action: add your first product.",
-      "Let the next correct screen become clear after product setup.",
+      "The questions are there to understand your product, audience, and stage.",
+      "Founder Coach turns your answers into a short product summary.",
+      "The next screen becomes the real overview for that product.",
     ],
     createProduct: "Start the product journey",
-    productsLink: "Open products page",
+    productsLink: "Maybe later",
     profileEyebrow: "Profile snapshot",
-    profileTitle: "Quick check-in",
-    profileDescription: "Your account basics look ready. You can still refine them in settings.",
+    profileTitle: "Profile ready",
+    profileDescription: "Your account is ready. Once a product exists, the header shows that active product and you can switch from there.",
     nameLabel: "Name",
     emailLabel: "Email",
     localeLabel: "Workspace language",
@@ -76,7 +80,7 @@ const COPY = {
     settingsLink: "Edit profile",
     journeyEyebrow: "Product journey",
     journeyTitle: "What happens next?",
-    journeyDescription: "Once the first product exists, Tiramisup opens the workspace according to your product stage, so day one feels guided instead of crowded.",
+    journeyDescription: "Once the first product exists, the dashboard stops feeling empty. Founder Coach summary, product context, and the next correct step show up together.",
     steps: [
       {
         title: "Describe the product",
@@ -107,6 +111,20 @@ export default function FirstRunOnboarding({
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white">
           <div className="border-b border-[#eef1f2] bg-[radial-gradient(circle_at_top_left,_rgba(149,219,218,0.28),_transparent_45%),linear-gradient(135deg,#fff9d6_0%,#ffffff_58%,#f7fbfb_100%)] px-6 py-6 sm:px-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{copy.eyebrow}</p>
+            <h1 className="mt-2 max-w-xl text-[30px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
+              {copy.welcomeTitle}
+            </h1>
+            <p className="mt-3 max-w-2xl text-[14px] leading-7 text-[#5e6678]">
+              {copy.welcomeDescription}
+            </p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-[12px] font-medium text-[#4c5567]">
+              <span className="h-2 w-2 rounded-full bg-[#95dbda]" />
+              {copy.description}
+            </div>
+          </div>
+
+          <div className="border-b border-[#eef1f2] px-6 py-5 sm:px-7">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{copy.calmStart}</p>
             <h2 className="mt-2 max-w-xl text-[28px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
               {copy.calmTitle}
@@ -133,7 +151,7 @@ export default function FirstRunOnboarding({
                 {copy.createProduct}
               </Link>
               <Link
-                href={`/${locale}/products`}
+                href={`/${locale}`}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[14px] font-medium text-[#5e6678] transition hover:bg-[#f6f6f6]"
               >
                 {copy.productsLink}

@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -64,7 +63,6 @@ export default async function PreLaunchPage({
   const { locale } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
-  const t = await getTranslations("preLaunch");
 
   const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
@@ -113,7 +111,6 @@ export default async function PreLaunchPage({
   const totalItems = checklists.length;
   const completedItems = checklists.filter(item => item.completed).length;
   const overallScore = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-  const readyToLaunch = overallScore === 100;
 
   // Extract blockers (HIGH priority + not completed)
   const blockers = checklists
@@ -126,6 +123,9 @@ export default async function PreLaunchPage({
       linkedTaskId: item.linkedTaskId || undefined,
     }));
 
+  const nonCriticalRemaining = Math.max(totalItems - completedItems - blockers.length, 0);
+  const readyToLaunch = blockers.length === 0 && totalItems > 0;
+
   const checklistsByCategory = {
     PRODUCT: checklists.filter(c => c.category === "PRODUCT"),
     MARKETING: checklists.filter(c => c.category === "MARKETING"),
@@ -136,75 +136,43 @@ export default async function PreLaunchPage({
   return (
     <div>
       <PageHeader
-        eyebrow={t("eyebrow")}
-        title={t("title")}
-        description={t("description")}
+        eyebrow="Ürünün laucha ne kadar hazır?"
+        title="Launch Readiness"
+        titleSuffix="👋"
       />
 
-      {/* Launch Review Summary */}
       <LaunchReviewSummary
         overallScore={overallScore}
         readyToLaunch={readyToLaunch}
         categories={categoryScores}
         blockersCount={blockers.length}
+        nonCriticalRemaining={nonCriticalRemaining}
       />
 
-      {/* Category Scorecards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {categoryScores.map((cat) => (
-          <div
-            key={cat.name}
-            className="rounded-[15px] border border-[#e8e8e8] bg-white p-4"
-          >
-            <p className="text-[12px] font-semibold text-[#666d80] mb-2">{cat.name}</p>
-            <p className="text-[24px] font-bold text-[#0d0d12] mb-2">{cat.score}%</p>
-            <div className="w-full h-1.5 bg-[#f6f6f6] rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${
-                  cat.status === "READY"
-                    ? "bg-[#75fc96]"
-                    : cat.status === "BLOCKED"
-                      ? "bg-[#ff4d4f]"
-                      : "bg-[#95dbda]"
-                }`}
-                style={{ width: `${cat.score}%` }}
-              />
-            </div>
-            <p className="text-[11px] font-semibold text-[#666d80] mt-2">
-              {cat.status === "READY"
-                ? "✓ Ready"
-                : cat.status === "BLOCKED"
-                  ? "⚠️ Blocked"
-                  : "→ In Progress"}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Blocker Summary */}
-      <BlockerSummary
-        blockers={blockers}
+      <ChecklistSection
+        checklistsByCategory={checklistsByCategory}
+        productId={product?.id || ""}
         onCreateTask={createTaskFromChecklistItem}
       />
 
-      {/* Checklist and Actions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <ChecklistSection
-            checklistsByCategory={checklistsByCategory}
-            productId={product?.id || ""}
+      {/* Blocker summary — only show when there are blockers */}
+      {blockers.length > 0 && (
+        <div className="mt-4">
+          <BlockerSummary
+            blockers={blockers}
             onCreateTask={createTaskFromChecklistItem}
           />
         </div>
-        <div>
-          <ActionsSection
-            tasks={tasks}
-            productId={product?.id || ""}
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Launch transition */}
+      {/* Actions / pending tasks */}
+      {tasks.length > 0 && (
+        <div className="mt-4">
+          <ActionsSection tasks={tasks} productId={product?.id || ""} />
+        </div>
+      )}
+
+      {/* Launch button */}
       {product && product.status === "PRE_LAUNCH" && (
         <div className="mt-6 rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
           <p className="text-[14px] font-semibold text-[#0d0d12]">

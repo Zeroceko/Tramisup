@@ -8,7 +8,7 @@ import { parseSavedMetricSetup } from "@/lib/metric-setup";
 function isValidSetup(input: unknown): input is SavedMetricSetup {
   if (!input || typeof input !== "object") return false;
   const setup = input as SavedMetricSetup;
-  return setup.version === 2 && Array.isArray(setup.selections) && Array.isArray(setup.entries);
+  return [2, 3].includes(setup.version) && Array.isArray(setup.selections) && Array.isArray(setup.entries);
 }
 
 export async function PATCH(
@@ -42,9 +42,11 @@ export async function PATCH(
       where: { id },
       data: {
         launchGoals: JSON.stringify({
-          version: 2,
+          version: existing?.founderSummary ? 3 : 2,
           selections: body.setup.selections,
           entries: existing?.entries ?? [],
+          ...(existing?.platforms?.length ? { platforms: existing.platforms } : {}),
+          ...(existing?.founderSummary ? { founderSummary: existing.founderSummary } : {}),
         } satisfies SavedMetricSetup),
       },
     });

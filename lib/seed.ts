@@ -1,13 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import type {
   ActivationStep,
-  LaunchCategory,
-  GrowthCategory,
   EventType,
   Frequency,
   MetricSource,
-  Priority,
-  TaskStatus,
 } from "@prisma/client";
 import type { AiPlan } from "@/lib/ai-plan";
 
@@ -55,82 +51,11 @@ export async function seedAiPlan(productId: string, plan: AiPlan, tx?: any) {
   }
 }
 
-// Seed static fallback checklists (used when AI is unavailable)
+// Intentionally do not fabricate fallback workspace data when AI is unavailable.
+// A blank but honest workspace is preferable to generic fake tasks/checklists.
 export async function seedStaticChecklists(productId: string, tx?: any) {
-  const db = tx || prisma;
-  const launchItems: Array<{ category: LaunchCategory; title: string; order: number }> = [
-    { category: "PRODUCT", title: "Ürün değer önerisi tanımla", order: 1 },
-    { category: "PRODUCT", title: "MVP özellikleri geliştir", order: 2 },
-    { category: "PRODUCT", title: "Kullanıcı testi tamamla", order: 3 },
-    { category: "PRODUCT", title: "Hata düzeltme ve son işlemler", order: 4 },
-    { category: "MARKETING", title: "Landing page oluştur", order: 1 },
-    { category: "MARKETING", title: "Sosyal medya hesaplarını kur", order: 2 },
-    { category: "MARKETING", title: "Launch duyurusunu hazırla", order: 3 },
-    { category: "MARKETING", title: "E-posta listesi oluştur", order: 4 },
-    { category: "LEGAL", title: "Gizlilik politikası yayınla", order: 1 },
-    { category: "LEGAL", title: "Kullanım koşullarını yayınla", order: 2 },
-    { category: "LEGAL", title: "Çerez onayını uygula", order: 3 },
-    { category: "TECH", title: "Üretim ortamını kur", order: 1 },
-    { category: "TECH", title: "Analitiği entegre et", order: 2 },
-    { category: "TECH", title: "Performans optimizasyonu", order: 3 },
-    { category: "TECH", title: "Güvenlik denetimini tamamla", order: 4 },
-  ];
-
-  for (const item of launchItems) {
-    await db.launchChecklist.create({
-      data: {
-        productId,
-        category: item.category,
-        title: item.title,
-        order: item.order,
-        completed: Math.random() > 0.6,
-      },
-    });
-  }
-
-  // Growth checklist items
-  const growthItems: Array<{ category: GrowthCategory; title: string; order: number }> = [
-    { category: "ACQUISITION", title: "SEO stratejisi oluştur", order: 1 },
-    { category: "ACQUISITION", title: "Paid ads kampanyası kur", order: 2 },
-    { category: "ACQUISITION", title: "Referral programı tasarla", order: 3 },
-    { category: "ACTIVATION", title: "Onboarding akışını optimize et", order: 1 },
-    { category: "ACTIVATION", title: "İlk değer anını hızlandır", order: 2 },
-    { category: "ACTIVATION", title: "Hoş geldin e-posta dizisi kur", order: 3 },
-    { category: "RETENTION", title: "Haftalık engagement e-postaları", order: 1 },
-    { category: "RETENTION", title: "Push notification stratejisi", order: 2 },
-    { category: "RETENTION", title: "Churn analizi ve önleme", order: 3 },
-    { category: "REVENUE", title: "Pricing sayfası A/B testi", order: 1 },
-    { category: "REVENUE", title: "Upsell fırsatlarını belirle", order: 2 },
-    { category: "REVENUE", title: "Annual plan indirimi kur", order: 3 },
-  ];
-
-  for (const item of growthItems) {
-    await db.growthChecklist.create({
-      data: {
-        productId,
-        category: item.category,
-        title: item.title,
-        order: item.order,
-        completed: Math.random() > 0.7,
-      },
-    });
-  }
-
-  // Tasks (Kanban)
-  const tasks: Array<{ title: string; status: TaskStatus; priority: Priority; dueDate: Date }> = [
-    { title: "Ürün demo görüşmeleri planla", status: "TODO", priority: "HIGH", dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) },
-    { title: "Launch hakkında blog yazısı yaz", status: "TODO", priority: "MEDIUM", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
-    { title: "Teknoloji gazetecileriyle iletişime geç", status: "IN_PROGRESS", priority: "MEDIUM", dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
-    { title: "Yatırımcı güncellemesi hazırla", status: "IN_PROGRESS", priority: "LOW", dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
-    { title: "Landing page kopyasını güncelle", status: "DONE", priority: "HIGH", dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-    { title: "Analytics entegrasyonu", status: "DONE", priority: "MEDIUM", dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
-  ];
-
-  for (const task of tasks) {
-    await db.task.create({
-      data: { productId, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate },
-    });
-  }
+  void productId;
+  void tx;
 }
 
 // Seed demo metrics/numbers (only when user opts in to demo data)

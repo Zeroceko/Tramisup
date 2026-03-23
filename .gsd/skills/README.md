@@ -23,6 +23,10 @@ Bu klasör projeye özel GSD skill'lerini içerir. Her skill belli bir görevi �
 | **review** | Code review, PR review, security/performance check | `review/SKILL.md` |
 | **app-store-submission-advisor** | User-facing App Store readiness, ASO, paywall/subscription, review checklist guidance | `app-store-submission-advisor/SKILL.md` |
 | **play-store-submission-advisor** | User-facing Google Play readiness, Data safety, billing, listing checklist guidance | `play-store-submission-advisor/SKILL.md` |
+| **aso-advisor** | App Store Optimization, listing copy, keywords, screenshots, localization | `aso-advisor/SKILL.md` |
+| **launch-readiness-advisor** | Launch blockers, release sequencing, post-launch residual work | `launch-readiness-advisor/SKILL.md` |
+| **analytics-instrumentation-advisor** | Tracking plans, event schemas, funnels, telemetry, measurement design | `analytics-instrumentation-advisor/SKILL.md` |
+| **skill-gateway** | First-pass skill routing, ambiguous request handling, skill selection | `skill-gateway/SKILL.md` |
 
 ---
 
