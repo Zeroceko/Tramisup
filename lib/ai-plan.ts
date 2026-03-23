@@ -515,9 +515,12 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
   }
 
   console.warn("[ai-plan] All providers failed — using skill-backed fallback plan");
-  return buildSkillBackedFallbackPlan({
-    ...input,
-    storeGuidance,
-    stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
-  });
+  return mergeMobileLaunchBaseline(
+    buildSkillBackedFallbackPlan({
+      ...input,
+      storeGuidance,
+      stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
+    }),
+    input
+  );
 }
