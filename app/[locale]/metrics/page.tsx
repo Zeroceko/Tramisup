@@ -4,10 +4,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
-import MetricsOverview from "@/components/MetricsOverview";
 import MetricEntryForm from "@/components/MetricEntryForm";
-import RetentionCohortTable from "@/components/RetentionCohortTable";
-import ActivationFunnelChart from "@/components/ActivationFunnelChart";
 import PageHeader from "@/components/PageHeader";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
@@ -32,28 +29,9 @@ export default async function MetricsPage({
 
   if (!product) {
     return (
-      <div className="text-center py-20 text-[#666d80]">Ürün bulunamadı</div>
+      <div className="py-20 text-center text-[#666d80]">Ürün bulunamadı</div>
     );
   }
-
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const metrics = await prisma.metric.findMany({
-    where: { productId: product.id, date: { gte: thirtyDaysAgo } },
-    orderBy: { date: "asc" },
-  });
-
-  const retentionCohorts = await prisma.retentionCohort.findMany({
-    where: { productId: product.id },
-    orderBy: { cohortDate: "desc" },
-    take: 10,
-  });
-
-  const latestMetric = await prisma.metric.findFirst({
-    where: { productId: product.id },
-    orderBy: { date: "desc" },
-  });
 
   const metricPlan = getGrowthMetricRecommendations({
     name: product.name,
@@ -69,70 +47,95 @@ export default async function MetricsPage({
     const selectedKeys = savedSetup?.selections.find((item) => item.stage === section.stage)?.selectedMetricKeys ?? [];
     return section.metrics
       .filter((metric) => selectedKeys.includes(metric.key))
-      .map((metric) => ({ stage: section.stage, name: metric.name }));
+      .map((metric) => ({ stage: section.stage, metricKey: metric.key, metricName: metric.name }));
   });
-
-  const kpiItems = [
-    { label: "Günlük Aktif Kullanıcı", value: latestMetric?.dau?.toLocaleString() || "—" },
-    { label: "Aylık Aktif Kullanıcı",  value: latestMetric?.mau?.toLocaleString() || "—" },
-    { label: "MRR",                     value: latestMetric?.mrr ? `$${latestMetric.mrr.toLocaleString()}` : "—" },
-    { label: "Aktivasyon Oranı",        value: latestMetric?.activationRate ? `${latestMetric.activationRate}%` : "—" },
-  ];
+  const latestEntry = savedSetup?.entries.at(-1) ?? null;
+  const recentEntries = [...(savedSetup?.entries ?? [])].reverse().slice(0, 7);
 
   return (
     <div>
       <PageHeader
         eyebrow={t("eyebrow")}
-        title={t("title")}
-        description={t("description")}
+        title={selectedMetrics.length > 0 ? "Günlük metrik takibi" : t("title")}
+        description={
+          selectedMetrics.length > 0
+            ? "Sadece seçtiğin ana AARRR metriklerini gir ve gidişatı gün gün izle."
+            : "Önce growth sayfasında hangi metrikleri takip edeceğini seç."
+        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <div className="lg:col-span-2 space-y-4">
-          {selectedMetrics.length > 0 ? (
+      {selectedMetrics.length === 0 ? (
+        <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-8 text-center">
+          <p className="text-[15px] font-semibold text-[#0d0d12]">Henüz metrik setup&apos;ı yok</p>
+          <p className="mt-2 text-[13px] text-[#666d80]">
+            Önce growth ekranında her kategori için 1 ana metrik seç. Sonra burada günlük değer gireceksin.
+          </p>
+          <a
+            href={`/${locale}/growth`}
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+          >
+            Büyüme setup&apos;ına git
+          </a>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen funnel metrikleri</p>
-              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Seçtiğin metrik seti</h2>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen metrikler</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Seçtiğin ana set</h2>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {selectedMetrics.map((metric) => (
-                  <span
-                    key={`${metric.stage}-${metric.name}`}
-                    className="inline-flex rounded-full bg-[#f6f6f6] px-3 py-1.5 text-[12px] text-[#0d0d12]"
-                  >
-                    {metric.stage}: {metric.name}
-                  </span>
+                  <div key={metric.stage} className="rounded-[12px] bg-[#fafafa] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#666d80]">{metric.stage}</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">{metric.metricName}</p>
+                    <p className="mt-2 text-[24px] font-bold tracking-[-0.02em] text-[#0d0d12]">
+                      {latestEntry?.values?.[metric.stage] ?? "—"}
+                    </p>
+                    <p className="mt-1 text-[12px] text-[#666d80]">Son girilen değer</p>
+                  </div>
                 ))}
               </div>
             </div>
-          ) : null}
-          <MetricsOverview metrics={metrics} />
-        </div>
-        <div>
-          <MetricEntryForm productId={product.id} latestMetric={latestMetric} />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <ActivationFunnelChart productId={product.id} />
-        <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Anlık</p>
-          <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Temel Metrikler</h2>
-          {latestMetric ? (
-            <div className="space-y-4">
-              {kpiItems.map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between py-2 border-b border-[#f0f0f0] last:border-0">
-                  <p className="text-[13px] text-[#666d80]">{label}</p>
-                  <p className="text-[18px] font-bold text-[#0d0d12] tracking-[-0.02em]">{value}</p>
+            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Gidişat</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Son girişler</h2>
+              {recentEntries.length === 0 ? (
+                <p className="mt-4 text-[13px] text-[#666d80]">Henüz veri girişi yok. Sağdaki formdan ilk gününü gir.</p>
+              ) : (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-[13px]">
+                    <thead>
+                      <tr className="border-b border-[#f0f0f0] text-[#666d80]">
+                        <th className="py-2 pr-4 font-medium">Tarih</th>
+                        {selectedMetrics.map((metric) => (
+                          <th key={metric.stage} className="py-2 pr-4 font-medium">{metric.stage}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentEntries.map((entry) => (
+                        <tr key={entry.date} className="border-b border-[#f7f7f7] last:border-0">
+                          <td className="py-3 pr-4 text-[#0d0d12]">{entry.date}</td>
+                          {selectedMetrics.map((metric) => (
+                            <td key={`${entry.date}-${metric.stage}`} className="py-3 pr-4 text-[#0d0d12]">
+                              {entry.values?.[metric.stage] ?? "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <p className="text-[13px] text-[#9ca3af] text-center py-10">Henüz metrik verisi yok</p>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <RetentionCohortTable cohorts={retentionCohorts} />
+          <div>
+            <MetricEntryForm productId={product.id} selectedMetrics={selectedMetrics} latestEntry={latestEntry} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

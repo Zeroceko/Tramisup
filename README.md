@@ -1,24 +1,40 @@
 # Tiramisup
 
-Launch-to-growth dönemindeki startup ekipleri için tek workspace.
+Launch-to-growth dönemindeki startup ekipleri için sakin, aşamalı ve yönlendirici tek workspace.
 
-**Status:** Live MVP, onboarding stabilized  
-**Last Updated:** 21 March 2026
+**Status:** Live MVP, onboarding + stage-aware growth setup stabilized  
+**Last Updated:** 22 March 2026
+
+---
+
+## Product thesis
+
+Tiramisup kullanıcıya her şeyi aynı anda göstermez.
+
+Ürünün şu anki yönü:
+1. kullanıcı ürününü kendi cümleleriyle anlatır
+2. Founder Coach buna göre ilk çalışma sistemini kurar
+3. kullanıcı önce neyi takip edeceğini seçer
+4. sonra yalnızca seçtiği metrikler için günlük veri girer
+5. sonra gidişatı görür
+6. ancak ondan sonra daha derin öneriler / hedefler / optimizasyonlar gelir
+
+Bu sırayı bozmak ürün kalitesini hızla düşürür.
 
 ---
 
 ## What is live right now?
 
-Tiramisup currently supports a focused MVP flow:
+Tiramisup currently supports this focused MVP flow:
 
 1. **Public landing page** (`/tr`, `/en`)
 2. **Waitlist capture** from the landing page CTA
 3. **Early-access signup** with access code (`TT31623SEN`)
 4. **Authenticated dashboard** with a safe empty state when no product exists
 5. **Product creation wizard** (`/{locale}/products/new`)
-6. **Product-scoped surfaces** for pre-launch, tasks, metrics, growth, integrations, settings
-
-This is not a fully polished SaaS yet. It is a working MVP with the critical onboarding path stabilized so first-time users do not fall into broken routes or fake seeded data immediately after signup.
+6. **Stage-aware product workspace** for launch and growth
+7. **Growth metric setup** where one primary metric is chosen for each AARRR category
+8. **Daily metric entry** based on the selected metric set
 
 ---
 
@@ -46,87 +62,177 @@ This is not a fully polished SaaS yet. It is a working MVP with the critical onb
 TT31623SEN
 ```
 
-- If valid, account is created and user lands on dashboard
-
 ### C. First authenticated session
 - If user has **no product**, dashboard shows a clean empty state
 - No fake metrics, fake tasks, or fake checklist data are shown
-- User is prompted to create first product
-- Clicking **İlk ürününü oluştur** opens `/{locale}/products/new`
+- User is prompted to create the first product
 
-### D. Product creation
-- Wizard collects product context across multiple steps
+### D. Product creation wizard
+Wizard now collects better product context:
+- product name
+- user-written product description
+- **multi-select categories**
+- **multi-select target audiences**
+- `Diğer` free-text support for both
+- business model
+- stage
+- optional website
+- planned launch date for `Yakında yayında`
+
+Current stage labels:
+- `Geliştirme aşamasında`
+- `Test kullanıcıları var`
+- `Yakında yayında`
+- `Yayında`
+- `Büyüme aşamasında`
+
+Removed for now:
+- `Fikir aşamasında`
+
+### E. Product creation result
 - Product is created through `/api/products`
-- Initial product data can be created at product-creation time
-- User is redirected back to localized dashboard
+- AI plan generation seeds the initial structure
+- `Yayında` and `Büyüme aşamasında` map to launched behavior
 
 ---
 
 ## Important behavior changes
 
 ### No fake seed on signup
-Previously, signup automatically created a product and seeded demo-like data. That behavior was removed.
-
-**Current rule:**
-- signup creates the user only
-- product data starts after product creation
-
-This avoids embarrassing first-run experiences with fake tasks, fake metrics, and fake launch status.
+Signup creates the user only.
+Product data starts after product creation.
 
 ### Locale-aware routing
-The app is now routed under locale prefixes:
+The app routes under locale prefixes:
 
 ```txt
 /tr/...
 /en/...
 ```
 
-Critical links and redirects were updated so onboarding no longer falls into broken non-locale routes.
+### Growth setup comes before growth complexity
+For launched products, the system should first ask:
+**What should we track?**
+
+Not:
+- full checklist
+- full goals surface
+- full routines surface
+- full website analysis
+- generic growth advice
+
+all at once.
 
 ---
 
-## Tech stack
+## Current launched-product flow
+
+For a launched product, the intended order is now:
+
+1. **Choose one primary metric for each AARRR category**
+   - Awareness
+   - Acquisition
+   - Activation
+   - Retention
+   - Referral
+   - Revenue
+
+2. **Save metric setup**
+
+3. **Go to metrics page**
+
+4. **Enter daily values only for the selected metrics**
+
+5. **Review progress / trend**
+
+Only after this should heavier guidance and deeper optimization logic become prominent.
+
+---
+
+## Dashboard behavior
+
+The dashboard should now answer one question:
+
+> What is the next correct step for this product right now?
+
+Examples:
+- no product → create first product
+- pre-launch product → continue launch preparation
+- launched product with no metric setup → set up tracking first
+- launched product with setup but no daily data → make first metric entry
+- launched product with data → review current progress
+
+### Dashboard should avoid
+- multiple competing CTA blocks
+- launched users feeling stuck in pre-launch language
+- generic website-analysis noise too early
+- heavy AI explanation walls
+
+---
+
+## Growth setup behavior
+
+### Current rule
+Each category gets **one primary metric**.
+
+### Current UX rule
+Selection happens **where the metric is shown**.
+No giant explanation block first, then a long scroll, then selection.
+
+### Current save rule
+The save CTA should stay visible and near the action context.
+After saving, the user moves into daily metric entry.
+
+---
+
+## Metrics page behavior
+
+The metrics page is no longer supposed to be a giant generic form.
+
+Correct behavior:
+- show selected metric set
+- show date
+- show one input per chosen category metric
+- show recent entries / simple progress
+
+Wrong behavior:
+- show unrelated fields the user never selected
+
+---
+
+## Founder Coach current role
+
+Founder Coach is not meant to be a loud always-on chat widget.
+Its current correct role is:
+- planning support during product creation
+- growth metric setup guidance
+- future evidence-based recommendation layer once real signals exist
+
+### Important rule
+Founder Coach should not default to speculative optimization advice.
+Avoid default assumptions like:
+- “SEO stratejisi kur”
+- “Onboarding akışını optimize et”
+
+unless the product has evidence or explicit context for them.
+
+Preferred guidance style:
+- define what to measure
+- ask for the next concrete action
+- respond to actual signals
+
+---
+
+## Technical stack
 
 - **Framework:** Next.js 15
 - **UI:** React 19 + Tailwind CSS
 - **Language:** TypeScript
 - **Auth:** NextAuth 4 (credentials)
-- **DB:** Prisma 7 + PostgreSQL
+- **DB:** Prisma + PostgreSQL
 - **i18n:** next-intl
 - **Tests:** Vitest + Playwright
 - **Deploy:** Vercel
-
----
-
-## Key routes
-
-### Public
-- `/{locale}` — landing page
-- `/{locale}/signup` — early-access signup with code
-- `/{locale}/login` — login
-- `/{locale}/waitlist/thank-you` — waitlist thank-you page
-
-### Authenticated
-- `/{locale}/dashboard`
-- `/{locale}/products`
-- `/{locale}/products/new`
-- `/{locale}/pre-launch`
-- `/{locale}/tasks`
-- `/{locale}/metrics`
-- `/{locale}/growth`
-- `/{locale}/integrations`
-- `/{locale}/settings`
-- `/{locale}/admin/waitlist`
-
-### API
-- `/api/auth/signup`
-- `/api/waitlist/join`
-- `/api/waitlist/[id]`
-- `/api/products`
-- `/api/checklist/[id]`
-- `/api/actions`
-- `/api/metrics`
-- `/api/integrations`
 
 ---
 
@@ -142,34 +248,19 @@ npm run dev
 ```
 
 ### Important local note
-In this environment, **port 3000 may already be occupied**.
-Next dev may automatically move to **3001**.
+Port `3000` may already be occupied in this environment.
+Next dev may move to `3001`.
 
-So always check the dev server output before testing in browser.
-
----
-
-## Verification commands
-
-```bash
-npm run build
-npm run lint
-```
-
-If local dev starts behaving strangely after many edits, clear Next cache and restart:
+If dev becomes flaky, clear cache and restart:
 
 ```bash
 rm -rf .next
 npm run dev
 ```
 
-This project has already shown cache corruption / stale chunk issues during iterative Next dev sessions.
-
 ---
 
 ## Production
-
-Current production is deployed on Vercel.
 
 Primary public URL:
 
@@ -177,45 +268,55 @@ Primary public URL:
 https://tramisup.vercel.app
 ```
 
+### Known production-sensitive notes
+- Supabase free tier may pause after inactivity
+- Invite/email flow still depends on correct env configuration
+- Immediate post-wizard navigation can be sensitive to active-product cookie timing; if stale behavior returns, move to product-id-driven transitions instead of only cookie + client push
+
 ---
 
-## What is considered stable right now?
+## Current architectural shortcut
 
-### Stable enough
-- landing page
-- waitlist modal
-- early-access signup with code
-- empty dashboard for first-time users
-- first product creation entrypoint
-- locale-aware navigation cleanup for key onboarding surfaces
+To move quickly without a DB migration, selected metric setup and daily AARRR entries are currently stored as JSON in `Product.launchGoals`.
 
-### Still needs continued hardening
-- deeper authenticated flows after wizard completion
-- broader i18n coverage across all app surfaces
-- more end-to-end test coverage for localized flows
-- replacing static early-access code with a proper invite-code system
-- reducing drift between README/HANDOFF and actual runtime behavior
+This is **not** the ideal long-term data model.
+It is a temporary UX-protecting bridge.
+
+Future cleanup should introduce explicit entities such as:
+- `MetricSetup`
+- `MetricEntry`
+- maybe `MetricDefinition`
+
+Do not build long-term complexity on top of the current shortcut unless intentionally migrating it.
+
+---
+
+## What must not regress
+
+1. No fake product/workspace on signup
+2. Launched products must not feel trapped in pre-launch UX
+3. Growth setup must stay calm and staged
+4. Metric entry must remain tied to selected setup
+5. Founder Coach should not speculate without evidence
+6. User-written product description must remain central context
+7. The app should guide, not lecture
 
 ---
 
 ## Immediate next priorities
 
-1. Finish production smoke testing across the full onboarding path
-2. Harden wizard submit → product created → dashboard follow-up flow
-3. Replace static access code with managed invite codes
-4. Continue gating or polishing incomplete inner surfaces
-5. Expand i18n beyond landing/login/signup into the whole product
+1. Replace temporary metric JSON storage with real DB entities
+2. Make navigation fully stage-aware for launched vs pre-launch products
+3. Improve metric trend visualization for selected AARRR metrics
+4. Add a proper post-wizard product overview step if stale first navigation keeps appearing
+5. Keep secondary surfaces (integrations, website analysis, heavy checklisting) from overwhelming first-run users
 
 ---
 
 ## Do not assume
 
-This repo has a history of docs getting ahead of the actual product.
-
-Treat runtime behavior as source of truth.
-Use:
+This repo has a history of docs getting ahead of runtime behavior.
+Treat runtime behavior as source of truth and verify with:
 - build output
 - production smoke tests
-- route-by-route verification
-
-before claiming a surface is done.
+- route-by-route checks

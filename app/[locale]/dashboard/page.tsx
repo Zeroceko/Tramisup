@@ -5,7 +5,6 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
-import InsightsCard from "@/components/InsightsCard";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 export default async function DashboardPage({
@@ -103,6 +102,29 @@ export default async function DashboardPage({
   const metricStatusLabel = selectedMetricCount > 0
     ? `${selectedMetricCount} metrik seçildi`
     : "Henüz seçim yok";
+  const nextStep = !isLaunched
+    ? {
+        href: `/${locale}/pre-launch`,
+        title: "Yayına hazırlığı tamamla",
+        description: `${completedLaunchChecklists}/${launchTotal} hazırlık maddesi tamamlandı. Önce kritik eksikleri kapat.`,
+      }
+    : selectedMetricCount === 0
+      ? {
+          href: `/${locale}/growth`,
+          title: "Büyüme takibini kur",
+          description: "Önce her kategori için 1 ana metrik seç. Sonraki adım günlük veri girişi olacak.",
+        }
+      : !latestMetric && !(savedMetricSetup?.entries?.length)
+        ? {
+            href: `/${locale}/metrics`,
+            title: "İlk metrik girişini yap",
+            description: "Seçtiğin metrikler hazır. Şimdi bugünkü ilk değerleri gir.",
+          }
+        : {
+            href: `/${locale}/metrics`,
+            title: "Bugünkü performansı kontrol et",
+            description: "Günlük veri girişini güncelle ve seçtiğin AARRR metriklerinin nasıl gittiğini gör.",
+          };
 
   return (
     <div>
@@ -165,71 +187,20 @@ export default async function DashboardPage({
 
       <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Şimdi ne yapmalısın?</p>
-              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-                {isLaunched ? "Growth düzenini kur" : "Yayına hazırlığı tamamla"}
-              </h2>
-            </div>
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Sıradaki adım</p>
+            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
+              {nextStep.title}
+            </h2>
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">{nextStep.description}</p>
           </div>
 
-          <div className="space-y-2">
-            {(isLaunched
-              ? [
-                  {
-                    href: `/${locale}/growth`,
-                    title: selectedMetricCount > 0 ? "Seçtiğin funnel metriklerini gözden geçir" : "Funnel metriklerini seç",
-                    description: selectedMetricCount > 0
-                      ? `${selectedMetricCount} metrik seçtin. Gerekirse güncelle.`
-                      : "Awareness, acquisition, activation, retention, referral ve revenue için uygun metrikleri işaretle.",
-                  },
-                  {
-                    href: `/${locale}/metrics`,
-                    title: latestMetric ? "Metrics ekranını güncelle" : "İlk metrik girişini yap",
-                    description: latestMetric
-                      ? "Seçtiğin setup'a göre güncel veriyi gir ve trendi takip et."
-                      : "Seçtiğin metrikleri doldurarak ilk takip düzenini başlat.",
-                  },
-                  {
-                    href: `/${locale}/growth`,
-                    title: product._count.goals > 0 ? "Hedeflerini sıkılaştır" : "İlk growth hedefini koy",
-                    description: product._count.goals > 0
-                      ? "Seçtiğin metrikleri hangi hedefe bağladığını netleştir."
-                      : "Takip ettiğin metriklerin neyi iyileştireceğini sayısal hedefe bağla.",
-                  },
-                ]
-              : [
-                  {
-                    href: `/${locale}/pre-launch`,
-                    title: "Launch checklist'i ilerlet",
-                    description: `${completedLaunchChecklists}/${launchTotal} madde tamamlandı. Kritik eksikleri kapat.`,
-                  },
-                  {
-                    href: `/${locale}/products/new`,
-                    title: "Ürün anlatımını iyileştir",
-                    description: "Founder Coach checklist'leri senin ürün anlatımına göre kuruyor. Metin zayıfsa plan da zayıflar.",
-                  },
-                  {
-                    href: `/${locale}/growth`,
-                    title: "Yayına çıkınca neyi ölçeceğini seç",
-                    description: "Growth sayfasında funnel metriklerini önceden seçerek yayına hazırlığını netleştir.",
-                  },
-                ]
-            ).map((item) => (
-              <Link
-                key={item.href + item.title}
-                href={item.href}
-                className="flex items-start gap-3 rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 transition hover:border-[#d0d0d0] hover:bg-[#fafafa]"
-              >
-                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#95dbda]" />
-                <div>
-                  <p className="text-[14px] font-semibold text-[#0d0d12]">{item.title}</p>
-                  <p className="mt-0.5 text-[13px] text-[#666d80]">{item.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <Link
+            href={nextStep.href}
+            className="inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+          >
+            Devam et
+          </Link>
         </div>
 
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
@@ -269,12 +240,6 @@ export default async function DashboardPage({
           )}
         </div>
       </section>
-
-      {product.website && (
-        <section className="mt-4">
-          <InsightsCard productId={product.id} website={product.website} />
-        </section>
-      )}
     </div>
   );
 }

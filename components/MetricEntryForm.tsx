@@ -1,41 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import type { FunnelStageKey, MetricEntryRow } from "@/lib/metric-setup";
 
-interface LatestMetric {
-  dau: number | null;
-  mau: number | null;
-  mrr: number | null;
-  activeSubscriptions: number | null;
-  newSignups: number | null;
-  churnedUsers: number | null;
-  activationRate: number | null;
-}
+type SelectedMetricField = {
+  stage: FunnelStageKey;
+  metricKey: string;
+  metricName: string;
+};
 
-const inputCls = "w-full px-4 py-2.5 rounded-[10px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 const labelCls = "block text-[12px] font-semibold text-[#0d0d12] mb-1.5";
 
 export default function MetricEntryForm({
   productId,
-  latestMetric,
+  selectedMetrics,
+  latestEntry,
 }: {
   productId: string;
-  latestMetric: LatestMetric | null;
+  selectedMetrics: SelectedMetricField[];
+  latestEntry: MetricEntryRow | null;
 }) {
   const router = useRouter();
+  const initialValues = useMemo(() => {
+    const base: Record<string, string> = {};
+    for (const metric of selectedMetrics) {
+      base[metric.stage] = latestEntry?.values?.[metric.stage]?.toString() ?? "";
+    }
+    return base;
+  }, [latestEntry, selectedMetrics]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
-    dau: latestMetric?.dau?.toString() || "",
-    mau: latestMetric?.mau?.toString() || "",
-    mrr: latestMetric?.mrr?.toString() || "",
-    activeSubscriptions: latestMetric?.activeSubscriptions?.toString() || "",
-    newSignups: "",
-    churnedUsers: "",
-    activationRate: latestMetric?.activationRate?.toString() || "",
+    values: initialValues,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,9 +44,9 @@ export default function MetricEntryForm({
     setLoading(true);
     setError("");
 
-    const hasValue = formData.dau || formData.mau || formData.mrr || formData.newSignups || formData.churnedUsers || formData.activationRate;
-    if (!hasValue) {
-      setError("En az bir metrik değeri gir.");
+    const values = Object.values(formData.values).filter(Boolean);
+    if (values.length !== selectedMetrics.length) {
+      setError("Devam etmeden önce seçtiğin tüm metriklere bugünkü değer gir.");
       setLoading(false);
       return;
     }
@@ -57,13 +58,9 @@ export default function MetricEntryForm({
         body: JSON.stringify({
           productId,
           date: formData.date,
-          dau: formData.dau ? parseInt(formData.dau) : null,
-          mau: formData.mau ? parseInt(formData.mau) : null,
-          mrr: formData.mrr ? parseFloat(formData.mrr) : null,
-          activeSubscriptions: formData.activeSubscriptions ? parseInt(formData.activeSubscriptions) : null,
-          newSignups: formData.newSignups ? parseInt(formData.newSignups) : null,
-          churnedUsers: formData.churnedUsers ? parseInt(formData.churnedUsers) : null,
-          activationRate: formData.activationRate ? parseFloat(formData.activationRate) : null,
+          values: Object.fromEntries(
+            Object.entries(formData.values).map(([stage, value]) => [stage, Number(value)])
+          ),
         }),
       });
 
@@ -73,7 +70,6 @@ export default function MetricEntryForm({
       }
 
       router.refresh();
-      setError("");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
     } finally {
@@ -82,13 +78,14 @@ export default function MetricEntryForm({
   };
 
   return (
-    <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6 sticky top-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Veri girişi</p>
-      <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Metrik Gir</h2>
+    <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6 sticky top-4">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Günlük veri girişi</p>
+      <h2 className="mb-2 text-[16px] font-semibold text-[#0d0d12]">Bugünkü metriklerini gir</h2>
+      <p className="mb-5 text-[12px] leading-5 text-[#666d80]">Sadece seçtiğin ana AARRR metriklerini gösteriyorum.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {error && (
-          <div className="px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-600">
+          <div className="rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">
             {error}
           </div>
         )}
@@ -104,87 +101,31 @@ export default function MetricEntryForm({
           />
         </div>
 
-        <div>
-          <label className={labelCls}>DAU</label>
-          <input
-            type="number"
-            value={formData.dau}
-            onChange={(e) => setFormData({ ...formData, dau: e.target.value })}
-            placeholder="Günlük aktif kullanıcı"
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>MAU</label>
-          <input
-            type="number"
-            value={formData.mau}
-            onChange={(e) => setFormData({ ...formData, mau: e.target.value })}
-            placeholder="Aylık aktif kullanıcı"
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>MRR ($)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.mrr}
-            onChange={(e) => setFormData({ ...formData, mrr: e.target.value })}
-            placeholder="Aylık yinelenen gelir"
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>Aktif Abonelikler</label>
-          <input
-            type="number"
-            value={formData.activeSubscriptions}
-            onChange={(e) => setFormData({ ...formData, activeSubscriptions: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>Yeni Kayıtlar</label>
-          <input
-            type="number"
-            value={formData.newSignups}
-            onChange={(e) => setFormData({ ...formData, newSignups: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>Churn Olan Kullanıcılar</label>
-          <input
-            type="number"
-            value={formData.churnedUsers}
-            onChange={(e) => setFormData({ ...formData, churnedUsers: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>Aktivasyon Oranı (%)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.activationRate}
-            onChange={(e) => setFormData({ ...formData, activationRate: e.target.value })}
-            className={inputCls}
-          />
-        </div>
+        {selectedMetrics.map((metric) => (
+          <div key={metric.stage}>
+            <label className={labelCls}>{metric.stage}: {metric.metricName}</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.values[metric.stage] ?? ""}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  values: { ...prev.values, [metric.stage]: e.target.value },
+                }))
+              }
+              placeholder={`${metric.metricName} değeri`}
+              className={inputCls}
+            />
+          </div>
+        ))}
 
         <button
           type="submit"
           disabled={loading}
           className="w-full h-10 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Kaydediliyor…" : "Metrikleri Kaydet"}
+          {loading ? "Kaydediliyor…" : "Bugünkü veriyi kaydet"}
         </button>
       </form>
     </div>

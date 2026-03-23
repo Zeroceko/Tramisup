@@ -49,11 +49,12 @@ export default function MetricSetupSelector({
     setError(null);
     try {
       const setup: SavedMetricSetup = {
-        version: 1,
+        version: 2,
         selections: plan.sections.map((section) => ({
           stage: section.stage,
           selectedMetricKeys: selected[section.stage] ?? [],
         })),
+        entries: initialSetup?.entries ?? [],
       };
 
       const res = await fetch(`/api/products/${productId}/metric-setup`, {

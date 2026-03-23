@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
+import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
 function isValidSetup(input: unknown): input is SavedMetricSetup {
   if (!input || typeof input !== "object") return false;
   const setup = input as SavedMetricSetup;
-  return setup.version === 1 && Array.isArray(setup.selections);
+  return setup.version === 2 && Array.isArray(setup.selections) && Array.isArray(setup.entries);
 }
 
 export async function PATCH(
@@ -23,7 +24,7 @@ export async function PATCH(
     const { id } = await params;
     const product = await prisma.product.findFirst({
       where: { id, userId: session.user.id },
-      select: { id: true },
+      select: { id: true, launchGoals: true },
     });
 
     if (!product) {
@@ -35,10 +36,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid setup payload" }, { status: 400 });
     }
 
+    const existing = parseSavedMetricSetup(product.launchGoals);
+
     await prisma.product.update({
       where: { id },
       data: {
-        launchGoals: JSON.stringify(body.setup),
+        launchGoals: JSON.stringify({
+          version: 2,
+          selections: body.setup.selections,
+          entries: existing?.entries ?? [],
+        } satisfies SavedMetricSetup),
       },
     });
 

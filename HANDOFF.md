@@ -1,233 +1,261 @@
 # Tiramisup - Handoff
 
 **Last Updated:** 22 March 2026  
-**Status:** MVP operator loop is live; user-facing advisory layer has started, but guided coaching/pulse logic is still a next-phase capability.
+**Status:** Live MVP; onboarding, stage-aware navigation, and growth metric setup are now product-critical. The system is moving from “many surfaces” toward a calmer, step-by-step founder workflow.
 
 ---
 
 ## Executive Summary
 
-Tiramisup is now beyond simple onboarding stabilization. The product has a working launch-to-growth transition: users can sign up, create a product, mark it as launched, and see the workspace adapt from launch-oriented content to growth-oriented content.
+Tiramisup is now a real launch-to-growth workspace with an opinionated first-run path:
 
-What is now true:
-- Public landing → waitlist / early-access signup → dashboard → product creation works as a real flow
-- Signup does **not** create fake product data; first meaningful workspace context begins after product creation
-- `launchStatus` from the wizard maps into `product.status` (`PRE_LAUNCH` vs `LAUNCHED`)
-- Pre-launch page includes a launch transition action (`Ürünümü launch ettim →`)
-- Dashboard adapts based on product status
-- Growth page includes an interactive growth checklist grouped by category
-- AI plan generation and URL-based product analysis exist and are part of the product experience
-- Admin waitlist flow exists, generates invite codes, and supports approve/reject workflows
-- Production is live and functional
+1. User signs up through waitlist / early-access flow
+2. User creates a product through the wizard
+3. Founder Coach turns that product context into initial launch/growth structure
+4. If the product is already **Yayında**, the product should move the user toward:
+   - choosing one primary metric for each AARRR category
+   - entering daily values for those selected metrics
+   - viewing early progress without being flooded by secondary surfaces
 
-What is not yet true:
-- Tiramisup does **not yet** behave like a fully stage-aware operator coach
-- The product is status-aware, not deeply stage-aware
-- It does not yet systematically tell users what to measure next, what to ignore, or how to interpret how their product is going
-- A proper “pulse / performance / monitoring” layer is still future work
+The core product direction is now clearer:
+- **Do not dump everything on the user at once**
+- **Do not default to generic growth advice without evidence**
+- **Do not treat pre-launch and launched products the same**
+- **Do not show metric forms unrelated to the metrics the user chose**
 
-This is an important distinction: the product has entered an AI-assisted operator mode, but not yet a fully guided operator-coach mode.
+This is the most important current product memory.
 
 ---
 
-## Current Product State
+## Current Product Behavior
 
-### User-facing product loop
-A real user can now do the following:
-1. Discover the product from landing page
-2. Join waitlist or use an access code
-3. Create an account
-4. Land in a safe empty dashboard if no product exists
-5. Create a product through the wizard
-6. Receive AI-generated plan/input from the wizard flow
-7. Enter a pre-launch workspace
-8. Mark the product as launched
-9. See dashboard and growth surfaces change accordingly
+### Stable user flow
+A real user can now:
+1. Discover the landing page
+2. Join waitlist or use early-access signup
+3. Reach a clean empty dashboard when no product exists
+4. Create a product through the wizard
+5. Have product context seed the initial plan/checklist structure
+6. If launched, enter a growth setup flow where the system asks: **what should we track first?**
+7. Save one selected metric per AARRR category
+8. Enter daily values only for those selected metrics
 
-### AI capability that exists now
-AI is not only decorative anymore.
-It currently helps in these ways:
-- product plan generation during product creation
-- URL/site/app context analysis
-- dashboard insights card for products with URLs
+### Founder Coach current role
+Founder Coach is no longer intended to be a loud always-on chat widget.
+It is now being positioned as:
+- a **planning layer** during product setup
+- a **metric-setup guide** during growth preparation
+- a future **evidence-based recommendation layer** once real signals exist
 
-### AI capability that does **not** fully exist yet
-The system does not yet reliably function as a proactive founder coach that:
-- infers user stage deeply
-- recommends stage-based metrics consistently
-- introduces post-launch question sets automatically
-- gives pulse-based “how is my product doing?” guidance
-- adapts guidance beyond the current `PRE_LAUNCH` / `LAUNCHED` split
+This is important. The product should not regress back into “big dark AI card with generic advice.”
 
 ---
 
-## Current Onboarding and Product Flow
+## Current UX/Product Principles
 
-### 1. Landing
-- `/tr` or `/en`
-- Primary CTA opens waitlist modal
+### 1. Calm, staged progression
+The product should feel progressive, not overwhelming.
 
-### 2. Waitlist
-- Name + email → `POST /api/waitlist/join`
-- Redirect to `/{locale}/waitlist/thank-you`
-- Modal also includes “Erken erişim kodum var” path to signup
+Correct pattern:
+- one main decision per screen
+- one obvious next step
+- secondary systems only after the primary setup is done
 
-### 3. Early-Access Signup
-- Route: `/{locale}/signup`
-- Inputs: name, email, password, access code
-- Access code logic:
-  - primary: invite codes stored on waitlist rows
-  - fallback: `TT31623SEN`
-- Signup creates user only
-- No fake auto-product, no fake seeded dashboard
+Wrong pattern:
+- checklist + metrics + goals + routines + AI explanations + integrations all at once
 
-### 4. First Dashboard State
-- `/{locale}/dashboard`
-- If no product exists:
-  - clear empty state
-  - CTA to create first product
-- If product exists:
-  - dashboard content loads based on product context/status
+### 2. Stage-aware product navigation
+Navigation should adapt to product state.
 
-### 5. Product Creation
-- `/{locale}/products/new`
-- Full wizard
-- Accepts optional URL
-- AI plan generation and scraping/analysis are part of the flow
-- `launchStatus` maps to `product.status`
+For launched products, the main top-level mental model is:
+- Genel Bakış
+- Görevler
+- Metrikler
+- Büyüme
 
-### 6. Pre-Launch → Launch Transition
-- Pre-launch page exposes launch action for `PRE_LAUNCH` products
-- Launch action updates product status and changes downstream workspace behavior
+`Pre-Launch` should not dominate the nav for a launched product.
+`Integrations` should not be a first-class top-level destination for daily use; it belongs lower-priority / under setup.
 
-### 7. Growth Surface
-- Growth page includes category-based growth checklist
-- Interactive toggles and optimistic updates are implemented
+### 3. Evidence-first recommendations
+The system must not assume a problem exists unless it has supporting context.
+
+Examples of bad default guidance:
+- “SEO stratejisi kur”
+- “Onboarding akışını optimize et”
+
+Unless Tiramisup knows SEO is the chosen growth lever or onboarding activation is actually weak, these are speculative and should not be default checklist output.
+
+Preferred guidance style:
+- “Önce acquisition için hangi metriği takip edeceğini seç.”
+- “Henüz aktivasyon metriği tanımlı değil.”
+- “Önce günlük veri girişini başlat.”
+
+### 4. Setup before optimization
+For launched products, the order should be:
+1. choose tracking metrics
+2. enter daily values
+3. view trend/progress
+4. then set targets / follow-up suggestions / optimization work
+
+Not the reverse.
 
 ---
 
-## Production
+## Wizard State (Current)
+
+### Product creation wizard now supports
+- product described in the user’s own words
+- **multi-select categories**
+- **multi-select target audiences**
+- `Diğer` option that opens a free-text field for AI-readable context
+- launch stage language updated to more natural Turkish
+
+Current stage labels:
+- `Geliştirme aşamasında`
+- `Test kullanıcıları var`
+- `Yakında yayında`
+- `Yayında`
+- `Büyüme aşamasında`
+
+Removed for now:
+- `Fikir aşamasında`
+
+### Important behavior
+If `Yakında yayında` is selected:
+- launch date is chosen from a date picker
+- not free-form month/year text
+
+### Important current caveat
+Wizard currently redirects to dashboard after creation. There has been evidence of first navigation state lagging until refresh, especially around active-product/cookie synchronization.
+If this reappears, prefer product-id-driven transitions or explicit overview steps over relying only on client-set cookie + push.
+
+---
+
+## Dashboard State (Current)
+
+### What the dashboard should now do
+The dashboard should answer only one question:
+**What is the next correct step for this product right now?**
+
+Examples:
+- pre-launch product → finish launch preparation
+- launched product with no metric setup → set up tracking first
+- launched product with tracking chosen but no entries → make first daily metric entry
+- launched product with entries → review current performance
+
+### What the dashboard should avoid
+- multiple competing CTA blocks
+- website analysis noise too early in the flow
+- showing launched users mostly pre-launch language
+- generic “growth” directions before metric setup exists
+
+---
+
+## Growth Setup State (Current)
+
+### Current intended behavior
+Growth page should now be calmer and more focused.
+Primary task:
+- choose **one primary metric** for each AARRR category:
+  - Awareness
+  - Acquisition
+  - Activation
+  - Retention
+  - Referral
+  - Revenue
+
+### Important UX rule
+The user should make the choice **where they see the metric**, not after reading a giant explanation block above and then scrolling down.
+
+### Save behavior
+- save CTA must be visible near the current action context
+- after save, user should be taken to the metrics input flow
+
+### Secondary content rule
+Before setup is completed, avoid dumping:
+- growth checklist
+n- goals
+- routines
+- timeline
+
+These should only appear after the primary setup step is done.
+
+---
+
+## Metrics State (Current)
+
+### Critical direction
+The metrics page must reflect the user’s selected setup.
+If the user chose six primary AARRR metrics, the daily input form should show only those six.
+
+Bad behavior:
+- generic giant metric form with unrelated inputs
+
+Correct behavior:
+- selected metric set
+- date
+- one input per chosen category metric
+- recent entries / simple progress view
+
+### Current implementation note
+To move quickly without a DB migration, selected metric setup and daily AARRR entries are currently being stored in `Product.launchGoals` as JSON payload.
+
+This is a pragmatic short-term choice, not the long-term domain model.
+Future cleanup should split this into explicit entities such as:
+- `MetricSetup`
+- `MetricEntry`
+- maybe `MetricDefinition`
+
+Do **not** treat the current `launchGoals` storage as the ideal architecture. Treat it as a temporary bridge that protects UX momentum.
+
+---
+
+## Production Notes
 
 **URL:** https://tramisup.vercel.app
 
-**Current status:** Live and usable
-
-### Known production-sensitive notes
-- Supabase free tier may pause after inactivity; if production returns unexplained 500s, check and resume Supabase first
-- Locale-prefixed routing remains mandatory everywhere
-- Invite-code and auth flow are live
-- Email sending for invite approval is wired, but still depends on `RESEND_API_KEY` being correctly set
-
-### Admin access
-- Admin panel: `/{locale}/admin/waitlist`
-- Admin account pattern currently depends on `admin@tiramisup`
-- Non-admins are blocked from the admin surface
+### Known product-sensitive realities
+- Supabase pause can still create confusing 500s
+- Locale-prefixed routing remains mandatory
+- Signup still uses early-access / invite structure
+- Active product selection still relies on cookie-based behavior and can be sensitive during immediate post-create navigation
 
 ---
 
-## Important Architecture / Product Notes
+## What Must Not Regress
 
-### 1. Status-aware, not fully stage-aware
-The current operator adaptation is built on `product.status`:
-- `PRE_LAUNCH`
-- `LAUNCHED`
-
-This is useful and real, but it is still simpler than the longer-term product direction.
-Future work may introduce a richer stage model (for example: pre-launch, just launched, early traction, etc.).
-
-### 2. No fake signup seed
-This is a hard product rule now.
-A new account should not be padded with fake tasks, fake metrics, or fake launch progress.
-
-### 3. Broken or incomplete surfaces should be gated
-If something is not ready, the product should narrow the path rather than expose a broken route.
-
-### 4. Locale-aware routing is a non-negotiable constraint
-All user-visible navigation must continue to use `/${locale}/...`.
-
-### 5. User-facing advisory knowledge now exists in project skills
-Two project skills were added specifically for **recommendations Tiramisup gives its users about their own apps**, not primarily for Tiramisup’s internal release process:
-- `.gsd/skills/app-store-submission-advisor/SKILL.md`
-- `.gsd/skills/play-store-submission-advisor/SKILL.md`
-
-These should be used by the user-facing advisory model, not treated as internal engineering checklists.
-
-### 6. Founder Coach agent added
-A new project-local agent exists:
-- `.gsd/agents/founder-coach.md`
-
-Its role is to act as a user-facing guidance model for Tiramisup users. It is designed to:
-- give stage-aware recommendations
-- provide launch/growth/store-readiness guidance
-- proactively suggest next steps when user context is clear enough
-- use the store-submission advisor skills when relevant
-- reason from verified product state instead of invented context
-- prefer suggested next actions/drafts over silent automatic mutations
-
-This is the correct home for customer-facing “what should I do next?” intelligence.
+1. **No fake workspace on signup**
+2. **Launched products must not feel trapped in pre-launch UX**
+3. **Growth setup must stay calm and single-purpose**
+4. **Metric entry must stay tied to selected setup**
+5. **Advice/checklists must not assume problems without evidence**
+6. **Project context from user-written description must remain central**
+7. **The product should guide, not lecture**
 
 ---
 
-## Development Team / Agent Structure
+## Near-Term Work Still Worth Doing
 
-Project-local agents now include:
-- `fullstack-developer`
-- `qa-tester`
-- `principal-pm`
-- `product-designer`
-- `docs-updater`
-- `first-time-user`
-- `sprint-planner`
-- `founder-coach`
+### High priority
+1. Replace temporary `launchGoals` JSON storage with real metric setup / entry tables
+2. Make nav fully stage-aware and reduce top-level noise for launched users
+3. Improve metrics trend visualization for selected AARRR metrics
+4. Add a proper product overview / post-wizard summary step if stale first-load behavior returns
 
-### Role split that matters
-- `principal-pm` sets scope and priority direction
-- `sprint-planner` translates that into the next sprint structure
-- `founder-coach` is not an internal dev helper; it is the user-facing advisory model
-- store-submission advisor skills are for user guidance, not mainly for internal release work
+### Medium priority
+5. Make Founder Coach progressively smarter once actual metric history exists
+6. Reintroduce website / SEO / onboarding advice only when triggered by context or explicit user path
+7. Refine multi-product switching UX
 
 ---
 
-## Tests / Verification State
+## Final Product Read
 
-Current signals from the repo and handoff history:
-- build is clean
-- unit tests are passing
-- major onboarding and operator-loop pieces have been implemented and deployed
+The important shift is not just “more features.”
+It is that Tiramisup is learning to behave like a calm operator system:
+- first define what matters
+- then track it
+- then interpret it
+- then suggest what changes
 
-Still important to keep doing:
-- browser-level production smoke checks on the full user journey
-- verification of status transition (`PRE_LAUNCH` → `LAUNCHED`) in production
-- validation that growth checklist and AI insight surfaces behave correctly with real user data
-
----
-
-## What Still Needs Work
-
-### Highest-priority future product gaps
-1. **Guided metrics setup** — the product should help users define what to measure now
-2. **Post-launch coaching** — the system should introduce better next-step guidance after launch
-3. **Pulse / performance layer** — users should be able to understand how their product is actually doing, not only what setup/checklist items remain
-4. **Richer stage model** — eventually move beyond a simple binary `PRE_LAUNCH` / `LAUNCHED`
-
-### Important but not immediate blockers
-5. Multi-product switching UX
-6. Real integrations (Stripe / analytics sources)
-7. Broader i18n coverage
-8. Invite email delivery verification in production
-
-### Explicitly okay to defer
-It is acceptable that the full guided operator-coach layer comes later.
-The current state is already good enough to ship and build on, as long as everyone remains honest about what is complete and what is still only foundation.
-
----
-
-## Final Read on Current State
-
-Tiramisup is no longer just a collection of startup surfaces. It now has the beginning of a real operator loop and the first signs of user-facing AI assistance.
-
-The right mental model is:
-- **current:** AI-assisted, status-aware operator workspace
-- **next phase:** stage-aware founder coaching, metric recommendation, and pulse-based guidance
-
-That means the product is in a good shipping state for this phase, but the next wave of work should focus less on adding more surfaces and more on making the system smarter about what the user should do next.
+That ordering matters more than adding more surfaces.
