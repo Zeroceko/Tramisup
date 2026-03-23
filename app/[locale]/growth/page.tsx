@@ -205,28 +205,28 @@ export default async function GrowthPage({
           </div>
         </div>
 
+        <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
+            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{nextStep.title}</h2>
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+              {nextStep.description}
+            </p>
+            <a
+              href={nextStep.href}
+              className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+            >
+              {nextStep.cta}
+            </a>
+          </div>
+
+          <div id="coach">
+            <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
+          </div>
+        </div>
+
         {hasSetup ? (
           <>
-            <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-              <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
-                <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{nextStep.title}</h2>
-                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-                  {nextStep.description}
-                </p>
-                <a
-                  href={nextStep.href}
-                  className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-                >
-                  {nextStep.cta}
-                </a>
-              </div>
-
-              <div id="coach">
-                <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
-              </div>
-            </div>
-
             <MetricSetupSelector
               productId={product.id}
               plan={metricPlan}

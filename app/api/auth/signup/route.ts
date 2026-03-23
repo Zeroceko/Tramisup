@@ -4,6 +4,30 @@ import bcrypt from "bcryptjs";
 
 const EARLY_ACCESS_CODE = process.env.EARLY_ACCESS_CODE || "TT31623SEN";
 
+function isPoolLimitError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /MaxClientsInSessionMode|max clients reached|pool_size/i.test(message);
+}
+
+async function withDbRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isPoolLimitError(error) || index === attempts - 1) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250 * (index + 1)));
+    }
+  }
+
+  throw lastError;
+}
+
 export async function POST(request: Request) {
   try {
     const { name, email, password, accessCode } = await request.json();
@@ -30,21 +54,22 @@ export async function POST(request: Request) {
     }
 
     const normalizedCode = accessCode.toUpperCase();
-
-    // Fallback: check if code matches the static fallback code
     const isValidFallbackCode = normalizedCode === EARLY_ACCESS_CODE;
 
-    // Check if code matches a DB invite code (non-blocking — fallback still works if DB lookup fails)
     let inviteCodeEntry = null;
-    try {
-      inviteCodeEntry = await prisma.waitlist.findFirst({
-        where: { inviteCode: normalizedCode },
-      });
-    } catch (lookupErr) {
-      console.error("Waitlist lookup failed, falling back to static code:", lookupErr);
+
+    if (!isValidFallbackCode) {
+      try {
+        inviteCodeEntry = await withDbRetry(() =>
+          prisma.waitlist.findFirst({
+            where: { inviteCode: normalizedCode },
+          })
+        );
+      } catch (lookupErr) {
+        console.error("Waitlist lookup failed, falling back to static code:", lookupErr);
+      }
     }
 
-    // Code must match either a DB code or the fallback code
     if (!inviteCodeEntry && !isValidFallbackCode) {
       return NextResponse.json(
         { error: "Geçersiz erken erişim kodu" },
@@ -52,7 +77,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await withDbRetry(() =>
+      prisma.user.findUnique({ where: { email } })
+    );
     if (existingUser) {
       return NextResponse.json(
         { error: "Bu e-posta adresi zaten kayıtlı" },
@@ -62,17 +89,19 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: { email, name: name || email.split("@")[0], passwordHash },
-    });
+    const user = await withDbRetry(() =>
+      prisma.user.create({
+        data: { email, name: name || email.split("@")[0], passwordHash },
+      })
+    );
 
-    // Mark DB invite code as used (best-effort — user is already created)
     if (inviteCodeEntry) {
-      prisma.waitlist
-        .update({
+      withDbRetry(() =>
+        prisma.waitlist.update({
           where: { id: inviteCodeEntry.id },
           data: { inviteCodeUsedAt: new Date() },
         })
+      )
         .catch((err) => console.error("Failed to mark invite code as used:", err));
     }
 

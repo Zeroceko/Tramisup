@@ -271,6 +271,10 @@ function timestampId(index) {
   return `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function runPersona(persona, index) {
   const id = timestampId(index);
   const email = `live-quality-${persona.key}-${id}@example.com`;
@@ -279,8 +283,11 @@ async function runPersona(persona, index) {
 
   const jar = await signupAndLogin({ email, password, name });
   const product = await createProduct(jar, persona.locale, persona.product);
+  await sleep(1200);
   const growthHtml = await fetchSurface(jar, persona.locale, "/growth");
+  await sleep(500);
   const preLaunchHtml = await fetchSurface(jar, persona.locale, "/pre-launch");
+  await sleep(500);
   const dashboardHtml = await fetchSurface(jar, persona.locale, "/dashboard");
 
   const failures = [
@@ -320,6 +327,8 @@ async function main() {
       });
       console.log(JSON.stringify(results[results.length - 1]));
     }
+
+    await sleep(3000);
   }
 
   const passedCount = results.filter((item) => item.passed).length;
