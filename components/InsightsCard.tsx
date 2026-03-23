@@ -37,7 +37,7 @@ export default function InsightsCard({ productId, website }: InsightsCardProps) 
   return (
     <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
       <div className="mb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">AI Analizi</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Tiramisup Analizi</p>
         <h2 className="mt-1 text-[18px] font-semibold text-[#0d0d12] tracking-[-0.01em]">Sitende ne eksik?</h2>
         <p className="mt-1 text-[13px] text-[#666d80] truncate">{website}</p>
       </div>
@@ -76,7 +76,7 @@ export default function InsightsCard({ productId, website }: InsightsCardProps) 
 
       {state === "done" && insights.length === 0 && (
         <div className="mt-4 rounded-[10px] border border-dashed border-[#e8e8e8] px-4 py-6 text-center">
-          <p className="text-[13px] text-[#666d80]">AI analiz tamamlanamadı.</p>
+          <p className="text-[13px] text-[#666d80]">Tiramisup analizi tamamlanamadı.</p>
           <button onClick={analyze} className="mt-2 text-[13px] font-semibold text-[#0d0d12] hover:underline">
             Tekrar dene
           </button>

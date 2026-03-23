@@ -7,6 +7,34 @@ import { buildFounderSummary } from "@/lib/founder-summary";
 import { seedAiPlan, seedMetricsData } from "@/lib/seed";
 import { scrapeUrl } from "@/lib/url-scraper";
 
+function extractCandidateLinks(input: Array<string | undefined | null>) {
+  const urlRegex = /https?:\/\/[^\s)]+/gi;
+  const found = new Set<string>();
+
+  for (const value of input) {
+    if (!value) continue;
+    const matches = value.match(urlRegex) ?? [];
+    for (const match of matches) {
+      const normalized = match.replace(/[.,;]+$/, "");
+      found.add(normalized);
+    }
+  }
+
+  return Array.from(found).slice(0, 3);
+}
+
+async function scrapeProductLinks(links: string[]) {
+  const parts = await Promise.all(
+    links.map(async (link) => {
+      const content = await scrapeUrl(link);
+      if (!content) return null;
+      return `URL: ${link}\n${content}`;
+    })
+  );
+
+  return parts.filter(Boolean).join("\n\n---\n\n") || null;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -76,11 +104,14 @@ export async function POST(request: Request) {
       );
     }
     const storeContext = isMobileApp
-      ? `Mobil uygulama platformları: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. App Store ve Google Play için submission-ready checklist oluştur.`
+      ? ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
+        ? `Mobil uygulama platformlari: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. Urun yayinda; store listing ve ASO tarafini growth sinyali gibi yorumla, submission-ready checklist'e donme.`
+        : `Mobil uygulama platformlari: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
       : "";
 
     // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
-    const websiteContent = website ? await scrapeUrl(website) : null;
+    const candidateLinks = extractCandidateLinks([website, description, stageContext]);
+    const websiteContent = await scrapeProductLinks(candidateLinks);
     const aiPlan = await generateAiPlan({
       name,
       description,
@@ -109,7 +140,7 @@ export async function POST(request: Request) {
     if (!aiPlan) {
       return NextResponse.json(
         {
-          error: "AI plan su anda olusturulamadi. Urun olusturma akisi Founder Coach olmadan devam etmemeli. AI provider anahtarlarini ve runtime config'ini kontrol et.",
+          error: "Tiramisup su anda ilk onerileri hazirlayamadi. Urun olusturma akisi bu adim tamamlanmadan devam etmemeli. Lutfen tekrar dene.",
         },
         { status: 503 }
       );

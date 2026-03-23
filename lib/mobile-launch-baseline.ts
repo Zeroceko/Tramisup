@@ -109,6 +109,10 @@ function mergeLaunchChecklist(
 export function mergeMobileLaunchBaseline(plan: AiPlan, input: WizardInput): AiPlan {
   const platforms = Array.from(new Set(input.mobilePlatforms ?? []));
   if (platforms.length === 0) return plan;
+  const launchStage = (input.launchStatus ?? "").toLowerCase();
+  if (["yayında", "büyüme aşamasında"].includes(launchStage)) {
+    return plan;
+  }
 
   const baselineItems: BaselineItem[] = [];
   if (platforms.includes("iOS")) baselineItems.push(...IOS_BASELINE);

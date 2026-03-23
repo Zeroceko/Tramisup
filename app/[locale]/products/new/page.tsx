@@ -251,7 +251,7 @@ export default function NewProductWizard() {
       case "Yayında":
         return "Bu aşamada Tiramisup, growth hazırlığını activation, retention ve revenue sinyallerine göre öne çeker.";
       case "Büyüme aşamasında":
-        return "Bu aşamada founder coach özellikle acquisition, activation ve retention metriklerini birlikte kurmaya çalışır.";
+        return "Bu aşamada Tiramisup özellikle acquisition, activation ve retention metriklerini birlikte kurmaya çalışır.";
       default:
         return null;
     }
@@ -476,7 +476,7 @@ export default function NewProductWizard() {
                 Ürününüzü tanıyalım
               </h1>
               <p className="mt-1 text-[14px] text-[#666d80]">
-                Founder Coach, anlattığın ürüne göre checklist ve growth başlangıcını hazırlayacak.
+                Tiramisup, anlattığın ürüne göre checklist ve growth başlangıcını hazırlayacak.
               </p>
             </div>
             <Link
@@ -580,7 +580,7 @@ export default function NewProductWizard() {
                       Mobil uygulama için platform seç
                     </p>
                     <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
-                      Founder Coach App Store ve Google Play gerekliliklerini buna göre ekleyecek.
+                      Tiramisup App Store ve Google Play gerekliliklerini buna göre ekleyecek.
                     </p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {MOBILE_PLATFORMS.map((platform) => {

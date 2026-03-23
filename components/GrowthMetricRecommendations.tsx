@@ -13,7 +13,7 @@ export default function GrowthMetricRecommendations({ plan }: { plan: GrowthMetr
   return (
     <section className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
       <div className="mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Founder coach</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Tiramisup</p>
         <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
           Growth takibi için önerilen funnel metrikleri
         </h2>

@@ -90,7 +90,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
     <div className="rounded-[20px] bg-[#0d0d12] p-6 text-white">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
-          Founder coach
+          Tiramisup
         </span>
         {suggestion?.confidence && (
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
@@ -102,7 +102,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
       {suggestion && (
         <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
-            Suggested next step
+            Bir sonraki öneri
           </p>
           <p className="mt-2 text-[18px] font-semibold leading-snug tracking-[-0.01em]">
             {suggestion.suggestedNextStep}
@@ -168,7 +168,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
 
           {answer.whatCanWait && answer.whatCanWait.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">What can wait</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">Şimdilik bekleyebilir</p>
               <ul className="mt-2 space-y-1 text-[12px] text-white/55">
                 {answer.whatCanWait.map((item, i) => (
                   <li key={`${item}-${i}`}>• {item}</li>

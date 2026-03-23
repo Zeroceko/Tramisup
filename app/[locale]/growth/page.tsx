@@ -96,7 +96,7 @@ export default async function GrowthPage({
         <section className="rounded-[20px] border border-[#e8e8e8] bg-white p-6">
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Next stage</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Sıradaki aşama</p>
               <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
                 Growth burada kilitli değil, sıradaki aşama olarak bekliyor
               </h2>
@@ -121,8 +121,8 @@ export default async function GrowthPage({
             </div>
 
             <div className="rounded-[18px] border border-[#eef1f2] bg-[#fbfcfc] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Launch readiness link</p>
-              <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">Buradan launch board&apos;a geçebilirsin</h3>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Launch bağlantısı</p>
+              <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">Buradan launch sayfasına dönebilirsin</h3>
               <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
                 Launch tarafı tamamlandığında growth sekmesi otomatik olarak ana çalışma alanına dönüşür.
               </p>
@@ -130,7 +130,7 @@ export default async function GrowthPage({
                 href={`/${locale}/pre-launch`}
                 className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
-                Launch board&apos;a git
+                Launch sayfasına git
               </a>
             </div>
           </div>
@@ -157,7 +157,7 @@ export default async function GrowthPage({
             <div className="rounded-[12px] bg-[#fafafa] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Growth durumu</p>
               <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-                {hasSetup ? "Setup net" : "Setup bekliyor"}
+                {hasSetup ? "Kurulum hazır" : "Kurulum bekliyor"}
               </p>
               <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
                 {hasSetup
@@ -179,7 +179,7 @@ export default async function GrowthPage({
             <div className="rounded-[12px] bg-[#fafafa] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Execution durumu</p>
               <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-                {completedGrowthItems}/{growthChecklists.length || 0} growth işi tamam
+                {completedGrowthItems}/{growthChecklists.length || 0} büyüme işi tamamlandı
               </p>
               <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
                 Hedefler, checklist ve rutinler burada; yani sayıyı görmekle işi yapmak aynı yüzeyde birleşiyor.
@@ -205,28 +205,34 @@ export default async function GrowthPage({
           </div>
         </div>
 
-        <MetricSetupSelector
-          productId={product.id}
-          plan={metricPlan}
-          initialSetup={savedMetricSetup}
-          locale={locale}
-        />
-
         {hasSetup ? (
           <>
-            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
-              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{nextStep.title}</h2>
-              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-                {nextStep.description}
-              </p>
-              <a
-                href={nextStep.href}
-                className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-              >
-                {nextStep.cta}
-              </a>
+            <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+              <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
+                <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{nextStep.title}</h2>
+                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+                  {nextStep.description}
+                </p>
+                <a
+                  href={nextStep.href}
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+                >
+                  {nextStep.cta}
+                </a>
+              </div>
+
+              <div id="coach">
+                <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
+              </div>
             </div>
+
+            <MetricSetupSelector
+              productId={product.id}
+              plan={metricPlan}
+              initialSetup={savedMetricSetup}
+              locale={locale}
+            />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="space-y-4 lg:col-span-2">
@@ -239,14 +245,18 @@ export default async function GrowthPage({
                 <GrowthRoutines routines={routines} productId={product.id} />
               </div>
               <div>
-                <div id="coach" className="mb-4">
-                  <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
-                </div>
                 <TimelineFeed events={timelineEvents} productId={product.id} />
               </div>
             </div>
           </>
-        ) : null}
+        ) : (
+          <MetricSetupSelector
+            productId={product.id}
+            plan={metricPlan}
+            initialSetup={savedMetricSetup}
+            locale={locale}
+          />
+        )}
       </div>
     </div>
   );

@@ -25,10 +25,10 @@ const categoryColors: Record<string, string> = {
 };
 
 const categoryLabels: Record<string, string> = {
-  PRODUCT: "Product",
-  MARKETING: "Marketing",
+  PRODUCT: "Ürün",
+  MARKETING: "Pazarlama",
   LEGAL: "Legal",
-  TECH: "Tech",
+  TECH: "Teknik",
 };
 
 export default function BlockerSummary({
@@ -67,7 +67,7 @@ export default function BlockerSummary({
         <span className="text-[20px]">🚨</span>
         <div>
           <p className="text-[14px] font-bold text-[#0d0d12]">
-            {blockers.length} Blocker{blockers.length !== 1 ? "s" : ""}
+            {blockers.length} kritik blokaj
           </p>
           <p className="text-[12px] text-[#ff7a7a]">
             Yüksek öncelikli ve launch akışını şu an durduran maddeler
@@ -115,7 +115,7 @@ export default function BlockerSummary({
                     disabled={loading === blocker.id}
                     className="h-7 rounded-full bg-[#ffd7ef] px-3 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
                   >
-                    {loading === blocker.id ? "..." : "Task oluştur"}
+                    {loading === blocker.id ? "..." : "Göreve çevir"}
                   </button>
                 )}
               </div>
@@ -180,9 +180,9 @@ export default function BlockerSummary({
                     <button
                       onClick={() => handleCreateTask(blocker.id)}
                       disabled={loading === blocker.id}
-                      className="h-7 rounded-full bg-[#ffd7ef] px-3 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
+                    className="h-7 rounded-full bg-[#ffd7ef] px-3 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
                     >
-                      {loading === blocker.id ? "..." : "Task oluştur"}
+                      {loading === blocker.id ? "..." : "Göreve çevir"}
                     </button>
                   ) : (
                     <span className="shrink-0 rounded border border-[#95dbda] bg-[#f0fffe] px-2 py-1 text-[11px] font-semibold text-[#2d9d9b]">

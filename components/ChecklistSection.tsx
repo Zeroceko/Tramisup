@@ -109,7 +109,7 @@ export default function ChecklistSection({
       <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-10 text-center">
         <p className="text-[14px] font-semibold text-[#0d0d12]">Henüz checklist oluşmadı</p>
         <p className="mt-1 text-[13px] text-[#666d80]">
-          Bu ürün için launch checklist maddeleri henüz üretilemedi. AI plan başarılı olursa burada gerçek maddeler görünür; başarısız olduysa boş ve dürüst bir state gösteriyoruz.
+          Bu ürün için launch checklist maddeleri henüz üretilemedi. Tiramisup önerileri hazırlanabildiğinde burada gerçek maddeler görünür; henüz oluşmadıysa boş ve dürüst bir state gösteriyoruz.
         </p>
       </div>
     );

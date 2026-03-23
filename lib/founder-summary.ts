@@ -59,11 +59,11 @@ export function buildFounderSummary(input: WizardInput, aiPlan: AiPlan | null): 
       : "Pre-launch ekranında ilk kritik hazırlık maddelerine başla.";
 
   const summary = isLaunched
-    ? `${input.name}, yayındaki ürün yolculuğuna geçmiş durumda. Founder Coach önce neyi ölçeceğini netleştirip büyümeyi sakin ve veri odaklı bir sırayla kurmanı önerecek.`
-    : `${input.name}, henüz hazırlık tarafında. Founder Coach ilk çalışma sistemini ürün anlatımına göre kurup seni dağılmadan bir sonraki doğru adıma taşıyacak.`;
+    ? `${input.name}, yayındaki ürün yolculuğuna geçmiş durumda. Tiramisup önce neyi ölçeceğini netleştirip büyümeyi sakin ve veri odaklı bir sırayla kurmanı önerecek.`
+    : `${input.name}, henüz hazırlık tarafında. Tiramisup ilk çalışma sistemini ürün anlatımına göre kurup seni dağılmadan bir sonraki doğru adıma taşıyacak.`;
 
   return {
-    headline: `${input.name} için Founder Coach özeti`,
+    headline: `${input.name} için Tiramisup özeti`,
     summary,
     nextStep,
     strengths: strengths.slice(0, 3),

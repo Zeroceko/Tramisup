@@ -73,7 +73,7 @@ export function getGrowthWorkspaceStep(
 
   return {
     key: "REVIEW_WITH_COACH",
-    title: "Şimdi Founder Coach önerisine göre odaklan",
+    title: "Şimdi Tiramisup önerisine göre odaklan",
     description:
       "Temel setup ve execution yüzeyi oturdu. Sıradaki iş, hangi hamlenin bugünkü metriği oynatacağını seçmek.",
     href: "#coach",

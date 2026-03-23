@@ -10,7 +10,7 @@ const COPY = {
   tr: {
     eyebrow: "İlk adım",
     title: "Ürün yolculuğuna başla",
-    description: "Sade bir başlangıçla ilerleyelim. Önce birkaç kısa soruyla ürününü tanıyalım, sonra Founder Coach sana ürününün ilk özetini çıkarsın.",
+    description: "Sade bir başlangıçla ilerleyelim. Önce birkaç kısa soruyla ürününü tanıyalım, sonra Tiramisup ürününün ilk özetini çıkarsın.",
     welcomeTitle: "Hoş geldin, ilk adımı birlikte netleştirelim",
     welcomeDescription: "Bu ilk ekranın amacı seni boş bir dashboard ile karşılamak değil. Önce kim olduğunu ve nasıl ilerleyeceğini netleştiriyoruz.",
     calmStart: "Sakin başlangıç",
@@ -18,7 +18,7 @@ const COPY = {
     calmDescription: "Bu ekranda tek ana adım var: soru akışını başlatmak. Fake dashboard ya da örnek veri göstermiyoruz.",
     principles: [
       "Sorular ürününü, kitleni ve aşamanı anlamak için var.",
-      "Cevaplarından sonra Founder Coach sana kısa bir ürün özeti çıkarır.",
+      "Cevaplarından sonra Tiramisup sana kısa bir ürün özeti çıkarır.",
       "Sonraki ekran doğrudan ürününün gerçek genel bakışı olur.",
     ],
     createProduct: "Ürün yolculuğuna başla",
@@ -35,7 +35,7 @@ const COPY = {
     settingsLink: "Profili düzenle",
     journeyEyebrow: "Ürün yolculuğu",
     journeyTitle: "Bundan sonra ne olacak?",
-    journeyDescription: "İlk ürün oluşturulduğunda dashboard artık boş görünmez. Founder Coach özetin, ürün bağlamın ve bir sonraki doğru adım tek yerde görünür.",
+    journeyDescription: "İlk ürün oluşturulduğunda dashboard artık boş görünmez. Tiramisup özeti, ürün bağlamın ve bir sonraki doğru adım tek yerde görünür.",
     steps: [
       {
         title: "Ürünü anlat",
@@ -43,7 +43,7 @@ const COPY = {
       },
       {
         title: "İlk sistemi kur",
-        description: "Founder Coach buna göre checklist ve başlangıç growth yapısını oluştursun.",
+        description: "Tiramisup buna göre checklist ve başlangıç growth yapısını oluştursun.",
       },
       {
         title: "Tek sıradaki adıma geç",
@@ -55,7 +55,7 @@ const COPY = {
   en: {
     eyebrow: "First step",
     title: "Start the product journey",
-    description: "Let’s keep the start simple. We’ll ask a few short product questions, then Founder Coach will turn your answers into a first summary.",
+    description: "Let’s keep the start simple. We’ll ask a few short product questions, then Tiramisup will turn your answers into a first summary.",
     welcomeTitle: "Welcome, let’s make the first step obvious",
     welcomeDescription: "This first screen should not feel like an empty dashboard. We first make your role and next move clear.",
     calmStart: "Calm start",
@@ -63,7 +63,7 @@ const COPY = {
     calmDescription: "There is one main action here: start the question flow. No fake dashboard and no sample data.",
     principles: [
       "The questions are there to understand your product, audience, and stage.",
-      "Founder Coach turns your answers into a short product summary.",
+      "Tiramisup turns your answers into a short product summary.",
       "The next screen becomes the real overview for that product.",
     ],
     createProduct: "Start the product journey",
@@ -80,7 +80,7 @@ const COPY = {
     settingsLink: "Edit profile",
     journeyEyebrow: "Product journey",
     journeyTitle: "What happens next?",
-    journeyDescription: "Once the first product exists, the dashboard stops feeling empty. Founder Coach summary, product context, and the next correct step show up together.",
+    journeyDescription: "Once the first product exists, the dashboard stops feeling empty. Tiramisup summary, product context, and the next correct step show up together.",
     steps: [
       {
         title: "Describe the product",
@@ -88,7 +88,7 @@ const COPY = {
       },
       {
         title: "Set up the first system",
-        description: "Let Founder Coach prepare the initial checklist and starter growth structure.",
+        description: "Let Tiramisup prepare the initial checklist and starter growth structure.",
       },
       {
         title: "Move to the next step",

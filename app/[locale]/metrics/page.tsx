@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
+import FunnelHealthSection from "@/components/FunnelHealthSection";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import MetricsTrendChart from "@/components/MetricsTrendChart";
 import PageHeader from "@/components/PageHeader";
+import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
 
@@ -59,15 +61,27 @@ export default async function MetricsPage({
     date: entry.date.slice(5),
     ...entry.values,
   }));
+  const funnelHealth = buildFunnelHealthSummary({
+    product: {
+      category: product.category,
+      targetAudience: product.targetAudience,
+      businessModel: product.businessModel,
+      description: product.description,
+      website: product.website,
+      launchGoals: product.launchGoals,
+    },
+    selectedMetrics,
+    entries: savedSetup?.entries ?? [],
+  });
 
   return (
     <div>
       <PageHeader
         eyebrow={t("eyebrow")}
-        title={selectedMetrics.length > 0 ? "Günlük metrik takibi" : t("title")}
+        title={selectedMetrics.length > 0 ? "Funnel sagligini takip et" : t("title")}
         description={
           selectedMetrics.length > 0
-            ? "Sadece seçtiğin ana AARRR metriklerini gir ve gidişatı gün gün izle."
+            ? "AARRR halkalarini tek akista gor, ritmi haftalik ya da aylik okuyup Tiramisup yorumunu takip et."
             : "Önce growth sayfasında hangi metrikleri takip edeceğini seç."
         }
       />
@@ -90,26 +104,28 @@ export default async function MetricsPage({
           <div className="space-y-4 lg:col-span-2">
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Metrics ne işe yarıyor?</p>
-              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Girdiğin sayıların yeri burası</h2>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Sayilarin funnel olarak okundugu yer burasi</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-[12px] bg-[#fafafa] p-4">
                   <p className="text-[12px] font-semibold text-[#0d0d12]">1. Bugünkü değerleri gir</p>
-                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Sağdaki formdan sadece seçtiğin sayıları girersin.</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Sagdaki formdan sadece sectigin sayilari girersin.</p>
                 </div>
                 <div className="rounded-[12px] bg-[#fafafa] p-4">
-                  <p className="text-[12px] font-semibold text-[#0d0d12]">2. Son durumu gör</p>
-                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Aşağıdaki kartlarda son girilen değer hemen görünür.</p>
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">2. Funnel halkalarini birlikte gor</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Tiramisup asamalarin birbirine nasil aktigini ve zayif halkayi gosterir.</p>
                 </div>
                 <div className="rounded-[12px] bg-[#fafafa] p-4">
-                  <p className="text-[12px] font-semibold text-[#0d0d12]">3. Değişimi takip et</p>
-                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Yeterli veri girince trend grafiği ve geçmiş tablo oluşur.</p>
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">3. Ritmi hedefe gore yorumla</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">Urun tipine gore haftalik ya da aylik buyume temposunu burada okuyacaksin.</p>
                 </div>
               </div>
             </div>
 
+            {funnelHealth ? <FunnelHealthSection summary={funnelHealth} /> : null}
+
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen metrikler</p>
-              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Seçtiğin ana set</h2>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Takip edilen halkalar</p>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Sectigin ana funnel seti</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {selectedMetrics.map((metric) => (
                   <div key={metric.stage} className="rounded-[12px] bg-[#fafafa] p-4">
@@ -177,9 +193,9 @@ export default async function MetricsPage({
 
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Bir sonraki adım</p>
-              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Sayıyı girdikten sonra işi ilerlet</h2>
+              <h2 className="text-[16px] font-semibold text-[#0d0d12]">Funnel&apos;i okuduktan sonra isi ilerlet</h2>
               <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-                Metrics burada neyin değiştiğini gösterir. Bu değişime göre bugün hangi işi ele alacağını görmek için görevler yüzeyine geç.
+                Tiramisup burada hangi halkada ritim kaybettigini gosterir. Bu yoruma gore bugun hangi isi ele alacagini gormek icin gorevler yuzeyine gec.
               </p>
               <a
                 href={`/${locale}/tasks`}

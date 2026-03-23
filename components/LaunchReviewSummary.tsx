@@ -25,14 +25,14 @@ export default function LaunchReviewSummary({
         {/* Left: Score */}
         <div className="flex-1">
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-2">
-            Launch Readiness Score
+            Launch hazırlık skoru
           </p>
           <div className="flex items-baseline gap-2">
             <span className="text-[56px] font-bold text-[#95dbda]">
               {overallScore}%
             </span>
             <span className="text-[14px] font-semibold text-[#666d80]">
-              Complete
+              tamamlandı
             </span>
           </div>
 
@@ -57,7 +57,7 @@ export default function LaunchReviewSummary({
             </div>
             {readyToLaunch && nonCriticalRemaining > 0 ? (
               <p className="mt-3 text-[13px] leading-6 text-[#666d80]">
-                Kritik blocker yok. Ancak {nonCriticalRemaining} kritik olmayan madde hâlâ açık; launch sonrası bu sayfada onları tamamlamaya devam edebilirsin.
+                Kritik blokaj yok. Ancak {nonCriticalRemaining} kritik olmayan madde hâlâ açık; launch sonrası bu sayfada onları tamamlamaya devam edebilirsin.
               </p>
             ) : null}
           </div>
@@ -66,7 +66,7 @@ export default function LaunchReviewSummary({
         {/* Right: Blockers */}
         <div className="flex-1">
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
-            Issues to Address
+            Kapatılması gerekenler
           </p>
           <div className="space-y-3">
             {blockersCount > 0 ? (
@@ -75,10 +75,10 @@ export default function LaunchReviewSummary({
                   <span className="text-[20px]">⚠️</span>
                   <div>
                     <p className="text-[14px] font-semibold text-[#ff4d4f]">
-                      {blockersCount} Blocker{blockersCount !== 1 ? "s" : ""}
+                      {blockersCount} kritik blokaj
                     </p>
                     <p className="text-[12px] text-[#ff7a7a]">
-                      High priority items not yet done
+                      Yüksek öncelikli ve henüz kapanmamış maddeler
                     </p>
                   </div>
                 </div>

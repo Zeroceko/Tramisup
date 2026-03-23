@@ -57,6 +57,8 @@ function extractGuidanceSection(skill: string) {
 async function loadStoreGuidance(input: WizardInput) {
   const category = (input.category ?? "").toLowerCase();
   const platforms = input.mobilePlatforms ?? [];
+  const stage = (input.launchStatus ?? "").toLowerCase();
+  const isLaunched = ["yayında", "büyüme aşamasında"].includes(stage);
   const shouldLoadAppStore = platforms.includes("iOS") || /mobil uygulama|mobile app|ios|apple|app store/.test(category);
   const shouldLoadPlayStore = platforms.includes("Android") || /mobil uygulama|mobile app|android|google play|play store/.test(category);
   const shouldLoadAso = shouldLoadAppStore || shouldLoadPlayStore;
@@ -66,11 +68,11 @@ async function loadStoreGuidance(input: WizardInput) {
     const skill = await loadProjectSkill("aso-advisor");
     parts.push(`ASO ADVISOR\n${extractGuidanceSection(skill)}`);
   }
-  if (shouldLoadAppStore) {
+  if (!isLaunched && shouldLoadAppStore) {
     const skill = await loadProjectSkill("app-store-submission-advisor");
     parts.push(`APP STORE SUBMISSION ADVISOR\n${extractGuidanceSection(skill)}`);
   }
-  if (shouldLoadPlayStore) {
+  if (!isLaunched && shouldLoadPlayStore) {
     const skill = await loadProjectSkill("play-store-submission-advisor");
     parts.push(`PLAY STORE SUBMISSION ADVISOR\n${extractGuidanceSection(skill)}`);
   }
@@ -104,13 +106,14 @@ const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach'su
 - İş modeli: ${input.businessModel || "belirtilmemiş"}
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
-${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n\nBu store rehberini launch checklist ve görevlerde açık, kullanıcıya dönük maddelere dönüştür.` : ""}
-${input.websiteContent ? `\nWEBSITE İÇERİĞİ (${input.website}):\n${input.websiteContent}\n\nBu içeriği de analiz ederek plana dahil et.` : ""}
+${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n\n${["Yayında", "Büyüme aşamasında"].includes(input.launchStatus || "") ? "Bu store rehberini submission checklist gibi degil, listing kalitesi, ASO ve buyume sinyali olarak yorumla." : "Bu store rehberini launch checklist ve gorevlerde acik, kullaniciya donuk maddelere donustur."}` : ""}
+${input.websiteContent ? `\nBAGLANTI ICERIGI:\n${input.websiteContent}\n\nVerilen linklerdeki urun veya store metinlerini plana dahil et. Ozellikle yayindaki urunlerde listing vaadi ile growth onceliklerini eslestir.` : ""}
 
 GÖREVİN:
 Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 - Launch öncesi ise: kurucunun kritik checklistlerini ve bu haftaki görevlerini oluştur.
 - Launch olduysa veya büyüme aşamasındaysa: growth hazırlığını kur, özellikle acquisition / activation / retention / revenue tarafında neyin önce ölçülmesi gerektiğini netleştir.
+- Yayindaki mobil urunlerde App Store / Play Store submission checklist'i yazma. Bunun yerine listing kalitesi, ASO, screenshot hikayesi, rating/review sinyali ve store-page message match odagina gec.
 - Kullanıcıya soru sorma. Mevcut bağlama göre karar ver.
 
 AŞAMA BAZLI DÜŞÜN:

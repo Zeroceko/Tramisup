@@ -167,11 +167,11 @@ export default async function DashboardPage({
         {/* Left col */}
         <div className="space-y-4">
 
-          {/* Founder Coach summary (if available) */}
+          {/* Tiramisup summary (if available) */}
           {founderSummary && (
             <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                Founder Coach özeti
+                Tiramisup özeti
               </p>
               <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
                 {founderSummary.headline}

@@ -280,7 +280,7 @@ function fallbackSuggestion(context: FounderCoachContext): FounderCoachSuggestio
   }
 
   return {
-    suggestedNextStep: "Founder Coach önerisine göre tek bir growth hamlesine odaklan",
+    suggestedNextStep: "Tiramisup önerisine göre tek bir growth hamlesine odaklan",
     whyNow: "Temel setup ve execution yüzeyi oturduysa artık en önemli konu hangi hamlenin metriği hareket ettireceğini seçmek.",
     whatCanWait: "Paralel çok sayıda optimizasyon denemesi",
     confidence: "HIGH"
