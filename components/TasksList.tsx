@@ -24,13 +24,7 @@ const priorityLabel: Record<string, string> = {
   LOW: "Düşük",
 };
 
-const statusLabel: Record<string, string> = {
-  TODO: "Yapılacak",
-  IN_PROGRESS: "Yapılıyor",
-  DONE: "Tamamlandı",
-};
-
-export default function TasksList({ tasks, productId }: TasksListProps) {
+export default function TasksList({ tasks }: TasksListProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -40,186 +34,123 @@ export default function TasksList({ tasks, productId }: TasksListProps) {
     return new Date(dueDate) < now;
   };
 
-  const getTaskBorderStyle = (task: Task) => {
-    if (task.status === "DONE") return "border-l-4 border-[#75fc96]";
-    if (isOverdue(task.dueDate)) return "border-l-4 border-[#ff4d4f]";
-    if (task.priority === "HIGH") return "border-l-4 border-[#ff7a45]";
-    return "border-l-4 border-[#95dbda]";
-  };
+  const todoTasks = tasks.filter((task) => task.status === "TODO");
+  const inProgressTasks = tasks.filter((task) => task.status === "IN_PROGRESS");
+  const doneTasks = tasks.filter((task) => task.status === "DONE");
 
-  const getBgStyle = (task: Task) => {
-    if (task.status === "DONE") return "bg-[#f0fffe]";
-    if (isOverdue(task.dueDate)) return "bg-[#fff1f0]";
-    return "bg-white";
-  };
-
-  // Group and sort tasks
-  const sortedTasks = [...tasks].sort((a, b) => {
-    // Overdue + not done first
-    const aOverdue = isOverdue(a.dueDate) && a.status !== "DONE";
-    const bOverdue = isOverdue(b.dueDate) && b.status !== "DONE";
-
-    if (aOverdue && !bOverdue) return -1;
-    if (!aOverdue && bOverdue) return 1;
-
-    // Then by priority
-    const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    }
-
-    // Then by due date
-    if (a.dueDate && b.dueDate) {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    }
-
-    return 0;
-  });
-
-  const todotasks = sortedTasks.filter(t => t.status === "TODO");
-  const inProgressTasks = sortedTasks.filter(t => t.status === "IN_PROGRESS");
-  const doneTasks = sortedTasks.filter(t => t.status === "DONE");
-
-  const toggleTaskStatus = async (taskId: string, currentStatus: string) => {
+  async function updateTaskStatus(taskId: string, status: Task["status"]) {
     setLoading(taskId);
     try {
-      const nextStatus =
-        currentStatus === "TODO"
-          ? "IN_PROGRESS"
-          : currentStatus === "IN_PROGRESS"
-            ? "DONE"
-            : "TODO";
-
       await fetch(`/api/actions/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify({ status }),
       });
       router.refresh();
-    } catch (error) {
-      console.error("Failed to update task:", error);
     } finally {
       setLoading(null);
     }
-  };
+  }
 
-  const TaskCard = ({ task }: { task: Task }) => {
-    const overdue = isOverdue(task.dueDate);
+  function TaskCard({ task }: { task: Task }) {
+    const overdue = isOverdue(task.dueDate) && task.status !== "DONE";
+
     return (
-      <div
-        key={task.id}
-        className={`rounded-[12px] ${getTaskBorderStyle(task)} ${getBgStyle(task)} p-4 transition`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h4 className={`text-[14px] font-semibold mb-2 ${task.status === "DONE" ? "text-[#9ca3af] line-through" : "text-[#0d0d12]"}`}>
-              {task.title}
-            </h4>
-            {task.description && (
-              <p className="text-[12px] text-[#666d80] mb-2">{task.description}</p>
-            )}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-[#f6f6f6] text-[#0d0d12]">
-                {priorityLabel[task.priority]}
-              </span>
-              {overdue && task.status !== "DONE" && (
-                <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-[#fff1f0] text-[#ff4d4f] border border-[#ffccc7]">
-                  OVERDUE
-                </span>
-              )}
-              {task.dueDate && (
-                <span
-                  className={`text-[11px] ${
-                    overdue && task.status !== "DONE"
-                      ? "text-[#ff4d4f] font-semibold"
-                      : "text-[#9ca3af]"
-                  }`}
-                >
-                  {format(new Date(task.dueDate), "d MMM yyyy")}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Status button */}
+      <div className={`rounded-[12px] border p-4 ${task.status === "DONE" ? "border-[#d8f5df] bg-[#f6fff8]" : "border-[#e8e8e8] bg-white"}`}>
+        <div className="flex items-start gap-3">
           <button
-            onClick={() => toggleTaskStatus(task.id, task.status)}
+            type="button"
             disabled={loading === task.id}
-            className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold border transition disabled:opacity-50 ${
-              task.status === "TODO"
-                ? "bg-white border-[#e8e8e8] text-[#0d0d12] hover:bg-[#f6f6f6]"
-                : task.status === "IN_PROGRESS"
-                  ? "bg-[#ffd7ef] border-[#ffd7ef] text-[#0d0d12] hover:bg-[#f5c8e4]"
-                  : "bg-[#f0fffe] border-[#95dbda] text-[#2d9d9b] hover:bg-[#e0f8f7]"
+            onClick={() => updateTaskStatus(task.id, task.status === "DONE" ? "TODO" : "DONE")}
+            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+              task.status === "DONE"
+                ? "border-[#75fc96] bg-[#75fc96]"
+                : "border-[#cfcfcf] bg-white hover:border-[#95dbda]"
             }`}
           >
-            {statusLabel[task.status]}
+            {task.status === "DONE" ? (
+              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                <path d="M1 3L3 5L7 1" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : null}
           </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className={`text-[14px] font-semibold ${task.status === "DONE" ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"}`}>
+                {task.title}
+              </p>
+              <span className="rounded-full bg-[#f6f6f6] px-2 py-0.5 text-[11px] font-semibold text-[#0d0d12]">
+                {priorityLabel[task.priority]}
+              </span>
+              {overdue ? (
+                <span className="rounded-full border border-[#ffccc7] bg-[#fff1f0] px-2 py-0.5 text-[11px] font-semibold text-[#cf1322]">
+                  Gecikmiş
+                </span>
+              ) : null}
+            </div>
+
+            {task.description ? <p className="mt-1 text-[12px] leading-5 text-[#666d80]">{task.description}</p> : null}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-[#8a8fa0]">
+              {task.dueDate ? <span>Tarih: {format(new Date(task.dueDate), "d MMM yyyy")}</span> : null}
+              {task.status !== "DONE" ? (
+                <button
+                  type="button"
+                  onClick={() => updateTaskStatus(task.id, task.status === "TODO" ? "IN_PROGRESS" : "TODO")}
+                  disabled={loading === task.id}
+                  className="rounded-full border border-[#e8e8e8] px-3 py-1 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+                >
+                  {task.status === "IN_PROGRESS" ? "Yapılıyor olarak işaretli" : "Yapılıyor olarak başlat"}
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     );
-  };
+  }
+
+  const sections = [
+    { title: "Sıradaki işler", items: todoTasks },
+    { title: "Üzerinde çalıştıkların", items: inProgressTasks },
+    { title: "Tamamlananlar", items: doneTasks },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* TODO Section */}
-      {todotasks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-1 h-6 rounded-full bg-[#ff7a45]" />
-            <h3 className="text-[16px] font-bold text-[#0d0d12]">
-              Yapılacak ({todotasks.length})
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {todotasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-[12px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[12px] text-[#666d80]">Yapılacak</p>
+          <p className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">{todoTasks.length}</p>
         </div>
+        <div className="rounded-[12px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[12px] text-[#666d80]">Yapılıyor</p>
+          <p className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">{inProgressTasks.length}</p>
+        </div>
+        <div className="rounded-[12px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[12px] text-[#666d80]">Tamamlandı</p>
+          <p className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">{doneTasks.length}</p>
+        </div>
+      </div>
+
+      {sections.map((section) =>
+        section.items.length > 0 ? (
+          <div key={section.title}>
+            <h3 className="mb-3 text-[16px] font-semibold text-[#0d0d12]">{section.title}</h3>
+            <div className="space-y-3">
+              {section.items.map((task) => (
+                <TaskCard key={task.id} task={task} />
+              ))}
+            </div>
+          </div>
+        ) : null
       )}
 
-      {/* IN_PROGRESS Section */}
-      {inProgressTasks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-1 h-6 rounded-full bg-[#ffd7ef]" />
-            <h3 className="text-[16px] font-bold text-[#0d0d12]">
-              Yapılıyor ({inProgressTasks.length})
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {inProgressTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* DONE Section */}
-      {doneTasks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-1 h-6 rounded-full bg-[#75fc96]" />
-            <h3 className="text-[16px] font-bold text-[#0d0d12]">
-              Tamamlandı ({doneTasks.length})
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {doneTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state */}
       {tasks.length === 0 && (
         <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white px-8 py-16 text-center">
-          <p className="text-[15px] font-semibold text-[#0d0d12]">Görev yok</p>
-          <p className="mt-2 text-[13px] text-[#666d80]">
-            Başlamak için pre-launch sayfasından görev ekle
-          </p>
+          <p className="text-[15px] font-semibold text-[#0d0d12]">Henüz görev yok</p>
+          <p className="mt-2 text-[13px] text-[#666d80]">Ürün planı oluştukça burada gerçekten işaretleyebileceğin işler görünecek.</p>
         </div>
       )}
     </div>

@@ -21,7 +21,7 @@ export default async function PreLaunchLayout({
 
   const products = await prisma.product.findMany({
     where: { userId: session.user.id },
-    select: { id: true, name: true },
+    select: { id: true, name: true, status: true },
     orderBy: { createdAt: "desc" },
   });
 

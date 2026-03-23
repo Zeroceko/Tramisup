@@ -36,9 +36,15 @@ A real user can now:
 3. Reach a clean empty dashboard when no product exists
 4. Create a product through the wizard
 5. Have product context seed the initial plan/checklist structure
-6. If launched, enter a growth setup flow where the system asks: **what should we track first?**
-7. Save one selected metric per AARRR category
-8. Enter daily values only for those selected metrics
+6. If the product is already **Yayında**, the top navigation now shifts away from `Pre-Launch` and keeps the working surface focused on:
+   - Genel Bakış
+   - Görevler
+   - Metrikler
+   - Büyüme
+7. Launched products move toward a growth setup flow where the system asks: **what should we track first?**
+8. User saves one selected metric per AARRR category
+9. User enters daily values only for those selected metrics
+10. Tasks can now be explicitly moved between yapılacak / yapılıyor / tamamlandı, so the work surface is no longer a passive list
 
 ### Founder Coach current role
 Founder Coach is no longer intended to be a loud always-on chat widget.
@@ -238,9 +244,9 @@ Do **not** treat the current `launchGoals` storage as the ideal architecture. Tr
 
 ### High priority
 1. Replace temporary `launchGoals` JSON storage with real metric setup / entry tables
-2. Make nav fully stage-aware and reduce top-level noise for launched users
-3. Improve metrics trend visualization for selected AARRR metrics
-4. Add a proper product overview / post-wizard summary step if stale first-load behavior returns
+2. Improve metrics trend visualization for selected AARRR metrics so users immediately see what they entered on a chart, not only in tables
+3. Add a proper product overview / post-wizard summary step if stale first-load behavior returns
+4. Simplify growth metric options further toward beginner-friendly, manually-enterable metrics and reduce jargon like retention/WAU/MAU where possible
 
 ### Medium priority
 5. Make Founder Coach progressively smarter once actual metric history exists

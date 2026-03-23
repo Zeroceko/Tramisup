@@ -145,6 +145,8 @@ For a launched product, the intended order is now:
 
 5. **Review progress / trend**
 
+6. **Work through real tasks and mark them as yapılacak / yapılıyor / tamamlandı**
+
 Only after this should heavier guidance and deeper optimization logic become prominent.
 
 ---
@@ -167,6 +169,10 @@ Examples:
 - launched users feeling stuck in pre-launch language
 - generic website-analysis noise too early
 - heavy AI explanation walls
+
+### Navigation rule
+For launched products, `Pre-Launch` should disappear from the main top navigation.
+`Integrations` should not compete with core daily work in the primary nav.
 
 ---
 
@@ -194,9 +200,11 @@ Correct behavior:
 - show date
 - show one input per chosen category metric
 - show recent entries / simple progress
+- make it obvious where the user will see what they entered
 
 Wrong behavior:
 - show unrelated fields the user never selected
+- ask for technical jargon without enough explanation
 
 ---
 

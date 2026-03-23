@@ -14,6 +14,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | K005 | recommendations | Store-readiness guidance shown to users must include legal pages, paywall/subscription disclosure, review-account readiness, privacy/SDK disclosures, accessibility checks, ASO metadata, and IAP/subscription completeness | Prevents shallow or incomplete App Store preparation advice in user-facing recommendations | 2026-03 |
 | K006 | ai-guidance | User-facing AI must reason from verified product state, not invented context, and should prefer suggested next actions over silent automatic mutations | Prevents irrelevant or hallucinated guidance that breaks trust | 2026-03 |
 | K007 | ux-flow | For launched products, force a calm order: metric setup → daily metric entry → progress view; do not dump checklist/goals/routines/integrations before tracking is configured | Prevents overwhelming first-run growth users and keeps the product action-oriented | 2026-03 |
+| K008 | navigation | For launched products, remove `Pre-Launch` from the primary top nav and keep the main working surface focused on overview, tasks, metrics, and growth | Prevents launched users from feeling trapped in the wrong stage model | 2026-03 |
 
 ## Patterns
 
@@ -24,6 +25,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | P003 | Product creation triggers first real workspace data | `app/api/products/route.ts`, `lib/seed.ts`, `app/[locale]/dashboard/page.tsx` | Signup no longer seeds a fake workspace; first product creation is the moment seeded starter data may appear |
 | P004 | Progressive interactivity | Server page fetches data, client component mutates via API then `router.refresh()` | Used in checklist, tasks, goals, routines, integrations |
 | P005 | Selected-metric-first growth flow | `app/[locale]/growth/page.tsx`, `components/MetricSetupSelector.tsx`, `app/[locale]/metrics/page.tsx` | Launched products first choose one primary metric per AARRR category, then enter daily values only for those selected metrics |
+| P006 | Task work surface | `app/[locale]/tasks/page.tsx`, `components/TasksList.tsx`, `app/api/actions/[id]/route.ts` | Tasks should be actively moved through yapılacak / yapılıyor / tamamlandı, not shown as a passive list |
 
 ## Lessons Learned
 

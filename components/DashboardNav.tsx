@@ -9,6 +9,7 @@ import ProductSelector from "@/components/ProductSelector";
 interface Product {
   id: string;
   name: string;
+  status?: "PRE_LAUNCH" | "LAUNCHED" | "GROWING";
 }
 
 interface DashboardNavProps {
@@ -24,18 +25,20 @@ export default function DashboardNav({
   const locale = pathname?.split("/")[1] || "tr";
   const t = useTranslations();
 
+  const activeProduct = products.find((product) => product.id === activeProductId);
+  const hasProducts = products.length > 0;
+  const isLaunched = activeProduct?.status === "LAUNCHED" || activeProduct?.status === "GROWING";
+
   const navItems = [
-    { href: "/dashboard",    key: "dashboard.overview", requiresProduct: false },
-    { href: "/pre-launch",   key: "preLaunch.eyebrow", requiresProduct: true },
-    { href: "/tasks",        key: "tasks.eyebrow", requiresProduct: true },
-    { href: "/metrics",      key: "metrics.eyebrow", requiresProduct: true },
-    { href: "/growth",       key: "growth.eyebrow", requiresProduct: true },
-    { href: "/integrations", key: "integrations.eyebrow", requiresProduct: true },
+    { href: "/dashboard", key: "dashboard.overview", requiresProduct: false, show: true },
+    { href: "/pre-launch", key: "preLaunch.eyebrow", requiresProduct: true, show: !isLaunched },
+    { href: "/tasks", key: "tasks.eyebrow", requiresProduct: true, show: true },
+    { href: "/metrics", key: "metrics.eyebrow", requiresProduct: true, show: true },
+    { href: "/growth", key: "growth.eyebrow", requiresProduct: true, show: true },
   ];
 
   const withLocale = (href: string) => `/${locale}${href}`;
-  const hasProducts = products.length > 0;
-  const visibleNavItems = navItems.filter((item) => hasProducts || !item.requiresProduct);
+  const visibleNavItems = navItems.filter((item) => item.show && (hasProducts || !item.requiresProduct));
 
   const isActive = (href: string) => {
     const localizedHref = withLocale(href);
@@ -43,28 +46,25 @@ export default function DashboardNav({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-[#e8e8e8]">
+    <header className="sticky top-0 z-40 border-b border-[#e8e8e8] bg-white">
       <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-
-        {/* Logo */}
-        <Link href={withLocale("/dashboard")} className="flex items-center gap-2.5 shrink-0">
-          <div className="w-9 h-9 rounded-full bg-[#fee74e] flex items-center justify-center">
-            <span className="font-outfit font-semibold text-[14px] text-[#2e2e2e]">T</span>
+        <Link href={withLocale("/dashboard")} className="flex shrink-0 items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fee74e]">
+            <span className="font-outfit text-[14px] font-semibold text-[#2e2e2e]">T</span>
           </div>
-          <span className="font-outfit font-medium text-[16px] text-[#2e2e2e] tracking-[-0.01em] hidden sm:block">
+          <span className="hidden font-outfit text-[16px] font-medium tracking-[-0.01em] text-[#2e2e2e] sm:block">
             Tiramisup
           </span>
         </Link>
 
-        {/* Pill nav */}
-        <nav className="hidden lg:flex items-center gap-1 bg-white rounded-full border border-[#e8e8e8] p-1 shadow-nav">
+        <nav className="hidden items-center gap-1 rounded-full border border-[#e8e8e8] bg-white p-1 shadow-nav lg:flex">
           {visibleNavItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={withLocale(item.href)}
-                className={`rounded-full px-4 h-[34px] flex items-center text-[13px] font-medium transition-colors whitespace-nowrap ${
+                className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"
                     : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
@@ -76,14 +76,13 @@ export default function DashboardNav({
           })}
         </nav>
 
-        {/* Right actions */}
         <div className="flex items-center gap-2">
-          <ProductSelector products={products} activeProductId={activeProductId} />
+          <ProductSelector products={products.map(({ id, name }) => ({ id, name }))} activeProductId={activeProductId} />
 
           {!hasProducts && (
             <Link
               href={withLocale("/products/new")}
-              className="hidden sm:inline-flex items-center px-4 h-9 rounded-full border border-[#e8e8e8] text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
+              className="hidden h-9 items-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6] sm:inline-flex"
             >
               {t("common.createFirstProduct")}
             </Link>
@@ -91,22 +90,21 @@ export default function DashboardNav({
 
           <Link
             href={withLocale("/settings")}
-            className="hidden sm:inline-flex items-center px-4 h-9 rounded-full text-[13px] font-medium text-[#0d0d12] hover:bg-[#f6f6f6] transition"
+            className="hidden h-9 items-center rounded-full px-4 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6] sm:inline-flex"
           >
             {t("settings.eyebrow")}
           </Link>
 
           <button
             onClick={() => signOut({ callbackUrl: `/${locale}` })}
-            className="inline-flex items-center px-4 h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition"
+            className="inline-flex h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
           >
             {t("common.signOut")}
           </button>
         </div>
       </div>
 
-      {/* Mobile nav */}
-      <div className="lg:hidden border-t border-[#e8e8e8] px-4 pb-2">
+      <div className="border-t border-[#e8e8e8] px-4 pb-2 lg:hidden">
         <nav className="flex gap-1 overflow-x-auto pt-2">
           {visibleNavItems.map((item) => {
             const active = isActive(item.href);
@@ -114,10 +112,10 @@ export default function DashboardNav({
               <Link
                 key={item.href}
                 href={withLocale(item.href)}
-                className={`whitespace-nowrap rounded-full px-4 h-[34px] flex items-center text-[12px] font-medium transition-colors ${
+                className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[12px] font-medium transition-colors ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"
-                    : "text-[#666d80] border border-[#e8e8e8]"
+                    : "border border-[#e8e8e8] text-[#666d80]"
                 }`}
               >
                 {t(item.key)}

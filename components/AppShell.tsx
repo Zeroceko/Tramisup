@@ -4,6 +4,7 @@ import DashboardNav from "@/components/DashboardNav";
 interface Product {
   id: string;
   name: string;
+  status?: "PRE_LAUNCH" | "LAUNCHED" | "GROWING";
 }
 
 export default function AppShell({
