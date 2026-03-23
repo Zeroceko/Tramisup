@@ -34,6 +34,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | K025 | docs-consistency | Sprint docs should be updated only after code verification, especially during product-logic resets | Prevents README/HANDOFF from drifting away from the actual product chain | 2026-03 |
 | K026 | figma-reference | Use Figma as a design-system/component reference for spacing, cards, nav rhythm, and CTA treatment; do not treat it as a literal screen-copy requirement for in-product surfaces | Preserves product logic while still improving visual/system consistency | 2026-03 |
 | K027 | launch-preview-nav | For launched products, keep `Launch` accessible as a lower-emphasis stage-preview/history surface instead of removing it entirely or letting it dominate the main working nav | Preserves stage continuity without confusing the daily work model | 2026-03 |
+| K028 | mobile-hybrid-checklist | For iOS / Android products, seed a deterministic store-readiness launch baseline from our own library, then let AI personalize and extend the rest of the checklist | Keeps critical submission items reliable without losing product-specific AI value | 2026-03 |
 
 ## Patterns
 
@@ -58,6 +59,7 @@ Agents read this before every unit. Add entries when you discover something wort
 | P017 | Metrics feedback loop UI | `components/MetricEntryForm.tsx`, `app/[locale]/metrics/page.tsx` | Metrics should show last-known values, save confirmation, and latest-vs-previous comparisons so users can see what changed |
 | P018 | Task spotlight surface | `components/TasksList.tsx` | Tasks page should spotlight one main task first and provide a direct action before the full list |
 | P019 | Welcome-first first run | `components/FirstRunOnboarding.tsx` | No-product dashboard should lead with welcome/orientation language before previewing later surfaces |
+| P020 | Mobile launch baseline merge | `lib/mobile-launch-baseline.ts`, `lib/ai-plan.ts` | Mobile store-readiness uses a deterministic baseline merged into the AI-generated launch checklist so required iOS / Android items survive provider variability |
 
 ## Lessons Learned
 

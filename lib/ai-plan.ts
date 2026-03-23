@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 import { loadProjectSkill } from "@/lib/project-skill-loader";
+import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
 
 export type AiLaunchItem = {
   category: LaunchCategory;
@@ -175,18 +176,63 @@ function parsePlan(text: string): AiPlan {
 
 const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getQwenErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isQwenLimitError(error: unknown) {
+  const message = getQwenErrorMessage(error).toLowerCase();
+  return (
+    /\b429\b/.test(message) ||
+    /limit/.test(message) ||
+    /quota/.test(message) ||
+    /rate/.test(message) ||
+    /insufficient balance/.test(message)
+  );
+}
+
+function isRetryableQwenError(error: unknown) {
+  const message = getQwenErrorMessage(error);
+  return /\b(429|500|502|503|504)\b/.test(message) || /system error/i.test(message);
+}
+
 async function tryQwen(input: WizardInput): Promise<AiPlan> {
   const client = new OpenAI({
     apiKey: process.env.QWEN_API_KEY,
     baseURL: QWEN_BASE_URL,
   });
-  const response = await client.chat.completions.create({
-    model: "qwen-plus",
-    messages: [{ role: "user", content: PROMPT(input) }],
-    response_format: { type: "json_object" },
-    temperature: 0.7,
-  });
-  return parsePlan(response.choices[0]?.message?.content || "{}");
+
+  let lastError: unknown;
+  const maxAttempts = 6;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await client.chat.completions.create({
+        model: "qwen-plus",
+        messages: [{ role: "user", content: PROMPT(input) }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+      return parsePlan(response.choices[0]?.message?.content || "{}");
+    } catch (error) {
+      lastError = error;
+      if (isQwenLimitError(error)) {
+        throw error;
+      }
+
+      if (!isRetryableQwenError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      await wait(Math.min(2500, 500 * attempt));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Qwen request failed");
 }
 
 async function tryDeepSeek(input: WizardInput): Promise<AiPlan> {
@@ -231,7 +277,7 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
         stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
       });
       console.log("[ai-plan] Generated via Qwen");
-      return plan;
+      return mergeMobileLaunchBaseline(plan, input);
     } catch (err) {
       console.warn("[ai-plan] Qwen failed, trying DeepSeek:", (err as Error).message);
     }
@@ -245,7 +291,7 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
         stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
       });
       console.log("[ai-plan] Generated via DeepSeek");
-      return plan;
+      return mergeMobileLaunchBaseline(plan, input);
     } catch (err) {
       console.warn("[ai-plan] DeepSeek failed, trying Gemini:", (err as Error).message);
     }
@@ -259,7 +305,7 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
         stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
       });
       console.log("[ai-plan] Generated via Gemini (fallback)");
-      return plan;
+      return mergeMobileLaunchBaseline(plan, input);
     } catch (err) {
       console.error("[ai-plan] Gemini fallback also failed:", (err as Error).message);
     }

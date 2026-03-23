@@ -398,7 +398,8 @@ export default function NewProductWizard() {
       router.replace(`/${locale}/dashboard`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      console.error(err);
+      setError("Tramisup önerileri hazırlanırken kısa bir aksaklık oldu. Aynı bilgilerle tekrar deneyebilirsin.");
       setLoading(false);
     }
   }
@@ -456,9 +457,34 @@ export default function NewProductWizard() {
 
           <StepPills currentPill={currentPill} onPillClick={goToPill} />
 
+          {loading ? (
+            <div className="mb-6 rounded-[20px] border border-[#e8f4f3] bg-[linear-gradient(135deg,#f7fffe_0%,#f0fbfb_100%)] px-5 py-5">
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-[#95dbda]/20 text-[#0d0d12]">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2.5" />
+                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold text-[#0d0d12]">Tramisup önerileri hazırlanıyor</p>
+                  <p className="mt-1 text-[13px] leading-6 text-[#5e6678]">
+                    Ürünün için ilk checklist, growth başlangıcı ve yönlendirme akışı hazırlanıyor. Bu adım birkaç saniye sürebilir.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[#4c5567]">
+                    <span className="rounded-full bg-white px-3 py-1">Ürün bağlamı okunuyor</span>
+                    <span className="rounded-full bg-white px-3 py-1">Öneriler sıralanıyor</span>
+                    <span className="rounded-full bg-white px-3 py-1">İlk çalışma yüzeyi kuruluyor</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {error ? (
-            <div className="mb-5 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">
-              {error}
+            <div className="mb-5 rounded-[14px] border border-[#ffd9c7] bg-[#fff7f2] px-4 py-4 text-[13px] text-[#9a4d18]">
+              <p className="font-semibold text-[#7a3412]">Öneri hazırlığı beklenenden uzun sürdü</p>
+              <p className="mt-1">{error}</p>
             </div>
           ) : null}
 
@@ -621,7 +647,7 @@ export default function NewProductWizard() {
             >
               {isLastQuestionInPill && isLastPill
                 ? loading
-                  ? "Plan hazırlanıyor…"
+                  ? "Öneriler hazırlanıyor…"
                   : "Planımı Oluştur ✦"
                 : "Devam Et"}
             </button>
