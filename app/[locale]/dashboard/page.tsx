@@ -7,8 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
-import FounderCoachWidget from "@/components/FounderCoachWidget";
-
+import TiramisupAdviceCard from "@/components/TiramisupAdviceCard";
 export default async function DashboardPage({
   params,
 }: {
@@ -191,6 +190,9 @@ export default async function DashboardPage({
             </div>
           )}
 
+          {/* AI Advisor Integrated Card */}
+          <TiramisupAdviceCard productId={product.id} stage={product.launchStatus || product.status.replace("_", " ")} />
+
           {/* Next step card */}
           <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
             <div className="flex items-start justify-between gap-4">
@@ -360,9 +362,6 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
-
-      {/* Floating AI Assistant Widget for 5-Persona Testing */}
-      <FounderCoachWidget productId={product.id} />
     </div>
   );
 }

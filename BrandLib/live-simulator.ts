@@ -1,5 +1,7 @@
 import { runOrchestrator } from './orchestrator';
 import { PrismaClient } from '@prisma/client';
+// @ts-expect-error Typescript bypass
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 const ONE_MINUTE = 60 * 1000;
@@ -51,10 +53,11 @@ async function runLiveTick(product: any, dayOffset: number) {
 
 async function main() {
   console.log('🌟 TIRAMISUP CANLI SİMULTATÖR BAŞLATILIYOR (1 Dakika = 1 Sanal Gün) 🌟\n');
+  const passwordHash = await bcrypt.hash('pwd123', 10);
   const user = await prisma.user.upsert({
     where: { email: 'live_founder@tiramisup.ai' },
-    update: {},
-    create: { email: 'live_founder@tiramisup.ai', name: 'Canlı Kurucu', passwordHash: 'pwd' }
+    update: { passwordHash },
+    create: { email: 'live_founder@tiramisup.ai', name: 'Canlı Kurucu', passwordHash }
   });
 
   const product = await prisma.product.create({
