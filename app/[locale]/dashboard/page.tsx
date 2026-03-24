@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import FounderCoachWidget from "@/components/FounderCoachWidget";
 
 export default async function DashboardPage({
   params,
@@ -359,6 +360,9 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
+
+      {/* Floating AI Assistant Widget for 5-Persona Testing */}
+      <FounderCoachWidget productId={product.id} />
     </div>
   );
 }
