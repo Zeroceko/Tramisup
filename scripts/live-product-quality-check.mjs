@@ -33,6 +33,7 @@ function persona({
   product,
   checks = {},
   expected = {},
+  productExpected = {},
 }) {
   return {
     key,
@@ -41,6 +42,7 @@ function persona({
     product: { ...product, seedData: false },
     checks,
     expected,
+    productExpected,
   };
 }
 
@@ -372,6 +374,7 @@ const PERSONAS = [
       preLaunchMustNotInclude: ["data safety", "review hesabı", "sign in with apple"],
     },
     expected: { growthHasNextStep: true, dashboardHasSummary: true },
+    productExpected: { status: "GROWING" },
   }),
   persona({
     key: "growing_b2b_pipelinepilot",
@@ -391,6 +394,7 @@ const PERSONAS = [
       growthMustNotInclude: ["data safety", "review hesabı"],
     },
     expected: { growthHasNextStep: true, dashboardHasSummary: true },
+    productExpected: { status: "GROWING" },
   }),
   persona({
     key: "growing_creator_signalnoteplus",
@@ -410,6 +414,7 @@ const PERSONAS = [
       growthMustNotInclude: ["data safety", "review hesabı"],
     },
     expected: { growthHasNextStep: true, dashboardHasSummary: true },
+    productExpected: { status: "GROWING" },
   }),
   persona({
     key: "growing_fintech_ledgermate",
@@ -429,6 +434,7 @@ const PERSONAS = [
       growthMustNotInclude: ["data safety", "review hesabı"],
     },
     expected: { growthHasNextStep: true, dashboardHasSummary: true },
+    productExpected: { status: "GROWING" },
   }),
 ];
 
@@ -456,24 +462,41 @@ class CookieJar {
 }
 
 async function request(url, { jar, method = "GET", headers = {}, body, redirect = "manual" } = {}) {
-  const finalHeaders = new Headers(headers);
-  if (jar) {
-    const cookie = jar.toHeader();
-    if (cookie) finalHeaders.set("cookie", cookie);
+  let lastError;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const finalHeaders = new Headers(headers);
+      if (jar) {
+        const cookie = jar.toHeader();
+        if (cookie) finalHeaders.set("cookie", cookie);
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: finalHeaders,
+        body,
+        redirect,
+      });
+
+      if (jar && response.headers.getSetCookie) {
+        jar.setFromHeader(response.headers.getSetCookie());
+      }
+
+      if (response.status >= 500 && attempt < 2) {
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 2) throw error;
+      await sleep(500 * (attempt + 1));
+    }
   }
 
-  const response = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    body,
-    redirect,
-  });
-
-  if (jar && response.headers.getSetCookie) {
-    jar.setFromHeader(response.headers.getSetCookie());
-  }
-
-  return response;
+  throw lastError;
 }
 
 async function signupAndLogin({ email, password, name }) {
@@ -595,6 +618,18 @@ function runSnippetChecks(snippets, expected = {}) {
   return failures;
 }
 
+function runProductChecks(product, expected = {}) {
+  const failures = [];
+
+  for (const [key, value] of Object.entries(expected)) {
+    if (product[key] !== value) {
+      failures.push(`Expected product.${key}=${value} but got ${product[key]}`);
+    }
+  }
+
+  return failures;
+}
+
 async function runPersona(personaConfig, index) {
   const id = timestampId(index);
   const email = `live-quality-${personaConfig.key}-${id}@example.com`;
@@ -622,6 +657,7 @@ async function runPersona(personaConfig, index) {
     ...runChecks(growthHtml, personaConfig.checks, "growth"),
     ...runChecks(preLaunchHtml, personaConfig.checks, "preLaunch"),
     ...runSnippetChecks(snippets, personaConfig.expected),
+    ...runProductChecks(product, personaConfig.productExpected),
   ];
 
   return {

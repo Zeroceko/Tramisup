@@ -7,6 +7,12 @@ import { buildFounderSummary } from "@/lib/founder-summary";
 import { seedAiPlan, seedMetricsData } from "@/lib/seed";
 import { scrapeUrl } from "@/lib/url-scraper";
 
+function deriveProductStatus(launchStatus?: string) {
+  if (launchStatus === "Büyüme aşamasında") return "GROWING" as const;
+  if (launchStatus === "Yayında") return "LAUNCHED" as const;
+  return "PRE_LAUNCH" as const;
+}
+
 function extractCandidateLinks(input: Array<string | undefined | null>) {
   const urlRegex = /https?:\/\/[^\s)]+/gi;
   const found = new Set<string>();
@@ -148,9 +154,7 @@ export async function POST(request: Request) {
 
     // 2. Create product + seed data in a transaction
     const product = await prisma.$transaction(async (tx) => {
-      const productStatus = ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
-        ? "LAUNCHED"
-        : "PRE_LAUNCH";
+      const productStatus = deriveProductStatus(launchStatus);
 
       const newProduct = await tx.product.create({
         data: {
