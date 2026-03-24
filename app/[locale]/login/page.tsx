@@ -1,143 +1,136 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { useTranslations, useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 
-const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
+const inputCls =
+  "w-full rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-3 text-sm font-medium text-[#21231D] outline-none transition-all placeholder:text-[#21231D]/30 focus:border-[#C45D97] focus:ring-2 focus:ring-[#C45D97]/20";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = useTranslations('login');
   const locale = useLocale();
-  const callbackUrl = searchParams.get('callbackUrl');
+  const t = useTranslations("login");
+  const callbackUrl = searchParams.get("callbackUrl");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const result = await signIn("credentials", { email, password, redirect: false });
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
       if (result?.error) {
-        setError(t('errors.wrongCredentials'));
+        setError(t("errors.wrongCredentials"));
       } else {
         router.push(callbackUrl || `/${locale}/dashboard`);
         router.refresh();
       }
     } catch {
-      setError(t('errors.generic'));
+      setError(t("errors.generic"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-6xl grid lg:grid-cols-[0.95fr_1.05fr] overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white shadow-card">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#FFF8F2] px-6 py-10 font-outfit">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(196,93,151,0.08) 1.5px, transparent 1.5px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[800px] -translate-x-1/2 -translate-y-1/2 opacity-20"
+        style={{
+          backgroundImage: "url('/assets/hero-brush-abstract.png')",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "contain",
+        }}
+      />
 
-        {/* Left panel */}
-        <section className="hidden lg:flex flex-col justify-between bg-[#0d0d12] p-10">
-          <div>
-            <Link href={`/${locale}`} className="inline-flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#fee74e] flex items-center justify-center font-bold text-[#0d0d12] text-[16px]">
-                T
-              </div>
-              <div>
-                <p className="text-[15px] font-semibold text-white">Tiramisup</p>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Operator cockpit</p>
-              </div>
-            </Link>
-            <h1 className="mt-12 text-[32px] font-bold tracking-[-0.03em] text-white leading-tight whitespace-pre-line">
-              {t('sidebarTitle')}
-            </h1>
-            <p className="mt-4 text-[14px] leading-7 text-white/60">
-              {t('sidebarSubtitle')}
-            </p>
-          </div>
+      <div className="relative z-10 mx-auto w-full max-w-[440px]">
+        <div className="mb-8 flex items-center justify-center gap-2.5">
+          <img src="/assets/illus-tiramisu-slice.png" alt="Tiramisup" className="h-10 w-10 object-contain" />
+          <span className="text-xl font-black text-[#21231D]">Tiramisup</span>
+        </div>
 
-          <div className="space-y-2">
-            {(t.raw('features') as string[]).map((item) => (
-              <div key={item} className="rounded-[12px] border border-white/10 bg-white/5 px-4 py-3 text-[13px] text-white/70">
-                {item}
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="rounded-2xl border border-[#E8DED7]/70 bg-white/80 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+          <h1 className="mb-1 text-2xl font-black text-[#21231D]">{t("title")}</h1>
+          <p className="mb-6 text-sm text-[#21231D]/50">{t("subtitle")}</p>
 
-        {/* Right panel */}
-        <section className="p-8 sm:p-12">
-          <div className="mx-auto max-w-md">
-            <div className="mb-8">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80] mb-2">{t('eyebrow')}</p>
-              <h2 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12]">{t('title')}</h2>
-              <p className="mt-2 text-[14px] text-[#666d80]">
-                {t('subtitle')}
-              </p>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="email" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
+                {t("email")}
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={t("emailPlaceholder")}
+                className={inputCls}
+                autoFocus
+                required
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-600">
-                  {error}
-                </div>
-              )}
+            <div>
+              <label htmlFor="password" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
+                {t("password")}
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={t("passwordPlaceholder")}
+                className={inputCls}
+                required
+              />
+            </div>
 
-              <div>
-                <label htmlFor="email" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
-                  {t('email')}
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                  className={inputCls}
-                  placeholder={t('emailPlaceholder')}
-                />
-              </div>
+            {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
-              <div>
-                <label htmlFor="password" className="block text-[12px] font-semibold text-[#0d0d12] mb-1.5">
-                  {t('password')}
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className={inputCls}
-                  placeholder={t('passwordPlaceholder')}
-                />
-              </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl border-none bg-[#21231D] py-3.5 text-sm font-black text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,35,29,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? t("loggingIn") : `${t("loginButton")} →`}
+            </button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? t('loggingIn') : t('loginButton')}
-              </button>
-            </form>
+          <button type="button" className="mt-4 w-full border-none bg-transparent text-sm font-medium text-[#C45D97] transition-colors hover:text-[#9F3E77]">
+            Forgot password?
+          </button>
+        </div>
 
-            <p className="mt-6 text-[13px] text-[#666d80]">
-              {t('noAccount')}{" "}
-              <Link href={`/${locale}/signup`} className="font-semibold text-[#0d0d12] hover:text-[#666d80] transition">
-                {t('signupHere')}
-              </Link>
-            </p>
-          </div>
-        </section>
+        <p className="mt-6 text-center text-sm text-[#21231D]/50">
+          {t("noAccount")}{" "}
+          <Link href={`/${locale}/signup`} className="font-bold text-[#C45D97] underline transition-colors hover:text-[#9F3E77]">
+            {t("signupHere")}
+          </Link>
+        </p>
       </div>
     </div>
   );
