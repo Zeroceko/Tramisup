@@ -25,8 +25,7 @@ const mockBcrypt = vi.mocked(bcrypt)
 
 // Extract the authorize function from credentials provider
 function getAuthorize() {
-  const credentialsProvider = authOptions.providers[0]
-  // @ts-expect-error - accessing internal authorize method
+  const credentialsProvider = authOptions.providers[0] as any
   return credentialsProvider.options.authorize as (
     credentials: { email: string; password: string } | undefined
   ) => Promise<{ id: string; email: string; name: string | null } | null>
@@ -207,7 +206,7 @@ describe('Auth Module - authOptions', () => {
         newSession: undefined,
       } as any)
 
-      expect(result.user.id).toBe('user-789')
+      expect((result.user as any)?.id).toBe('user-789')
     })
   })
 })

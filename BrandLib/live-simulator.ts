@@ -1,6 +1,5 @@
 import { runOrchestrator } from './orchestrator';
 import { PrismaClient } from '@prisma/client';
-// @ts-expect-error Typescript bypass
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
