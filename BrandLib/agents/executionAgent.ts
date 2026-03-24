@@ -14,8 +14,7 @@ export async function runExecutionAgent(userRequest: string, productId: string) 
     tools: {
       createTask: createTaskTool,
       getTasks: getTasksTool,
-    },
-    maxSteps: 5,
+    }
   });
 
   return result.text;

@@ -13,8 +13,7 @@ export async function runGrowthAgent(userRequest: string, productId: string) {
     prompt: `Context Product ID: ${productId}\nUser intent: ${userRequest}`,
     tools: {
       logMetric: logMetricTool,
-    },
-    maxSteps: 5,
+    }
   });
 
   return result.text;

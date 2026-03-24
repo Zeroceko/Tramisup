@@ -12,6 +12,7 @@ export const createTaskTool = tool({
     description: z.string().optional().describe('Optional context or details about how to execute the task.'),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM').describe('The urgency of the task.')
   }),
+  // @ts-expect-error Bypass ai-sdk version typing error
   execute: async ({ productId, title, description, priority }) => {
     try {
       const task = await prisma.task.create({
@@ -37,6 +38,7 @@ export const getTasksTool = tool({
     productId: z.string().describe('The ID of the product.'),
     status: z.enum(['TODO', 'IN_PROGRESS', 'DONE']).optional().describe('Filter by task status.')
   }),
+  // @ts-expect-error Bypass ai-sdk version typing error
   execute: async ({ productId, status }) => {
     try {
       const whereClause: any = { productId };

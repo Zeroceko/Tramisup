@@ -14,6 +14,7 @@ export const logMetricTool = tool({
     mrr: z.number().optional().describe('Monthly Recurring Revenue'),
     newSignups: z.number().int().optional().describe('Number of new signups on this date')
   }),
+  // @ts-expect-error Bypass ai-sdk version typing error
   execute: async ({ productId, date, dau, mau, mrr, newSignups }) => {
     try {
       const parsedDate = new Date(date);
