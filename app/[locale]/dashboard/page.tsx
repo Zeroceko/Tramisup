@@ -191,7 +191,7 @@ export default async function DashboardPage({
           )}
 
           {/* AI Advisor Integrated Card */}
-          <TiramisupAdviceCard productId={product.id} stage={product.launchStatus || product.status.replace("_", " ")} />
+          <TiramisupAdviceCard productId={product.id} stage={product.launchStatus || (product.status?.replace("_", " ") ?? "PRE_LAUNCH")} />
 
           {/* Next step card */}
           <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">

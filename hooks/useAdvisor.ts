@@ -18,8 +18,8 @@ export function useAdvisor(productId: string) {
         setResponse(data.text);
         return data.text;
       } else {
-        console.error('Advisor error:', data.error);
-        setResponse('AI Hatası: ' + data.error);
+        console.error('Advisor error:', data.details || data.error);
+        setResponse('AI Hatası: ' + (data.details || data.error));
         return null;
       }
     } catch (err) {
