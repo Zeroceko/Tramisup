@@ -307,12 +307,18 @@ enum EventType {
 }
 
 enum IntegrationProvider {
+  // P0 — Already built
   STRIPE
   GA4
-  MIXPANEL
-  SEGMENT
-  AMPLITUDE
-  POSTHOG
+  // P1 — Next sprint
+  REVENUECAT
+  APP_STORE_CONNECT
+  GOOGLE_PLAY
+  META_ADS
+  // P2 — Scale-up
+  GOOGLE_ADS
+  TIKTOK_ADS
+  APPSFLYER
 }
 
 enum IntegrationStatus {

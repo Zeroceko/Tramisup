@@ -8,19 +8,19 @@ import type { IntegrationDef } from "@/components/IntegrationCard";
 // Ozenle secilmis P0, P1, P2 Growth Stack Entegrasyonlari
 const AVAILABLE_INTEGRATIONS: IntegrationDef[] = [
   // P0 - Active & Ready
-  { provider: "GA4",       name: "Google Analytics",  description: "Ürün içi DAU, retention, funnel ve organik site trafiği analizi.", icon: "📊" },
-  { provider: "STRIPE",    name: "Stripe",            description: "Finansal veriler: MRR, yeni abonelikler ve Churn takibi.", icon: "💳" },
+  { provider: "GA4",                name: "Google Analytics",  description: "Ürün içi DAU, retention, funnel ve organik site trafiği analizi.", icon: "📊" },
+  { provider: "STRIPE",             name: "Stripe",            description: "Finansal veriler: MRR, yeni abonelikler ve Churn takibi.", icon: "💳" },
   
-  // P1 - Marketing & Monetization (Coming Soon)
-  { provider: "REVENUECAT",name: "RevenueCat",        description: "App Store ve Play Store abonelik analitiği.", icon: "😼", comingSoon: true },
-  { provider: "META",      name: "Meta Ads API",      description: "Reklam harcamaları (Spend) ve dönüşüm (CAC, ROAS) verileri.", icon: "♾️", comingSoon: true },
-  
-  // P2 - Enterprise & Stores (Coming Soon)
-  { provider: "APPSTORE",  name: "App Store Connect", description: "iOS App verisi, organik install dönüşümleri ve yorumlar.", icon: "🍏", comingSoon: true },
-  { provider: "GPLAY",     name: "Google Play",       description: "Android App vitals, organik edinim metrikleri.", icon: "🤖", comingSoon: true },
-  { provider: "APPSFLYER", name: "AppsFlyer",         description: "Attribution doğrulama ve gelişmiş Mobil MMP çözümü.", icon: "🚀", comingSoon: true },
-  { provider: "TIKTOK",    name: "TikTok Ads",        description: "TikTok Manager Ads performansı ve harcamaları.", icon: "🎵", comingSoon: true },
-  { provider: "BIGQUERY",  name: "BigQuery (Firebase)", description: "Ham event akışı ve gelişmiş SQL ürün performans merkezi.", icon: "☁️", comingSoon: true },
+  // P1 - Next Sprint (Coming Soon)
+  { provider: "REVENUECAT",         name: "RevenueCat",        description: "App Store ve Play Store abonelik analitiği.", icon: "😼", comingSoon: true },
+  { provider: "APP_STORE_CONNECT",  name: "App Store Connect", description: "iOS App verisi, organik install dönüşümleri ve yorumlar.", icon: "🍏", comingSoon: true },
+  { provider: "GOOGLE_PLAY",        name: "Google Play",       description: "Android App vitals, organik edinim metrikleri.", icon: "🤖", comingSoon: true },
+  { provider: "META_ADS",           name: "Meta Ads",          description: "Reklam harcamaları (Spend) ve dönüşüm (CAC, ROAS) verileri.", icon: "♾️", comingSoon: true },
+
+  // P2 - Scale-up (Coming Soon)
+  { provider: "GOOGLE_ADS",         name: "Google Ads",        description: "Search, Display ve App kampanya performansı.", icon: "🔍", comingSoon: true },
+  { provider: "TIKTOK_ADS",         name: "TikTok Ads",        description: "TikTok Manager Ads performansı ve harcamaları.", icon: "🎵", comingSoon: true },
+  { provider: "APPSFLYER",          name: "AppsFlyer",         description: "Attribution doğrulama ve gelişmiş Mobil MMP çözümü.", icon: "🚀", comingSoon: true },
 ];
 
 export default async function IntegrationsPage() {

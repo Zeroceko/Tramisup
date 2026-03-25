@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       websiteContent: websiteContent ?? undefined,
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     });
-    const founderSummary = buildFounderSummary({
+    const founderSummary = await buildFounderSummary({
       name,
       description,
       category,
