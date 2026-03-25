@@ -51,7 +51,7 @@ export default async function IntegrationsPage() {
         <div className="mb-10">
           <h1 className="text-[28px] font-semibold tracking-tight text-[#f4f4f5] mb-2">Connectors</h1>
           <p className="text-[15px] text-[#a1a1aa] max-w-2xl">
-            Ürününüzün büyüme sistemine güç katın. Uygulamaları tek tıkla bağlayarak Tiramisup Mentor AI'ın gerçek veriler üzerinden koçluk yapmasını sağlayabilirsiniz.
+            Ürününüzün büyüme sistemine güç katın. Uygulamaları tek tıkla bağlayarak Tiramisup Mentor AI&apos;ın gerçek veriler üzerinden koçluk yapmasını sağlayabilirsiniz.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default async function IntegrationsPage() {
         <div className="mb-6">
           <h2 className="text-[18px] font-medium text-[#f4f4f5] mb-1">Growth Stack Connectors</h2>
           <p className="text-[13px] text-[#71717a] mb-6">
-            Özer'in (Admin) kurduğu bir defaya mahsus ayarlar sayesinde tüm workspace'iniz bu entegrasyonları anında aktif edebilir.
+            Özer&apos;in (Admin) kurduğu bir defaya mahsus ayarlar sayesinde tüm workspace&apos;iniz bu entegrasyonları anında aktif edebilir.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
