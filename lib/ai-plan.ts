@@ -203,13 +203,13 @@ ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
 ${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n` : ""}
 ${input.websiteContent ? `\n🔥 CRITICAL - FOUNDER'S WEBSITE CONTENT:\n${input.websiteContent}\n(IMPORTANT: Analyze this text. Read what problem the product actually solves and its features. Formulate all task and checklist items STRICTLY by referring to this content, the product's features, and promises!)\n` : ""}
 
-YOUR TASK:
-Build the founder's first real growth and operational system for this product:
-- If pre-launch: Create critical launch checklists and this week's technical/marketing tasks.
-- If launched or growing: Set up growth readiness, ensure every metric in the AARRR funnel is measurable.
+GÖREVİN:
+Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
+- Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik görevlerini oluştur.
+- Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
 
-SPECIAL RULE: Never write generic (one-size-fits-all) items. You MUST refer to the features or vision on the website. Use the name "${input.name}" frequently. Be ruthless and highly actionable.
-CRITICAL: Write ALL output strictly in English. Do not use Turkish.
+ÖZEL KURAL: Asla ezber veya jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere atıf yap.
+DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
   const hasKey = !!process.env.OPENAI_API_KEY || !!process.env.QWEN_API_KEY || !!process.env.DEEPSEEK_API_KEY || !!process.env.GEMINI_API_KEY;
