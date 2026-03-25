@@ -40,17 +40,17 @@ export function buildFounderSummary(input: WizardInput, aiPlan: AiPlan | null): 
 
   const focusAreas = isLaunched
     ? (growthItems.length
-        ? growthItems
-        : [
-            "İlk takip edeceğin acquisition ve activation metriklerini seç.",
-            "Metrik setup'tan sonra ilk günlük veri girişini başlat.",
-          ])
+      ? growthItems
+      : [
+        "İlk takip edeceğin acquisition ve activation metriklerini seç.",
+        "Metrik setup'tan sonra ilk günlük veri girişini başlat.",
+      ])
     : (launchItems.length
-        ? launchItems
-        : [
-            "İlk launch hazırlık maddelerini kapat.",
-            "Bu haftaki en kritik işe odaklan.",
-          ]);
+      ? launchItems
+      : [
+        "İlk launch hazırlık maddelerini kapat.",
+        "Bu haftaki en kritik işe odaklan.",
+      ]);
 
   const nextStep = isLaunched
     ? "Growth setup ekranında her kategori için tek ana metrik seç."

@@ -18,6 +18,7 @@
     "test:all": "npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.53",
     "@ai-sdk/openai": "^3.0.48",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
