@@ -1,108 +1,57 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 23 March 2026  
-**Status:** Live MVP; the current sprint is a product-logic reset focused on first-login onboarding, a clearer Growth vs Metrics split, beginner-friendly metric language, stronger metrics feedback loops, and a more action-oriented task surface.
+**Last Updated:** 25 March 2026  
+**Status:** **Data-Driven AI Mentorship Phase Complete.** The project has transitioned from static AI advice to real-time metric injection. The "Connectors Store" is functional for GA4 and Stripe, and the AI agents (Growth/Orchestrator) now see live MRR, DAU, and churn data before responding.
 
 ---
 
 ## Executive Summary
 
-Tiramisup is now a real launch-to-growth workspace with an opinionated first-run path:
+Tiramisup is now a data-aware founder co-pilot:
 
-1. User signs up through waitlist / early-access flow
-2. User creates a product through the wizard
-3. Founder Coach turns that product context into initial launch/growth structure
-4. If the product is already **Yayında**, the product should move the user toward:
-   - choosing one primary metric for each AARRR category
-   - entering daily values for those selected metrics
-   - seeing a real trend chart, not only a table
-   - viewing early progress without being flooded by secondary surfaces
-5. If the product is still pre-launch, `Growth` should remain visible as the next stage, but the page should act like a locked/preview surface instead of a full working workspace
-
-The core product direction is now clearer:
-- **Do not dump everything on the user at once**
-- **Do not default to generic growth advice without evidence**
-- **Do not treat pre-launch and launched products the same**
-- **Do not show metric forms unrelated to the metrics the user chose**
-- **Do not fabricate fallback workspace data when AI is unavailable**
-- **Do explain Growth and Metrics in plain language**
-- **Do make the metrics page answer “I entered numbers, now what changed?”**
-
-This is the most important current product memory.
+1. **OAuth 2.0 Integration:** Google Analytics 4 and Stripe Connect flows are ready.
+2. **Metric Injection Engine:** A new layer (`lib/metric-context.ts`) queries Prisma and formats a structured "Data Snapshot" + Turkish context string for AI prompts.
+3. **Data-Driven Mentorship:** The AI (Founder Coach) no longer gives generic advice. It detects trends (e.g., "MRR is down by 8%") and prioritizes tasks accordingly.
+4. **Connectors Store:** A premium Dark Mode UI manages integrations based on a P0/P1/P2 roadmap.
 
 ---
 
-## Current Product Behavior
+## Major Milestone: Data-Driven AI (Shipped 25 March)
 
-### Stable user flow
-A real user can now:
-1. Discover the landing page
-2. Join waitlist or use early-access signup
-3. Reach a short welcome/profile onboarding dashboard when no product exists
-4. Create a product through the wizard
-5. Have product context seed the initial plan/checklist structure
-6. If the product is already **Yayında**, the top navigation now shifts away from `Pre-Launch` and keeps the working surface focused on:
-   - Genel Bakış
-   - Görevler
-   - Metrikler
-   - Büyüme
-7. Launched products move toward a growth setup flow where the system asks: **what should we track first?**
-8. User saves one selected metric per AARRR category
-9. User enters daily values only for those selected metrics
-10. User sees a real trend chart on the metrics page once enough entries exist
-11. Tasks now have their own shell under the locale route, so the work surface stays consistent
-12. Founder Coach now runs as a lightweight skill-routed decision engine rather than a single prompt-only helper
-13. `Launch` stays visible even after launch so non-critical items can still be reviewed and completed
-14. Mobile app products must capture platform selection and surface App Store / Google Play readiness guidance during setup
-15. ASO now has its own skill boundary so listing optimization stays separate from compliance/review guidance
-16. Launch readiness and analytics instrumentation now also have dedicated skills so blocker logic and measurement design stay separate
-17. A project-level `skill-gateway` skill now exists to route ambiguous or multi-domain skill requests
+### 1. The Metric Context Layer (`lib/metric-context.ts`)
+- **Purpose:** Bridges the gap between raw Prisma `Metric` rows and the AI model.
+- **Features:** 7-day trend analysis, up/down/stable detection, integration status monitoring.
+- **Usage:** Used by `founder-summary.ts`, `growthAgent.ts`, and `orchestrator.ts`.
 
-### Founder Coach current role
-Founder Coach is no longer intended to be a loud always-on chat widget.
-It is now being positioned as:
-- a **planning layer** during product setup
-- a **metric-setup guide** during growth preparation
-- a **skill-routed decision engine** that can load project advisory knowledge when needed
-- a future **evidence-based recommendation layer** once real signals exist
-- a store-readiness guide for mobile products when iOS / Android distribution is relevant
-- an ASO-aware listing optimization layer when store metadata and screenshots need tightening
-- a launch-readiness layer for blocker-first release sequencing
-- an analytics instrumentation layer for event schema / tracking plan design
+### 2. Async Product Context
+- `buildFounderSummary` is now `async`. 
+- It fetches live metrics to generate data-driven headlines (e.g., "MRR is stable, focus on acquisition").
+- **Crucial:** Always `await` this function in route handlers.
 
-This is important. The product should not regress back into “big dark AI card with generic advice.”
+### 3. Integration Roadmap (P0/P1/P2)
+We have aligned the Prisma `IntegrationProvider` enum and the UI to this roadmap:
+- **P0 (Operational):** GA4, Stripe.
+- **P1 (Next Dev Cycle):** RevenueCat, App Store Connect, Google Play, Meta Ads.
+- **P2 (Scale):** Google Ads, TikTok Ads, AppsFlyer.
+
+### 4. AI Agent Prompt Updates
+- `GROWTH_AGENT_PROMPT` and `SYSTEM_ARCHITECT_PROMPT` now have strict rules to prioritize "📊 GERÇEK METRİK VERİSİ" over generic patterns.
 
 ---
 
-## Current Sprint Priority
+## Technical Requirements for the Next Developer
 
-This sprint should be treated as a **product logic chain reset**, not as a visual polish sprint.
+### 1. Environment Variables (`.env` & Vercel Dashboard)
+The following MUST be configured for the system to work:
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: From GCP Console (Analytics Data/Admin APIs enabled).
+- `STRIPE_CLIENT_ID` / `STRIPE_SECRET_KEY`: From Stripe Dashboard (Connect enabled).
+- `NEXT_PUBLIC_APP_URL`: Must match the environment (localhost:3002 or production URL) for OAuth redirects.
 
-The priority stack is:
-1. **First-login onboarding**
-2. **Growth vs Metrics separation**
-3. **Beginner-friendly metric language**
-4. **Metrics feedback loop**
-5. **Tasks as the daily work surface**
-6. **Docs consistency**
+### 2. Sync Workers
+- The background sync logic for GA4 (`BrandLib/sync/ga4.ts`) and Stripe (`BrandLib/sync/stripe.ts`) is ready and handles `upsert` into the `Metric` table.
+- **Next Task:** Implement sync workers for P1 providers (RevenueCat etc.).
 
-### What shipped in this reset
-- First-run onboarding copy is warmer and more clearly welcome-oriented instead of feeling like a generic empty dashboard
-- Growth now explains that it is the place to choose and manage **which numbers matter**
-- Metrics now explains that it is the place to **enter today’s numbers and see what changed**
-- Metric naming and explanations were rewritten in simpler Turkish so early-stage founders are not forced into raw analytics jargon immediately
-- The metrics entry form now confirms where saved numbers will show up
-- The metrics overview cards now compare the latest entry against the previous one when possible
-- Tasks now surface one main task first so the page behaves more like a work surface than a passive list
-- Main workspace nav now behaves more stage-aware for launched products by prioritizing overview, tasks, metrics, and growth while keeping `Launch` visible as a lower-emphasis preview/history surface
-- Dashboard quick links / CTA labels were cleaned up so old terms like `Growth setup`, `Board`, and `Metrik setup` no longer compete with the current product language
-- Metrics now points more explicitly toward Tasks after data entry so the feedback loop connects back to action
-- Product creation now shows a foreground “Tramisup önerileri hazırlanıyor” overlay instead of exposing raw provider/config language during AI preparation
-- Mobile app products now merge a deterministic iOS / Android store-readiness baseline into the AI-generated launch checklist
-- Post-signup routing now goes to product creation first, and shell product loading falls back safely instead of crashing the whole authenticated surface when the database pool is temporarily saturated
-- Growth page now uses a single shared next-step logic chain: metric setup → first metric entry → first goal → growth checklist execution → Founder Coach focus
-- Founder Coach now reads metric setup and saved entry maturity from `launchGoals` instead of assuming launch-post users always need the same generic advice
-- Growth checklist category naming is now aligned with actual growth execution language instead of mismatched placeholder labels
+---
 
 ---
 
