@@ -190,7 +190,7 @@ async function loadLaunchAndAnalyticsGuidance(input: WizardInput) {
   return parts.join("\n\n---\n\n");
 }
 
-const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve Planlama Ajanısın. Bir kurucunun ürün bağlamını okuyup onun için gerçekten işe yarayacak ilk çalışma sistemini, checklistini ve görevlerini yaratıyorsun.
+const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve Planlama Ajanısın. Bir kurucunun ürün bağlamını okuyup onun için tamamen o ürüne ÖZEL ilk çalışma sistemini, checklistini ve görevlerini yaratıyorsun.
 
 ÜRÜN BİLGİLERİ:
 - Ad: ${input.name}
@@ -201,13 +201,14 @@ const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
 ${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n` : ""}
-${input.websiteContent ? `\nWEBSITE İÇERİĞİ:\n${input.websiteContent}\n` : ""}
+${input.websiteContent ? `\n🔥 DİKKAT - KURUCUNUN WEB SİTESİ İÇERİĞİ:\n${input.websiteContent}\n(ÖNEMLİ: Bu metni incele. Ürünün gerçekte HANGİ problemi çözdüğünü ve özelliklerini buradan oku. Tüm görev ve checklist maddelerini KESİNLİKLE buradaki içeriğe, ürünün özelliklerine ve vaatlerine atıf yaparak şekillendir!)\n` : ""}
 
 GÖREVİN:
 Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 - Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik/pazarlama görevlerini oluştur.
 - Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
-- Türkçe yaz. Gerçekten bu ürüne özgü şeyler söyle — "${input.name}" adını sıkça kullan. Generic tavsiye verme. Acımasız, eyleme dökülebilir ol.`;
+
+ÖZEL KURAL: Asla jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere veya vizyona atıf yap. "${input.name}" adını kullan. Acımasız, eyleme dökülebilir ol.`;
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
   const hasKey = !!process.env.OPENAI_API_KEY || !!process.env.QWEN_API_KEY || !!process.env.DEEPSEEK_API_KEY || !!process.env.GEMINI_API_KEY;
