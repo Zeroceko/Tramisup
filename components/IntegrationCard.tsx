@@ -29,31 +29,7 @@ export default function IntegrationCard({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-
   const isConnected = existingIntegration?.status === "CONNECTED";
-
-  const handleConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await fetch("/api/integrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, provider: integration.provider, apiKey }),
-      });
-      if (response.ok) {
-        setShowConfig(false);
-        setApiKey("");
-        router.refresh();
-      }
-    } catch (error) {
-      console.error("Failed to connect integration:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDisconnect = async () => {
     if (!existingIntegration) return;
@@ -127,50 +103,23 @@ export default function IntegrationCard({
             </button>
           </div>
         </div>
-      ) : showConfig ? (
-        <form onSubmit={handleConnect} className="space-y-2">
-          <input
-            type="text"
-            placeholder={
-              integration.provider === "STRIPE"
-                ? "Stripe Restricted Key (Sadece Okuma)"
-                : integration.provider === "GA4"
-                ? "GA4 Property ID (Örn: 123456789)"
-                : "API Key / Token"
-            }
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            required
-            className={inputCls}
-          />
-          {integration.provider === "GA4" && (
-            <p className="text-[10px] text-[#666d80] leading-tight px-1 pb-1">
-              * Lütfen GA4 mülkünüze <strong>tiramisup-bot@tiramisup-system.iam.gserviceaccount.com</strong> adresini Görüntüleyici olarak ekleyin.
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 h-9 rounded-full bg-[#ffd7ef] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50"
-            >
-              {loading ? "Bağlanıyor…" : "Bağlan"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowConfig(false)}
-              className="h-9 px-3 rounded-full border border-[#e8e8e8] text-[12px] font-medium text-[#666d80] hover:bg-[#f6f6f6] transition"
-            >
-              İptal
-            </button>
-          </div>
-        </form>
       ) : (
         <button
-          onClick={() => setShowConfig(true)}
-          className="w-full h-9 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition"
+          onClick={() => {
+            setLoading(true);
+            if (integration.provider === "GA4") {
+              window.location.href = `/api/integrations/google/link?productId=${productId}`;
+            } else if (integration.provider === "STRIPE") {
+              window.location.href = `/api/integrations/stripe/link?productId=${productId}`;
+            } else {
+              setLoading(false);
+              alert("Bu entegrasyon henüz desteklenmiyor.");
+            }
+          }}
+          disabled={loading}
+          className="w-full h-9 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition disabled:opacity-50"
         >
-          Bağlan
+          {loading ? "Yönlendiriliyor..." : `${integration.name} ile Bağlan`}
         </button>
       )}
     </div>

@@ -1,8 +1,30 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import { AnalyticsAdminServiceClient } from '@google-analytics/admin';
+import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/lib/prisma';
 
-export async function syncGa4(productId: string, propertyId: string): Promise<number> {
-  const analyticsDataClient = new BetaAnalyticsDataClient();
+export async function syncGa4(productId: string, configData: string): Promise<number> {
+  const config = JSON.parse(configData);
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret || !config.refresh_token) {
+    throw new Error("Missing Google OAuth components or missing refresh_token");
+  }
+
+  const oauth2Client = new OAuth2Client(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: config.refresh_token });
+
+  const adminClient = new AnalyticsAdminServiceClient({ authClient: oauth2Client });
+  
+  // Magic Flow: Auto detect the user's first GA4 property
+  const [accountSummaries] = await adminClient.listAccountSummaries();
+  const firstProperty = accountSummaries[0]?.propertySummaries?.[0]?.property;
+  if (!firstProperty) throw new Error("No Google Analytics 4 properties found on this account.");
+  
+  const propertyId = firstProperty.replace('properties/', '');
+
+  const analyticsDataClient = new BetaAnalyticsDataClient({ authClient: oauth2Client });
 
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${propertyId}`,

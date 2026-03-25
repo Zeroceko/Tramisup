@@ -1,9 +1,13 @@
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 
-export async function syncStripe(productId: string, apiKey: string): Promise<number> {
-  const stripe = new Stripe(apiKey, { apiVersion: '2026-02-25.clover' });
+export async function syncStripe(productId: string, configData: string): Promise<number> {
+  const config = JSON.parse(configData);
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-02-25.clover' });
   let syncedRecords = 0;
+
+  if (!config.stripe_user_id) throw new Error("Missing connected Stripe User ID.");
+  const stripeAccount = config.stripe_user_id;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -12,7 +16,10 @@ export async function syncStripe(productId: string, apiKey: string): Promise<num
   let mrr = 0;
 
   // Retrieve active subscriptions
-  const subscriptions = await stripe.subscriptions.list({ status: 'active', limit: 100 });
+  const subscriptions = await stripe.subscriptions.list(
+    { status: 'active', limit: 100 },
+    { stripeAccount }
+  );
   
   for (const sub of subscriptions.data) {
     activeSubscriptions++;
@@ -28,11 +35,14 @@ export async function syncStripe(productId: string, apiKey: string): Promise<num
 
   // Understand recent churn 
   const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-  const canceledSubs = await stripe.subscriptions.list({
-    status: 'canceled',
-    created: { gte: thirtyDaysAgo },
-    limit: 100
-  });
+  const canceledSubs = await stripe.subscriptions.list(
+    {
+      status: 'canceled',
+      created: { gte: thirtyDaysAgo },
+      limit: 100
+    },
+    { stripeAccount }
+  );
 
   const churnedUsers = canceledSubs.data.length;
 
