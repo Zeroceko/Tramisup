@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Integration {
+export interface IntegrationDef {
   provider: string;
   name: string;
   description: string;
-  icon: string;
+  icon: string | React.ReactNode;
+  comingSoon?: boolean;
 }
 
 interface ExistingIntegration {
@@ -16,14 +17,12 @@ interface ExistingIntegration {
   lastSyncAt: Date | null;
 }
 
-const inputCls = "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
-
 export default function IntegrationCard({
   integration,
   existingIntegration,
   productId,
 }: {
-  integration: Integration;
+  integration: IntegrationDef;
   existingIntegration?: ExistingIntegration;
   productId: string;
 }) {
@@ -31,7 +30,8 @@ export default function IntegrationCard({
   const [loading, setLoading] = useState(false);
   const isConnected = existingIntegration?.status === "CONNECTED";
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     if (!existingIntegration) return;
     setLoading(true);
     try {
@@ -44,7 +44,8 @@ export default function IntegrationCard({
     }
   };
 
-  const handleSync = async () => {
+  const handleSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!existingIntegration) return;
     setLoading(true);
     try {
@@ -54,73 +55,87 @@ export default function IntegrationCard({
       alert(`Senkronizasyon başarılı! Toplam ${data.recordsSynced} gün/kayıt veritabanına işlendi.`);
       router.refresh();
     } catch (error) {
-      console.error("Failed to sync connection:", error);
       alert("Senkronizasyon başarısız: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCardClick = () => {
+    if (integration.comingSoon || isConnected || loading) return;
+    
+    setLoading(true);
+    if (integration.provider === "GA4") {
+      window.location.href = `/api/integrations/google/link?productId=${productId}`;
+    } else if (integration.provider === "STRIPE") {
+      window.location.href = `/api/integrations/stripe/link?productId=${productId}`;
+    } else {
+      setLoading(false);
+      alert("Bu entegrasyon henüz desteklenmiyor.");
+    }
+  };
+
   return (
-    <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5 hover:border-[#d0d0d0] transition">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-[10px] bg-[#f6f6f6] flex items-center justify-center text-[20px] shrink-0">
+    <div 
+      onClick={handleCardClick}
+      className={`relative group rounded-xl border p-5 transition-all overflow-hidden ${
+        integration.comingSoon
+          ? "bg-[#161616]/50 border-[#2e2e2e]/50 cursor-not-allowed opacity-60"
+          : "bg-[#161616] border-[#2e2e2e] hover:border-[#444] hover:bg-[#1a1a1a] cursor-pointer"
+      }`}
+    >
+      <div className="flex justify-between items-start mb-4">
+        {/* ICON */}
+        <div className="w-10 h-10 rounded-lg bg-[#222] border border-[#333] flex items-center justify-center text-[18px] shadow-sm shrink-0">
           {integration.icon}
         </div>
-        <div>
-          <h3 className="text-[15px] font-semibold text-[#0d0d12]">{integration.name}</h3>
-          <p className="text-[12px] text-[#666d80] mt-0.5">{integration.description}</p>
-        </div>
+
+        {/* STATUS BADGE */}
+        {integration.comingSoon ? (
+          <span className="text-[11px] font-medium text-[#888] px-2.5 py-1 rounded-md bg-[#222]">Yakında</span>
+        ) : isConnected ? (
+          <span className="text-[11px] font-medium text-[#4ade80] px-2.5 py-1 rounded-md bg-[#4ade80]/10 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]"></span>
+            Bağlandı
+          </span>
+        ) : (
+          <span className="text-[11px] font-medium text-[#e4e4e7] px-2.5 py-1 rounded-md bg-[#333] group-hover:bg-[#444] transition">
+            {loading ? "Yönlendiriliyor..." : "Etkinleştir"}
+          </span>
+        )}
       </div>
 
-      {isConnected ? (
-        <div className="space-y-3">
+      <div className="mb-4">
+        <h3 className="text-[15px] font-semibold text-[#f4f4f5] tracking-tight">{integration.name}</h3>
+        <p className="text-[13px] text-[#a1a1aa] mt-1 pr-2 leading-relaxed">{integration.description}</p>
+      </div>
+
+      {/* QUICK ACTIONS FOR CONNECTED */}
+      {isConnected && (
+        <div className="pt-4 border-t border-[#333] flex items-center justify-between gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {existingIntegration?.lastSyncAt ? (
+             <span className="text-[10px] text-[#666]">
+               Son Sync: {new Date(existingIntegration.lastSyncAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute:'2-digit' })}
+             </span>
+          ) : <span />}
+          
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#75fc96]/20 text-[11px] font-semibold text-[#1a7a36]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#75fc96]" />
-              Bağlandı
-            </span>
-            {existingIntegration?.lastSyncAt && (
-              <span className="text-[11px] text-[#9ca3af]">
-                Son: {new Date(existingIntegration.lastSyncAt).toLocaleDateString("tr-TR")}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
+            <button 
               onClick={handleSync}
               disabled={loading}
-              className="flex-1 h-9 rounded-full bg-[#95dbda] text-[12px] font-semibold text-[#0d0d12] hover:opacity-80 transition disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md bg-[#fafafa] text-[11px] font-medium text-[#000] hover:bg-[#e4e4e7] transition disabled:opacity-50"
             >
-              {loading ? "Senkronize Ediliyor..." : "Şimdi Senkronize Et"}
+              Senkronize Et
             </button>
-            <button
+            <button 
               onClick={handleDisconnect}
               disabled={loading}
-              className="h-9 px-3 rounded-full border border-red-200 text-[12px] font-semibold text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-[#444] text-[11px] font-medium text-[#ef4444] hover:bg-[#ef4444]/10 hover:border-[#ef4444]/30 transition disabled:opacity-50"
             >
               Kopar
             </button>
           </div>
         </div>
-      ) : (
-        <button
-          onClick={() => {
-            setLoading(true);
-            if (integration.provider === "GA4") {
-              window.location.href = `/api/integrations/google/link?productId=${productId}`;
-            } else if (integration.provider === "STRIPE") {
-              window.location.href = `/api/integrations/stripe/link?productId=${productId}`;
-            } else {
-              setLoading(false);
-              alert("Bu entegrasyon henüz desteklenmiyor.");
-            }
-          }}
-          disabled={loading}
-          className="w-full h-9 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition disabled:opacity-50"
-        >
-          {loading ? "Yönlendiriliyor..." : `${integration.name} ile Bağlan`}
-        </button>
       )}
     </div>
   );
