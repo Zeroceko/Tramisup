@@ -208,7 +208,7 @@ Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 - Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik/pazarlama görevlerini oluştur.
 - Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
 
-ÖZEL KURAL: Asla jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere veya vizyona atıf yap. "${input.name}" adını kullan. Acımasız, eyleme dökülebilir ol.`;
+ÖZEL KURAL: Startup dünyasının vazgeçilmez temel adımlarını (Hukuki metinler, Analytics altyapısı, Geri bildirim kanalları vb) unutma ve mutlaka ekle. Ancak, bu veya diğer maddeleri yazarken asla ezber veya jenerik bir dil kullanma! Her bir "Standart/Temel" eksik adımı ürünün kendisine ve vizyonuna bağla. Bolca "${input.name}" adını kullan. Acımasız ve eyleme dökülebilir ol.`;
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
   const hasKey = !!process.env.OPENAI_API_KEY || !!process.env.QWEN_API_KEY || !!process.env.DEEPSEEK_API_KEY || !!process.env.GEMINI_API_KEY;
