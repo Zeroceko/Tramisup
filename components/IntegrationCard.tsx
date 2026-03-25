@@ -68,16 +68,18 @@ export default function IntegrationCard({
     }
   };
 
-  const handleTestConnection = async () => {
+  const handleSync = async () => {
     if (!existingIntegration) return;
     setLoading(true);
     try {
-      await fetch(`/api/integrations/${existingIntegration.id}/test`, { method: "POST" });
-      alert("Bağlantı testi başarılı! (Mock yanıt)");
+      const res = await fetch(`/api/integrations/${existingIntegration.id}/sync`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.details);
+      alert(`Senkronizasyon başarılı! Toplam ${data.recordsSynced} gün/kayıt veritabanına işlendi.`);
       router.refresh();
     } catch (error) {
-      console.error("Failed to test connection:", error);
-      alert("Bağlantı testi başarısız");
+      console.error("Failed to sync connection:", error);
+      alert("Senkronizasyon başarısız: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
@@ -110,11 +112,11 @@ export default function IntegrationCard({
           </div>
           <div className="flex gap-2">
             <button
-              onClick={handleTestConnection}
+              onClick={handleSync}
               disabled={loading}
               className="flex-1 h-9 rounded-full bg-[#95dbda] text-[12px] font-semibold text-[#0d0d12] hover:opacity-80 transition disabled:opacity-50"
             >
-              Bağlantıyı Test Et
+              {loading ? "Senkronize Ediliyor..." : "Şimdi Senkronize Et"}
             </button>
             <button
               onClick={handleDisconnect}
@@ -129,12 +131,23 @@ export default function IntegrationCard({
         <form onSubmit={handleConnect} className="space-y-2">
           <input
             type="text"
-            placeholder="API Key / Token"
+            placeholder={
+              integration.provider === "STRIPE"
+                ? "Stripe Restricted Key (Sadece Okuma)"
+                : integration.provider === "GA4"
+                ? "GA4 Property ID (Örn: 123456789)"
+                : "API Key / Token"
+            }
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             required
             className={inputCls}
           />
+          {integration.provider === "GA4" && (
+            <p className="text-[10px] text-[#666d80] leading-tight px-1 pb-1">
+              * Lütfen GA4 mülkünüze <strong>tiramisup-bot@tiramisup-system.iam.gserviceaccount.com</strong> adresini Görüntüleyici olarak ekleyin.
+            </p>
+          )}
           <div className="flex gap-2">
             <button
               type="submit"
