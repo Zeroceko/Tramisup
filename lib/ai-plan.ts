@@ -201,14 +201,15 @@ const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
 ${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n` : ""}
-${input.websiteContent ? `\n🔥 DİKKAT - KURUCUNUN WEB SİTESİ İÇERİĞİ:\n${input.websiteContent}\n(ÖNEMLİ: Bu metni incele. Ürünün gerçekte HANGİ problemi çözdüğünü ve özelliklerini buradan oku. Tüm görev ve checklist maddelerini KESİNLİKLE buradaki içeriğe, ürünün özelliklerine ve vaatlerine atıf yaparak şekillendir!)\n` : ""}
+${input.websiteContent ? `\n🔥 CRITICAL - FOUNDER'S WEBSITE CONTENT:\n${input.websiteContent}\n(IMPORTANT: Analyze this text. Read what problem the product actually solves and its features. Formulate all task and checklist items STRICTLY by referring to this content, the product's features, and promises!)\n` : ""}
 
-GÖREVİN:
-Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
-- Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik/pazarlama görevlerini oluştur.
-- Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
+YOUR TASK:
+Build the founder's first real growth and operational system for this product:
+- If pre-launch: Create critical launch checklists and this week's technical/marketing tasks.
+- If launched or growing: Set up growth readiness, ensure every metric in the AARRR funnel is measurable.
 
-ÖZEL KURAL: Startup dünyasının vazgeçilmez temel adımlarını (Hukuki metinler, Analytics altyapısı, Geri bildirim kanalları vb) unutma ve mutlaka ekle. Ancak, bu veya diğer maddeleri yazarken asla ezber veya jenerik bir dil kullanma! Her bir "Standart/Temel" eksik adımı ürünün kendisine ve vizyonuna bağla. Bolca "${input.name}" adını kullan. Acımasız ve eyleme dökülebilir ol.`;
+SPECIAL RULE: Never write generic (one-size-fits-all) items. You MUST refer to the features or vision on the website. Use the name "${input.name}" frequently. Be ruthless and highly actionable.
+CRITICAL: Write ALL output strictly in English. Do not use Turkish.
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
   const hasKey = !!process.env.OPENAI_API_KEY || !!process.env.QWEN_API_KEY || !!process.env.DEEPSEEK_API_KEY || !!process.env.GEMINI_API_KEY;

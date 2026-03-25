@@ -35,6 +35,7 @@ export default function DashboardNav({
         tasks: "Tasks",
         metrics: "Metrics",
         growth: "Growth",
+        integrations: "Integrations",
         newProduct: "+ Add product",
         settings: "Settings",
         signOut: "Sign out",
@@ -45,6 +46,7 @@ export default function DashboardNav({
         tasks: "Görevler",
         metrics: "Metrikler",
         growth: "Büyüme",
+        integrations: "Entegrasyonlar",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
         signOut: "Çıkış yap",
@@ -57,12 +59,14 @@ export default function DashboardNav({
           { href: "/tasks", label: labels.tasks },
           { href: "/metrics", label: labels.metrics },
           { href: "/growth", label: labels.growth },
+          { href: "/integrations", label: labels.integrations },
           { href: "/pre-launch", label: labels.launch, preview: true },
         ]
       : [
           { href: "/dashboard", label: labels.overview },
           { href: "/pre-launch", label: labels.launch },
           { href: "/growth", label: labels.growth },
+          { href: "/integrations", label: labels.integrations },
         ]
     : [{ href: "/dashboard", label: labels.overview }];
 
