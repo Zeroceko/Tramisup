@@ -57,7 +57,7 @@ export default async function DashboardPage({
     );
   }
 
-  const [completedLaunchChecklists, completedGrowthChecklists, latestMetric, taskCounts] =
+  const [completedLaunchChecklists, completedGrowthChecklists, latestMetric, taskCountsRaw] =
     await Promise.all([
       prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
       prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
@@ -65,14 +65,21 @@ export default async function DashboardPage({
       prisma.task.groupBy({
         by: ["status"],
         where: { productId: product.id },
-        _count: true,
+        _count: { status: true },
       }),
     ]);
+
+  console.log(`[Dashboard] Loaded for product: ${product.id}, tasks: ${taskCountsRaw.length}`);
 
   const launchTotal = product._count.launchChecklists || 0;
   const growthTotal = product._count.growthChecklists || 0;
   const savedMetricSetup = await getMetricSetup(product.id);
-  const founderSummary = savedMetricSetup?.founderSummary;
+  const founderSummary = savedMetricSetup?.founderSummary as any;
+  
+  // Safe extraction of task counts from groupby
+  const pendingTasks = taskCountsRaw.find((t) => t.status === "TODO")?._count?.status ?? 0;
+  const doneTasks = taskCountsRaw.find((t) => t.status === "DONE")?._count?.status ?? 0;
+
   const selectedMetricCount =
     savedMetricSetup?.selections.reduce(
       (sum, item) => sum + item.selectedMetricKeys.length,
@@ -86,8 +93,7 @@ export default async function DashboardPage({
     growthTotal > 0 ? Math.round((completedGrowthChecklists / growthTotal) * 100) : 0;
 
   const totalTasks = product._count.tasks;
-  const pendingTasks = taskCounts.find((t) => t.status === "TODO")?._count ?? 0;
-  const doneTasks = taskCounts.find((t) => t.status === "DONE")?._count ?? 0;
+  // pendingTasks and doneTasks are now computed safely above
 
   const nextStep = !isLaunched
     ? {
