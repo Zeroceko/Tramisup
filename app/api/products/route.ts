@@ -143,16 +143,8 @@ export async function POST(request: Request) {
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     }, aiPlan);
 
-    if (!aiPlan) {
-      return NextResponse.json(
-        {
-          error: "Tiramisup su anda ilk onerileri hazirlayamadi. Urun olusturma akisi bu adim tamamlanmadan devam etmemeli. Lutfen tekrar dene.",
-        },
-        { status: 503 }
-      );
-    }
-
     // 2. Create product + seed data in a transaction
+    // If AI plan failed, product still gets created (AI enrichment is non-blocking)
     const product = await prisma.$transaction(async (tx) => {
       const productStatus = deriveProductStatus(launchStatus);
 
@@ -181,7 +173,9 @@ export async function POST(request: Request) {
         },
       });
 
-      await seedAiPlan(newProduct.id, aiPlan, tx);
+      if (aiPlan) {
+        await seedAiPlan(newProduct.id, aiPlan, tx);
+      }
 
       // Seed demo metrics only if user opted in
       if (seedData) {

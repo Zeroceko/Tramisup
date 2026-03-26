@@ -8,7 +8,8 @@ import type {
 import type { AiPlan } from "@/lib/ai-plan";
 
 // Seed AI-generated plan (launch checklist, growth checklist, tasks)
-export async function seedAiPlan(productId: string, plan: AiPlan, tx?: any) {
+export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: any) {
+  if (!plan) return;
   const db = tx || prisma;
 
   for (const item of plan.launchChecklist) {

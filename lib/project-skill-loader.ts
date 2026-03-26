@@ -4,7 +4,12 @@ import type { FounderCoachContext } from "@/lib/founder-coach-context";
 
 export async function loadProjectSkill(name: string): Promise<string> {
   const filePath = path.join(process.cwd(), ".gsd", "skills", name, "SKILL.md");
-  return readFile(filePath, "utf8");
+  try {
+    return await readFile(filePath, "utf8");
+  } catch {
+    console.warn(`[skill-loader] Could not load skill "${name}" from ${filePath}`);
+    return "";
+  }
 }
 
 type SkillMatch = {

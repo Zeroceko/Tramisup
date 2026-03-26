@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { defaultModel } from "../BrandLib/ai-client";
+import { defaultModel, withFallback } from "../BrandLib/ai-client";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 import { loadProjectSkill } from "@/lib/project-skill-loader";
 import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
@@ -219,8 +219,14 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     return null;
   }
 
-  const storeGuidance = await loadStoreGuidance(input);
-  const launchGuidance = await loadLaunchAndAnalyticsGuidance(input);
+  let storeGuidance = "";
+  let launchGuidance = "";
+  try {
+    storeGuidance = await loadStoreGuidance(input);
+    launchGuidance = await loadLaunchAndAnalyticsGuidance(input);
+  } catch (err) {
+    console.warn("[ai-plan] Skill loading failed (non-blocking):", err);
+  }
 
   const finalInput = {
     ...input,
@@ -229,12 +235,16 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
   };
 
   try {
-    const { object } = await generateObject({
-      model: defaultModel,
-      schema: PlanSchema,
-      prompt: PROMPT(finalInput),
-      temperature: 0.7,
-    });
+    const { object } = await withFallback(
+      (model) =>
+        generateObject({
+          model,
+          schema: PlanSchema,
+          prompt: PROMPT(finalInput),
+          temperature: 0.7,
+        }),
+      "ai-plan"
+    );
 
     const orderedLaunch = assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
     const orderedGrowth = assignOrder(dedupeByTitle(object.growthChecklist as AiGrowthItem[]));

@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { defaultModel } from "@/BrandLib/ai-client";
+import { defaultModel, withFallback } from "@/BrandLib/ai-client";
 import type { FounderCoachContext } from "@/lib/founder-coach-context";
 import { buildFounderCoachDecision } from "@/lib/founder-coach-agent";
 import { getMetricContext } from "@/lib/metric-context";
@@ -240,14 +240,18 @@ function parseJson<T>(text: string): T {
 
 async function callGemini<T>(prompt: string): Promise<T | null> {
   try {
-    const result = await generateText({
-      model: defaultModel,
-      prompt,
-      temperature: 0.4,
-    });
+    const result = await withFallback(
+      (model) =>
+        generateText({
+          model,
+          prompt,
+          temperature: 0.4,
+        }),
+      "founder-coach"
+    );
     return parseJson<T>(result.text);
   } catch (err) {
-    console.error("[founder-coach] Gemini call failed:", err);
+    console.error("[founder-coach] AI call failed completely:", err);
     return null;
   }
 }
