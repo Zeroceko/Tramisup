@@ -1,5 +1,4 @@
-import { generateText } from 'ai';
-import { defaultModel, withFallback } from './ai-client';
+import { generateTextFallback } from './ai-client';
 import { SYSTEM_ARCHITECT_PROMPT } from './prompts';
 import { getMetricContext } from '@/lib/metric-context';
 
@@ -23,17 +22,11 @@ export async function runOrchestrator(prompt: string, productId: string) {
   ].join('\n');
 
   try {
-    const result = await withFallback(
-      (model) =>
-        generateText({
-          model,
-          system: SYSTEM_ARCHITECT_PROMPT,
-          prompt: enrichedPrompt,
-        }),
+    return await generateTextFallback(
+      SYSTEM_ARCHITECT_PROMPT,
+      enrichedPrompt,
       'orchestrator'
     );
-
-    return result.text;
   } catch (err) {
     console.error('[orchestrator] AI generation failed completely:', err);
     return 'Şu an AI servisi geçici olarak yanıt veremiyor. Checklist ve görev ekranlarından devam edebilirsin — Tiramisup kısa süre içinde tekrar aktif olacak.';

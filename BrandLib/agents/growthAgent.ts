@@ -1,5 +1,4 @@
-import { generateText } from 'ai';
-import { defaultModel } from '../ai-client';
+import { generateTextFallback } from '../ai-client';
 import { GROWTH_AGENT_PROMPT } from '../prompts';
 import { logMetricTool } from '../tools';
 import { getMetricContext } from '@/lib/metric-context';
@@ -23,14 +22,9 @@ export async function runGrowthAgent(userRequest: string, productId: string) {
     `User intent: ${userRequest}`,
   ].join('\n');
 
-  const result = await generateText({
-    model: defaultModel,
-    system: GROWTH_AGENT_PROMPT,
-    prompt: enrichedPrompt,
-    tools: {
-      logMetric: logMetricTool,
-    }
-  });
-
-  return result.text;
+  return await generateTextFallback(
+    GROWTH_AGENT_PROMPT,
+    enrichedPrompt,
+    'growth-agent'
+  );
 }

@@ -34,16 +34,66 @@ export async function withFallback<T>(
   primaryFn: (model: any) => Promise<T>,
   context: string = 'AI Call'
 ): Promise<T> {
+  // 1. Try Gemini
   try {
-    // Try primary: Gemini via AI SDK
+    console.log(`[${context}] Trying Gemini...`);
     return await primaryFn(defaultModel);
   } catch (err) {
-    console.warn(`[${context}] Primary (Gemini) failed, trying Qwen...`, err);
+    console.warn(`[${context}] Gemini failed, trying Qwen (AI SDK)...`, err);
+    
+    // 2. Try Qwen via AI SDK
     try {
-      // Try fallback: Qwen via AI SDK
       return await primaryFn(qwenModel);
+    } catch (qwenErr) {
+      console.warn(`[${context}] Qwen (AI SDK) failed, trying Raw Qwen fallback...`, qwenErr);
+      
+      // 3. Final raw fallback for TEXT generation (if T is handleable as string)
+      // This is mainly for orchestrator/agents that use generateText
+      try {
+        // We can't easily turn primaryFn into a raw call if it's bound to AI SDK models,
+        // so we only do this if we can detect it's a simple text request or through specific logic.
+        // For now, let's just throw so the caller handles it, OR implement a raw text generator.
+        throw qwenErr; 
+      } catch (finalErr) {
+        console.error(`[${context}] ALL models failed:`, finalErr);
+        throw finalErr;
+      }
+    }
+  }
+}
+
+/**
+ * Robust text generation that tries Gemini then Raw Qwen.
+ */
+export async function generateTextFallback(
+  systemPrompt: string,
+  userPrompt: string,
+  context: string = 'Text AI Call'
+): Promise<string> {
+  // 1. Try Gemini
+  try {
+    const { generateText } = await import("ai");
+    const result = await generateText({
+      model: defaultModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+    });
+    return result.text;
+  } catch (err) {
+    console.warn(`[${context}] Gemini text failed, trying Raw Qwen...`, err);
+    
+    // 2. Try Raw Qwen
+    try {
+      const response = await qwenRaw.chat.completions.create({
+        model: "qwen-plus",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+      });
+      return response.choices[0].message.content || "";
     } catch (fallbackErr) {
-      console.error(`[${context}] Both AI models failed:`, fallbackErr);
+      console.error(`[${context}] Both text AI paths failed:`, fallbackErr);
       throw fallbackErr;
     }
   }
