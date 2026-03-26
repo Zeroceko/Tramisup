@@ -20,11 +20,11 @@ export const qwenSdk = createOpenAI({
   baseURL: 'https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1',
 });
 
-// Primary model: qwen-plus
-export const defaultModel = qwenSdk('qwen-plus');
+// Primary model: Gemini 1.5 Flash
+export const defaultModel = google('gemini-1.5-flash');
 
-// Backup model: Gemini 1.5 Flash (standard GOOGLE_GENERATIVE_AI_API_KEY from .env)
-export const geminiModel = google('gemini-1.5-flash');
+// Backup model: qwen-plus via AI SDK wrapper
+export const qwenModel = qwenSdk('qwen-plus');
 
 /**
  * Execute an AI function with fallback logic.
@@ -35,13 +35,13 @@ export async function withFallback<T>(
   context: string = 'AI Call'
 ): Promise<T> {
   try {
-    // Try primary: Qwen via AI SDK
+    // Try primary: Gemini via AI SDK
     return await primaryFn(defaultModel);
   } catch (err) {
-    console.warn(`[${context}] Primary (AI SDK) failed, trying Gemini...`, err);
+    console.warn(`[${context}] Primary (Gemini) failed, trying Qwen...`, err);
     try {
-      // Try fallback: Gemini via AI SDK
-      return await primaryFn(geminiModel);
+      // Try fallback: Qwen via AI SDK
+      return await primaryFn(qwenModel);
     } catch (fallbackErr) {
       console.error(`[${context}] Both AI models failed:`, fallbackErr);
       throw fallbackErr;
@@ -51,31 +51,44 @@ export async function withFallback<T>(
 
 /**
  * Specifically for structured output (objects) where AI SDK's generateObject might fail on compatible providers.
+ * Now prioritized for Gemini (#1) with Raw Qwen fallback (#2).
  */
 export async function generateStructuredFallback<T>(
   prompt: string,
   schema: any,
   context: string = 'Structured AI Call'
 ): Promise<T> {
+  // 1. Try Primary (Gemini via AI SDK)
   try {
-    console.log(`[${context}] Attempting raw Qwen call for structured output...`);
-    const response = await qwenRaw.chat.completions.create({
-      model: "qwen-plus",
-      messages: [
-        { role: "system", content: "You are a helpful assistant that always outputs valid JSON strictly matching the requested format." },
-        { role: "user", content: prompt }
-      ],
-      response_format: { type: "json_object" }
+    const { generateObject } = await import("ai");
+    const { object } = await generateObject({
+      model: defaultModel,
+      schema: schema,
+      prompt: prompt,
+      temperature: 0.7,
     });
-
-    const content = response.choices[0].message.content || "{}";
-    // Strip markdown blocks if present
-    const cleanContent = content.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    return JSON.parse(cleanContent) as T;
+    return object as T;
   } catch (err) {
-    console.warn(`[${context}] Raw Qwen failed, falling back to Vercel AI SDK (Gemini/Default)...`, err);
-    // This is where we could put more logic if needed
-    throw err;
+    console.warn(`[${context}] Gemini structured call failed, trying Raw Qwen...`, err);
+    
+    // 2. Try Fallback (Raw Qwen - very stable for JSON)
+    try {
+      const response = await qwenRaw.chat.completions.create({
+        model: "qwen-plus",
+        messages: [
+          { role: "system", content: "You are a helpful assistant that always outputs valid JSON strictly matching the requested format." },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const content = response.choices[0].message.content || "{}";
+      const cleanContent = content.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+      return JSON.parse(cleanContent) as T;
+    } catch (fallbackErr) {
+      console.error(`[${context}] Both structured AI paths failed:`, fallbackErr);
+      throw fallbackErr;
+    }
   }
 }
 
