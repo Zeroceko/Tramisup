@@ -212,10 +212,10 @@ Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
-  const hasKey = !!process.env.GEMINI_API_KEY;
+  const hasKey = !!(process.env.QWEN_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);
 
   if (!hasKey) {
-    console.warn("[ai-plan] No AI API key configured — using static fallback");
+    console.warn("[ai-plan] No AI API key configured (checked QWEN, GOOGLE_GENERATIVE_AI, GEMINI) — using static fallback");
     return null;
   }
 
@@ -249,7 +249,7 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     const orderedLaunch = assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
     const orderedGrowth = assignOrder(dedupeByTitle(object.growthChecklist as AiGrowthItem[]));
 
-    console.log("[ai-plan] Generated structured Checklist via Vercel AI SDK");
+    console.log(`[ai-plan] SUCCESS: Generated structured plan with ${orderedLaunch.length} launch items and ${orderedGrowth.length} growth items`);
     const aiGeneratedPlan: AiPlan = {
       launchChecklist: orderedLaunch,
       growthChecklist: orderedGrowth,

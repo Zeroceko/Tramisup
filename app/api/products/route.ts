@@ -118,6 +118,7 @@ export async function POST(request: Request) {
     // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
     const candidateLinks = extractCandidateLinks([website, description, stageContext]);
     const websiteContent = await scrapeProductLinks(candidateLinks);
+    console.log("[api/products] Generating AI plan...");
     const aiPlan = await generateAiPlan({
       name,
       description,
@@ -130,6 +131,9 @@ export async function POST(request: Request) {
       websiteContent: websiteContent ?? undefined,
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     });
+    console.log("[api/products] AI plan result:", aiPlan ? "SUCCESS (object generated)" : "FALLBACK / NULL");
+
+    console.log("[api/products] Building founder summary...");
     const founderSummary = await buildFounderSummary({
       name,
       description,
@@ -145,9 +149,11 @@ export async function POST(request: Request) {
 
     // 2. Create product + seed data in a transaction
     // If AI plan failed, product still gets created (AI enrichment is non-blocking)
+    console.log("[api/products] Starting DB transaction...");
     const product = await prisma.$transaction(async (tx) => {
       const productStatus = deriveProductStatus(launchStatus);
 
+      console.log("[api/products] Creating Product record...");
       const newProduct = await tx.product.create({
         data: {
           userId: session.user.id,
@@ -159,7 +165,15 @@ export async function POST(request: Request) {
           targetAudience,
           businessModel,
           website,
-          launchDate: launchDate ? new Date(launchDate) : undefined,
+          launchDate: (() => {
+            if (!launchDate) return undefined;
+            const d = new Date(launchDate);
+            if (isNaN(d.getTime())) {
+              console.warn(`[api/products] Invalid launchDate provided: ${launchDate}. Skipping date field.`);
+              return undefined;
+            }
+            return d;
+          })(),
         },
       });
 
@@ -192,10 +206,12 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
-    console.error("Failed to create product:", error);
+  } catch (error: any) {
+    console.error("❌ [api/products] CRITICAL FAILURE:", error);
+    if (error.stack) console.error(error.stack);
+    
     return NextResponse.json(
-      { error: "Failed to create product" },
+      { error: `Failed to create product: ${error.message || "Unknown error"}` },
       { status: 500 }
     );
   }
