@@ -115,6 +115,9 @@ export async function POST(request: Request) {
         : `Mobil uygulama platformlari: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
       : "";
 
+    const dbUrl = process.env.DATABASE_URL || "";
+    console.log(`[api/products] DB_URL_PREFIX: ${dbUrl.slice(0, 20)}... (Length: ${dbUrl.length})`);
+
     // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
     const candidateLinks = extractCandidateLinks([website, description, stageContext]);
     const websiteContent = await scrapeProductLinks(candidateLinks);
