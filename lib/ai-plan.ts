@@ -1,6 +1,5 @@
-import { generateObject } from "ai";
 import { z } from "zod";
-import { defaultModel, withFallback } from "../BrandLib/ai-client";
+import { defaultModel, withFallback, generateStructuredFallback } from "../BrandLib/ai-client";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 import { loadProjectSkill } from "@/lib/project-skill-loader";
 import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
@@ -235,14 +234,11 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
   };
 
   try {
-    const { object } = await withFallback(
-      (model) =>
-        generateObject({
-          model,
-          schema: PlanSchema,
-          prompt: PROMPT(finalInput),
-          temperature: 0.7,
-        }),
+    // We use generateStructuredFallback because AI SDK's generateObject 
+    // often fails with JSON parsing errors on Alibaba MaaS via compatibility mode.
+    const object = await generateStructuredFallback<any>(
+      PROMPT(finalInput),
+      PlanSchema,
       "ai-plan"
     );
 
