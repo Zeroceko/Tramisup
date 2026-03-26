@@ -302,3 +302,54 @@ rm -rf .next && npm run dev
 - **i18n:** next-intl
 - **Tests:** Vitest + Playwright
 - **Deploy:** Vercel
+
+---
+
+## Changelog
+
+### v0.2.0 — 26 March 2026
+
+**DB Migrasyonu (Teknik Borc Temizligi)**
+- `Product.launchGoals` JSON blob kaldirildi, yerine `MetricSetup` ve `MetricEntry` Prisma modelleri geldi
+- 15+ dosya yeni DB entity'lerine tasirildi
+- Mevcut veriyi tasimak icin migration scripti hazir (`scripts/migrate-launch-goals.ts`)
+
+**Veri Odakli AI Mentorluk**
+- Founder Coach artik gercek AARRR funnel verisini + entegrasyon metriklerini prompt'a enjekte ediyor
+- DAU < 10 ise acquisition odagi, entegrasyon yoksa baglanti onerisi gibi akilli fallback'ler
+- Advisor route duzeltildi: artik `MetricSetup` tablosunu kontrol ediyor
+
+**Unified Next-Step Sistemi**
+- Yeni `lib/next-step.ts`: tum sayfalarda tek bir "siradaki adim" mantigi
+- Akis: Urun olustur → Launch checklist → Metrik kur → Ilk veri gir → Hedef koy → Checklist ilerlet → Gunluk metrik
+
+**Metrik Trend Gorsellestirme**
+- `MetricsTrendChart` yeniden yazildi: AreaChart + gradient dolgular
+- Her AARRR asamasi icin sparkline kartlari + trend yuzdesi
+
+**Navigasyon Iyilestirmeleri**
+- Pre-launch urunler artik nav'da Tasks goruyor, Growth "preview" olarak isaretli
+- Post-wizard overview sayfasi eklendi (`/products/[id]/overview`)
+- Urun olusturma sonrasi artik overview'a yonleniyor
+
+**Settings Hub**
+- Settings sayfasi 3 bolumlu hub oldu: Entegrasyonlar (durum + sync), Growth Tracking, Profil
+- Kullanicilar artik entegrasyonlari Settings'ten bulabiliyor
+
+**Entegrasyon Altyapisi**
+- Entegrasyon oneri sistemi: secilen metriklere gore provider onerisi
+- GA4 property picker + sync kontrolleri
+- P0 (GA4, Stripe) operasyonel, P1/P2 roadmap'te
+
+**Guvenlik & Stabilite**
+- Signup route artik 500 hatalarinda detay sizdirmiyor
+- Vitest config `Landing Page/` dizinini disliyor
+- Advisor route'taki eski `launchGoals` referansi duzeltildi
+
+### v0.1.0 — Initial Release
+- Core product creation wizard
+- Pre-launch checklist system
+- Basic metric tracking with launchGoals JSON
+- AI mentorship with Qwen/DeepSeek/Gemini fallback chain
+- GA4 + Stripe integration OAuth flows
+- Waitlist system with invite codes
