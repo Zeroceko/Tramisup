@@ -1,21 +1,19 @@
-import { PrismaClient, LaunchCategory, GrowthCategory, Priority, TaskStatus, MetricSource, ProductStatus } from "@prisma/client";
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import bcrypt from "bcryptjs";
+import { LaunchCategory, GrowthCategory, Priority, TaskStatus, MetricSource, ProductStatus } from "@prisma/client";
 
-async function main() {
-  const PROD_URL = "postgresql://postgres.ojecebxxcbxrofnbkaae:IxK8QJnDQNjc7Zpf@db.ojecebxxcbxrofnbkaae.supabase.co:5432/postgres";
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: PROD_URL,
-      },
-    },
-  });
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const secret = searchParams.get('secret');
+
+  if (secret !== 'tiramisu_shakalaka_123') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const email = "m@m.com";
   const password = "1234";
   const hashedPassword = await bcrypt.hash(password, 10);
-
-  console.log(`🚀 Starting COMPREHENSIVE SEEDING for: ${email}...`);
 
   try {
     // 1. User
@@ -28,16 +26,10 @@ async function main() {
         name: "M User",
       },
     });
-    console.log(`✅ User updated: ${user.id}`);
 
-    // Clean up existing products for this user to start fresh (for testing)
-    const existingProducts = await prisma.product.findMany({ where: { userId: user.id } });
-    for (const p of existingProducts) {
-      await prisma.product.delete({ where: { id: p.id } });
-    }
-    console.log("🧹 Cleaned up old products.");
+    // 2. Product (Start fresh for this user)
+    await prisma.product.deleteMany({ where: { userId: user.id } });
 
-    // 2. Product
     const product = await prisma.product.create({
       data: {
         userId: user.id,
@@ -51,9 +43,8 @@ async function main() {
         businessModel: "Subscription",
       },
     });
-    console.log(`✅ Product created: ${product.id}`);
 
-    // 3. Launch Checklist (10 items)
+    // 3. Launch Checklist
     const launchItems = [
       { title: "Landing page tasarımı", completed: true, category: LaunchCategory.MARKETING },
       { title: "Waitlist entegrasyonu", completed: true, category: LaunchCategory.TECH },
@@ -75,9 +66,8 @@ async function main() {
         priority: i % 3 === 0 ? Priority.HIGH : Priority.MEDIUM,
       })),
     });
-    console.log("✅ Launch Checklist seeded.");
 
-    // 4. Growth Checklist (5 items)
+    // 4. Growth Checklist
     const growthItems = [
       { title: "Haftalık bülten gönderimi", category: GrowthCategory.RETENTION },
       { title: "SEO için anahtar kelime analizi", category: GrowthCategory.ACQUISITION },
@@ -94,9 +84,8 @@ async function main() {
         completed: false,
       })),
     });
-    console.log("✅ Growth Checklist seeded.");
 
-    // 5. Metrics (7 days of data for trends)
+    // 5. Metrics
     const metricsData = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
@@ -104,19 +93,17 @@ async function main() {
       metricsData.push({
         productId: product.id,
         date,
-        mrr: 100 + (6 - i) * 20, // MRR increasing
-        dau: 50 + (6 - i) * 5,   // DAU increasing
+        mrr: 100 + (6 - i) * 20,
+        dau: 50 + (6 - i) * 5,
         mau: 1500,
         newSignups: 10 + (6 - i),
         activeSubscriptions: 5 + (6 - i),
         source: MetricSource.MANUAL,
       });
     }
-
     await prisma.metric.createMany({ data: metricsData });
-    console.log("✅ Metrics (7 days) seeded.");
 
-    // 6. Tasks (10 items)
+    // 6. Tasks
     const tasks = [
       { title: "Bug: Logo responsive değil", status: TaskStatus.TODO, priority: Priority.HIGH },
       { title: "Yeni metrik girişi yap", status: TaskStatus.TODO, priority: Priority.MEDIUM },
@@ -124,10 +111,6 @@ async function main() {
       { title: "User Interview #1", status: TaskStatus.DONE, priority: Priority.LOW },
       { title: "Twitter'da fırlatma tarihi duyurusu", status: TaskStatus.TODO, priority: Priority.MEDIUM },
       { title: "Database backup kontrolü", status: TaskStatus.IN_PROGRESS, priority: Priority.HIGH },
-      { title: "Copywriting revizyonu", status: TaskStatus.TODO, priority: Priority.MEDIUM },
-      { title: "Demo videosu çek", status: TaskStatus.TODO, priority: Priority.MEDIUM },
-      { title: "GA4 Dashboard kurulumu", status: TaskStatus.TODO, priority: Priority.LOW },
-      { title: "Open Graph tagleri ekle", status: TaskStatus.DONE, priority: Priority.MEDIUM },
     ];
 
     await prisma.task.createMany({
@@ -137,9 +120,8 @@ async function main() {
         order: i,
       })),
     });
-    console.log("✅ Tasks seeded.");
 
-    // 7. MetricSetup & Founder Summary
+    // 7. MetricSetup & Summary
     await prisma.metricSetup.create({
       data: {
         productId: product.id,
@@ -154,15 +136,10 @@ async function main() {
         },
       },
     });
-    console.log("✅ MetricSetup and Summary seeded.");
 
-    console.log("\n💎 CRYSTAL CLEAR SEEDING COMPLETE! User m@m.com is 100% ready.");
-
-  } catch (error) {
-    console.error("❌ Deep Seeding failed:", error);
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ success: true, message: 'Deep seeding complete for m@m.com' });
+  } catch (error: any) {
+    console.error('Seeding API Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-main();
