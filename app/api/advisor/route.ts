@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { runOrchestrator } from '../../../BrandLib/orchestrator';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import type { FunnelMetricSelection } from '@/lib/metric-setup';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {

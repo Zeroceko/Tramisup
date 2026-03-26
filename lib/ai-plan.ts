@@ -212,7 +212,7 @@ Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
-  const hasKey = !!process.env.OPENAI_API_KEY || !!process.env.QWEN_API_KEY || !!process.env.DEEPSEEK_API_KEY || !!process.env.GEMINI_API_KEY;
+  const hasKey = !!process.env.GEMINI_API_KEY;
 
   if (!hasKey) {
     console.warn("[ai-plan] No AI API key configured — using static fallback");

@@ -1,5 +1,5 @@
-import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateText } from "ai";
+import { defaultModel } from "@/BrandLib/ai-client";
 import type { FounderCoachContext } from "@/lib/founder-coach-context";
 import { buildFounderCoachDecision } from "@/lib/founder-coach-agent";
 import { getMetricContext } from "@/lib/metric-context";
@@ -22,8 +22,6 @@ export type FounderCoachSuggestion = {
   whatCanWait?: string;
   confidence: "LOW" | "MEDIUM" | "HIGH";
 };
-
-const QWEN_BASE_URL = "https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1";
 
 function summarizeContext(context: FounderCoachContext) {
   return JSON.stringify(context, null, 2);
@@ -240,43 +238,18 @@ function parseJson<T>(text: string): T {
   return JSON.parse(cleaned) as T;
 }
 
-async function callModels<T>(prompt: string): Promise<T | null> {
-  if (process.env.QWEN_API_KEY) {
-    try {
-      const client = new OpenAI({ apiKey: process.env.QWEN_API_KEY, baseURL: QWEN_BASE_URL });
-      const res = await client.chat.completions.create({
-        model: "qwen-plus",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-      });
-      return parseJson<T>(res.choices[0]?.message?.content || "{}");
-    } catch {}
+async function callGemini<T>(prompt: string): Promise<T | null> {
+  try {
+    const result = await generateText({
+      model: defaultModel,
+      prompt,
+      temperature: 0.4,
+    });
+    return parseJson<T>(result.text);
+  } catch (err) {
+    console.error("[founder-coach] Gemini call failed:", err);
+    return null;
   }
-
-  if (process.env.DEEPSEEK_API_KEY) {
-    try {
-      const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
-      const res = await client.chat.completions.create({
-        model: "deepseek-chat",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-      });
-      return parseJson<T>(res.choices[0]?.message?.content || "{}");
-    } catch {}
-  }
-
-  for (const geminiKey of [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean)) {
-    try {
-      const genAI = new GoogleGenerativeAI(geminiKey!);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const result = await model.generateContent(prompt);
-      return parseJson<T>(result.response.text());
-    } catch {}
-  }
-
-  return null;
 }
 
 function fallbackReactive(context: FounderCoachContext): FounderCoachResponse {
@@ -415,14 +388,14 @@ function fallbackSuggestion(context: FounderCoachContext): FounderCoachSuggestio
 
 export async function getFounderCoachAnswer(context: FounderCoachContext, userMessage: string): Promise<FounderCoachResponse> {
   const prompt = await buildReactivePrompt(context, userMessage);
-  const result = await callModels<FounderCoachResponse>(prompt);
+  const result = await callGemini<FounderCoachResponse>(prompt);
   if (result?.title && result?.summary && Array.isArray(result?.priorities)) return result;
   return fallbackReactive(context);
 }
 
 export async function getFounderCoachSuggestion(context: FounderCoachContext): Promise<FounderCoachSuggestion | null> {
   const prompt = await buildProactivePrompt(context);
-  const result = await callModels<FounderCoachSuggestion>(prompt);
+  const result = await callGemini<FounderCoachSuggestion>(prompt);
   if (result?.suggestedNextStep && result?.whyNow && result?.confidence) return result;
   return fallbackSuggestion(context);
 }
