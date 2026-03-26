@@ -9,7 +9,7 @@ import MetricsTrendChart from "@/components/MetricsTrendChart";
 import PageHeader from "@/components/PageHeader";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
-import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import { getMetricSetup } from "@/lib/metric-setup";
 
 function formatMetricValue(value: number | null | undefined) {
   if (value == null) return "—";
@@ -70,7 +70,7 @@ export default async function MetricsPage({
     businessModel: product.businessModel,
     website: product.website,
   });
-  const savedSetup = parseSavedMetricSetup(product.launchGoals);
+  const savedSetup = await getMetricSetup(product.id);
   const selectedMetrics = metricPlan.sections.flatMap((section) => {
     const selectedKeys =
       savedSetup?.selections.find((item) => item.stage === section.stage)?.selectedMetricKeys ?? [];
@@ -99,7 +99,6 @@ export default async function MetricsPage({
       businessModel: product.businessModel,
       description: product.description,
       website: product.website,
-      launchGoals: product.launchGoals,
     },
     selectedMetrics,
     entries: savedSetup?.entries ?? [],

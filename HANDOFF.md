@@ -1,364 +1,304 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 25 March 2026  
-**Status:** **Data-Driven AI Mentorship Phase Complete.** The project has transitioned from static AI advice to real-time metric injection. The "Connectors Store" is functional for GA4 and Stripe, and the AI agents (Growth/Orchestrator) now see live MRR, DAU, and churn data before responding.
+**Last Updated:** 26 March 2026
+**Status:** **MetricSetup/MetricEntry migration complete. Data-Driven AI Mentorship live. Integrations layer (GA4 + Stripe) operational.**
 
 ---
 
 ## Executive Summary
 
-Tiramisup is now a data-aware founder co-pilot:
+Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-growth phase. The system guides founders through a calm, staged progression: define what to track, enter daily data, observe trends, then optimize.
 
-1. **OAuth 2.0 Integration:** Google Analytics 4 and Stripe Connect flows are ready.
-2. **Metric Injection Engine:** A new layer (`lib/metric-context.ts`) queries Prisma and formats a structured "Data Snapshot" + Turkish context string for AI prompts.
-3. **Data-Driven Mentorship:** The AI (Founder Coach) no longer gives generic advice. It detects trends (e.g., "MRR is down by 8%") and prioritizes tasks accordingly.
-4. **Connectors Store:** A premium Dark Mode UI manages integrations based on a P0/P1/P2 roadmap.
+### What shipped in the latest sprint cycle (26 March 2026)
 
----
+**Sprint 1 — DB Migration (Critical tech debt resolved)**
+- Replaced `Product.launchGoals` JSON blob with proper `MetricSetup` and `MetricEntry` Prisma models
+- All API routes, pages, and lib files migrated to use new DB entities
+- Migration script available at `scripts/migrate-launch-goals.ts`
+- Legacy `parseSavedMetricSetup()` kept for backward compatibility but no longer used by active code
 
-## Major Milestone: Data-Driven AI (Shipped 25 March)
+**Sprint 2 — Metric Trend Visualization + Navigation**
+- `MetricsTrendChart` upgraded: area charts with gradient fills, per-stage sparkline cards with trend percentages
+- `DashboardNav` improved: pre-launch products now see Tasks in nav, Growth shown as preview
+- Post-wizard product overview page (`/products/[id]/overview`) — clear orientation after product creation
 
-### 1. The Metric Context Layer (`lib/metric-context.ts`)
-- **Purpose:** Bridges the gap between raw Prisma `Metric` rows and the AI model.
-- **Features:** 7-day trend analysis, up/down/stable detection, integration status monitoring.
-- **Usage:** Used by `founder-summary.ts`, `growthAgent.ts`, and `orchestrator.ts`.
+**Sprint 3 — Smart Coach + Unified Orchestration**
+- Founder Coach now receives AARRR funnel data + integration metrics in AI prompts
+- `lib/next-step.ts` — unified next-step orchestration across all pages
+- Enhanced fallback responses with metric-aware logic (DAU < 10 → acquisition focus, no integrations → suggest connection)
 
-### 2. Async Product Context
-- `buildFounderSummary` is now `async`. 
-- It fetches live metrics to generate data-driven headlines (e.g., "MRR is stable, focus on acquisition").
-- **Crucial:** Always `await` this function in route handlers.
+**Settings & Integrations UX Fix**
+- Settings page restructured as a hub: Entegrasyonlar (with live status), Growth Tracking, Profil
+- Users can now discover and navigate to Integrations from Settings
 
-### 3. Integration Roadmap (P0/P1/P2)
-We have aligned the Prisma `IntegrationProvider` enum and the UI to this roadmap:
-- **P0 (Operational):** GA4, Stripe.
-- **P1 (Next Dev Cycle):** RevenueCat, App Store Connect, Google Play, Meta Ads.
-- **P2 (Scale):** Google Ads, TikTok Ads, AppsFlyer.
-
-### 4. AI Agent Prompt Updates
-- `GROWTH_AGENT_PROMPT` and `SYSTEM_ARCHITECT_PROMPT` now have strict rules to prioritize "📊 GERÇEK METRİK VERİSİ" over generic patterns.
-
----
-
-## Technical Requirements for the Next Developer
-
-### 1. Environment Variables (`.env` & Vercel Dashboard)
-The following MUST be configured for the system to work:
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: From GCP Console (Analytics Data/Admin APIs enabled).
-- `STRIPE_CLIENT_ID` / `STRIPE_SECRET_KEY`: From Stripe Dashboard (Connect enabled).
-- `NEXT_PUBLIC_APP_URL`: Must match the environment (localhost:3002 or production URL) for OAuth redirects.
-
-### 2. Sync Workers
-- The background sync logic for GA4 (`BrandLib/sync/ga4.ts`) and Stripe (`BrandLib/sync/stripe.ts`) is ready and handles `upsert` into the `Metric` table.
-- **Next Task:** Implement sync workers for P1 providers (RevenueCat etc.).
+**Bug Fixes**
+- Signup route no longer leaks error details in 500 responses
+- Vitest config excludes `Landing Page/` directory (was causing false test failures)
+- Advisor route updated to check `MetricSetup` table instead of legacy `launchGoals` field
 
 ---
+
+## Architecture Overview
+
+### Database Models (Prisma + PostgreSQL)
+
+**Core:**
+- `User` — Auth (email + passwordHash, credentials + JWT)
+- `Product` — Main workspace entity (status: PRE_LAUNCH | LAUNCHED | GROWING)
+
+**Metric System (NEW — replaces launchGoals JSON):**
+- `MetricSetup` — One per product. Stores AARRR metric selections (JSON), platforms, ignoredChecklistIds, founderSummary
+- `MetricEntry` — One per product+date. Stores user-entered AARRR funnel values (JSON)
+- `Metric` — Integration-synced daily data (DAU, MAU, MRR, churn, etc.) from GA4/Stripe
+
+**Growth Infrastructure:**
+- `LaunchChecklist` — Pre-launch blockers (PRODUCT/MARKETING/LEGAL/TECH)
+- `GrowthChecklist` — Growth execution items (ACQUISITION/ACTIVATION/RETENTION/REVENUE)
+- `Task` — Standalone tasks linked to checklist items
+- `Goal` — Numeric targets with progress tracking
+- `GrowthRoutine` — Recurring weekly/monthly tasks
+
+**Integrations:**
+- `Integration` — OAuth config per provider per product (status: DISCONNECTED | CONNECTED | ERROR)
+- `SyncJob` — Job logs for each sync run
+
+**Other:**
+- `Waitlist` — Pre-launch signups with invite codes
+- `RetentionCohort`, `ActivationFunnel`, `TimelineEvent`
+
+### Key Library Files
+
+| File | Purpose |
+|------|---------|
+| `lib/metric-setup.ts` | DB-backed CRUD for MetricSetup/MetricEntry + legacy JSON parser |
+| `lib/next-step.ts` | Unified next-step orchestration across all pages |
+| `lib/metric-context.ts` | Builds metric snapshot + Turkish context string for AI prompts |
+| `lib/founder-coach.ts` | Turkish-first mentorship engine (Qwen → DeepSeek → Gemini fallback) |
+| `lib/founder-coach-context.ts` | Aggregates product state for Founder Coach |
+| `lib/founder-coach-agent.ts` | Skill-loading decision maker for advisory routing |
+| `lib/founder-summary.ts` | Builds data-driven founder summary during product creation |
+| `lib/funnel-health.ts` | Computes AARRR funnel health status per stage |
+| `lib/growth-workspace-step.ts` | Growth page step logic (SETUP → ENTER → GOAL → CHECKLIST → COACH) |
+| `lib/integration-recommendations.ts` | Maps metric keys to recommended providers |
+| `lib/integrations-catalog.ts` | Integration definitions + metadata |
+| `lib/ga4-admin.ts` | Google Analytics Admin API helpers |
+
+### AI Provider Chain
+
+All AI calls fall through this provider chain in order:
+1. **Qwen** (`qwen-plus` via Alibaba Cloud MaaS) — fastest, cheapest
+2. **DeepSeek** (`deepseek-chat`) — fallback
+3. **Gemini** (`gemini-2.0-flash`, `GEMINI_API_KEY`) — second fallback
+4. **Gemini backup** (`gemini-2.0-flash`, `GEMINI_API_KEY_2`) — last resort
+
+If all fail, static hardcoded fallback responses are returned (no crash).
+
+### Integration Roadmap
+
+| Priority | Providers | Status |
+|----------|-----------|--------|
+| **P0** | GA4, Stripe | Operational — OAuth + sync workers live |
+| **P1** | RevenueCat, App Store Connect, Google Play, Meta Ads | Enum ready, sync workers not built |
+| **P2** | Google Ads, TikTok Ads, AppsFlyer | Enum ready, placeholder only |
 
 ---
 
 ## Current UX/Product Principles
 
 ### 1. Calm, staged progression
-The product should feel progressive, not overwhelming.
+- One main decision per screen
+- One obvious next step
+- Secondary systems only after primary setup is done
 
-Correct pattern:
-- one main decision per screen
-- one obvious next step
-- secondary systems only after the primary setup is done
-
-Wrong pattern:
-- checklist + metrics + goals + routines + AI explanations + integrations all at once
-
-### 2. Stage-aware product navigation
-Navigation should adapt to product state.
-
-For launched products, the main top-level mental model is:
-- Genel Bakış
-- Görevler
-- Metrikler
-- Büyüme
-
-`Launch` should not dominate the nav for a launched product.
-It can remain visible, but it should read as a preview/history surface rather than the primary daily work area.
-`Integrations` should not be a first-class top-level destination for daily use; it belongs lower-priority / under setup.
-
-Figma note:
-- The current implementation used the Figma file as a component/system reference for nav pills, card rhythm, spacing, and CTA treatment.
-- It was not used as a screen-copy instruction set.
+### 2. Stage-aware navigation
+For **launched** products: Overview → Tasks → Metrics → Growth (Launch as preview)
+For **pre-launch** products: Overview → Launch → Tasks (Growth as preview)
+Settings → Integrations accessible via Settings hub
 
 ### 3. Evidence-first recommendations
-The system must not assume a problem exists unless it has supporting context.
-
-Examples of bad default guidance:
-- “SEO stratejisi kur”
-- “Onboarding akışını optimize et”
-
-Unless Tiramisup knows SEO is the chosen growth lever or onboarding activation is actually weak, these are speculative and should not be default checklist output.
-
-Preferred guidance style:
-- “Önce acquisition için hangi metriği takip edeceğini seç.”
-- “Henüz aktivasyon metriği tanımlı değil.”
-- “Önce günlük veri girişini başlat.”
+The system must not assume problems without supporting context. Founder Coach uses real metric data from `MetricSetup`/`MetricEntry` tables and `Metric` integration data.
 
 ### 4. Setup before optimization
-For launched products, the order should be:
-1. choose tracking metrics
-2. enter daily values
-3. view trend/progress
-4. then set targets / follow-up suggestions / optimization work
+1. Choose tracking metrics → 2. Enter daily values → 3. View trends → 4. Set targets → 5. Optimize
 
-Not the reverse.
+### 5. Growth vs Metrics distinction
+- **Growth** = "Neyi takip edeceğiz?" (What to track)
+- **Metrics** = "Bugün ne oldu ve ne değişti?" (What happened today)
 
 ---
 
-## Wizard State (Current)
+## Page-by-Page State
 
-### Product creation wizard now supports
-- product described in the user’s own words
-- **multi-select categories**
-- **multi-select target audiences**
-- `Diğer` option that opens a free-text field for AI-readable context
-- launch stage language updated to more natural Turkish
+### Dashboard (`/[locale]/dashboard`)
+- Shows next-step card based on product state (unified via `lib/next-step.ts`)
+- Displays founderSummary from `MetricSetup.founderSummary`
+- Quick links to all sections with live counts
+- First-run: welcome onboarding with no fake data
 
-Current stage labels:
-- `Geliştirme aşamasında`
-- `Test kullanıcıları var`
-- `Yakında yayında`
-- `Yayında`
-- `Büyüme aşamasında`
+### Growth (`/[locale]/growth`)
+- Pre-launch: preview card explaining Growth is the next stage
+- Launched: AARRR metric selection (MetricSetupSelector), growth checklist, goals, routines
+- Integration recommendations based on selected metrics
+- Advisor card with stage-aware guidance
 
-Removed for now:
-- `Fikir aşamasında`
+### Metrics (`/[locale]/metrics`)
+- Shows only user-selected metrics (from `MetricSetup.selections`)
+- Funnel health analysis with AT_RISK / ON_TRACK / AHEAD status per stage
+- Trend chart (area + sparklines) for last 14 entries
+- Daily entry form with last-known value hints
+- Recent entries table with delta comparison
 
-### Important behavior
-If `Yakında yayında` is selected:
-- launch date is chosen from a date picker
-- not free-form month/year text
+### Tasks (`/[locale]/tasks`)
+- Surfaces one main task first
+- Quick start/complete actions
+- Supporting task list underneath
 
-### Important current caveat
-Wizard now uses server-set active-product cookies and redirects more safely after creation, but AI preparation can still take a few seconds under provider variability.
-The product-creation UI should prefer a calm foreground loading state over raw backend/provider errors.
+### Pre-launch (`/[locale]/pre-launch`)
+- Category-based checklist (Product, Marketing, Legal, Tech)
+- Ignored items stored in `MetricSetup.ignoredChecklistIds`
+- Launch button when ready
 
-New-user caveat:
-- New signup should land in product creation, not bounce straight into a DB-heavy dashboard path.
-- The authenticated shell now fails softer if product-list queries hit temporary pool pressure.
+### Settings (`/[locale]/settings`)
+- **Integrations hub** — connected provider status badges, last sync time, link to `/integrations`
+- **Growth tracking** — link to metric setup
+- **Profile** — name, project name, launch date, status
 
----
+### Integrations (`/[locale]/integrations`)
+- Dark mode marketplace UI
+- Live integrations with property picker (GA4) and sync controls
+- Roadmap section for P1/P2 providers
 
-## Dashboard State (Current)
-
-### What the dashboard should now do
-The dashboard should answer only one question:
-**What is the next correct step for this product right now?**
-
-Examples:
-- no product yet → quick welcome/profile onboarding, then create first product
-- pre-launch product → finish launch preparation
-- launched product with no metric setup → set up tracking first
-- launched product with tracking chosen but no entries → make first daily metric entry
-- launched product with entries → review current performance
-
-### What the dashboard should avoid
-- multiple competing CTA blocks
-- a barren first-login empty state with no orientation
-- website analysis noise too early in the flow
-- showing launched users mostly pre-launch language
-- generic “growth” directions before metric setup exists
-
-### First-run no-product behavior
-When the user has no product yet, the dashboard should now show:
-- a short welcome surface
-- a lightweight profile snapshot (name, email, locale context)
-- one primary CTA into product creation
-- a simple staged preview of what happens after the first product is created
-
-This should still avoid fake metrics, fake tasks, or fake checklist data.
+### Post-wizard Overview (`/[locale]/products/[id]/overview`)
+- Shown after product creation
+- Product summary, what Tiramisup prepared, clear next-step CTA
 
 ---
 
-## Growth Setup State (Current)
+## Environment Variables
 
-### Current intended behavior
-Growth page should now be calmer and more focused.
-Primary task:
-- choose **one primary metric** for each AARRR category:
-  - Awareness
-  - Acquisition
-  - Activation
-  - Retention
-  - Referral
-  - Revenue
+```bash
+# AI Providers
+QWEN_API_KEY="..."
+DEEPSEEK_API_KEY="..."
+GEMINI_API_KEY="..."
+GEMINI_API_KEY_2="..."
 
-### Important UX rule
-The user should make the choice **where they see the metric**, not after reading a giant explanation block above and then scrolling down.
+# Auth
+NEXTAUTH_URL="http://localhost:3002"
+NEXTAUTH_SECRET="..."
 
-### Save behavior
-- save CTA must be visible near the current action context
-- after save, user should be taken to the metrics input flow
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3002"
 
-### Current sequencing rule
-For launched products, Growth should now behave like a staged operating system:
-1. metric setup
-2. first metrics entry
-3. first explicit goal
-4. growth checklist execution
-5. Founder Coach prioritization
+# Database
+DATABASE_URL="postgresql://..."
 
-The whole surface should keep reinforcing that order instead of mixing all layers equally.
+# Google OAuth (GA4)
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
 
-### Pre-launch behavior
-For pre-launch products, Growth should stay visible as the next stage, but the page should explain that it is coming next and point back to launch readiness.
-Do not hide the section completely unless the stage model changes again.
-
-### Secondary content rule
-Before setup is completed, avoid dumping:
-- growth checklist
-- goals
-- routines
-- timeline
-
-These should only appear after the primary setup step is done.
-
-### Coach rule
-Founder Coach on the Growth page should not behave like a generic motivational card.
-It should read:
-- whether metric setup exists
-- whether real metric entries exist
-- whether goals exist
-- whether launch blockers are actually active or were intentionally ignored
-
-The fallback recommendation should match current workspace maturity, not only raw product status.
-
-### Important framing rule
-Growth is now the answer to:
-- **“Neyi takip edeceğiz?”**
-
-Metrics is now the answer to:
-- **“Bugün ne oldu ve ne değişti?”**
-
-This distinction should stay visible in:
-- page headers
-- helper copy
-- save confirmations
-- next-step CTA logic
+# Stripe
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
 
 ---
 
-## Metrics State (Current)
+## Local Development
 
-### Critical direction
-The metrics page must reflect the user’s selected setup.
-If the user chose six primary AARRR metrics, the daily input form should show only those six.
+```bash
+npm install
+npx prisma generate
+npx prisma db push        # sync schema to local DB
+npm run dev                # starts on port 3002
+```
 
-Bad behavior:
-- generic giant metric form with unrelated inputs
-- unexplained jargon
-- no visible feedback after save
+Access code for signup: `TT31623SEN`
 
-Correct behavior:
-- selected metric set
-- date
-- one input per chosen category metric
-- recent entries / simple progress view
-- trend chart once enough entries exist
-- visible comparison against the prior entry when available
-- clear guidance about where the saved data appears
-
-### Beginner-friendly language rule
-Metric labels and descriptions should reduce analytics jargon where possible.
-
-Examples:
-- explain acquisition cost in plain Turkish instead of relying only on `CAC`
-- explain retention as users coming back later
-- explain activation as reaching the first real value moment
-- explain revenue metrics as recurring income, not only acronyms
-
-### Current implementation note
-To move quickly without a DB migration, selected metric setup and daily AARRR entries are currently being stored in `Product.launchGoals` as JSON payload.
-
-This is a pragmatic short-term choice, not the long-term domain model.
-Future cleanup should split this into explicit entities such as:
-- `MetricSetup`
-- `MetricEntry`
-- maybe `MetricDefinition`
-
-Do **not** treat the current `launchGoals` storage as the ideal architecture. Treat it as a temporary bridge that protects UX momentum.
-
-### Feedback loop rule
-After metric entry, the product should help the user answer:
-- what did I just save?
-- where can I see it?
-- how is today different from the last entry?
-
-The current UI direction now includes:
-- a simple explainer section at the top of Metrics
-- last-known-value hints inside the form
-- a success message after save
-- summary cards that compare the latest value with the previous entry
+If dev becomes flaky:
+```bash
+rm -rf .next && npm run dev
+```
 
 ---
 
-## Tasks Surface State (Current)
-
-### Critical direction
-Tasks should feel like the user’s **daily work surface**, not a backlog dump.
-
-### Current implementation direction
-- surface one clear main task at the top
-- show whether that task is the next logical step or the current in-progress item
-- make it easy to start or complete that task directly
-- keep remaining tasks underneath as supporting context
-
----
-
-## Production Notes
+## Production
 
 **URL:** https://tramisup.vercel.app
+**Hosting:** Vercel (`zerocekos-projects/tramisup`)
+**DB:** Supabase PostgreSQL (free tier — pauses after inactivity)
 
-### Known product-sensitive realities
-- Supabase pause can still create confusing 500s
-- Locale-prefixed routing remains mandatory
-- Signup still uses early-access / invite structure
-- Active product selection still relies on cookie-based behavior and can be sensitive during immediate post-create navigation
+---
+
+## First thing to do when you take over
+
+1. `npm install && npx prisma generate`
+2. Copy `.env.example` to `.env.local`, fill in keys
+3. `npx prisma db push` — sync schema
+4. `npm run dev` — verify on http://localhost:3002
+5. Create test user via `/tr/signup` with code `TT31623SEN`
+6. `npm test` — verify all 65 tests pass
+
+---
+
+## What is NOT done yet
+
+### High Priority
+1. **P1 Integration sync workers** — RevenueCat, App Store Connect, Google Play, Meta Ads (enums exist, OAuth + sync code not built)
+2. **Email notification flow** — waitlist approval, onboarding emails
+3. **Multi-product switching UX** — basic product selector exists but could be smoother
+4. **Remove `Product.launchGoals` column** — field still in schema but no longer used by any code. Can be dropped in a future migration.
+
+### Medium Priority
+1. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists)
+2. Reintroduce website / SEO analysis only when triggered by context
+3. Add proper retention cohort visualization
+4. Implement activation funnel drill-down
+
+### Low Priority
+1. Figma design system alignment pass
+2. PWA / mobile optimization
+3. Team/collaboration features
 
 ---
 
 ## What Must Not Regress
 
-1. **No fake workspace on signup**
-2. **Launched products must not feel trapped in pre-launch UX**
-3. **Growth must stay staged: preview for pre-launch, workspace for launched**
-4. **Metric entry must stay tied to selected setup**
-5. **Advice/checklists must not assume problems without evidence**
-6. **Project context from user-written description must remain central**
-7. **The product should guide, not lecture**
+1. No fake workspace data on signup
+2. Launched products must not feel trapped in pre-launch UX
+3. Growth must stay staged: preview for pre-launch, workspace for launched
+4. Metric entry must stay tied to selected setup (from `MetricSetup` table)
+5. Advice must not assume problems without evidence
+6. User-written product description must remain central context
+7. The product should guide, not lecture
+8. `MetricSetup`/`MetricEntry` tables are the source of truth — never revert to `launchGoals` JSON
 
 ---
 
-## Near-Term Work Still Worth Doing
+## Test Coverage
 
-### High priority
-1. Replace temporary `launchGoals` JSON storage with real metric setup / entry tables
-2. Strengthen next-step orchestration across dashboard, tasks, growth, and metrics so the whole product answers one question consistently
-3. Improve metrics trend visualization and drill-down so users can read what changed, not only that something changed
-4. Convert pre-launch Growth preview into a cleaner launch-readiness gate if future feedback says the mixed stage is still confusing
-5. Keep the no-fake-data rule strict: only AI-generated or user-created records should appear in the workspace
-6. Continue the current design pass using Figma as a component/system reference, not as a pixel-copy source
+**Unit tests:** 7 files, 65 tests
+- `__tests__/api/auth/signup.test.ts` — 12 assertions
+- `__tests__/api/waitlist/join.test.ts` — 11 assertions
+- `__tests__/api/waitlist/check.test.ts`
+- `__tests__/api/waitlist/admin.test.ts`
+- `__tests__/lib/auth.test.ts`
+- `__tests__/lib/metric-context.test.ts` — 7 test cases
 
-### Medium priority
-1. Make Founder Coach progressively smarter once actual metric history exists
-2. Reintroduce website / SEO / onboarding advice only when triggered by context or explicit user path
-3. Refine multi-product switching UX
-4. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists) without allowing silent automatic mutations
+**E2E tests:** 5 Playwright files (not part of `npm test`, run via `npm run test:e2e`)
 
 ---
 
-## Final Product Read
+## Technical Stack
 
-The important shift is not just “more features.”
-It is that Tiramisup is learning to behave like a calm operator system:
-- first define what matters
-- then track it
-- then interpret it
-- then suggest what changes
-
-That ordering matters more than adding more surfaces.
+- **Framework:** Next.js 15 (App Router)
+- **UI:** React 19 + Tailwind CSS 3
+- **Language:** TypeScript 5
+- **Auth:** NextAuth 4 (Credentials + JWT)
+- **DB:** Prisma 6 + PostgreSQL (Supabase)
+- **AI:** Qwen + DeepSeek + Gemini (fallback chain)
+- **Charts:** Recharts
+- **i18n:** next-intl
+- **Tests:** Vitest + Playwright
+- **Deploy:** Vercel

@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { Settings, User } from "lucide-react";
 import ProductSelector from "@/components/ProductSelector";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Product {
   id: string;
@@ -14,11 +23,23 @@ interface Product {
 interface DashboardNavProps {
   products?: Product[];
   activeProductId?: string;
+  userName?: string;
+}
+
+function getInitials(name?: string): string {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 export default function DashboardNav({
   products = [],
   activeProductId,
+  userName,
 }: DashboardNavProps) {
   const pathname = usePathname();
   const locale = pathname?.split("/")[1] || "tr";
@@ -36,8 +57,10 @@ export default function DashboardNav({
         metrics: "Metrics",
         growth: "Growth",
         integrations: "Integrations",
+        connectorHub: "Connectors",
         newProduct: "+ Add product",
         settings: "Settings",
+        account: "Account",
         signOut: "Sign out",
       }
     : {
@@ -47,8 +70,10 @@ export default function DashboardNav({
         metrics: "Metrikler",
         growth: "Büyüme",
         integrations: "Entegrasyonlar",
+        connectorHub: "Bağlantılar",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
+        account: "Hesap",
         signOut: "Çıkış yap",
       };
 
@@ -59,14 +84,13 @@ export default function DashboardNav({
           { href: "/tasks", label: labels.tasks },
           { href: "/metrics", label: labels.metrics },
           { href: "/growth", label: labels.growth },
-          { href: "/integrations", label: labels.integrations },
           { href: "/pre-launch", label: labels.launch, preview: true },
         ]
       : [
           { href: "/dashboard", label: labels.overview },
           { href: "/pre-launch", label: labels.launch },
-          { href: "/growth", label: labels.growth },
-          { href: "/integrations", label: labels.integrations },
+          { href: "/tasks", label: labels.tasks },
+          { href: "/growth", label: labels.growth, preview: true },
         ]
     : [{ href: "/dashboard", label: labels.overview }];
 
@@ -89,13 +113,13 @@ export default function DashboardNav({
             href={withLocale("/dashboard")}
             className="flex shrink-0 items-center gap-2.5"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fee74e]">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10h12M10 4l6 6-6 6" stroke="#2e2e2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img
+              src="/assets/illus-tiramisu-slice.png"
+              alt="Tiramisup"
+              className="h-9 w-9 object-contain"
+            />
             <span className="hidden font-semibold text-[15px] text-[#0d0d12] tracking-[-0.01em] sm:block">
-              Tiramisight
+              Tiramisup
             </span>
           </Link>
 
@@ -129,6 +153,7 @@ export default function DashboardNav({
                   : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
               }`}
               aria-label={labels.settings}
+              title={labels.settings}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -145,6 +170,17 @@ export default function DashboardNav({
             activeProductId={activeProductId}
           />
 
+          <Link
+            href={withLocale("/settings")}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e8e8] bg-white text-[#666d80] transition hover:border-[#d0d0d0] hover:text-[#0d0d12] lg:hidden ${
+              pathname?.startsWith(withLocale("/settings")) ? "border-[#f0bfd8] bg-[#fff1f8] text-[#0d0d12]" : ""
+            }`}
+            aria-label={labels.settings}
+            title={labels.settings}
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+
           {!hasProducts && (
             <Link
               href={withLocale("/products/new")}
@@ -154,14 +190,39 @@ export default function DashboardNav({
             </Link>
           )}
 
-          {/* Avatar */}
-          <button
-            onClick={() => signOut({ callbackUrl: `/${locale}` })}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d0d12] text-[12px] font-bold text-white transition hover:bg-[#2e2e2e]"
-            title={labels.signOut}
-          >
-            T
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d0d12] text-[11px] font-bold text-white transition hover:bg-[#2e2e2e]"
+                title={labels.account}
+              >
+                {getInitials(userName)}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-[16px] border-[#e8e8e8] bg-white p-2 shadow-[0_20px_50px_rgba(17,16,20,0.08)]">
+              <DropdownMenuLabel className="px-3 py-2 text-[12px] uppercase tracking-[0.14em] text-[#7b8393]">
+                {labels.account}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-[#ececec]" />
+              <DropdownMenuItem asChild className="rounded-[12px] px-3 py-2.5 text-[13px] font-medium text-[#0d0d12] focus:bg-[#f6f6f6]">
+                <Link href={withLocale("/settings")}>
+                  <User className="mr-2 h-4 w-4 text-[#666d80]" />
+                  {labels.settings}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => signOut({ callbackUrl: `/${locale}` })}
+                className="rounded-[12px] px-3 py-2.5 text-[13px] font-medium text-[#0d0d12] focus:bg-[#f6f6f6]"
+              >
+                <svg className="mr-2 h-4 w-4 text-[#666d80]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                {labels.signOut}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

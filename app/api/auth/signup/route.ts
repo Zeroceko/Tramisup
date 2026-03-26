@@ -112,7 +112,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(
-      { error: "Sunucu hatası, lütfen tekrar deneyin", details: (error as Error).message || String(error) },
+      { error: "Sunucu hatası, lütfen tekrar deneyin" },
       { status: 500 }
     );
   }

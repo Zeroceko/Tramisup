@@ -6,7 +6,9 @@ export default async function ThankYouPage({ params }: { params: Promise<{ local
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         {/* Icon */}
-        <div className="text-[80px] mb-6">✨</div>
+        <div className="flex items-center justify-center mb-6">
+          <img src="/assets/illus-tiramisu-slice.png" alt="Tiramisup" className="h-20 w-20 object-contain" />
+        </div>
 
         {/* Heading */}
         <h1 className="text-[32px] font-bold text-[#0d0d12] mb-3">Teşekkürler!</h1>
@@ -18,7 +20,10 @@ export default async function ThankYouPage({ params }: { params: Promise<{ local
 
         {/* Secondary message */}
         <div className="bg-[#f6f6f6] rounded-[15px] p-6 mb-8">
-          <p className="text-[14px] text-[#0d0d12] font-medium mb-2">📧 Email takip et</p>
+          <p className="text-[14px] text-[#0d0d12] font-medium mb-2 flex items-center justify-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email takip et
+          </p>
           <p className="text-[13px] text-[#666d80]">
             Onay emailini spam klasöründe kontrol etmeyi unutma. Yakında bir davet linki göndereceğiz.
           </p>

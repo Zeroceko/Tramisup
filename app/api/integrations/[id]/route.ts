@@ -15,9 +15,22 @@ export async function DELETE(
 
     const { id } = await context.params;
 
+    const integration = await prisma.integration.findUnique({
+      where: { id },
+      include: { product: true },
+    });
+
+    if (!integration || integration.product.userId !== session.user.id) {
+      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+    }
+
     await prisma.integration.update({
       where: { id },
-      data: { status: "DISCONNECTED" },
+      data: {
+        status: "DISCONNECTED",
+        config: null,
+        lastSyncAt: null,
+      },
     });
 
     return NextResponse.json({ message: "Integration disconnected" });

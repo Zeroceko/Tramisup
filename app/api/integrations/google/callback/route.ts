@@ -52,6 +52,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${baseUrl}/tr/integrations?error=exchange_failed`);
     }
 
+    const existingIntegration = await prisma.integration.findUnique({
+      where: {
+        productId_provider: {
+          productId,
+          provider: "GA4",
+        },
+      },
+    });
+
+    const existingConfig = existingIntegration?.config
+      ? JSON.parse(existingIntegration.config)
+      : null;
+
+    const mergedConfig = {
+      refresh_token: tokenData.refresh_token ?? existingConfig?.refresh_token,
+      access_token: tokenData.access_token,
+      expires_in: tokenData.expires_in,
+      propertyId: existingConfig?.propertyId,
+      propertyName: existingConfig?.propertyName,
+      propertyDisplayName: existingConfig?.propertyDisplayName,
+      accountName: existingConfig?.accountName,
+      accountDisplayName: existingConfig?.accountDisplayName,
+    };
+
     // Upsert into our Integrations database allowing robust future background cron syncs
     await prisma.integration.upsert({
       where: {
@@ -62,21 +86,13 @@ export async function GET(req: NextRequest) {
       },
       update: {
         status: "CONNECTED",
-        config: JSON.stringify({
-          refresh_token: tokenData.refresh_token || undefined,
-          access_token: tokenData.access_token,
-          expires_in: tokenData.expires_in
-        })
+        config: JSON.stringify(mergedConfig)
       },
       create: {
         productId,
         provider: "GA4",
         status: "CONNECTED",
-        config: JSON.stringify({
-           refresh_token: tokenData.refresh_token,
-           access_token: tokenData.access_token,
-           expires_in: tokenData.expires_in
-        })
+        config: JSON.stringify(mergedConfig)
       }
     });
 

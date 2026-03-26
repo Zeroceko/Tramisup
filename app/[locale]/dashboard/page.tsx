@@ -6,7 +6,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
-import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import { getMetricSetup } from "@/lib/metric-setup";
 import TiramisupAdviceCard from "@/components/TiramisupAdviceCard";
 export default async function DashboardPage({
   params,
@@ -71,7 +71,7 @@ export default async function DashboardPage({
 
   const launchTotal = product._count.launchChecklists || 0;
   const growthTotal = product._count.growthChecklists || 0;
-  const savedMetricSetup = parseSavedMetricSetup(product.launchGoals);
+  const savedMetricSetup = await getMetricSetup(product.id);
   const founderSummary = savedMetricSetup?.founderSummary;
   const selectedMetricCount =
     savedMetricSetup?.selections.reduce(
@@ -269,13 +269,21 @@ export default async function DashboardPage({
                 {
                   href: `/${locale}/pre-launch`,
                   label: "Launch hazırlığı",
-                  icon: "🚀",
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 8v4l3 3"/>
+                    </svg>
+                  ),
                   sub: `${completedLaunchChecklists}/${launchTotal} tamamlandı`,
                 },
                 {
                   href: `/${locale}/growth`,
                   label: isLaunched ? "Metrik odağı" : "Growth önizlemesi",
-                  icon: "📈",
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+                    </svg>
+                  ),
                   sub: isLaunched
                     ? selectedMetricCount > 0
                       ? `${selectedMetricCount} ana metrik seçili`
@@ -285,13 +293,21 @@ export default async function DashboardPage({
                 {
                   href: `/${locale}/tasks`,
                   label: "Görevler",
-                  icon: "✅",
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                  ),
                   sub: totalTasks > 0 ? `${pendingTasks} sırada bekliyor` : "Henüz görev yok",
                 },
                 {
                   href: `/${locale}/metrics`,
                   label: "Metrikler",
-                  icon: "📊",
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/>
+                    </svg>
+                  ),
                   sub: latestMetric ? "Bugünkü değişimi gör" : "İlk veri girişini başlat",
                 },
               ].map((link) => (
@@ -300,7 +316,7 @@ export default async function DashboardPage({
                   href={link.href}
                   className="flex items-center gap-3 rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 transition hover:border-[#e0e0e0] hover:bg-white"
                 >
-                  <span className="text-[18px]">{link.icon}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-white border border-[#ebebeb] text-[#5e6678]">{link.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-[#0d0d12]">{link.label}</p>
                     <p className="text-[11px] text-[#666d80]">{link.sub}</p>

@@ -23,5 +23,5 @@ export default async function MetricsLayout({
 
   const activeProductId = await getActiveProductId();
 
-  return <AppShell products={products} activeProductId={activeProductId}>{children}</AppShell>;
+  return <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>{children}</AppShell>;
 }

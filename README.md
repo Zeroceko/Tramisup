@@ -2,8 +2,8 @@
 
 Launch-to-growth dönemindeki startup ekipleri için sakin, aşamalı ve yönlendirici tek workspace.
 
-**Status:** Live MVP, with the current sprint focused on first-login clarity, Growth vs Metrics separation, beginner-friendly metric language, metrics feedback loops, and task-surface clarity  
-**Last Updated:** 23 March 2026
+**Status:** Live MVP — integrations layer shipped, AI coach is stage-aware, all blank-page/emoji/routing bugs resolved
+**Last Updated:** 26 March 2026
 
 ---
 
@@ -318,8 +318,8 @@ npm run dev
 ```
 
 ### Important local note
-Port `3000` may already be occupied in this environment.
-Next dev may move to `3001`.
+Local OAuth is configured around `http://localhost:3002`.
+Run the app on port `3002` so Google and Stripe callback URLs stay consistent.
 
 If dev becomes flaky, clear cache and restart:
 
@@ -391,3 +391,141 @@ Treat runtime behavior as source of truth and verify with:
 - build output
 - production smoke tests
 - route-by-route checks
+
+---
+
+## Environment variables
+
+All required env vars for local development — copy to `.env.local`:
+
+```bash
+# AI — primary provider chain: Qwen → DeepSeek → Gemini → Gemini backup
+QWEN_API_KEY="..."
+DEEPSEEK_API_KEY="..."         # optional but recommended
+GEMINI_API_KEY="..."           # primary Gemini key
+GEMINI_API_KEY_2="..."         # backup Gemini key (failover)
+
+# Auth
+NEXTAUTH_URL="http://localhost:3002"
+NEXTAUTH_SECRET="..."
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3002"
+
+# Database
+DATABASE_URL="postgresql://..."
+
+# Google OAuth (for GA4 integration)
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+
+# Stripe
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+**Important:** In production (Vercel), set all the same vars. The app currently runs on `http://localhost:3002` locally so Google and Stripe OAuth redirect URIs must match.
+
+---
+
+## AI provider chain
+
+All AI calls fall through this provider chain in order:
+
+1. **Qwen** (`qwen-plus` via Alibaba Cloud MaaS) — fastest, cheapest
+2. **DeepSeek** (`deepseek-chat`) — fallback if Qwen unavailable
+3. **Gemini** (`gemini-2.0-flash`, `GEMINI_API_KEY`) — second fallback
+4. **Gemini backup** (`gemini-2.0-flash`, `GEMINI_API_KEY_2`) — last resort
+
+If all fail, static hardcoded fallback responses are returned (no crash).
+
+This pattern is used in:
+- `lib/founder-coach.ts` — Founder Coach reactive + proactive
+- `lib/ai-advice.ts` — weekly advice cards
+- `app/api/products/[id]/insights/route.ts` — website insight analysis
+
+---
+
+## Integrations
+
+Integrations are defined in `lib/integrations-catalog.ts`.
+
+Currently live:
+- **GA4** — Google Analytics OAuth, token stored in `Integration` table, properties fetched via Admin API
+- **Stripe** — Stripe Connect, revenue metric sync
+
+Roadmap (UI visible, not yet functional):
+- RevenueCat, App Store, Google Play, Meta Ads, Google Ads, TikTok Ads, AppsFlyer
+
+Brand logos for all providers are in `components/BrandLogo.tsx` as inline SVG (no external dependencies).
+
+---
+
+## Known architectural shortcut
+
+Metric setup and daily AARRR entries are stored as JSON in `Product.launchGoals`.
+
+This is a temporary bridge — not the intended long-term data model. Future cleanup should introduce:
+- `MetricSetup` entity
+- `MetricEntry` entity
+
+Do not build long-term logic on top of this JSON field without migrating it first.
+
+---
+
+## Handoff notes for new dev team
+
+### What was built and shipped (March 2026)
+
+**Integrations layer**
+- Full Google Analytics OAuth flow with property picker
+- Stripe Connect flow
+- `Integration` model in Prisma (stores token, config, status)
+- `BrandLib/sync/` for pulling metric data from connected providers
+- `components/IntegrationsWorkspace.tsx` — search, live integrations, compact roadmap list
+
+**AI improvements**
+- Founder Coach is now stage-aware: `PRE_LAUNCH` products will never get GA4/growth tool suggestions, only launch blocker guidance
+- Proactive suggestion card has refresh + retry buttons with Turkish error messages
+- All AI endpoints use dual Gemini key fallback loop
+- Website insights analysis (`/api/products/[id]/insights`) with same fallback chain
+
+**UI quality pass**
+- Zero emojis in UI — all replaced with inline SVG icons
+- Brand logos for all 9 integration providers in `BrandLogo.tsx`
+- Tiramisu watercolor image (`/public/assets/illus-tiramisu-slice.png`) used as logo in nav and favicon
+- Avatar shows user initials (e.g. "ÖÖ" for "Özer Öcek"), not hardcoded "T"
+- Gear icon in nav routes to `/settings` (was incorrectly routing to `/integrations`)
+- Roadmap integrations shown as compact horizontal list, not large cards
+
+**Critical bug fixes**
+- `components/ui/sonner.tsx` was missing `"use client"` — caused blank pages on `/growth`, `/settings`, `/integrations`
+- `lib/ga4-admin.ts`: `listAccountSummaries()` returns `[IAccountSummary[], ...]` — destructured array, not `.accountSummaries` property
+- `app/api/integrations/[id]/ga4-properties/route.ts`: `config` is `string | null` in schema — used non-null assertions where already validated
+
+### Production environment (Vercel)
+
+Project: `zerocekos-projects/tramisup`
+URL: `https://tramisup.vercel.app`
+
+All env vars listed above must be set in Vercel dashboard.
+Supabase free tier **pauses after inactivity** — if production DB is unreachable, wake it at supabase.com dashboard first.
+
+### First thing to do when you take over
+
+1. `npm install && npx prisma generate` — generate Prisma client
+2. Copy `.env.local.example` to `.env.local`, fill in keys
+3. `npm run dev` — starts on port 3002
+4. `npx prisma migrate dev` — apply any pending migrations to local DB
+5. Create a test user via `/tr/signup` with access code `TT31623SEN`
+6. Run `npm test` to verify all tests pass before touching anything
+
+### What is NOT done yet (immediate next priorities)
+
+1. Replace `Product.launchGoals` JSON blob with real `MetricSetup`/`MetricEntry` entities
+2. Metric trend charts for selected AARRR metrics
+3. Complete Google Play Store Console integration
+4. App Store Connect integration
+5. Email notification flow (waitlist, onboarding)
+6. Proper post-wizard product overview to avoid stale-cookie navigation issues

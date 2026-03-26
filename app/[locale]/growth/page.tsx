@@ -11,9 +11,11 @@ import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
 import AdvisorCard from "@/components/AdvisorCard";
+import GrowthIntegrationRecommendations from "@/components/GrowthIntegrationRecommendations";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
-import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import { getMetricSetup } from "@/lib/metric-setup";
+import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
 
 export default async function GrowthPage({
   params,
@@ -53,6 +55,10 @@ export default async function GrowthPage({
     where: { productId: product.id },
     orderBy: { endDate: "asc" },
   });
+  const integrations = await prisma.integration.findMany({
+    where: { productId: product.id, status: "CONNECTED" },
+    select: { provider: true },
+  });
 
   const timelineEvents = await prisma.timelineEvent.findMany({
     where: { productId: product.id },
@@ -69,7 +75,7 @@ export default async function GrowthPage({
     businessModel: product.businessModel,
     website: product.website,
   });
-  const savedMetricSetup = parseSavedMetricSetup(product.launchGoals);
+  const savedMetricSetup = await getMetricSetup(product.id);
   const hasSetup = !!savedMetricSetup?.selections?.length;
   const hasMetricEntries = (savedMetricSetup?.entries?.length ?? 0) > 0;
   const hasGoals = goals.length > 0;
@@ -82,6 +88,11 @@ export default async function GrowthPage({
     completedGrowthItems,
     totalGrowthItems: growthChecklists.length,
     locale,
+  });
+  const integrationRecommendations = getRecommendedIntegrationsForSetup({
+    setup: savedMetricSetup,
+    plan: metricPlan,
+    connectedProviders: integrations.map((integration) => integration.provider),
   });
 
   if (!isLaunched) {
@@ -231,6 +242,12 @@ export default async function GrowthPage({
               productId={product.id}
               plan={metricPlan}
               initialSetup={savedMetricSetup}
+              locale={locale}
+            />
+
+            <GrowthIntegrationRecommendations
+              metricRecommendations={integrationRecommendations.metricRecommendations}
+              uncoveredMetricNames={integrationRecommendations.uncoveredMetricNames}
               locale={locale}
             />
 

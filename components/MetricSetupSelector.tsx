@@ -91,7 +91,7 @@ export default function MetricSetupSelector({
 
   if (!editing && initialSetup?.selections?.length) {
     return (
-      <section className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+      <section id="tracking-metrics" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Secilen metrik seti</p>
@@ -99,7 +99,8 @@ export default function MetricSetupSelector({
               Metrik kararlarini verdin, simdi execution tarafina geciyoruz
             </h2>
             <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-              Bu alan artik ozet halinde kaliyor. Ihtiyac olursa secimini duzenlersin; kalan ekran ise hedefler, checklist ve Tiramisup onerilerine ayrilir.
+              Bu alan artik ozet halinde kaliyor. Ihtiyac olursa buradan veya daha sonra Ayarlar altindaki `Growth takip metriklerini degistir`
+              kisayolundan secimini duzenleyebilirsin; kalan ekran ise hedefler, checklist ve Tiramisup onerilerine ayrilir.
             </p>
           </div>
           <button
@@ -107,7 +108,7 @@ export default function MetricSetupSelector({
             onClick={() => setEditing(true)}
             className="inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
           >
-            Metrikleri duzenle
+            Growth takip metriklerini degistir
           </button>
         </div>
 
@@ -131,14 +132,15 @@ export default function MetricSetupSelector({
   }
 
   return (
-    <section className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+    <section id="tracking-metrics" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
       <div className="mb-6 max-w-2xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Growth = neyi takip edeceğiz?</p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
           Önce her adım için tek bir ana sayı seçelim
         </h2>
         <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-          Growth ekranında amacımız optimizasyon yapmak değil. Önce neyi takip edeceğini netleştiriyoruz. Kaydedince seni Metrics ekranına götürüp bugünkü sayılarını gireceğiz.
+          Growth ekranında amacımız optimizasyon yapmak değil. Önce neyi takip edeceğini netleştiriyoruz.
+          Bu secimi daha sonra Ayarlar altindan yeniden duzenleyebilirsin. Kaydedince seni Metrics ekranına götürüp bugünkü sayılarını gireceğiz.
         </p>
       </div>
 

@@ -29,9 +29,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Integration is not connected" }, { status: 400 });
     }
 
-    const config = integration.config ? JSON.parse(integration.config) : null;
-    if (!config?.apiKey) {
-      return NextResponse.json({ error: "Missing configuration API Key" }, { status: 400 });
+    if (!integration.config) {
+      return NextResponse.json({ error: "Missing integration configuration" }, { status: 400 });
     }
 
     const syncJob = await prisma.syncJob.create({
@@ -45,9 +44,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     try {
       if (integration.provider === "STRIPE") {
-        recordsSynced = await syncStripe(integration.productId, config.apiKey);
+        recordsSynced = await syncStripe(integration.productId, integration.config);
       } else if (integration.provider === "GA4") {
-        recordsSynced = await syncGa4(integration.productId, config.apiKey);
+        recordsSynced = await syncGa4(integration.productId, integration.config);
       } else {
         throw new Error("Provider sync algorithm not implemented");
       }

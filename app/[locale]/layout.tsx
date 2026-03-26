@@ -1,6 +1,7 @@
 import { Manrope, Outfit } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -30,6 +31,7 @@ export default async function LocaleLayout({
       <body className="font-manrope bg-[#f6f6f6] text-[#0d0d12] antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}
+          <Toaster />
         </NextIntlClientProvider>
       </body>
     </html>

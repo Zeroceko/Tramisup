@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { parseSavedMetricSetup, type FunnelStageKey, type SavedMetricSetup } from "@/lib/metric-setup";
+import type { FunnelStageKey } from "@/lib/metric-setup";
+import { saveMetricEntry } from "@/lib/metric-setup";
 
 export async function POST(request: Request) {
   try {
@@ -24,14 +25,16 @@ export async function POST(request: Request) {
 
     const product = await prisma.product.findFirst({
       where: { id: productId, userId: session.user.id },
-      select: { id: true, launchGoals: true },
+      select: { id: true },
     });
     if (!product) {
       return NextResponse.json({ error: "Ürün bulunamadı" }, { status: 404 });
     }
 
-    const existing = parseSavedMetricSetup(product.launchGoals);
-    if (!existing) {
+    const setup = await prisma.metricSetup.findUnique({
+      where: { productId },
+    });
+    if (!setup) {
       return NextResponse.json({ error: "Önce metrik setup'ını oluştur" }, { status: 400 });
     }
 
@@ -41,26 +44,11 @@ export async function POST(request: Request) {
         .map(([key, value]) => [key, Number(value)])
     ) as Partial<Record<FunnelStageKey, number>>;
 
-    const nextEntries = existing.entries.filter((entry) => entry.date !== date);
-    nextEntries.push({ date, values: sanitizedValues });
-    nextEntries.sort((a, b) => a.date.localeCompare(b.date));
-
-    const nextPayload: SavedMetricSetup = {
-      version: existing.founderSummary ? 3 : 2,
-      selections: existing.selections,
-      entries: nextEntries,
-      ...(existing.platforms?.length ? { platforms: existing.platforms } : {}),
-      ...(existing.founderSummary ? { founderSummary: existing.founderSummary } : {}),
-    };
-
-    await prisma.product.update({
-      where: { id: productId },
-      data: { launchGoals: JSON.stringify(nextPayload) },
-    });
+    await saveMetricEntry(productId, date, sanitizedValues);
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error("Error saving metric setup entry:", error);
+    console.error("Error saving metric entry:", error);
     return NextResponse.json({ error: "Failed to save metrics" }, { status: 500 });
   }
 }
@@ -81,11 +69,27 @@ export async function GET(request: Request) {
 
     const product = await prisma.product.findFirst({
       where: { id: productId, userId: session.user.id },
-      select: { launchGoals: true },
+      select: { id: true },
     });
 
-    const setup = parseSavedMetricSetup(product?.launchGoals);
-    return NextResponse.json({ entries: setup?.entries ?? [], selections: setup?.selections ?? [] });
+    if (!product) {
+      return NextResponse.json({ error: "Ürün bulunamadı" }, { status: 404 });
+    }
+
+    const setup = await prisma.metricSetup.findUnique({
+      where: { productId },
+      include: {
+        entries: { orderBy: { date: "asc" } },
+      },
+    });
+
+    const selections = (setup?.selections as Array<{ stage: string; selectedMetricKeys: string[] }>) ?? [];
+    const entries = (setup?.entries ?? []).map((e) => ({
+      date: e.date.toISOString().slice(0, 10),
+      values: e.values as Partial<Record<FunnelStageKey, number>>,
+    }));
+
+    return NextResponse.json({ entries, selections });
   } catch (error) {
     console.error("Error fetching metrics:", error);
     return NextResponse.json({ error: "Failed to fetch metrics" }, { status: 500 });

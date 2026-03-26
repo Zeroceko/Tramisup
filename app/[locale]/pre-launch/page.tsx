@@ -10,7 +10,8 @@ import PageHeader from "@/components/PageHeader";
 import LaunchReviewSummary from "@/components/LaunchReviewSummary";
 import BlockerSummary from "@/components/BlockerSummary";
 import LaunchButton from "@/components/LaunchButton";
-import { buildSavedMetricSetupValue, parseSavedMetricSetup } from "@/lib/metric-setup";
+import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
+import { prisma as prismaClient } from "@/lib/prisma";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(itemId: string) {
@@ -74,9 +75,10 @@ async function setChecklistItemIgnored(itemId: string, ignored: boolean) {
       throw new Error("Item not found or unauthorized");
     }
 
-    const ignoredIds = new Set(
-      parseSavedMetricSetup(checklistItem.product.launchGoals)?.ignoredLaunchChecklistIds ?? []
-    );
+    const setup = await prismaClient.metricSetup.findUnique({
+      where: { productId: checklistItem.productId },
+    });
+    const ignoredIds = new Set<string>(setup?.ignoredChecklistIds ?? []);
 
     if (ignored) {
       ignoredIds.add(itemId);
@@ -84,15 +86,7 @@ async function setChecklistItemIgnored(itemId: string, ignored: boolean) {
       ignoredIds.delete(itemId);
     }
 
-    await prisma.product.update({
-      where: { id: checklistItem.productId },
-      data: {
-        launchGoals: buildSavedMetricSetupValue(checklistItem.product.launchGoals, (setup) => ({
-          ...setup,
-          ignoredLaunchChecklistIds: Array.from(ignoredIds),
-        })),
-      },
-    });
+    await updateIgnoredChecklistIds(checklistItem.productId, Array.from(ignoredIds));
 
     revalidatePath("/pre-launch");
   } catch (error) {
@@ -122,9 +116,10 @@ export default async function PreLaunchPage({
     where: { productId: product?.id },
     orderBy: [{ category: "asc" }, { order: "asc" }],
   });
-  const ignoredChecklistIds = new Set(
-    parseSavedMetricSetup(product?.launchGoals)?.ignoredLaunchChecklistIds ?? []
-  );
+  const metricSetup = product
+    ? await prismaClient.metricSetup.findUnique({ where: { productId: product.id } })
+    : null;
+  const ignoredChecklistIds = new Set<string>(metricSetup?.ignoredChecklistIds ?? []);
   const activeChecklists = checklists.filter((item) => !ignoredChecklistIds.has(item.id));
   const ignoredChecklistItems = checklists.filter((item) => ignoredChecklistIds.has(item.id));
 

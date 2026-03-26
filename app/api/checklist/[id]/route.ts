@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { buildSavedMetricSetupValue, parseSavedMetricSetup } from "@/lib/metric-setup";
+import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 
 export async function PATCH(
   request: Request,
@@ -27,9 +27,10 @@ export async function PATCH(
     }
 
     if (typeof ignored === "boolean") {
-      const ignoredIds = new Set(
-        parseSavedMetricSetup(existingItem.product.launchGoals)?.ignoredLaunchChecklistIds ?? []
-      );
+      const setup = await prisma.metricSetup.findUnique({
+        where: { productId: existingItem.productId },
+      });
+      const ignoredIds = new Set<string>(setup?.ignoredChecklistIds ?? []);
 
       if (ignored) {
         ignoredIds.add(id);
@@ -37,15 +38,7 @@ export async function PATCH(
         ignoredIds.delete(id);
       }
 
-      await prisma.product.update({
-        where: { id: existingItem.productId },
-        data: {
-          launchGoals: buildSavedMetricSetupValue(existingItem.product.launchGoals, (setup) => ({
-            ...setup,
-            ignoredLaunchChecklistIds: Array.from(ignoredIds),
-          })),
-        },
-      });
+      await updateIgnoredChecklistIds(existingItem.productId, Array.from(ignoredIds));
 
       return NextResponse.json({ id, ignored });
     }

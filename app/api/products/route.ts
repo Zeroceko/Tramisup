@@ -168,13 +168,16 @@ export async function POST(request: Request) {
           businessModel,
           website,
           launchDate: launchDate ? new Date(launchDate) : undefined,
-          launchGoals: JSON.stringify({
-            version: 3,
-            selections: [],
-            entries: [],
-            platforms: normalizedMobilePlatforms,
-            founderSummary,
-          }),
+        },
+      });
+
+      // Create MetricSetup record with platforms and founderSummary
+      await tx.metricSetup.create({
+        data: {
+          productId: newProduct.id,
+          selections: [],
+          platforms: normalizedMobilePlatforms,
+          founderSummary,
         },
       });
 

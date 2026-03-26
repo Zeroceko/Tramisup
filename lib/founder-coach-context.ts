@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getGrowthWorkspaceStep, type GrowthWorkspaceStepKey } from "@/lib/growth-workspace-step";
-import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import type { FunnelMetricSelection } from "@/lib/metric-setup";
 
 export type FounderCoachContext = {
   product: {
@@ -51,11 +51,8 @@ function inferPlatforms(product: {
   website: string | null;
   launchStatus: string | null;
   category: string | null;
-  launchGoals: string | null;
-}) {
+}, storedPlatforms: string[]) {
   const haystack = `${product.launchStatus ?? ""} ${product.category ?? ""} ${product.website ?? ""}`.toLowerCase();
-  const savedSetup = parseSavedMetricSetup(product.launchGoals);
-  const storedPlatforms = Array.from(new Set(savedSetup?.platforms ?? []));
   if (storedPlatforms.length > 0) return storedPlatforms;
   const inferred: string[] = [];
   if (/ios|app store|apple/.test(haystack)) inferred.push("iOS");
@@ -79,30 +76,41 @@ function inferLoginRequired(product: { targetAudience: string | null; descriptio
 }
 
 export async function getFounderCoachContext(productId: string, recentEvent?: { type: string; at?: string }): Promise<FounderCoachContext> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      category: true,
-      targetAudience: true,
-      businessModel: true,
-      website: true,
-      launchStatus: true,
-      launchGoals: true,
-      status: true,
-    },
-  });
+  const [product, metricSetup] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        category: true,
+        targetAudience: true,
+        businessModel: true,
+        website: true,
+        launchStatus: true,
+        status: true,
+      },
+    }),
+    prisma.metricSetup.findUnique({
+      where: { productId },
+      include: {
+        entries: { orderBy: { date: "desc" }, take: 1 },
+      },
+    }),
+  ]);
 
   if (!product) throw new Error("Product not found");
-  const savedSetup = parseSavedMetricSetup(product.launchGoals);
-  const ignoredLaunchChecklistIds = savedSetup?.ignoredLaunchChecklistIds ?? [];
-  const selectedMetricCount = (savedSetup?.selections ?? []).reduce(
+  const selections = (metricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
+  const ignoredLaunchChecklistIds = metricSetup?.ignoredChecklistIds ?? [];
+  const selectedMetricCount = selections.reduce(
     (total, selection) => total + selection.selectedMetricKeys.length,
     0
   );
-  const latestSavedEntry = savedSetup?.entries.at(-1) ?? null;
+  const metricEntryCount = await prisma.metricEntry.count({ where: { productId } });
+  const latestSavedEntry = metricSetup?.entries[0] ?? null;
+  const latestSavedValues = latestSavedEntry
+    ? (latestSavedEntry.values as Partial<Record<string, number>>)
+    : null;
 
   const [
     launchTotal,
@@ -159,7 +167,7 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
   ]);
   const nextGrowthStep = getGrowthWorkspaceStep({
     hasSetup: selectedMetricCount > 0,
-    hasMetricEntries: (savedSetup?.entries.length ?? 0) > 0,
+    hasMetricEntries: metricEntryCount > 0,
     hasGoals: goals > 0,
     completedGrowthItems: growthCompleted,
     totalGrowthItems: growthTotal,
@@ -178,51 +186,48 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     growthWorkspace: {
       metricSetupComplete: selectedMetricCount > 0,
       selectedMetricCount,
-      entryCount: savedSetup?.entries.length ?? 0,
+      entryCount: metricEntryCount,
       nextFocus: nextGrowthStep.key,
     },
     metrics: {
       hasActivationMetric:
         !!latestActivation ||
         !!latestMetric?.activationRate ||
-        (savedSetup?.selections.some(
+        selections.some(
           (selection) =>
             selection.stage === "Activation" && selection.selectedMetricKeys.length > 0
-        ) ??
-          false),
+        ),
       hasRevenueMetric:
         latestMetric?.mrr != null ||
-        latestSavedEntry?.values?.Revenue != null ||
-        (savedSetup?.selections.some(
+        latestSavedValues?.Revenue != null ||
+        selections.some(
           (selection) =>
             selection.stage === "Revenue" && selection.selectedMetricKeys.length > 0
-        ) ??
-          false),
+        ),
       hasRetentionMetric:
         !!latestRetention ||
-        latestSavedEntry?.values?.Retention != null ||
-        (savedSetup?.selections.some(
+        latestSavedValues?.Retention != null ||
+        selections.some(
           (selection) =>
             selection.stage === "Retention" && selection.selectedMetricKeys.length > 0
-        ) ??
-          false),
+        ),
       latest: latestMetric
         ? {
             dau: latestMetric.dau,
             mrr: latestMetric.mrr,
             activationRate: latestMetric.activationRate,
           }
-        : latestSavedEntry
+        : latestSavedValues
           ? {
-              dau: latestSavedEntry.values.Acquisition ?? null,
-              mrr: latestSavedEntry.values.Revenue ?? null,
-              activationRate: latestSavedEntry.values.Activation ?? null,
+              dau: latestSavedValues.Acquisition ?? null,
+              mrr: latestSavedValues.Revenue ?? null,
+              activationRate: latestSavedValues.Activation ?? null,
             }
         : null,
-      lastUpdatedAt: latestMetric?.date?.toISOString() ?? latestSavedEntry?.date ?? null,
+      lastUpdatedAt: latestMetric?.date?.toISOString() ?? latestSavedEntry?.date?.toISOString() ?? null,
     },
     storeReadiness: {
-      platforms: inferPlatforms(product),
+      platforms: inferPlatforms(product, metricSetup?.platforms ?? []),
       loginRequired: inferLoginRequired(product),
       socialLogin: null,
       hasSubscription: inferSubscription(product),

@@ -26,7 +26,7 @@ export default async function DashboardLayout({
     products.find((p) => p.id === activeId)?.id ?? products[0]?.id;
 
   return (
-    <AppShell products={products} activeProductId={effectiveActiveId}>
+    <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
       {children}
     </AppShell>
   );

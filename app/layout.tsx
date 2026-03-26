@@ -4,6 +4,10 @@ import { locales } from "@/i18n";
 export const metadata: Metadata = {
   title: "Tiramisup — Launch OS",
   description: "Launch checklist, live metrics, and growth routines in one platform",
+  icons: {
+    icon: "/assets/illus-tiramisu-slice.png",
+    apple: "/assets/illus-tiramisu-slice.png",
+  },
 };
 
 export function generateStaticParams() {

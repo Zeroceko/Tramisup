@@ -98,9 +98,9 @@ async function callAI(prompt: string): Promise<WeeklyAdvice | null> {
       console.warn("[advice] DeepSeek failed:", (err as Error).message);
     }
   }
-  if (process.env.GEMINI_API_KEY) {
+  for (const geminiKey of [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean)) {
     try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+      const genAI = new GoogleGenerativeAI(geminiKey!);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");

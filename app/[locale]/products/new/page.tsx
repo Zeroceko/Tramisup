@@ -394,8 +394,8 @@ export default function NewProductWizard() {
         throw new Error(err.error || "Ürün oluşturulamadı");
       }
 
-      await res.json();
-      router.replace(`/${locale}/dashboard`);
+      const product = await res.json();
+      router.replace(`/${locale}/products/${product.id}/overview`);
       router.refresh();
     } catch (err) {
       console.error(err);

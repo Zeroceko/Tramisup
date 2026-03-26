@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { FounderCoachContext } from "@/lib/founder-coach-context";
 import { buildFounderCoachDecision } from "@/lib/founder-coach-agent";
+import { getMetricContext } from "@/lib/metric-context";
+import { getMetricSetup, type FunnelStageKey } from "@/lib/metric-setup";
 
 export type FounderCoachResponse = {
   title: string;
@@ -27,6 +29,67 @@ function summarizeContext(context: FounderCoachContext) {
   return JSON.stringify(context, null, 2);
 }
 
+async function buildMetricDataContext(productId: string): Promise<string> {
+  const parts: string[] = [];
+
+  // Integration metrics (GA4, Stripe synced data)
+  try {
+    const metricCtx = await getMetricContext(productId);
+    if (metricCtx.contextString) {
+      parts.push(metricCtx.contextString);
+    }
+  } catch {}
+
+  // AARRR funnel entries (user-entered data from MetricSetup/MetricEntry)
+  try {
+    const setup = await getMetricSetup(productId);
+    if (setup && setup.selections.length > 0) {
+      const selectedStages = setup.selections
+        .filter((s) => s.selectedMetricKeys.length > 0)
+        .map((s) => s.stage);
+
+      parts.push(`\nAARRR FUNNEL SETUP: ${selectedStages.join(", ")} adimlari icin metrik secilmis.`);
+
+      if (setup.entries.length > 0) {
+        const recent = setup.entries.slice(-7);
+        parts.push(`AARRR FUNNEL VERİSİ (Son ${recent.length} giris):`);
+        for (const entry of recent) {
+          const vals = Object.entries(entry.values)
+            .map(([stage, val]) => `${stage}: ${val}`)
+            .join(", ");
+          parts.push(`  ${entry.date}: ${vals}`);
+        }
+
+        // Compute simple trends for selected stages
+        if (recent.length >= 2) {
+          const first = recent[0];
+          const last = recent[recent.length - 1];
+          const trends: string[] = [];
+          for (const stage of selectedStages) {
+            const key = stage as FunnelStageKey;
+            const firstVal = first.values[key];
+            const lastVal = last.values[key];
+            if (firstVal != null && lastVal != null) {
+              const change = lastVal - firstVal;
+              const pct = firstVal !== 0 ? ((change / Math.abs(firstVal)) * 100).toFixed(1) : "N/A";
+              const dir = change > 0 ? "yukari" : change < 0 ? "asagi" : "stabil";
+              trends.push(`  ${stage}: ${dir} (%${pct})`);
+            }
+          }
+          if (trends.length > 0) {
+            parts.push("AARRR TREND ANALİZİ:");
+            parts.push(...trends);
+          }
+        }
+      } else {
+        parts.push("AARRR FUNNEL VERİSİ: Henuz giris yapilmamis. Kurucuya ilk veri girisini onermelisin.");
+      }
+    }
+  } catch {}
+
+  return parts.join("\n");
+}
+
 function detectStoreNeed(message: string, context: FounderCoachContext) {
   const lower = message.toLowerCase();
   const platformText = context.storeReadiness.platforms.join(" ").toLowerCase();
@@ -41,16 +104,27 @@ function detectStoreNeed(message: string, context: FounderCoachContext) {
 }
 
 async function buildReactivePrompt(context: FounderCoachContext, message: string) {
-  const decision = await buildFounderCoachDecision({
-    context,
-    message,
-    mode: "REACTIVE_ANSWER",
-  });
+  const [decision, metricData] = await Promise.all([
+    buildFounderCoachDecision({
+      context,
+      message,
+      mode: "REACTIVE_ANSWER",
+    }),
+    buildMetricDataContext(context.product.id),
+  ]);
   const advisoryKnowledge = decision.skills
     .map(
       (skill) => `SKILL: ${skill.name}\nWHY LOADED: ${skill.reason}\n${skill.content}`
     )
     .join("\n\n---\n\n");
+
+  const stage = context.product.status;
+  const stageContext =
+    stage === "PRE_LAUNCH"
+      ? "This product is PRE_LAUNCH — not live yet. Prioritize launch blockers and checklist completion. Do not suggest growth tools, integrations (GA4, Stripe), or metric tracking as high-priority items for this stage."
+      : stage === "LAUNCHED"
+      ? "This product is LAUNCHED but early. Focus on metric setup, first data entry, and initial goals before integrations."
+      : "This product is GROWING. Growth execution, routines, and integrations that unblock specific metrics are relevant.";
 
   return `You are Founder Coach inside Tiramisup.
 Answer only from the verified product state provided below. Do not invent unsupported context.
@@ -58,8 +132,12 @@ If context is incomplete, state assumptions briefly.
 Prioritize what matters now. Prefer specific, founder-friendly, stage-aware guidance.
 If advisory skill knowledge is loaded, treat it as relevant guidance and use it deliberately.
 
+STAGE CONTEXT: ${stageContext}
+
 VERIFIED PRODUCT STATE:
 ${summarizeContext(context)}
+
+${metricData ? `LIVE METRIC DATA:\n${metricData}` : ""}
 
 ${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 
@@ -86,27 +164,57 @@ Rules:
 - no markdown
 - no generic startup fluff
 - tie advice to actual stage/status and known state
+- respect the stage context above when ranking priorities
 - if store readiness, legal risk, metric interpretation, or prioritization is relevant, use the loaded skill guidance instead of guessing
 `;
 }
 
 async function buildProactivePrompt(context: FounderCoachContext) {
-  const decision = await buildFounderCoachDecision({
-    context,
-    mode: "PROACTIVE_SUGGESTION",
-  });
+  const [decision, metricData] = await Promise.all([
+    buildFounderCoachDecision({
+      context,
+      mode: "PROACTIVE_SUGGESTION",
+    }),
+    buildMetricDataContext(context.product.id),
+  ]);
   const advisoryKnowledge = decision.skills
     .map(
       (skill) => `SKILL: ${skill.name}\nWHY LOADED: ${skill.reason}\n${skill.content}`
     )
     .join("\n\n---\n\n");
 
+  const stage = context.product.status;
+
+  const stageRules =
+    stage === "PRE_LAUNCH"
+      ? `STAGE: PRE_LAUNCH — product is NOT live yet.
+STRICT RULES FOR THIS STAGE:
+- Focus ONLY on launch checklist completion and launch blockers.
+- NEVER suggest GA4, analytics integrations, growth tools, metric setup, or AARRR tracking.
+- NEVER suggest Stripe, revenue tracking, or retention analysis.
+- The single most valuable thing is closing launch blockers and getting to launch.`
+      : stage === "LAUNCHED"
+      ? `STAGE: LAUNCHED — product is live but early.
+STRICT RULES FOR THIS STAGE:
+- If metric setup is not complete, suggest that first.
+- If metric setup is complete but no entries, suggest first data entry.
+- If data exists but no goals, suggest setting first goal.
+- Integrations (GA4, Stripe) are relevant ONLY if metric setup is complete and there are 0 connected integrations.`
+      : `STAGE: GROWING — product has traction.
+STRICT RULES FOR THIS STAGE:
+- Focus on growth checklist execution, routines, and goal progress.
+- Suggest integrations if they would unblock a specific tracked metric.`;
+
   return `You are Founder Coach inside Tiramisup.
 You are generating one short proactive suggestion card from verified product state.
 Do not invent unsupported context. Suggest one high-value next step only.
 
+${stageRules}
+
 VERIFIED PRODUCT STATE:
 ${summarizeContext(context)}
+
+${metricData ? `LIVE METRIC DATA:\n${metricData}` : ""}
 
 ${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 
@@ -121,10 +229,8 @@ Return valid JSON only in this shape:
 Rules:
 - Turkish only
 - one suggestion only
-- if the state is too weak or noisy, still choose the highest-confidence next step
-- prefer launch blockers in PRE_LAUNCH
-- prefer activation/metric clarity in LAUNCHED
-- prefer suggestion over broad checklist
+- strictly follow the stage rules above — they override everything else
+- if the state is too weak or noisy, still choose the highest-confidence next step for the current stage
 - use loaded advisory knowledge when it sharpens the next-step recommendation
 `;
 }
@@ -161,9 +267,9 @@ async function callModels<T>(prompt: string): Promise<T | null> {
     } catch {}
   }
 
-  if (process.env.GEMINI_API_KEY) {
+  for (const geminiKey of [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean)) {
     try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const genAI = new GoogleGenerativeAI(geminiKey!);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent(prompt);
       return parseJson<T>(result.response.text());
@@ -219,6 +325,26 @@ function fallbackReactive(context: FounderCoachContext): FounderCoachResponse {
         { title: "Tek bir ana başarı metriğini hedefe çevir", why: "Odak alanını daraltmak execution kalitesini yükseltir.", priority: "IMPORTANT" }
       ],
       whatCanWait: ["Paralel çok sayıda growth deneyi", "Detaylı vanity metric kıyasları"]
+    };
+  }
+
+  // Has data, has goals — check for metric health signals
+  if (context.metrics.latest?.mrr != null || context.metrics.latest?.dau != null) {
+    const priorities: FounderCoachResponse["priorities"] = [];
+    if (context.metrics.latest.dau != null && context.metrics.latest.dau < 10) {
+      priorities.push({ title: "Günlük aktif kullanıcı sayısı düşük — acquisition odağını artır", why: "DAU tek haneli seviyede. Yeni kullanıcı kazanımı öncelikli.", priority: "CRITICAL" });
+    }
+    if (context.execution.integrationsConnected === 0) {
+      priorities.push({ title: "Stripe veya GA4 bağla", why: "Manuel veri girişi yerine otomatik veri akışı daha güvenilir.", priority: "IMPORTANT" });
+    }
+    if (priorities.length === 0) {
+      priorities.push({ title: "Mevcut metrikleri haftalık gözden geçir", why: "Düzenli veri kontrolü trendleri erken yakalar.", priority: "IMPORTANT" });
+    }
+    return {
+      title: "Growth döngüsü aktif, metrikleri takip et",
+      summary: "Ürün yayında ve veri akışı var. Şimdi en önemli konu metriklerdeki hareketi düzenli okuyup büyüme döngüsünü güçlendirmek.",
+      priorities,
+      whatCanWait: ["Yeni entegrasyon araştırması", "Büyük çaplı refactoring"]
     };
   }
 

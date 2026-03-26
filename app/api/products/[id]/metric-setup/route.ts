@@ -2,13 +2,18 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { SavedMetricSetup } from "@/lib/metric-setup";
-import { parseSavedMetricSetup } from "@/lib/metric-setup";
+import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { saveMetricSelections } from "@/lib/metric-setup";
 
-function isValidSetup(input: unknown): input is SavedMetricSetup {
-  if (!input || typeof input !== "object") return false;
-  const setup = input as SavedMetricSetup;
-  return [2, 3].includes(setup.version) && Array.isArray(setup.selections) && Array.isArray(setup.entries);
+function isValidSelections(input: unknown): input is FunnelMetricSelection[] {
+  if (!Array.isArray(input)) return false;
+  return input.every(
+    (item) =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof item.stage === "string" &&
+      Array.isArray(item.selectedMetricKeys)
+  );
 }
 
 export async function PATCH(
@@ -24,7 +29,7 @@ export async function PATCH(
     const { id } = await params;
     const product = await prisma.product.findFirst({
       where: { id, userId: session.user.id },
-      select: { id: true, launchGoals: true },
+      select: { id: true },
     });
 
     if (!product) {
@@ -32,24 +37,13 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    if (!isValidSetup(body?.setup)) {
+    const selections = body?.setup?.selections;
+
+    if (!isValidSelections(selections)) {
       return NextResponse.json({ error: "Invalid setup payload" }, { status: 400 });
     }
 
-    const existing = parseSavedMetricSetup(product.launchGoals);
-
-    await prisma.product.update({
-      where: { id },
-      data: {
-        launchGoals: JSON.stringify({
-          version: existing?.founderSummary ? 3 : 2,
-          selections: body.setup.selections,
-          entries: existing?.entries ?? [],
-          ...(existing?.platforms?.length ? { platforms: existing.platforms } : {}),
-          ...(existing?.founderSummary ? { founderSummary: existing.founderSummary } : {}),
-        } satisfies SavedMetricSetup),
-      },
-    });
+    await saveMetricSelections(id, selections);
 
     return NextResponse.json({ success: true });
   } catch (error) {

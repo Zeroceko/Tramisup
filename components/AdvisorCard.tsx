@@ -26,31 +26,51 @@ interface AdvisorCardProps {
   eventType?: string;
 }
 
+function parseSuggestionError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('API key') || msg.includes('LoadAPIKeyError')) return 'AI servisi şu an yapılandırılmamış.';
+  if (msg.includes('quota') || msg.includes('429')) return 'AI servisinin kullanım limiti doldu. Biraz sonra tekrar dene.';
+  if (msg.includes('timeout') || msg.includes('408')) return 'İstek zaman aşımına uğradı.';
+  if (msg.includes('500') || msg.includes('Internal')) return 'Sunucu hatası oluştu.';
+  return 'Öneri şu an alınamadı.';
+}
+
 export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }: AdvisorCardProps) {
   const [suggestion, setSuggestion] = useState<FounderCoachSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<FounderCoachResponse | null>(null);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadSuggestion = () => {
     let cancelled = false;
+    setLoading(true);
+    setSuggestionError(null);
     fetch(`/api/products/${productId}/advice?event=${encodeURIComponent(eventType)}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })
       .then((data: FounderCoachSuggestion | null) => {
         if (!cancelled) {
           setSuggestion(data);
           setLoading(false);
         }
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setSuggestionError(parseSuggestionError(err));
+          setLoading(false);
+        }
       });
+    return () => { cancelled = true; };
+  };
 
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    return loadSuggestion();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventType, productId]);
 
   async function askCoach() {
@@ -69,8 +89,8 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
       if (!res.ok) throw new Error("request failed");
       const data = (await res.json()) as FounderCoachResponse;
       setAnswer(data);
-    } catch {
-      setError("Koç önerisi şu an alınamadı. Biraz sonra tekrar dene.");
+    } catch (err: unknown) {
+      setError(parseSuggestionError(err));
     } finally {
       setAsking(false);
     }
@@ -99,11 +119,35 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
         )}
       </div>
 
-      {suggestion && (
+      {suggestionError ? (
         <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
-            Bir sonraki öneri
-          </p>
+          <p className="text-[13px] text-white/50">{suggestionError}</p>
+          <button
+            onClick={loadSuggestion}
+            className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 text-[12px] font-medium text-white/70 transition hover:bg-white/12 hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6l1.59-1.59A2.5 2.5 0 1 0 8.5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Tekrar dene
+          </button>
+        </div>
+      ) : suggestion ? (
+        <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
+              Bir sonraki öneri
+            </p>
+            <button
+              onClick={loadSuggestion}
+              title="Yenile"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white/30 transition hover:bg-white/10 hover:text-white/60"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6l1.59-1.59A2.5 2.5 0 1 0 8.5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <p className="mt-2 text-[18px] font-semibold leading-snug tracking-[-0.01em]">
             {suggestion.suggestedNextStep}
           </p>
@@ -112,7 +156,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             <p className="mt-2 text-[12px] text-white/45">Şimdilik bekleyebilir: {suggestion.whatCanWait}</p>
           )}
         </div>
-      )}
+      ) : null}
 
       <div className="mb-4">
         <label className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">

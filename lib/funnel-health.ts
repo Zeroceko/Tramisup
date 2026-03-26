@@ -36,7 +36,6 @@ type ProductShape = {
   businessModel?: string | null;
   description?: string | null;
   website?: string | null;
-  launchGoals?: string | null;
 };
 
 const STAGE_ORDER: FunnelStageKey[] = [

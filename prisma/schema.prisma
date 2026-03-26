@@ -60,6 +60,8 @@ model Product {
   retentionCohorts  RetentionCohort[]
   tasks             Task[]
   timelineEvents    TimelineEvent[]
+  metricSetup       MetricSetup?
+  metricEntries     MetricEntry[]
 
   @@index([userId])
 }
@@ -332,4 +334,37 @@ enum SyncStatus {
   RUNNING
   SUCCESS
   FAILED
+}
+
+// --- MetricSetup / MetricEntry ---
+// Replaces the Product.launchGoals JSON blob with proper DB entities.
+// MetricSetup: one per product, stores AARRR metric selections + auxiliary config.
+// MetricEntry: one row per product+date, stores user-entered AARRR funnel values.
+
+model MetricSetup {
+  id                  String        @id @default(cuid())
+  productId           String        @unique
+  selections          Json          // FunnelMetricSelection[] — AARRR stage → selected metric keys
+  platforms           String[]      @default([])
+  ignoredChecklistIds String[]      @default([])
+  founderSummary      Json?         // { headline, summary, nextStep, strengths, focusAreas }
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  product             Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  entries             MetricEntry[]
+}
+
+model MetricEntry {
+  id            String      @id @default(cuid())
+  productId     String
+  metricSetupId String
+  date          DateTime    @db.Date
+  values        Json        // Record<FunnelStageKey, number>
+  createdAt     DateTime    @default(now())
+  metricSetup   MetricSetup @relation(fields: [metricSetupId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date])
+  @@index([productId, date])
+  @@index([metricSetupId])
 }
