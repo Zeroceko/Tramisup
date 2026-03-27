@@ -2,8 +2,273 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GrowthMetricPlan } from "@/lib/growth-metric-recommendations";
+import type { GrowthMetricPlan, FunnelSection, FunnelMetricRecommendation } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
+
+// --- Types ---
+
+type Selected = Record<string, string>;
+
+// --- Summary panel ---
+
+function SummaryPanel({
+  plan,
+  selected,
+}: {
+  plan: GrowthMetricPlan;
+  selected: Selected;
+}) {
+  const selectedCount = plan.sections.filter((s) => !!selected[s.stage]).length;
+  const total = plan.sections.length;
+  const allDone = selectedCount === total;
+
+  // Detect vanity selections
+  const vanitySelections = plan.sections.flatMap((section) => {
+    const key = selected[section.stage];
+    if (!key) return [];
+    const metric = section.metrics.find((m) => m.key === key);
+    return metric?.vanityWarning ? [{ stage: section.stage, warning: metric.vanityWarning }] : [];
+  });
+
+  // Build what the dashboard will show
+  const dashboardItems = plan.sections.map((section) => {
+    const key = selected[section.stage];
+    const metric = section.metrics.find((m) => m.key === key);
+    return { stage: section.stage, metric: metric ?? null };
+  });
+
+  return (
+    <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
+        Ölçüm sistemi
+      </p>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">
+          {selectedCount}
+        </span>
+        <span className="text-[14px] text-[#666d80]">/ {total} aşama</span>
+      </div>
+
+      {/* Funnel coverage dots */}
+      <div className="mt-3 flex gap-1">
+        {plan.sections.map((section) => (
+          <div
+            key={section.stage}
+            title={section.stage}
+            className={`h-2 flex-1 rounded-full transition-colors ${
+              selected[section.stage] ? "bg-[#95dbda]" : "bg-[#e8e8e8]"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Selected metrics list */}
+      <div className="mt-4 space-y-2">
+        {dashboardItems.map(({ stage, metric }) => (
+          <div key={stage} className="flex items-start gap-2">
+            <span
+              className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+                metric ? "bg-[#95dbda]" : "bg-[#e8e8e8]"
+              }`}
+            />
+            <div className="min-w-0">
+              <p className="text-[11px] text-[#8a8fa0]">{stage}</p>
+              {metric ? (
+                <p className="text-[12px] font-semibold leading-4 text-[#0d0d12]">
+                  {metric.name}
+                </p>
+              ) : (
+                <p className="text-[12px] text-[#c0c0c0]">Seçilmedi</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Vanity warnings */}
+      {vanitySelections.length > 0 && (
+        <div className="mt-4 rounded-[12px] border border-orange-100 bg-[#fff7ed] p-3">
+          <p className="text-[11px] font-semibold text-[#c2410c]">
+            {vanitySelections.length === 1 ? "1 düşük güven metriği" : `${vanitySelections.length} düşük güven metriği`}
+          </p>
+          {vanitySelections.map(({ stage, warning }) => (
+            <p key={stage} className="mt-1 text-[11px] leading-4 text-[#c2410c]">
+              <span className="font-semibold">{stage}:</span> {warning}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* Coach explanation */}
+      {allDone && vanitySelections.length === 0 && (
+        <div className="mt-4 rounded-[12px] bg-[#f0fafa] p-3">
+          <p className="text-[12px] font-semibold text-[#0d0d12]">Koç ne yapacak?</p>
+          <p className="mt-1 text-[11px] leading-4 text-[#666d80]">
+            Bu {total} metrik her gün güncellendikçe koç trendi okuyacak, zayıf halkayı tespit edecek ve ne yapman gerektiğini söyleyecek.
+          </p>
+        </div>
+      )}
+
+      {!allDone && (
+        <p className="mt-4 text-[11px] leading-4 text-[#8a8fa0]">
+          {total - selectedCount} aşama daha seçilince dashboard ve koç bu metrikleri kullanmaya başlar.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// --- Metric card ---
+
+function MetricCard({
+  metric,
+  isSelected,
+  onSelect,
+}: {
+  metric: FunnelMetricRecommendation;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const [showAvoid, setShowAvoid] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full rounded-[14px] border p-4 text-left transition ${
+        isSelected
+          ? "border-[#95dbda] bg-[#f0fafa]"
+          : "border-[#e8e8e8] bg-[#fafafa] hover:border-[#cce8e8]"
+      }`}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {metric.recommended && (
+            <span className="rounded-full bg-[#ffd7ef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#0d0d12]">
+              Önerilen
+            </span>
+          )}
+        </div>
+        {/* Radio circle */}
+        <span
+          className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition ${
+            isSelected ? "border-[#95dbda] bg-[#95dbda]" : "border-[#cfcfcf]"
+          }`}
+        >
+          {isSelected && (
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+              <path
+                d="M1 3L3 5L7 1"
+                stroke="#0d0d12"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </span>
+      </div>
+
+      {/* Name */}
+      <p className={`mt-2 text-[13px] font-semibold leading-snug ${isSelected ? "text-[#0d0d12]" : "text-[#0d0d12]"}`}>
+        {metric.name}
+      </p>
+
+      {/* Description */}
+      <p className="mt-1 text-[12px] leading-5 text-[#666d80]">{metric.description}</p>
+
+      {/* When to use */}
+      <p className="mt-2 text-[11px] leading-4 text-[#8a8fa0]">
+        <span className="font-semibold">Ne zaman: </span>
+        {metric.whenToUse}
+      </p>
+
+      {/* When to avoid (toggle) */}
+      {metric.whenToAvoid && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowAvoid((v) => !v); }}
+          className="mt-1.5 text-[11px] text-[#94a3b8] underline-offset-2 hover:underline"
+        >
+          {showAvoid ? "Gizle" : "Ne zaman seçme?"}
+        </button>
+      )}
+      {showAvoid && metric.whenToAvoid && (
+        <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
+          <span className="font-semibold">Kaçın: </span>
+          {metric.whenToAvoid}
+        </p>
+      )}
+
+      {/* Vanity warning — only shown when selected */}
+      {isSelected && metric.vanityWarning && (
+        <div className="mt-3 rounded-[10px] border border-orange-100 bg-[#fff7ed] p-2.5">
+          <p className="text-[11px] leading-4 text-[#c2410c]">
+            ⚠ {metric.vanityWarning}
+          </p>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// --- Stage section ---
+
+function StageSection({
+  section,
+  selectedKey,
+  onSelect,
+  stageIndex,
+}: {
+  section: FunnelSection;
+  selectedKey: string | undefined;
+  onSelect: (key: string) => void;
+  stageIndex: number;
+}) {
+  const isDone = !!selectedKey;
+
+  return (
+    <div className={`rounded-[16px] border p-5 ${isDone ? "border-[#d1f0ef]" : "border-[#e8e8e8]"}`}>
+      {/* Stage header */}
+      <div className="mb-4 flex items-start gap-3">
+        <span
+          className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+            isDone
+              ? "bg-[#95dbda] text-[#0d0d12]"
+              : "border border-[#e8e8e8] bg-white text-[#8a8fa0]"
+          }`}
+        >
+          {isDone ? (
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+              <path d="M1 3L3 5L7 1" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            stageIndex + 1
+          )}
+        </span>
+        <div>
+          <p className="text-[15px] font-semibold text-[#0d0d12]">{section.stage}</p>
+          <p className="mt-0.5 text-[12px] leading-4 text-[#666d80]">{section.guidingQuestion}</p>
+        </div>
+      </div>
+
+      {/* Metrics grid */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {section.metrics.map((metric) => (
+          <MetricCard
+            key={metric.key}
+            metric={metric}
+            isSelected={selectedKey === metric.key}
+            onSelect={() => onSelect(metric.key)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Main component ---
 
 export default function MetricSetupSelector({
   productId,
@@ -17,68 +282,50 @@ export default function MetricSetupSelector({
   locale: string;
 }) {
   const router = useRouter();
-  const initialMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const selection of initialSetup?.selections ?? []) {
-      map[selection.stage] = selection.selectedMetricKeys;
+
+  const initialMap = useMemo<Selected>(() => {
+    const map: Selected = {};
+    for (const s of initialSetup?.selections ?? []) {
+      if (s.selectedMetricKeys[0]) map[s.stage] = s.selectedMetricKeys[0];
     }
     return map;
   }, [initialSetup]);
 
-  const [selected, setSelected] = useState<Record<string, string[]>>(initialMap);
+  const [selected, setSelected] = useState<Selected>(initialMap);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(!(initialSetup?.selections?.length));
+  const [editing, setEditing] = useState(!initialSetup?.selections?.length);
 
-  function selectSingle(stage: string, metricKey: string) {
-    setSaved(false);
-    setSelected((prev) => ({ ...prev, [stage]: [metricKey] }));
+  const completedStages = plan.sections.filter((s) => !!selected[s.stage]).length;
+  const allReady = completedStages === plan.sections.length;
+
+  function selectMetric(stage: string, key: string) {
+    setError(null);
+    setSelected((prev) => ({ ...prev, [stage]: key }));
   }
 
-  const completedStages = plan.sections.filter((section) => (selected[section.stage] ?? []).length === 1).length;
-  const allStagesReady = completedStages === plan.sections.length;
-  const selectedSummary = plan.sections
-    .map((section) => {
-      const metricKey = selected[section.stage]?.[0];
-      const metric = section.metrics.find((item) => item.key === metricKey);
-      return metric
-        ? {
-            stage: section.stage,
-            metricName: metric.name,
-            whyItMatters: section.whyItMatters,
-          }
-        : null;
-    })
-    .filter(Boolean) as Array<{ stage: string; metricName: string; whyItMatters: string }>;
-
   async function saveSetup() {
-    if (!allStagesReady) {
-      setError("Devam etmeden önce her kategori için 1 metrik seç.");
+    if (!allReady) {
+      setError("Devam etmeden önce her aşama için bir metrik seç.");
       return;
     }
-
     setSaving(true);
-    setSaved(false);
     setError(null);
     try {
       const setup: SavedMetricSetup = {
         version: 2,
-        selections: plan.sections.map((section) => ({
-          stage: section.stage,
-          selectedMetricKeys: selected[section.stage] ?? [],
+        selections: plan.sections.map((s) => ({
+          stage: s.stage,
+          selectedMetricKeys: selected[s.stage] ? [selected[s.stage]] : [],
         })),
         entries: initialSetup?.entries ?? [],
       };
-
       const res = await fetch(`/api/products/${productId}/metric-setup`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ setup }),
       });
-
       if (!res.ok) throw new Error("save failed");
-      setSaved(true);
       setEditing(false);
       router.push(`/${locale}/metrics`);
       router.refresh();
@@ -89,41 +336,55 @@ export default function MetricSetupSelector({
     }
   }
 
+  // --- Summary view (not editing) ---
   if (!editing && initialSetup?.selections?.length) {
+    const summary = plan.sections.map((s) => {
+      const key = selected[s.stage];
+      const metric = s.metrics.find((m) => m.key === key);
+      return { stage: s.stage, metric };
+    });
+
     return (
-      <section id="tracking-metrics" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Secilen metrik seti</p>
-            <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-              Metrik kararlarini verdin, simdi execution tarafina geciyoruz
+      <section id="tracking-metrics" className="rounded-[16px] border border-[#e8e8e8] bg-white p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
+              Seçilen ölçüm sistemi
+            </p>
+            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
+              {plan.sections.length} aşama tanımlı
             </h2>
-            <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-              Bu alan artik ozet halinde kaliyor. Ihtiyac olursa buradan veya daha sonra Ayarlar altindaki `Growth takip metriklerini degistir`
-              kisayolundan secimini duzenleyebilirsin; kalan ekran ise hedefler, checklist ve Tiramisup onerilerine ayrilir.
+            <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
+              Günlük veri girişi ve trend takibi için Metrics ekranını kullan.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+            className="shrink-0 inline-flex h-9 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
           >
-            Growth takip metriklerini degistir
+            Metrikleri değiştir
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {selectedSummary.map((item) => (
-            <div key={item.stage} className="rounded-[14px] border border-[#eef1f2] bg-[#fbfcfc] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">
-                {item.stage}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {summary.map(({ stage, metric }) => (
+            <div key={stage} className="rounded-[14px] border border-[#e8e8e8] bg-[#fafafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
+                {stage}
               </p>
-              <h3 className="mt-1 text-[15px] font-semibold text-[#0d0d12]">
-                {item.metricName}
-              </h3>
-              <p className="mt-2 text-[12px] leading-5 text-[#666d80]">
-                {item.whyItMatters}
-              </p>
+              {metric ? (
+                <>
+                  <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">{metric.name}</p>
+                  {metric.vanityWarning && (
+                    <p className="mt-1.5 text-[11px] leading-4 text-[#f97316]">
+                      ⚠ Düşük güven metriği
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="mt-1 text-[13px] text-[#8a8fa0]">Seçilmedi</p>
+              )}
             </div>
           ))}
         </div>
@@ -131,73 +392,55 @@ export default function MetricSetupSelector({
     );
   }
 
+  // --- Edit view ---
   return (
-    <section id="tracking-metrics" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-      <div className="mb-6 max-w-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Growth = neyi takip edeceğiz?</p>
+    <section id="tracking-metrics">
+      {/* Header */}
+      <div className="mb-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
+          Growth = neyi takip edeceğiz?
+        </p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          Önce her adım için tek bir ana sayı seçelim
+          Her aşama için tek bir ana sinyal seç
         </h2>
-        <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-          Growth ekranında amacımız optimizasyon yapmak değil. Önce neyi takip edeceğini netleştiriyoruz.
-          Bu secimi daha sonra Ayarlar altindan yeniden duzenleyebilirsin. Kaydedince seni Metrics ekranına götürüp bugünkü sayılarını gireceğiz.
+        <p className="mt-1.5 text-[13px] leading-5 text-[#666d80]">
+          Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.
         </p>
       </div>
 
-      <div className="space-y-4">
-        {plan.sections.map((section) => {
-          const selectedKey = selected[section.stage]?.[0];
-          return (
-            <div key={section.stage} className="rounded-[14px] border border-[#ededed] p-4">
-              <div className="mb-3">
-                <p className="text-[15px] font-semibold text-[#0d0d12]">{section.stage}</p>
-                <p className="mt-1 text-[12px] leading-5 text-[#666d80]">{section.whyItMatters}</p>
-              </div>
+      {/* Two-column layout */}
+      <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
+        {/* Stage sections */}
+        <div className="space-y-3">
+          {plan.sections.map((section, i) => (
+            <StageSection
+              key={section.stage}
+              section={section}
+              selectedKey={selected[section.stage]}
+              onSelect={(key) => selectMetric(section.stage, key)}
+              stageIndex={i}
+            />
+          ))}
+        </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                {section.metrics.map((metric) => {
-                  const active = selectedKey === metric.key;
-                  return (
-                    <button
-                      key={metric.key}
-                      type="button"
-                      onClick={() => selectSingle(section.stage, metric.key)}
-                      className={`rounded-[12px] border p-4 text-left transition ${
-                        active
-                          ? "border-[#95dbda] bg-[#f0fafa]"
-                          : "border-[#ececec] bg-[#fafafa] hover:border-[#d9d9d9]"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[13px] font-semibold text-[#0d0d12]">{metric.name}</p>
-                        <span
-                          className={`mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full border ${
-                            active ? "border-[#95dbda] bg-[#95dbda]" : "border-[#cfcfcf]"
-                          }`}
-                        >
-                          {active ? (
-                            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                              <path d="M1 3L3 5L7 1" stroke="#0d0d12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          ) : null}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-[12px] leading-5 text-[#666d80]">{metric.description}</p>
-                      <p className="mt-2 text-[11px] leading-5 text-[#8a8fa0]">{metric.whenToUse}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        {/* Summary panel (sticky on desktop) */}
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <SummaryPanel plan={plan} selected={selected} />
+        </div>
       </div>
 
-      <div className="sticky bottom-4 mt-6 rounded-[16px] border border-[#ececec] bg-white/95 p-4 shadow-[0_12px_30px_rgba(13,13,18,0.08)] backdrop-blur">
+      {/* Sticky save bar */}
+      <div className="sticky bottom-4 mt-5 rounded-[16px] border border-[#e8e8e8] bg-white/96 p-4 shadow-[0_8px_24px_rgba(13,13,18,0.08)] backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[13px] font-semibold text-[#0d0d12]">{completedStages} / {plan.sections.length} kategori tamamlandı</p>
-            <p className="mt-1 text-[12px] text-[#666d80]">Burada seçim yapıyoruz. Sayı girişi bir sonraki adımda Metrics ekranında olacak.</p>
+            <p className="text-[13px] font-semibold text-[#0d0d12]">
+              {completedStages} / {plan.sections.length} aşama seçildi
+            </p>
+            {!allReady && (
+              <p className="mt-0.5 text-[12px] text-[#666d80]">
+                Kalan {plan.sections.filter((s) => !selected[s.stage]).map((s) => s.stage).join(", ")} aşamaları için seçim yap.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {initialSetup?.selections?.length ? (
@@ -205,23 +448,22 @@ export default function MetricSetupSelector({
                 type="button"
                 onClick={() => setEditing(false)}
                 disabled={saving}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
               >
-                Vazgec
+                Vazgeç
               </button>
             ) : null}
             <button
               type="button"
               onClick={() => void saveSetup()}
-              disabled={saving || !allStagesReady}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={saving || !allReady}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Kaydediliyor…" : "Kaydet ve metrik girisine gec"}
+              {saving ? "Kaydediliyor…" : "Kaydet ve metrik girişine geç"}
             </button>
           </div>
         </div>
-        {saved ? <p className="mt-3 text-[12px] text-[#2f6d46]">Seçimlerin kaydedildi.</p> : null}
-        {error ? <p className="mt-3 text-[12px] text-[#b42318]">{error}</p> : null}
+        {error && <p className="mt-2 text-[12px] text-[#b42318]">{error}</p>}
       </div>
     </section>
   );
