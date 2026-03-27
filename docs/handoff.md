@@ -1,6 +1,6 @@
 # Tiramisup Handoff Notes
 
-**Last Updated:** 23 March 2026
+**Last Updated:** 27 March 2026
 
 ## Current focus
 
@@ -49,6 +49,39 @@ Current product surfaces also include:
 - ASO questions should route separately from policy/compliance questions
 - launch blocker questions should route to launch readiness, and tracking-plan questions should route to analytics instrumentation
 - skill-routing questions should route to the new gateway skill
+
+## March 27 — Today Screen Redesign
+
+Dashboard replaced with a phase-adaptive "Today" command center.
+
+### Architecture decisions
+- `GROWING` and `LAUNCHED` are merged at the UI level. GROWING is only cosmetic (purple badge). All post-launch behavior is identical. Wizard still writes GROWING to DB for "Büyüme aşamasında" selections.
+- `PhaseKey` is now `"pre-launch" | "launched"` — two operating modes only.
+- Pre-launch and post-launch render completely different primary actions, decision strips, and blocker surfaces.
+
+### New components (`components/today/`)
+| Component | Purpose |
+|-----------|---------|
+| `TodayHero` | Greeting + product name + phase badge + one-line status |
+| `PrimaryAction` | Single dominant action card with progress bar. Phase-adaptive. |
+| `DecisionStrip` | 4 compact health indicators (readiness/growth, tasks, metrics, sources) |
+| `BlockerAlert` | Conditional — only renders when HIGH priority checklist items or ERROR integrations exist |
+| `TodayTasks` | Top 3 priority tasks with quick-complete (PATCH `/api/actions/[id]`) |
+| `SourceHealth` | Today's entry status, manual vs automated metric breakdown, integration health |
+| `CoachInsight` | Opt-in AI coach (collapsed by default). Prompt always sent in English, response forced to user locale. |
+
+### Data fetching
+`app/[locale]/dashboard/page.tsx` now fetches in a single parallel `Promise.all`:
+- `LaunchChecklist` HIGH+incomplete items (blockers)
+- `Task` top 3 by priority (not DONE)
+- `Task` grouped by status (counts)
+- `Integration` ERROR status
+- `MetricEntry` for today's date
+- `Goal` count
+- `MetricSetup` (AARRR selections + founder summary)
+
+### CoachInsight language fix
+Prompts are always sent in English for better AI reasoning. A `You MUST respond in Turkish` instruction is appended when `locale === "tr"`. This prevents the model from defaulting to English regardless of prompt language.
 
 ## Notes
 

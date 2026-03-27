@@ -16,9 +16,12 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
 
   function handleAsk() {
     setExpanded(true);
-    const prompt = isEn
-      ? `My product is at stage: ${stage}. Look at my checklists, completed tasks, and daily performance. Give me ONE specific focus point — what should I do next and why. Be direct, no introduction.`
-      : `Ürünümün şu anki aşaması: ${stage}. Checklistlerime, tamamlanan görevlerime ve günlük performansıma bakarak bana SADECE TEK BİR odak noktası ver. Ne yapmam gerektiği ve neden. Sohbet etme, direkt yaz.`;
+    // Always send analysis in English (better AI reasoning),
+    // then force response language via explicit instruction.
+    const languageInstruction = isEn
+      ? "Respond in English."
+      : "You MUST respond in Turkish (Türkçe). Do not use English.";
+    const prompt = `My product is at stage: ${stage}. Look at my checklists, completed tasks, and daily performance. Give me ONE specific focus point — what I should do next and exactly why. Be direct, no introduction, no self-presentation. ${languageInstruction}`;
     askAdvisor(prompt);
   }
 
