@@ -16,10 +16,13 @@ export async function PATCH(
     const { id } = await context.params;
     const body = await request.json();
 
-    // Verify ownership via product
+    // Verify ownership via product; include linked checklist item
     const existing = await prisma.task.findFirst({
       where: { id },
-      include: { product: { select: { userId: true } } },
+      include: {
+        product: { select: { userId: true } },
+        launchChecklistItem: { select: { id: true, completed: true } },
+      },
     });
     if (!existing || existing.product.userId !== session.user.id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -29,6 +32,18 @@ export async function PATCH(
       where: { id },
       data: { status: body.status },
     });
+
+    // Auto-complete the linked launch checklist item when task → DONE
+    if (
+      body.status === "DONE" &&
+      existing.launchChecklistItem &&
+      !existing.launchChecklistItem.completed
+    ) {
+      await prisma.launchChecklist.update({
+        where: { id: existing.launchChecklistItem.id },
+        data: { completed: true },
+      });
+    }
 
     return NextResponse.json(task);
   } catch (error) {

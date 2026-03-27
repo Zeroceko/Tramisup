@@ -83,6 +83,66 @@ Dashboard replaced with a phase-adaptive "Today" command center.
 ### CoachInsight language fix
 Prompts are always sent in English for better AI reasoning. A `You MUST respond in Turkish` instruction is appended when `locale === "tr"`. This prevents the model from defaulting to English regardless of prompt language.
 
+## March 28 — Launch Readiness Screen Redesign
+
+Launch Readiness reframed as a "launch control system" with gate logic, weighted scoring, and severity hierarchy.
+
+### Gate model
+Three gate states derived at page level:
+- `HARD_BLOCKED` — any active HIGH-priority incomplete checklist item. Button locked.
+- `WARNING` — no active blockers, but ignored blockers or non-critical items remain. Button enabled with risk acknowledgment.
+- `CLEAR` — zero blockers, zero ignored. Full green light.
+
+### Weighted score
+`HIGH=3, MEDIUM=2, LOW=1`. Score = completedWeight / totalWeight × 100. Simple % was misleading (9/10 with 1 critical LEGAL = 90% — wrong).
+
+### New and updated components
+| Component | Change |
+|-----------|--------|
+| `components/launch/LaunchGateStatus.tsx` | New hero. Weighted score (large display), gate state badge, 4 confidence indicators (Product/Tech/Legal/Marketing), anchor to #blockers when hard blocked. |
+| `components/ChecklistSection.tsx` | Risk label per category, RED border on HIGH items, red counter badge, expandable description, "Göreve ekle" CTA. |
+| `components/BlockerSummary.tsx` | CRITICAL (LEGAL/TECH) vs IMPORTANT (PRODUCT/MARKETING) severity. Sorted by severity. "Riski kabul et, geç" replaces "Yoksay". |
+| `components/LaunchButton.tsx` | `gateOpen` prop — lock icon when blocked. Ignored blocker warning in modal. Risk acknowledgment checkbox required when ignored blockers exist. |
+
+### Page (`app/[locale]/pre-launch/page.tsx`)
+Computes weighted score, gate state, and 4 confidence indicators. Passes `gateOpen`, `ignoredBlockers`, `nonCriticalRemaining`, and `locale` to all components. `LaunchReviewSummary` removed — replaced by `LaunchGateStatus`.
+
+---
+
+## March 28 — Tasks Screen Redesign
+
+Tasks reframed as a founder execution queue with impact-based prioritization and linked system effects.
+
+### Section model
+Tasks are sorted into four execution lanes (derived, not stored in DB):
+- **Şimdi yap / Do now** — `IN_PROGRESS` tasks + `HIGH` priority tasks that are overdue or due today. Shown as prominent focus cards with a large CTA.
+- **Sırada / Up next** — `HIGH` and `MEDIUM` priority `TODO` tasks not in the focus lane.
+- **Bekleyen / Backlog** — `LOW` priority `TODO` tasks. Collapsed by default.
+- **Tamamlandı / Done** — `DONE` tasks. Collapsed by default.
+
+### Linked system effect
+When a task is marked DONE via `PATCH /api/actions/[id]`, the API now also auto-completes the linked `LaunchChecklist` item (if one exists and is not already completed). This means completing a task from the launch checklist on the Tasks screen is reflected immediately in Launch Readiness — no manual double-update needed.
+
+### Card metadata surface
+- Priority shown as impact label (`Yüksek etki / High impact`) with colored dot
+- Linked checklist category badge (LEGAL / TECH / PRODUCT / MARKETING) — shows which launch gate this task affects
+- Overdue / due today / in-progress state badges
+- Expandable description (collapse toggle button)
+- Inline "Başla / Start" button to move task → IN_PROGRESS
+
+### Momentum bar
+Completion progress bar at the top: `doneTasks.length / tasks.length × 100`. Thin green bar, always visible when tasks exist.
+
+### Task creation
+Inline add form with title, description (new), due date, priority. Uses `POST /api/actions`. Description field was always in the DB but never exposed in the UI until now.
+
+### Updated files
+| File | Change |
+|------|--------|
+| `app/api/actions/[id]/route.ts` | PATCH now includes `launchChecklistItem` in the query and auto-completes it when task → DONE |
+| `app/[locale]/tasks/page.tsx` | Fetches tasks with `include: { launchChecklistItem }`, removed next-intl dependency (hardcoded bilingual), passes `locale` to TasksList |
+| `components/TasksList.tsx` | Full rewrite — 4-lane execution queue, focus cards, momentum bar, collapsible backlog/done, bilingual |
+
 ## Notes
 
 - Figma MCP was not available in this terminal harness, so the first-run surface was implemented against the existing product system and documented constraints instead of a direct frame import.

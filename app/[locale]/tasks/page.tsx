@@ -1,5 +1,4 @@
 import { getServerSession } from "next-auth";
-import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +14,8 @@ export default async function TasksPage({
   const { locale } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
-  const t = await getTranslations("tasks");
+
+  const isEn = locale === "en";
 
   const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
@@ -27,9 +27,11 @@ export default async function TasksPage({
 
   if (!product) {
     return (
-      <div className="text-center py-20">
+      <div className="py-20 text-center">
         <p className="text-[14px] text-[#666d80]">
-          Görevleri görmek için bir ürün oluşturmalısın
+          {isEn
+            ? "Create a product to start tracking tasks"
+            : "Görevleri görmek için bir ürün oluşturmalısın"}
         </p>
       </div>
     );
@@ -37,22 +39,26 @@ export default async function TasksPage({
 
   const tasks = await prisma.task.findMany({
     where: { productId: product.id },
-    orderBy: [
-      { dueDate: "asc" },
-      { priority: "desc" },
-      { createdAt: "desc" },
-    ],
+    include: {
+      launchChecklistItem: {
+        select: { id: true, title: true, category: true, completed: true },
+      },
+    },
+    orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { createdAt: "desc" }],
   });
 
   return (
     <div>
       <PageHeader
-        eyebrow={t("eyebrow")}
-        title={t("title")}
-        description={t("description")}
+        eyebrow={isEn ? "Your execution queue" : "Çalışma yüzeyin"}
+        title={isEn ? "Tasks" : "Görevler"}
+        description={
+          isEn
+            ? "Focus on highest-impact work first."
+            : "En yüksek etkili işe önce odaklan."
+        }
       />
-
-      <TasksList tasks={tasks} productId={product.id} />
+      <TasksList tasks={tasks} productId={product.id} locale={locale} />
     </div>
   );
 }
