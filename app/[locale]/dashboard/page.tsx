@@ -2,12 +2,221 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
-import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
-import StatCard from "@/components/StatCard";
-import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import { getMetricSetup } from "@/lib/metric-setup";
-import TiramisupAdviceCard from "@/components/TiramisupAdviceCard";
+import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import FirstRunOnboarding from "@/components/FirstRunOnboarding";
+import TodayHero from "@/components/today/TodayHero";
+import PrimaryAction from "@/components/today/PrimaryAction";
+import DecisionStrip from "@/components/today/DecisionStrip";
+import BlockerAlert from "@/components/today/BlockerAlert";
+import TodayTasks from "@/components/today/TodayTasks";
+import SourceHealth from "@/components/today/SourceHealth";
+import CoachInsight from "@/components/today/CoachInsight";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+type PhaseKey = "pre-launch" | "launched";
+
+function derivePhase(status: string): PhaseKey {
+  if (status === "LAUNCHED" || status === "GROWING") return "launched";
+  return "pre-launch";
+}
+
+/** Build a human-readable status line based on product state. */
+function buildStatusLine(
+  phase: PhaseKey,
+  launchStatus: string | null,
+  opts: {
+    readinessScore: number;
+    blockerCount: number;
+    daysUntilLaunch: number | null;
+    selectedMetricCount: number;
+    enteredToday: boolean;
+    funnelOverall: string | null;
+    locale: string;
+  }
+): string {
+  const { readinessScore, blockerCount, daysUntilLaunch, selectedMetricCount, enteredToday, funnelOverall, locale } = opts;
+  const isEn = locale === "en";
+
+  if (phase === "pre-launch") {
+    if (blockerCount > 0 && daysUntilLaunch != null && daysUntilLaunch > 0) {
+      return isEn
+        ? `${daysUntilLaunch} days to launch. ${blockerCount} blocker${blockerCount > 1 ? "s" : ""} remaining.`
+        : `Launch'a ${daysUntilLaunch} gün kaldı. ${blockerCount} kritik blokaj kaldı.`;
+    }
+    if (blockerCount > 0) {
+      return isEn
+        ? `${readinessScore}% ready. ${blockerCount} blocker${blockerCount > 1 ? "s" : ""} need attention.`
+        : `%${readinessScore} hazır. ${blockerCount} kritik blokaj dikkatini bekliyor.`;
+    }
+    if (readinessScore >= 100) {
+      return isEn ? "All checklist items complete. Ready to launch." : "Tüm hazırlık maddeleri tamam. Launch'a hazırsın.";
+    }
+    // Sub-phase nuance from launchStatus
+    if (launchStatus === "Geliştirme aşamasında") {
+      return isEn
+        ? `Building phase — ${readinessScore}% of launch checklist done.`
+        : `Geliştirme aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;
+    }
+    if (launchStatus === "Test kullanıcıları var") {
+      return isEn
+        ? `Testing phase — ${readinessScore}% of launch checklist done.`
+        : `Test aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;
+    }
+    return isEn
+      ? `${readinessScore}% of launch preparation complete.`
+      : `Launch hazırlığının %${readinessScore}'i tamamlandı.`;
+  }
+
+  if (phase === "launched") {
+    if (selectedMetricCount === 0) {
+      return isEn
+        ? "Launched! Set up your metrics to start tracking growth."
+        : "Yayında! Büyüme takibini başlatmak için metrik setup'ını tamamla.";
+    }
+    if (!enteredToday) {
+      return isEn
+        ? "Metrics are set up. Enter today's values to build your baseline."
+        : "Metrikler hazır. Bugünkü değerleri girerek baz çizgini oluştur.";
+    }
+    // Funnel health nuance (when enough data exists)
+    if (funnelOverall === "STRONG") {
+      return isEn
+        ? "Growth is on track. Keep the daily rhythm."
+        : "Büyüme sağlıklı ilerliyor. Günlük ritmi koru.";
+    }
+    if (funnelOverall === "MIXED") {
+      return isEn
+        ? "Some funnel stages need attention. Check the weak link."
+        : "Bazı funnel halkaları dikkat istiyor. Zayıf halkayı kontrol et.";
+    }
+    return isEn
+      ? "Tracking active. Review your funnel health and keep the rhythm."
+      : "Takip aktif. Funnel sağlığını kontrol et ve ritmi koru.";
+  }
+
+  // Exhaustive fallback (unreachable with current PhaseKey)
+  return "";
+}
+
+/** Build the primary action card content from product state. */
+function buildPrimaryAction(
+  phase: PhaseKey,
+  locale: string,
+  opts: {
+    readinessScore: number;
+    launchCompleted: number;
+    launchTotal: number;
+    blockerCount: number;
+    selectedMetricCount: number;
+    enteredToday: boolean;
+    hasGoals: boolean;
+    growthCompleted: number;
+    growthTotal: number;
+  }
+) {
+  const isEn = locale === "en";
+
+  if (phase === "pre-launch") {
+    if (opts.readinessScore >= 100) {
+      return {
+        title: isEn ? "Ready to launch" : "Launch'a hazırsın",
+        description: isEn
+          ? "All critical items are done. Review your final checklist and press launch."
+          : "Tüm kritik maddeler tamamlandı. Son kontrolleri yap ve launch butonuna bas.",
+        why: isEn ? "All blockers cleared" : "Tüm blokajlar kapandı",
+        cta: isEn ? "Go to launch review" : "Launch kontrolüne git →",
+        href: `/${locale}/pre-launch`,
+        accent: "teal" as const,
+        progress: 100,
+      };
+    }
+    return {
+      title: isEn ? "Complete your launch preparation" : "Launch hazırlığını tamamla",
+      description: isEn
+        ? `${opts.launchCompleted}/${opts.launchTotal} items done. ${opts.blockerCount > 0 ? `${opts.blockerCount} critical blocker${opts.blockerCount > 1 ? "s" : ""} need resolution.` : "Keep going."}`
+        : `${opts.launchCompleted}/${opts.launchTotal} madde tamamlandı. ${opts.blockerCount > 0 ? `${opts.blockerCount} kritik blokaj çözülmeli.` : "Devam et."}`,
+      why: isEn ? "Next step toward launch" : "Launch'a giden bir sonraki adım",
+      cta: isEn ? "Go to launch checklist" : "Launch checklist'e git →",
+      href: `/${locale}/pre-launch`,
+      accent: "amber" as const,
+      progress: opts.readinessScore,
+    };
+  }
+
+  if (opts.selectedMetricCount === 0) {
+    return {
+      title: isEn ? "Set up growth tracking" : "Büyüme takibini kur",
+      description: isEn
+        ? "Select one key metric per AARRR category. This becomes your daily pulse."
+        : "Her AARRR kategorisi için 1 ana metrik seç. Bu senin günlük nabzın olacak.",
+      why: isEn ? "First step after launch" : "Launch sonrası ilk adım",
+      cta: isEn ? "Go to growth setup" : "Growth setup'a git →",
+      href: `/${locale}/growth`,
+      accent: "teal" as const,
+    };
+  }
+
+  if (!opts.enteredToday) {
+    return {
+      title: isEn ? "Enter today's metrics" : "Bugünkü metrikleri gir",
+      description: isEn
+        ? "Your metrics are configured. Enter today's values to keep your growth rhythm."
+        : "Metriklerin hazır. Bugünkü değerleri girerek büyüme ritmini koru.",
+      why: isEn ? "Daily operating rhythm" : "Günlük çalışma ritmi",
+      cta: isEn ? "Enter metrics" : "Metrikleri gir →",
+      href: `/${locale}/metrics`,
+      accent: "pink" as const,
+    };
+  }
+
+  if (!opts.hasGoals) {
+    return {
+      title: isEn ? "Set your first goal" : "İlk hedefini belirle",
+      description: isEn
+        ? "Data is flowing. Now define a numeric target to work toward."
+        : "Veri akıyor. Şimdi çalışacağın sayısal bir hedef tanımla.",
+      why: isEn ? "Turn data into direction" : "Veriyi yöne çevir",
+      cta: isEn ? "Set a goal" : "Hedef koy →",
+      href: `/${locale}/growth#goals`,
+      accent: "teal" as const,
+    };
+  }
+
+  if (opts.growthTotal > 0 && opts.growthCompleted < opts.growthTotal) {
+    return {
+      title: isEn ? "Advance your growth checklist" : "Growth checklist'ini ilerlet",
+      description: isEn
+        ? `${opts.growthCompleted}/${opts.growthTotal} growth items done. Keep pushing the metrics.`
+        : `${opts.growthCompleted}/${opts.growthTotal} growth maddesi tamamlandı. Metrikleri hareket ettirecek işlere devam et.`,
+      why: isEn ? "Structured growth execution" : "Yapılandırılmış büyüme uygulaması",
+      cta: isEn ? "Go to growth checklist" : "Growth checklist'e git →",
+      href: `/${locale}/growth#growth-checklist`,
+      accent: "teal" as const,
+      progress: opts.growthTotal > 0 ? Math.round((opts.growthCompleted / opts.growthTotal) * 100) : undefined,
+    };
+  }
+
+  // Default: daily review
+  return {
+    title: isEn ? "Review today's performance" : "Bugünkü performansı kontrol et",
+    description: isEn
+      ? "Metrics entered. Check your funnel health and goal progress."
+      : "Metrikler girildi. Funnel sağlığını ve hedef ilerlemeni kontrol et.",
+    why: isEn ? "Daily operating rhythm" : "Günlük çalışma ritmi",
+    cta: isEn ? "View metrics" : "Metrikleri gör →",
+    href: `/${locale}/metrics`,
+    accent: "pink" as const,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default async function DashboardPage({
   params,
 }: {
@@ -15,7 +224,9 @@ export default async function DashboardPage({
 }) {
   const { locale } = await params;
   const session = await getServerSession(authOptions);
+  const isEn = locale === "en";
 
+  // ---- Product resolution ----
   const activeId = await getActiveProductId();
   const productInclude = {
     _count: {
@@ -23,7 +234,6 @@ export default async function DashboardPage({
         launchChecklists: true,
         growthChecklists: true,
         tasks: true,
-        metrics: true,
         goals: true,
         integrations: { where: { status: "CONNECTED" } },
       },
@@ -42,348 +252,322 @@ export default async function DashboardPage({
     });
   }
 
+  // ---- Empty state: no product ----
   if (!product) {
     return (
       <div>
-        <PageHeader
-          eyebrow={locale === "en" ? "Overview" : "Ürünün laucha ne kadar hazır?"}
-          title={locale === "en"
-            ? `Welcome${session?.user?.name ? `, ${session.user.name}` : ""}`
-            : `Hoş geldin${session?.user?.name ? `, ${session.user.name}` : ""}`}
-          titleSuffix="👋"
+        <TodayHero
+          userName={session?.user?.name}
+          productName={isEn ? "Welcome" : "Hoş geldin"}
+          phase="pre-launch"
+          statusLine={isEn ? "Create your first product to get started." : "Başlamak için ilk ürününü oluştur."}
+          locale={locale}
         />
         <FirstRunOnboarding locale={locale} userName={session?.user?.name} userEmail={session?.user?.email} />
       </div>
     );
   }
 
-  const [completedLaunchChecklists, completedGrowthChecklists, latestMetric, taskCountsRaw] =
-    await Promise.all([
-      prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
-      prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
-      prisma.metric.findFirst({ where: { productId: product.id }, orderBy: { date: "desc" } }),
-      prisma.task.groupBy({
-        by: ["status"],
-        where: { productId: product.id },
-        _count: { status: true },
-      }),
-    ]);
+  // ---- Data fetching (parallel) ----
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  console.log(`[Dashboard] Loaded for product: ${product.id}, tasks: ${taskCountsRaw.length}`);
+  const [
+    completedLaunchChecklists,
+    completedGrowthChecklists,
+    highPriorityBlockers,
+    priorityTasks,
+    taskCountsRaw,
+    errorIntegrations,
+    todayMetricEntry,
+    goalCount,
+    savedMetricSetup,
+  ] = await Promise.all([
+    prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
+    prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
+    prisma.launchChecklist.findMany({
+      where: { productId: product.id, completed: false, priority: "HIGH" },
+      select: { id: true, title: true, category: true },
+      orderBy: { order: "asc" },
+      take: 5,
+    }),
+    prisma.task.findMany({
+      where: { productId: product.id, status: { not: "DONE" } },
+      orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { createdAt: "asc" }],
+      select: { id: true, title: true, priority: true, status: true, dueDate: true },
+      take: 3,
+    }),
+    prisma.task.groupBy({
+      by: ["status"],
+      where: { productId: product.id },
+      _count: { status: true },
+    }),
+    prisma.integration.findMany({
+      where: { productId: product.id, status: "ERROR" },
+      select: { id: true, provider: true },
+    }),
+    prisma.metricEntry.findFirst({
+      where: { productId: product.id, date: today },
+    }),
+    prisma.goal.count({ where: { productId: product.id, completed: false } }),
+    getMetricSetup(product.id),
+  ]);
+
+  // ---- Derived values ----
+  const phase = derivePhase(product.status);
+  const isLaunched = phase === "launched";
 
   const launchTotal = product._count.launchChecklists || 0;
   const growthTotal = product._count.growthChecklists || 0;
-  const savedMetricSetup = await getMetricSetup(product.id);
-  const founderSummary = savedMetricSetup?.founderSummary as any;
-  
-  // Safe extraction of task counts from groupby
+  const readinessScore = launchTotal > 0 ? Math.round((completedLaunchChecklists / launchTotal) * 100) : 0;
+  const growthScore = growthTotal > 0 ? Math.round((completedGrowthChecklists / growthTotal) * 100) : 0;
+
   const pendingTasks = taskCountsRaw.find((t) => t.status === "TODO")?._count?.status ?? 0;
-  const doneTasks = taskCountsRaw.find((t) => t.status === "DONE")?._count?.status ?? 0;
+  const inProgressTasks = taskCountsRaw.find((t) => t.status === "IN_PROGRESS")?._count?.status ?? 0;
+  const totalPending = pendingTasks + inProgressTasks;
 
-  const selectedMetricCount =
-    savedMetricSetup?.selections.reduce(
-      (sum, item) => sum + item.selectedMetricKeys.length,
-      0
-    ) ?? 0;
+  const selections = (savedMetricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
+  const selectedMetricCount = selections.reduce((sum, s) => sum + s.selectedMetricKeys.length, 0);
+  const enteredToday = !!todayMetricEntry;
 
-  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
-  const readinessScore =
-    launchTotal > 0 ? Math.round((completedLaunchChecklists / launchTotal) * 100) : 0;
-  const growthScore =
-    growthTotal > 0 ? Math.round((completedGrowthChecklists / growthTotal) * 100) : 0;
+  const connectedCount = product._count.integrations ?? 0;
+  const errorCount = errorIntegrations.length;
 
-  const totalTasks = product._count.tasks;
-  // pendingTasks and doneTasks are now computed safely above
+  const founderSummary = savedMetricSetup?.founderSummary as { headline?: string; summary?: string; nextStep?: string } | null;
 
-  const nextStep = !isLaunched
-    ? {
-        href: `/${locale}/pre-launch`,
-        label: "Launch hazırlığına git →",
-        title: "Yayına hazırlığı tamamla",
-        description: `${completedLaunchChecklists}/${launchTotal} hazırlık maddesi tamamlandı`,
-      }
-    : selectedMetricCount === 0
-      ? {
-          href: `/${locale}/growth`,
-          label: "Growth setup'a git →",
-          title: "Büyüme takibini kur",
-          description: "Her kategori için 1 metrik seç",
-        }
-      : !latestMetric
-        ? {
-            href: `/${locale}/metrics`,
-            label: "Metrik gir →",
-            title: "İlk metrik girişini yap",
-            description: "Seçtiğin metrikler hazır, bugünkü değerleri gir",
-          }
-        : {
-            href: `/${locale}/metrics`,
-            label: "Performansı gör →",
-            title: "Bugünkü performansı kontrol et",
-            description: "Günlük AARRR verilerini güncelle",
-          };
+  // Days until launch (if launchDate is set and in future)
+  let daysUntilLaunch: number | null = null;
+  if (product.launchDate) {
+    const diff = new Date(product.launchDate).getTime() - Date.now();
+    if (diff > 0) daysUntilLaunch = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
 
+  // Blockers: high-priority incomplete checklist items + error integrations
+  const blockers = [
+    ...highPriorityBlockers.map((b) => ({
+      id: b.id,
+      title: b.title,
+      href: `/${locale}/pre-launch`,
+      source: isEn ? `Launch · ${b.category}` : `Launch · ${b.category}`,
+    })),
+    ...errorIntegrations.map((e) => ({
+      id: e.id,
+      title: isEn ? `${e.provider} connection error` : `${e.provider} bağlantı hatası`,
+      href: `/${locale}/integrations`,
+      source: isEn ? "Integration" : "Entegrasyon",
+    })),
+  ];
+
+  // ---- Status line ----
+  const statusLine = founderSummary?.summary
+    ? founderSummary.summary
+    : buildStatusLine(phase, product.launchStatus, {
+        readinessScore,
+        blockerCount: highPriorityBlockers.length,
+        daysUntilLaunch,
+        selectedMetricCount,
+        enteredToday,
+        funnelOverall: null, // TODO: wire buildFunnelHealthSummary when entries exist
+        locale,
+      });
+
+  // ---- Primary action ----
+  const primaryAction = buildPrimaryAction(phase, locale, {
+    readinessScore,
+    launchCompleted: completedLaunchChecklists,
+    launchTotal,
+    blockerCount: highPriorityBlockers.length,
+    selectedMetricCount,
+    enteredToday,
+    hasGoals: goalCount > 0,
+    growthCompleted: completedGrowthChecklists,
+    growthTotal,
+  });
+
+  // ---- Decision strip indicators ----
+  const indicators = buildIndicators(phase, locale, {
+    readinessScore,
+    growthScore,
+    totalPending,
+    selectedMetricCount,
+    enteredToday,
+    connectedCount,
+    errorCount,
+    goalCount,
+  });
+
+  // ---- Tasks for component ----
+  const taskItems = priorityTasks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    priority: t.priority as "HIGH" | "MEDIUM" | "LOW",
+    status: t.status as "TODO" | "IN_PROGRESS",
+    dueDate: t.dueDate?.toISOString() ?? null,
+  }));
+
+  // ---- Render ----
   return (
-    <div>
-      {/* Page header — Figma style */}
-      <PageHeader
-        eyebrow="Ürünün laucha ne kadar hazır?"
-        title={product.name}
-        titleSuffix="👋"
-        description={
-          founderSummary?.summary
-            ?? (isLaunched
-              ? "Yayındaki ürünün için growth ve hedef takibini buradan yönet."
-              : "Launch checklist'i tamamlayıp yayına hazırlığını ilerlet.")
-        }
+    <div className="space-y-5">
+      {/* 1. Hero */}
+      <TodayHero
+        userName={session?.user?.name}
+        productName={product.name}
+        phase={product.status === "GROWING" ? "growing" : phase}
+        statusLine={statusLine}
+        locale={locale}
       />
 
-      {/* Stat cards row — 3 cards like Figma */}
-      <section className="grid gap-4 sm:grid-cols-3 xl:grid-cols-3">
-        <StatCard
-          label="Toplam Görev"
-          value={String(totalTasks)}
-          hint={`${pendingTasks} bekliyor`}
-          accent="teal"
-          progress={totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0}
-        />
-        <StatCard
-          label="Bekleyen Görev"
-          value={String(pendingTasks)}
-          hint="Henüz başlanmadı"
-          accent="pink"
-          progress={totalTasks > 0 ? Math.round((pendingTasks / totalTasks) * 100) : 0}
-        />
-        <StatCard
-          label={isLaunched ? "Growth skoru" : "Hazırlık skoru"}
-          value={isLaunched ? `${growthScore}%` : `${readinessScore}%`}
-          hint={
-            isLaunched
-              ? `${completedGrowthChecklists}/${growthTotal} growth maddesi`
-              : `${completedLaunchChecklists}/${launchTotal} launch maddesi`
-          }
-          accent="yellow"
-          progress={isLaunched ? growthScore : readinessScore}
-        />
+      {/* 2. Primary Action — the dominant card */}
+      <PrimaryAction
+        title={primaryAction.title}
+        description={primaryAction.description}
+        why={primaryAction.why}
+        cta={primaryAction.cta}
+        href={primaryAction.href}
+        accent={primaryAction.accent}
+        progress={primaryAction.progress}
+      />
+
+      {/* 3. Decision Strip — compact health indicators */}
+      <DecisionStrip indicators={indicators} />
+
+      {/* 4. Blockers — only if they exist */}
+      <BlockerAlert blockers={blockers} locale={locale} />
+
+      {/* 5. Today's Focus — split layout */}
+      <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        {/* Left: priority tasks */}
+        <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
+
+        {/* Right: source health (only post-launch with metrics) */}
+        {isLaunched && selectedMetricCount > 0 && (
+          <SourceHealth
+            connectedCount={connectedCount}
+            errorCount={errorCount}
+            totalMetrics={selectedMetricCount}
+            automatedMetrics={0}
+            enteredToday={enteredToday}
+            locale={locale}
+          />
+        )}
       </section>
 
-      {/* Main 2-col layout */}
-      <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_360px]">
-
-        {/* Left col */}
-        <div className="space-y-4">
-
-          {/* Tiramisup summary (if available) */}
-          {founderSummary && (
-            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                Tiramisup özeti
-              </p>
-              <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                {founderSummary.headline}
-              </h2>
-              <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
-                {founderSummary.summary}
-              </p>
-              <div className="mt-4 rounded-[12px] bg-[#f8fbfb] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                  Bir sonraki doğru adım
-                </p>
-                <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
-                  {founderSummary.nextStep}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* AI Advisor Integrated Card */}
-          <TiramisupAdviceCard productId={product.id} stage={product.launchStatus || (product.status?.replace("_", " ") ?? "PRE_LAUNCH")} />
-
-          {/* Next step card */}
-          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                  Sıradaki adım
-                </p>
-                <h2 className="mt-1.5 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-                  {nextStep.title}
-                </h2>
-                <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
-                  {nextStep.description}
-                </p>
-              </div>
-            </div>
-            <Link
-              href={nextStep.href}
-              className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-            >
-              {nextStep.label}
-            </Link>
-          </div>
-
-          {/* Product details card */}
-          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
-              Ürün özeti
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                <p className="text-[11px] text-[#666d80]">Aşama</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                  {product.launchStatus || product.status.replace("_", " ")}
-                </p>
-              </div>
-              {product.category && (
-                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                  <p className="text-[11px] text-[#666d80]">Kategori</p>
-                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                    {product.category}
-                  </p>
-                </div>
-              )}
-              {product.targetAudience && (
-                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                  <p className="text-[11px] text-[#666d80]">Kitle</p>
-                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                    {product.targetAudience}
-                  </p>
-                </div>
-              )}
-              {product.businessModel && (
-                <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                  <p className="text-[11px] text-[#666d80]">Model</p>
-                  <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                    {product.businessModel}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right col — Figma: notes/quick links panel */}
-        <div className="space-y-4">
-
-          {/* Quick links panel */}
-          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
-              Hızlı erişim
-            </p>
-            <div className="space-y-2">
-              {[
-                {
-                  href: `/${locale}/pre-launch`,
-                  label: "Launch hazırlığı",
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 8v4l3 3"/>
-                    </svg>
-                  ),
-                  sub: `${completedLaunchChecklists}/${launchTotal} tamamlandı`,
-                },
-                {
-                  href: `/${locale}/growth`,
-                  label: isLaunched ? "Metrik odağı" : "Growth önizlemesi",
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-                    </svg>
-                  ),
-                  sub: isLaunched
-                    ? selectedMetricCount > 0
-                      ? `${selectedMetricCount} ana metrik seçili`
-                      : "Takip setini seç"
-                    : "Launch sonrası burada açılacak",
-                },
-                {
-                  href: `/${locale}/tasks`,
-                  label: "Görevler",
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                    </svg>
-                  ),
-                  sub: totalTasks > 0 ? `${pendingTasks} sırada bekliyor` : "Henüz görev yok",
-                },
-                {
-                  href: `/${locale}/metrics`,
-                  label: "Metrikler",
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/>
-                    </svg>
-                  ),
-                  sub: latestMetric ? "Bugünkü değişimi gör" : "İlk veri girişini başlat",
-                },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-3 rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 transition hover:border-[#e0e0e0] hover:bg-white"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-white border border-[#ebebeb] text-[#5e6678]">{link.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-[#0d0d12]">{link.label}</p>
-                    <p className="text-[11px] text-[#666d80]">{link.sub}</p>
-                  </div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0b8c8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 17L17 7M17 7H7M17 7v10" />
-                  </svg>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Goals panel */}
-          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                Aktif hedefler
-              </p>
-              <span className="text-[20px] font-bold text-[#0d0d12] leading-none">
-                {product._count.goals || "—"}
-              </span>
-            </div>
-            {product._count.goals === 0 ? (
-              <p className="text-[13px] text-[#666d80]">
-                {isLaunched
-                  ? "Growth setup'ını seç, sonra hedef koy."
-                  : "Önce yayına hazırlığı bitir, sonra hedef koy."}
-              </p>
-            ) : (
-              <Link
-                href={`/${locale}/growth`}
-                className="text-[13px] font-semibold text-[#0d0d12] hover:text-[#666d80] transition"
-              >
-                Hedeflere git →
-              </Link>
-            )}
-          </div>
-
-          {/* Metric tracking panel */}
-          <div className="rounded-[15px] border border-[#0d0d12] bg-[#0d0d12] p-5 text-white">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-2">
-              Metrik takibi
-            </p>
-            <p className="text-[16px] font-semibold leading-snug">
-              {selectedMetricCount > 0
-                ? `${selectedMetricCount} metrik aktif takipte`
-                : "Henüz metrik seçilmedi"}
-            </p>
-            <Link
-              href={selectedMetricCount > 0 ? `/${locale}/metrics` : `/${locale}/growth`}
-              className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-            >
-              {selectedMetricCount > 0
-                ? latestMetric
-                  ? "Bugünkü veriyi gir"
-                  : "İlk veriyi gir"
-                : "Takip setini seç"}
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* 6. Coach — collapsed by default, user triggers it */}
+      <CoachInsight
+        productId={product.id}
+        stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
+        locale={locale}
+      />
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Decision Strip Builder
+// ---------------------------------------------------------------------------
+
+function buildIndicators(
+  phase: PhaseKey,
+  locale: string,
+  opts: {
+    readinessScore: number;
+    growthScore: number;
+    totalPending: number;
+    selectedMetricCount: number;
+    enteredToday: boolean;
+    connectedCount: number;
+    errorCount: number;
+    goalCount: number;
+  }
+) {
+  const isEn = locale === "en";
+  type Indicator = {
+    label: string;
+    value: string;
+    status: "healthy" | "warning" | "neutral" | "empty";
+    hint?: string;
+  };
+
+  const indicators: Indicator[] = [];
+
+  if (phase === "pre-launch") {
+    // Readiness score
+    indicators.push({
+      label: isEn ? "Readiness" : "Hazırlık",
+      value: `%${opts.readinessScore}`,
+      status: opts.readinessScore >= 100 ? "healthy" : opts.readinessScore >= 60 ? "neutral" : "warning",
+      hint: isEn ? "Launch checklist" : "Launch checklist",
+    });
+
+    // Tasks
+    indicators.push({
+      label: isEn ? "Tasks" : "Görevler",
+      value: String(opts.totalPending),
+      status: opts.totalPending === 0 ? "healthy" : "neutral",
+      hint: isEn ? "pending" : "bekliyor",
+    });
+
+    // Placeholder for balance — show empty metric/source slots
+    indicators.push({
+      label: isEn ? "Metrics" : "Metrikler",
+      value: "—",
+      status: "empty",
+      hint: isEn ? "After launch" : "Launch sonrası",
+    });
+
+    indicators.push({
+      label: isEn ? "Sources" : "Kaynaklar",
+      value: "—",
+      status: "empty",
+      hint: isEn ? "After launch" : "Launch sonrası",
+    });
+  } else {
+    // Growth score
+    indicators.push({
+      label: isEn ? "Growth" : "Büyüme",
+      value: `%${opts.growthScore}`,
+      status: opts.growthScore >= 80 ? "healthy" : opts.growthScore >= 40 ? "neutral" : "warning",
+      hint: isEn ? "Growth checklist" : "Growth checklist",
+    });
+
+    // Tasks
+    indicators.push({
+      label: isEn ? "Tasks" : "Görevler",
+      value: String(opts.totalPending),
+      status: opts.totalPending === 0 ? "healthy" : "neutral",
+      hint: isEn ? "pending" : "bekliyor",
+    });
+
+    // Metrics health
+    indicators.push({
+      label: isEn ? "Metrics" : "Metrikler",
+      value: opts.selectedMetricCount > 0
+        ? opts.enteredToday
+          ? (isEn ? "Current" : "Güncel")
+          : (isEn ? "Waiting" : "Bekliyor")
+        : "—",
+      status: opts.selectedMetricCount === 0
+        ? "empty"
+        : opts.enteredToday
+          ? "healthy"
+          : "warning",
+      hint: opts.selectedMetricCount > 0
+        ? `${opts.selectedMetricCount} ${isEn ? "tracked" : "takipte"}`
+        : (isEn ? "Not set up" : "Kurulmadı"),
+    });
+
+    // Sources
+    indicators.push({
+      label: isEn ? "Sources" : "Kaynaklar",
+      value: opts.connectedCount > 0 ? String(opts.connectedCount) : "—",
+      status: opts.errorCount > 0 ? "warning" : opts.connectedCount > 0 ? "healthy" : "empty",
+      hint: opts.errorCount > 0
+        ? `${opts.errorCount} ${isEn ? "error" : "hata"}`
+        : opts.connectedCount > 0
+          ? (isEn ? "connected" : "bağlı")
+          : (isEn ? "None connected" : "Bağlı değil"),
+    });
+  }
+
+  return indicators;
 }
