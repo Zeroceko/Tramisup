@@ -7,10 +7,7 @@ import type { ExistingIntegration, IntegrationDef } from "@/components/Integrati
 import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
 
 function parseConfig(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
+  if (!value) return null;
   try {
     return JSON.parse(value) as Record<string, unknown>;
   } catch {
@@ -19,10 +16,13 @@ function parseConfig(value: string | null) {
 }
 
 export default async function IntegrationsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams?: Promise<{ success?: string; error?: string }>;
 }) {
+  const { locale } = await params;
   const session = await getServerSession(authOptions);
   const resolvedSearchParams = (await searchParams) ?? {};
 
@@ -35,12 +35,17 @@ export default async function IntegrationsPage({
   });
 
   if (!product) {
-    return <div className="text-center py-20 text-[#666d80]">Product not found</div>;
+    return (
+      <div className="py-20 text-center text-[14px] text-[#666d80]">
+        {locale === "en" ? "Product not found" : "Ürün bulunamadı"}
+      </div>
+    );
   }
 
   const existingIntegrations = await prisma.integration.findMany({
     where: { productId: product.id },
   });
+
   const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
     const config = parseConfig(integration.config);
     return {
@@ -51,9 +56,13 @@ export default async function IntegrationsPage({
       selectedPropertyId:
         typeof config?.propertyId === "string" ? config.propertyId : null,
       selectedPropertyDisplayName:
-        typeof config?.propertyDisplayName === "string" ? config.propertyDisplayName : null,
+        typeof config?.propertyDisplayName === "string"
+          ? config.propertyDisplayName
+          : null,
       accountDisplayName:
-        typeof config?.accountDisplayName === "string" ? config.accountDisplayName : null,
+        typeof config?.accountDisplayName === "string"
+          ? config.accountDisplayName
+          : null,
     };
   });
 
