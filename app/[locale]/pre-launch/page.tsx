@@ -7,9 +7,9 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import ChecklistSection from "@/components/ChecklistSection";
 import ActionsSection from "@/components/ActionsSection";
 import PageHeader from "@/components/PageHeader";
-import LaunchReviewSummary from "@/components/LaunchReviewSummary";
 import BlockerSummary from "@/components/BlockerSummary";
 import LaunchButton from "@/components/LaunchButton";
+import LaunchGateStatus, { GateState, ConfidenceIndicator } from "@/components/launch/LaunchGateStatus";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 import { prisma as prismaClient } from "@/lib/prisma";
 
@@ -95,6 +95,13 @@ async function setChecklistItemIgnored(itemId: string, ignored: boolean) {
   }
 }
 
+// Weight map: HIGH=3, MEDIUM=2, LOW=1
+function getWeight(priority: string): number {
+  if (priority === "HIGH") return 3;
+  if (priority === "MEDIUM") return 2;
+  return 1;
+}
+
 export default async function PreLaunchPage({
   params,
 }: {
@@ -116,6 +123,7 @@ export default async function PreLaunchPage({
     where: { productId: product?.id },
     orderBy: [{ category: "asc" }, { order: "asc" }],
   });
+
   const metricSetup = product
     ? await prismaClient.metricSetup.findUnique({ where: { productId: product.id } })
     : null;
@@ -128,46 +136,24 @@ export default async function PreLaunchPage({
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 
-  // Category scoring
-  const categoryNames = {
-    PRODUCT: "Product Readiness",
-    MARKETING: "Marketing Readiness",
-    LEGAL: "Legal Readiness",
-    TECH: "Technical Readiness",
-  };
+  // --- Weighted score ---
+  const totalWeight = activeChecklists.reduce((sum, item) => sum + getWeight(item.priority), 0);
+  const completedWeight = activeChecklists
+    .filter((item) => item.completed)
+    .reduce((sum, item) => sum + getWeight(item.priority), 0);
+  const weightedScore = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
 
-  const categoryScores = Object.entries(categoryNames).map(([key, name]) => {
-    const items = activeChecklists.filter(c => c.category === key);
-    const completed = items.filter(c => c.completed).length;
-    const total = items.length;
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    // Status: READY if 100%, BLOCKED if has HIGH priority uncompleted, else IN_PROGRESS
-    const status =
-      percentage === 100
-        ? ("READY" as const)
-        : items.some(i => i.priority === "HIGH" && !i.completed)
-          ? ("BLOCKED" as const)
-          : ("IN_PROGRESS" as const);
-
-    return { name, score: percentage, status };
-  });
-
-  // Overall readiness score
-  const totalItems = activeChecklists.length;
-  const completedItems = activeChecklists.filter(item => item.completed).length;
-  const overallScore = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-  // Extract blockers (HIGH priority + not completed)
+  // --- Blockers ---
   const blockers = activeChecklists
-    .filter(item => item.priority === "HIGH" && !item.completed)
-    .map(item => ({
+    .filter((item) => item.priority === "HIGH" && !item.completed)
+    .map((item) => ({
       id: item.id,
       title: item.title,
       category: item.category,
       priority: item.priority,
       linkedTaskId: item.linkedTaskId || undefined,
     }));
+
   const ignoredBlockers = ignoredChecklistItems
     .filter((item) => item.priority === "HIGH" && !item.completed)
     .map((item) => ({
@@ -178,69 +164,119 @@ export default async function PreLaunchPage({
       linkedTaskId: item.linkedTaskId || undefined,
     }));
 
-  const nonCriticalRemaining = Math.max(totalItems - completedItems - blockers.length, 0);
-  const readyToLaunch = blockers.length === 0 && totalItems > 0;
+  // Non-critical remaining = incomplete items that are not HIGH priority blockers
+  const nonCriticalRemaining = activeChecklists.filter(
+    (item) => !item.completed && item.priority !== "HIGH"
+  ).length;
 
+  // --- Gate state ---
+  let gateState: GateState;
+  if (blockers.length > 0) {
+    gateState = "HARD_BLOCKED";
+  } else if (ignoredBlockers.length > 0 || nonCriticalRemaining > 0) {
+    gateState = "WARNING";
+  } else {
+    gateState = "CLEAR";
+  }
+
+  // --- Confidence indicators ---
+  // Compute per-category weighted score and status
+  function getCategoryConfidence(
+    category: string,
+    label: string
+  ): ConfidenceIndicator {
+    const items = activeChecklists.filter((c) => c.category === category);
+    if (items.length === 0) {
+      return { label, score: 100, status: "CLEAR" };
+    }
+    const catTotal = items.reduce((s, i) => s + getWeight(i.priority), 0);
+    const catDone = items
+      .filter((i) => i.completed)
+      .reduce((s, i) => s + getWeight(i.priority), 0);
+    const score = catTotal > 0 ? Math.round((catDone / catTotal) * 100) : 0;
+    const hasBlocker = items.some((i) => i.priority === "HIGH" && !i.completed);
+    const status = hasBlocker ? "BLOCKED" : score === 100 ? "CLEAR" : "PARTIAL";
+    return { label, score, status };
+  }
+
+  const isEn = locale === "en";
+  const confidence: ConfidenceIndicator[] = [
+    getCategoryConfidence("PRODUCT", isEn ? "Product" : "Ürün"),
+    getCategoryConfidence("TECH", isEn ? "Technical" : "Teknik"),
+    getCategoryConfidence("LEGAL", isEn ? "Legal" : "Legal"),
+    getCategoryConfidence("MARKETING", isEn ? "Marketing" : "Pazarlama"),
+  ];
+
+  // --- Checklist by category ---
   const checklistsByCategory = {
-    PRODUCT: activeChecklists.filter(c => c.category === "PRODUCT"),
-    MARKETING: activeChecklists.filter(c => c.category === "MARKETING"),
-    LEGAL: activeChecklists.filter(c => c.category === "LEGAL"),
-    TECH: activeChecklists.filter(c => c.category === "TECH"),
+    PRODUCT: activeChecklists.filter((c) => c.category === "PRODUCT"),
+    MARKETING: activeChecklists.filter((c) => c.category === "MARKETING"),
+    LEGAL: activeChecklists.filter((c) => c.category === "LEGAL"),
+    TECH: activeChecklists.filter((c) => c.category === "TECH"),
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Ürünün laucha ne kadar hazır?"
+        eyebrow={isEn ? "How ready is your product for launch?" : "Ürünün laucha ne kadar hazır?"}
         title="Launch Readiness"
-        titleSuffix="👋"
       />
 
-      <LaunchReviewSummary
-        overallScore={overallScore}
-        readyToLaunch={readyToLaunch}
-        categories={categoryScores}
-        blockersCount={blockers.length}
+      {/* Gate status hero */}
+      <LaunchGateStatus
+        gateState={gateState}
+        weightedScore={weightedScore}
+        activeBlockerCount={blockers.length}
+        ignoredBlockerCount={ignoredBlockers.length}
         nonCriticalRemaining={nonCriticalRemaining}
+        confidence={confidence}
+        locale={locale}
       />
 
+      {/* Blockers — only shown when there are active or ignored blockers */}
+      {(blockers.length > 0 || ignoredBlockers.length > 0) && (
+        <BlockerSummary
+          blockers={blockers}
+          ignoredBlockers={ignoredBlockers}
+          onCreateTask={createTaskFromChecklistItem}
+          onIgnore={setChecklistItemIgnored}
+          locale={locale}
+        />
+      )}
+
+      {/* Checklist by category */}
       <ChecklistSection
         checklistsByCategory={checklistsByCategory}
         productId={product?.id || ""}
         onCreateTask={createTaskFromChecklistItem}
         ignoredItems={ignoredChecklistItems}
+        locale={locale}
       />
 
-      {/* Blocker summary — only show when there are blockers */}
-      {(blockers.length > 0 || ignoredBlockers.length > 0) && (
-        <div className="mt-4">
-          <BlockerSummary
-            blockers={blockers}
-            ignoredBlockers={ignoredBlockers}
-            onCreateTask={createTaskFromChecklistItem}
-            onIgnore={setChecklistItemIgnored}
-          />
-        </div>
-      )}
-
-      {/* Actions / pending tasks */}
+      {/* Pending tasks linked to this product */}
       {tasks.length > 0 && (
-        <div className="mt-4">
-          <ActionsSection tasks={tasks} productId={product?.id || ""} />
-        </div>
+        <ActionsSection tasks={tasks} productId={product?.id || ""} />
       )}
 
-      {/* Launch button */}
+      {/* Launch button — only for PRE_LAUNCH products */}
       {product && product.status === "PRE_LAUNCH" && (
-        <div className="mt-6 rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
+        <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
           <p className="text-[14px] font-semibold text-[#0d0d12]">
-            Ürününü yayınladın mı?
+            {isEn ? "Ready to go live?" : "Ürününü yayınladın mı?"}
           </p>
           <p className="mt-1 text-[13px] text-[#666d80]">
-            Launch&apos;ını kaydet — dashboard büyüme moduna geçer.
+            {isEn
+              ? "Mark as launched — your dashboard shifts to growth mode."
+              : "Launch'ını kaydet — dashboard büyüme moduna geçer."}
           </p>
           <div className="mt-4">
-            <LaunchButton productId={product.id} locale={locale} />
+            <LaunchButton
+              productId={product.id}
+              locale={locale}
+              gateOpen={gateState !== "HARD_BLOCKED"}
+              ignoredBlockers={ignoredBlockers}
+              nonCriticalRemaining={nonCriticalRemaining}
+            />
           </div>
         </div>
       )}
