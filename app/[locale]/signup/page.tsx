@@ -87,7 +87,7 @@ export default function SignupPage() {
       if (result?.error) {
         setError(t("errors.loginAfterCreate"));
       } else {
-        router.push(`/${locale}/products/new`);
+        router.push(`/${locale}/onboarding`);
         router.refresh();
       }
     } catch {

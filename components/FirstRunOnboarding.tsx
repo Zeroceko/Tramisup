@@ -145,7 +145,7 @@ export default function FirstRunOnboarding({
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                href={`/${locale}/products/new`}
+                href={`/${locale}/onboarding`}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
               >
                 {copy.createProduct}
