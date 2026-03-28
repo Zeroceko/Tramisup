@@ -13,6 +13,7 @@ model User {
   email        String    @unique
   name         String?
   passwordHash String
+  preferredLocale String  @default("en")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   products     Product[]

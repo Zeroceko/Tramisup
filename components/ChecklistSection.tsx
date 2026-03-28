@@ -85,7 +85,7 @@ export default function ChecklistSection({
   productId: _productId,
   onCreateTask,
   ignoredItems,
-  locale = "tr",
+  locale = "en",
 }: ChecklistSectionProps) {
   const router = useRouter();
   const isEn = locale === "en";

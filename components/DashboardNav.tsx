@@ -42,7 +42,7 @@ export default function DashboardNav({
   userName,
 }: DashboardNavProps) {
   const pathname = usePathname();
-  const locale = pathname?.split("/")[1] || "tr";
+  const locale = pathname?.split("/")[1] || "en";
 
   const hasProducts = products.length > 0;
   const activeProduct = products.find((product) => product.id === activeProductId) ?? products[0];

@@ -25,7 +25,7 @@ export type GrowthWorkspaceStep = {
 export function getGrowthWorkspaceStep(
   input: GrowthWorkspaceStepInput
 ): GrowthWorkspaceStep {
-  const { hasSetup, hasMetricEntries, hasGoals, completedGrowthItems, totalGrowthItems, locale = "tr" } = input;
+  const { hasSetup, hasMetricEntries, hasGoals, completedGrowthItems, totalGrowthItems, locale = "en" } = input;
 
   if (!hasSetup) {
     return {

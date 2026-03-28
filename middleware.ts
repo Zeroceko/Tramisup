@@ -8,7 +8,7 @@ const intlMiddleware = createMiddleware({
   locales,
 
   // Used when no locale matches
-  defaultLocale: 'tr',
+  defaultLocale: 'en',
   
   // Always use locale prefix
   localePrefix: 'always'
@@ -24,7 +24,7 @@ export default async function middleware(req: NextRequest) {
   const isRootLocale = locales.some(l => pathname === `/${l}` || pathname === `/${l}/`);
   
   if (token && isRootLocale) {
-    const locale = pathname.split('/')[1] || 'tr';
+    const locale = pathname.split('/')[1] || 'en';
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, req.url));
   }
 

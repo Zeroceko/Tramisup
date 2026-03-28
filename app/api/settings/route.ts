@@ -10,11 +10,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, productName, launchDate, status } = await request.json();
+    const { name, productName, launchDate, status, preferredLocale } = await request.json();
+    const safeLocale = preferredLocale === "en" || preferredLocale === "tr" ? preferredLocale : undefined;
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { name },
+      data: {
+        name,
+        ...(safeLocale ? { preferredLocale: safeLocale } : {}),
+      },
     });
 
     const product = await prisma.product.findFirst({
@@ -32,7 +36,14 @@ export async function PATCH(request: Request) {
       });
     }
 
-    return NextResponse.json({ message: "Settings updated successfully" });
+    const response = NextResponse.json({ message: "Settings updated successfully" });
+    if (safeLocale) {
+      response.cookies.set("NEXT_LOCALE", safeLocale, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    return response;
   } catch (error) {
     console.error("Error updating settings:", error);
     return NextResponse.json(

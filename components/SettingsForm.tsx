@@ -8,6 +8,7 @@ interface User {
   id: string;
   name: string | null;
   email: string;
+  preferredLocale?: string | null;
   product: {
     id: string;
     name: string;
@@ -19,11 +20,59 @@ interface User {
 const inputCls = "w-full px-4 py-3 rounded-[12px] border border-[#e8e8e8] text-[14px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 const labelCls = "block text-[12px] font-semibold text-[#0d0d12] mb-1.5";
 
-export default function SettingsForm({ user }: { user: User | null }) {
+export default function SettingsForm({ user, locale }: { user: User | null; locale: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const isEn = locale === "en";
+
+  const setLocaleCookie = (newLocale: string) => {
+    const maxAge = 60 * 60 * 24 * 365;
+    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=${maxAge}`;
+  };
+
+  const copy = isEn
+    ? {
+        errorGeneric: "Something went wrong.",
+        success: "Settings updated.",
+        personalTitle: "Personal",
+        name: "Full name",
+        email: "Email",
+        language: "Language",
+        projectTitle: "Project",
+        projectName: "Project name",
+        launchDate: "Launch date",
+        optional: "(optional)",
+        status: "Status",
+        statusOptions: {
+          PRE_LAUNCH: "Pre-Launch",
+          LAUNCHED: "Launched",
+          GROWING: "Growing",
+        },
+        save: "Save changes",
+        saving: "Saving…",
+      }
+    : {
+        errorGeneric: "Bir hata oluştu.",
+        success: "Ayarlar güncellendi.",
+        personalTitle: "Kişisel Bilgiler",
+        name: "Ad Soyad",
+        email: "E-posta",
+        language: "Dil",
+        projectTitle: "Proje Bilgileri",
+        projectName: "Proje Adı",
+        launchDate: "Launch Tarihi",
+        optional: "(opsiyonel)",
+        status: "Durum",
+        statusOptions: {
+          PRE_LAUNCH: "Pre-Launch",
+          LAUNCHED: "Launched",
+          GROWING: "Büyüyor",
+        },
+        save: "Değişiklikleri Kaydet",
+        saving: "Kaydediliyor…",
+      };
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -32,6 +81,7 @@ export default function SettingsForm({ user }: { user: User | null }) {
       ? format(new Date(user.product.launchDate), "yyyy-MM-dd")
       : "",
     status: user?.product?.status || "PRE_LAUNCH",
+    preferredLocale: user?.preferredLocale || locale || "en",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,12 +97,16 @@ export default function SettingsForm({ user }: { user: User | null }) {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error("Failed to update settings");
+      if (!response.ok) throw new Error(isEn ? "Failed to update settings" : "Ayarlar güncellenemedi");
 
-      setSuccess("Ayarlar başarıyla güncellendi.");
+      setSuccess(copy.success);
+      if (formData.preferredLocale && formData.preferredLocale !== locale) {
+        router.push(`/${formData.preferredLocale}/settings`);
+        return;
+      }
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setError(err instanceof Error ? err.message : copy.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -73,10 +127,10 @@ export default function SettingsForm({ user }: { user: User | null }) {
 
       {/* Personal */}
       <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">Kişisel Bilgiler</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">{copy.personalTitle}</p>
         <div className="space-y-3">
           <div>
-            <label className={labelCls}>Ad Soyad</label>
+            <label className={labelCls}>{copy.name}</label>
             <input
               type="text"
               value={formData.name}
@@ -85,7 +139,7 @@ export default function SettingsForm({ user }: { user: User | null }) {
             />
           </div>
           <div>
-            <label className={labelCls}>E-posta</label>
+            <label className={labelCls}>{copy.email}</label>
             <input
               type="email"
               value={user?.email}
@@ -93,15 +147,30 @@ export default function SettingsForm({ user }: { user: User | null }) {
               className={inputCls + " bg-[#f6f6f6] text-[#9ca3af] cursor-not-allowed"}
             />
           </div>
+          <div>
+            <label className={labelCls}>{copy.language}</label>
+            <select
+              value={formData.preferredLocale}
+              onChange={(e) => {
+                const nextLocale = e.target.value;
+                setFormData({ ...formData, preferredLocale: nextLocale });
+                setLocaleCookie(nextLocale);
+              }}
+              className={inputCls}
+            >
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Project */}
       <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">Proje Bilgileri</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">{copy.projectTitle}</p>
         <div className="space-y-3">
           <div>
-            <label className={labelCls}>Proje Adı</label>
+            <label className={labelCls}>{copy.projectName}</label>
             <input
               type="text"
               value={formData.projectName}
@@ -110,7 +179,9 @@ export default function SettingsForm({ user }: { user: User | null }) {
             />
           </div>
           <div>
-            <label className={labelCls}>Launch Tarihi <span className="font-normal text-[#9ca3af]">(opsiyonel)</span></label>
+            <label className={labelCls}>
+              {copy.launchDate} <span className="font-normal text-[#9ca3af]">{copy.optional}</span>
+            </label>
             <input
               type="date"
               value={formData.launchDate}
@@ -119,15 +190,15 @@ export default function SettingsForm({ user }: { user: User | null }) {
             />
           </div>
           <div>
-            <label className={labelCls}>Durum</label>
+            <label className={labelCls}>{copy.status}</label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               className={inputCls}
             >
-              <option value="PRE_LAUNCH">Pre-Launch</option>
-              <option value="LAUNCHED">Launched</option>
-              <option value="GROWING">Growing</option>
+              <option value="PRE_LAUNCH">{copy.statusOptions.PRE_LAUNCH}</option>
+              <option value="LAUNCHED">{copy.statusOptions.LAUNCHED}</option>
+              <option value="GROWING">{copy.statusOptions.GROWING}</option>
             </select>
           </div>
         </div>
@@ -138,7 +209,7 @@ export default function SettingsForm({ user }: { user: User | null }) {
         disabled={loading}
         className="w-full h-11 rounded-full bg-[#ffd7ef] text-[14px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}
+        {loading ? copy.saving : copy.save}
       </button>
     </form>
   );

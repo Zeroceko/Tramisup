@@ -27,7 +27,7 @@ export type NextStep = {
  */
 export async function getProductNextStep(
   productId: string | null,
-  locale: string = "tr"
+  locale: string = "en"
 ): Promise<NextStep> {
   if (!productId) {
     return {

@@ -28,6 +28,7 @@ export default async function SettingsPage({
   } : null;
 
   const activeProduct = user?.product;
+  const isEn = locale === "en";
 
   // Fetch connected integrations for active product
   const integrations = activeProduct
@@ -39,6 +40,43 @@ export default async function SettingsPage({
     : [];
 
   const connectedCount = integrations.filter((i) => i.status === "CONNECTED").length;
+  const copy = isEn
+    ? {
+        sourcesLabel: "Sources",
+        sourcesTitle: "Manage data sources",
+        sourcesWithCount: (count: number) =>
+          `${count} source${count === 1 ? "" : "s"} connected. Add new sources or manage existing ones.`,
+        sourcesEmpty: "No sources connected yet. Connect GA4 or Stripe to pull metrics automatically.",
+        lastSync: "Last sync",
+        connected: "Connected",
+        error: "Error",
+        disconnected: "Not connected",
+        manageSources: "Manage sources",
+        connectSource: "Connect source",
+        growthLabel: "Growth tracking",
+        growthTitle: "Update growth tracking metrics",
+        growthDesc:
+          "You can update AARRR tracking metrics for this product anytime. This takes you back to the metric setup step in Growth.",
+        growthCta: "Open growth tracking",
+      }
+    : {
+        sourcesLabel: "Kaynaklar",
+        sourcesTitle: "Veri kaynaklarını yönet",
+        sourcesWithCount: (count: number) =>
+          `${count} kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.`,
+        sourcesEmpty: "Henüz bağlı kaynak yok. GA4 veya Stripe bağlayarak metrik verisini otomatik çek.",
+        lastSync: "Son senkron",
+        connected: "Bağlı",
+        error: "Hata",
+        disconnected: "Bağlı değil",
+        manageSources: "Kaynakları yönet",
+        connectSource: "Kaynak bağla",
+        growthLabel: "Büyüme takibi",
+        growthTitle: "Büyüme metriklerini güncelle",
+        growthDesc:
+          "Seçili ürün için AARRR takip metriklerini istediğin zaman güncelleyebilirsin. Bu alan seni Growth tarafındaki metrik kurulumuna geri götürür.",
+        growthCta: "Büyüme takibini aç",
+      };
 
   return (
     <div className="max-w-xl">
@@ -54,15 +92,15 @@ export default async function SettingsPage({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                Kaynaklar
+                {copy.sourcesLabel}
               </p>
               <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                Veri kaynaklarını yönet
+                {copy.sourcesTitle}
               </h2>
               <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
                 {connectedCount > 0
-                  ? `${connectedCount} kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.`
-                  : "Henüz bağlı kaynak yok. GA4 veya Stripe bağlayarak metrik verisini otomatik çek."}
+                  ? copy.sourcesWithCount(connectedCount)
+                  : copy.sourcesEmpty}
               </p>
             </div>
             {connectedCount > 0 && (
@@ -78,7 +116,7 @@ export default async function SettingsPage({
               {integrations.map((integration) => {
                 const isConnected = integration.status === "CONNECTED";
                 const lastSync = integration.lastSyncAt
-                  ? new Intl.DateTimeFormat("tr-TR", {
+                  ? new Intl.DateTimeFormat(isEn ? "en-US" : "tr-TR", {
                       day: "2-digit",
                       month: "short",
                       hour: "2-digit",
@@ -99,7 +137,7 @@ export default async function SettingsPage({
                         </p>
                         {lastSync && (
                           <p className="text-[11px] text-[#8b93a6]">
-                            Son sync: {lastSync}
+                            {copy.lastSync}: {lastSync}
                           </p>
                         )}
                       </div>
@@ -111,7 +149,7 @@ export default async function SettingsPage({
                           ? "bg-[#fee2e2] text-[#ef4444]"
                           : "bg-[#f5f5f5] text-[#8b93a6]"
                     }`}>
-                      {isConnected ? "Bagli" : integration.status === "ERROR" ? "Hata" : "Bagli degil"}
+                      {isConnected ? copy.connected : integration.status === "ERROR" ? copy.error : copy.disconnected}
                     </span>
                   </div>
                 );
@@ -123,7 +161,7 @@ export default async function SettingsPage({
             href={`/${locale}/integrations`}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
           >
-            {connectedCount > 0 ? "Kaynakları yönet" : "Kaynak bağla"}
+            {connectedCount > 0 ? copy.manageSources : copy.connectSource}
           </Link>
         </section>
       )}
@@ -131,24 +169,26 @@ export default async function SettingsPage({
       {/* Growth tracking section */}
       {activeProduct ? (
         <section className="mb-4 rounded-[18px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffdfd_0%,_#fff7fa_100%)] p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">Growth tracking</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
+            {copy.growthLabel}
+          </p>
           <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-            Growth takip metriklerini degistir
+            {copy.growthTitle}
           </h2>
           <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            Secili urunun icin AARRR takip metriklerini daha sonra da guncelleyebilirsin. Bu alan seni Growth tarafindaki metric setup adimina geri goturur.
+            {copy.growthDesc}
           </p>
           <Link
             href={`/${locale}/growth#tracking-metrics`}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
           >
-            Growth takip metriklerini ac
+            {copy.growthCta}
           </Link>
         </section>
       ) : null}
 
       {/* Profile & project settings form */}
-      <SettingsForm user={user} />
+      <SettingsForm user={user} locale={locale} />
     </div>
   );
 }

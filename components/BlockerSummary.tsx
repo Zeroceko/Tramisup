@@ -75,7 +75,7 @@ export default function BlockerSummary({
   ignoredBlockers,
   onCreateTask,
   onIgnore,
-  locale = "tr",
+  locale = "en",
 }: BlockerSummaryProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const isEn = locale === "en";

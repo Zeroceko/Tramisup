@@ -17,7 +17,7 @@ interface ProductSelectorProps {
 export default function ProductSelector({ products, activeProductId }: ProductSelectorProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const locale = pathname?.split("/")[1] || "tr";
+  const locale = pathname?.split("/")[1] || "en";
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
