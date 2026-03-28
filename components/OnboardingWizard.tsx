@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { Link2, Paperclip, Plus, Sparkles, X } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,6 +192,30 @@ const STEP_META: Record<
   metrics: { eyebrow: "Veri", title: "AARRR onerisi" },
 };
 
+const ONBOARDING_PHASES = [
+  "Ürününü Anlat",
+  "Tip&Kanallar",
+  "Ürün Profilleri",
+  "Veri & İzler",
+  "Launch Hazırlık",
+  "Growth Setup",
+  "Öncelikler",
+] as const;
+
+const STEP_TO_PHASE: Record<StepId, number> = {
+  name: 0,
+  description: 0,
+  category: 1,
+  platform: 1,
+  stage: 2,
+  timing: 4,
+  business: 2,
+  audience: 2,
+  goal: 6,
+  sources: 3,
+  metrics: 5,
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isLaunchedStage(s: string) {
@@ -286,8 +311,8 @@ function OptionCard({
       onClick={onClick}
       className={`w-full rounded-[14px] border p-4 text-left transition-all ${
         selected
-          ? "border-[#0d0d12] bg-[#0d0d12] text-white shadow-[0_4px_20px_rgba(13,13,18,0.18)]"
-          : "border-[#e5e7eb] bg-white text-[#0d0d12] hover:border-[#0d0d12]/40 hover:shadow-sm"
+          ? "border-[#8dcfd2] bg-[#dff2f4] text-[#0d0d12] shadow-[0_4px_20px_rgba(84,141,146,0.16)]"
+          : "border-[#dadbe0] bg-white text-[#0d0d12] hover:border-[#9fb5bf] hover:shadow-sm"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -302,7 +327,7 @@ function OptionCard({
         )}
         <div>
           <p className="text-[14px] font-semibold leading-tight">{item.label}</p>
-          <p className={`mt-0.5 text-[12px] ${selected ? "text-white/70" : "text-[#8a8fa0]"}`}>
+          <p className={`mt-0.5 text-[12px] ${selected ? "text-[#50767a]" : "text-[#8a8fa0]"}`}>
             {item.sub}
           </p>
         </div>
@@ -331,10 +356,12 @@ function StepWrapper({
           {badge}
         </span>
       )}
-      <h1 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12] sm:text-[30px]">
+      <h1 className="text-center text-[30px] font-semibold tracking-[-0.03em] text-[#0d0d12] sm:text-[44px]">
         {title}
       </h1>
-      <p className="mb-7 mt-2 text-[14px] leading-6 text-[#666d80]">{subtitle}</p>
+      <p className="mx-auto mb-7 mt-2 max-w-3xl text-center text-[16px] leading-[1.45] text-[#666d80] sm:text-[22px]">
+        {subtitle}
+      </p>
       {children}
     </div>
   );
@@ -480,6 +507,9 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const totalSteps = stepIds.length;
   const progressPct = totalSteps > 1 ? (stepIndex / (totalSteps - 1)) * 100 : 0;
   const currentMeta = STEP_META[currentId];
+  const activePhaseIndex = STEP_TO_PHASE[currentId];
+  const activePhaseSteps = stepIds.filter((id) => STEP_TO_PHASE[id] === activePhaseIndex);
+  const activePhaseStepIndex = activePhaseSteps.indexOf(currentId);
 
   const autoMetrics = useMemo(
     () => computeAutoMetrics(data),
@@ -625,122 +655,54 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,215,239,0.42),_transparent_24%),linear-gradient(180deg,_#fcfcfb_0%,_#f5f5f2_100%)] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
-          <div className="overflow-hidden rounded-[28px] border border-[#e8e8e8] bg-[#0d0d12] p-6 text-white shadow-[0_24px_70px_rgba(13,13,18,0.16)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
-              Tiramisup setup
-            </p>
-            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.03em]">
-              Urununu sisteme yerlestirelim
-            </h2>
-            <p className="mt-3 text-[13px] leading-6 text-white/70">
-              Once urununu anlayalim, sonra dashboard, checklist ve growth alani buna gore sekillensin.
-            </p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,146,178,0.35),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,158,255,0.28),_transparent_34%),linear-gradient(135deg,_#ffd2df_0%,_#f1d8ff_46%,_#c9dcff_100%)] p-3 sm:p-6">
+      <div className="mx-auto max-w-[1220px] rounded-[18px] border border-white/55 bg-[#f2f2f2]/95 p-4 shadow-[0_24px_80px_rgba(65,38,72,0.22)] backdrop-blur">
+        <div className="flex items-center justify-between gap-4 px-1 pb-3">
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1b1b1f] sm:text-[36px]">
+            Yeni Ürün Oluştur
+          </h1>
+          <button
+            type="button"
+            onClick={() => router.push(`/${locale}/dashboard`)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#d8d8d8] bg-[#f6f6f6] text-[#5f6674] transition hover:bg-white"
+            aria-label="Kapat"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="scrollbar-hide mb-5 overflow-x-auto">
+          <div className="flex min-w-max items-center gap-2">
+            {ONBOARDING_PHASES.map((phase, index) => {
+              const isCurrent = index === activePhaseIndex;
+              const isDone = index < activePhaseIndex;
+              return (
+                <span
+                  key={phase}
+                  className={`inline-flex h-9 items-center rounded-full px-4 text-[12px] font-medium ${
+                    isCurrent
+                      ? "border border-[#7ac9cf] bg-[#bde5e8] text-[#0f3b40]"
+                      : isDone
+                      ? "bg-[#cfd2d7] text-[#4f5563]"
+                      : "bg-[#b5b6ba] text-white/85"
+                  }`}
+                >
+                  {phase}
+                  {isCurrent ? ` (${activePhaseStepIndex + 1}/${Math.max(1, activePhaseSteps.length)})` : ""}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-[16px] border border-[#ececee] bg-[#f7f7f8] px-4 py-6 sm:px-6 sm:py-8">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-[#e4e4e8]">
               <div
-                className="h-full rounded-full bg-[#95dbda] transition-[width] duration-500"
-                style={{ width: `${Math.max(4, progressPct)}%` }}
+                className="h-full rounded-full bg-[#8ecfd3] transition-[width] duration-500"
+                style={{ width: `${Math.max(6, progressPct)}%` }}
               />
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-white/55">
-              <span>{currentMeta.eyebrow}</span>
-              <span>
-                {stepIndex + 1} / {totalSteps}
-              </span>
-            </div>
-
-            <div className="mt-6 space-y-2">
-              {stepIds.map((step, index) => {
-                const isCurrent = step === currentId;
-                const isDone = index < stepIndex;
-                return (
-                  <div
-                    key={step}
-                    className={`flex items-center gap-3 rounded-[16px] px-3 py-2.5 transition ${
-                      isCurrent
-                        ? "bg-white text-[#0d0d12]"
-                        : isDone
-                        ? "bg-white/8 text-white"
-                        : "bg-transparent text-white/52"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                        isCurrent
-                          ? "bg-[#0d0d12] text-white"
-                          : isDone
-                          ? "bg-[#95dbda] text-[#0d0d12]"
-                          : "border border-white/12"
-                      }`}
-                    >
-                      {isDone ? "✓" : index + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.12em] opacity-60">
-                        {STEP_META[step].eyebrow}
-                      </p>
-                      <p className="text-[13px] font-semibold">{STEP_META[step].title}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 rounded-[20px] border border-white/10 bg-white/6 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                Canli ozet
-              </p>
-              <div className="mt-3 space-y-3 text-[12px]">
-                <div>
-                  <p className="text-white/45">Urun</p>
-                  <p className="mt-0.5 font-semibold text-white">{data.name?.trim() || "Henuz ad verilmedi"}</p>
-                </div>
-                <div>
-                  <p className="text-white/45">Kategori</p>
-                  <p className="mt-0.5 font-semibold text-white">{data.category || "Secilmedi"}</p>
-                </div>
-                <div>
-                  <p className="text-white/45">Platform</p>
-                  <p className="mt-0.5 font-semibold text-white">{formatPlatforms(data.platforms)}</p>
-                </div>
-                <div>
-                  <p className="text-white/45">Asama</p>
-                  <p className="mt-0.5 font-semibold text-white">
-                    {getStageLabel(data.launchStatus, STAGES)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-white/45">Hedef kitle</p>
-                  <p className="mt-0.5 font-semibold text-white">
-                    {getStageLabel(data.targetAudience, AUDIENCES)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="overflow-hidden rounded-[30px] border border-[#e8e8e8] bg-white shadow-[0_24px_80px_rgba(13,13,18,0.08)]">
-          <div className="border-b border-[#eef1f2] bg-[linear-gradient(180deg,_#fffefe_0%,_#faf8fb_100%)] px-6 py-5 sm:px-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
-                  {currentMeta.eyebrow}
-                </p>
-                <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                  {currentMeta.title}
-                </h1>
-              </div>
-              <div className="rounded-full border border-[#e8e8e8] bg-white px-3 py-1 text-[11px] font-semibold text-[#666d80]">
-                {stepIndex + 1} / {totalSteps}
-              </div>
-            </div>
-          </div>
-
-          <div className="px-6 py-8 sm:px-8 sm:py-10">
           {/* Step: name */}
           {currentId === "name" && (
             <StepWrapper
@@ -765,6 +727,10 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
               title="Ürünün ne yapıyor?"
               subtitle="Bir cümleyle açıkla — hangi problemi, kimin için çözüyor?"
             >
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#ececef] px-3 py-1 text-[12px] text-[#6e7483]">
+                <Sparkles className="h-3.5 w-3.5" />
+                Ürününü kısaca anlatın
+              </div>
               <textarea
                 autoFocus
                 value={data.description ?? ""}
@@ -962,12 +928,45 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           {currentId !== "metrics" && (() => {
             const isLastStep = stepIndex === stepIds.length - 1;
             return (
-              <div className="mt-8 flex items-center justify-between gap-4">
+              <div className="mt-8 space-y-3">
+                {currentId === "description" && (
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                    >
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f6f2dd] text-[#9c8f45]">
+                        <Paperclip className="h-4 w-4" />
+                      </span>
+                      Dosya Yükle
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                    >
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#dff2f4] text-[#3f8b91]">
+                        <Link2 className="h-4 w-4" />
+                      </span>
+                      URL Tanımla
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                    >
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f2e8dc] text-[#8c6d43]">
+                        <Plus className="h-4 w-4" />
+                      </span>
+                      Ek Not
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
                   onClick={goBack}
                   disabled={stepIndex === 0}
-                  className="flex h-10 items-center gap-2 rounded-full border border-[#e5e7eb] px-4 text-[13px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
+                  className="flex h-11 items-center gap-2 rounded-full border border-[#d9dadd] bg-white px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
                 >
                   ← Geri
                 </button>
@@ -986,7 +985,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     <button
                       type="button"
                       onClick={() => submit(false)}
-                      className="h-10 rounded-full bg-[#0d0d12] px-6 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
+                      className="h-11 rounded-full bg-[#edbfd9] px-7 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0]"
                     >
                       {connectableSources.length > 0 ? "Tamamla ve kaynak bagla" : "Tamamla ve basla"}
                     </button>
@@ -995,12 +994,13 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                       type="button"
                       onClick={goNext}
                       disabled={!canContinue()}
-                      className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="h-11 rounded-full bg-[#edbfd9] px-7 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Devam →
+                      Devam Et
                     </button>
                   )}
                 </div>
+              </div>
               </div>
             );
           })()}
