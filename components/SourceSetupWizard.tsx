@@ -669,7 +669,7 @@ export default function SourceSetupWizard({
             ) : (
               <button
                 type="button"
-                onClick={runSync}
+                onClick={() => runSync()}
                 disabled={loading}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
               >
