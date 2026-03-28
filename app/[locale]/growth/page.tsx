@@ -244,6 +244,7 @@ export default async function GrowthPage({
               plan={metricPlan}
               initialSetup={savedMetricSetup}
               locale={locale}
+              connectedProviders={integrations.map((integration) => integration.provider)}
             />
 
             <GrowthIntegrationRecommendations
@@ -273,6 +274,7 @@ export default async function GrowthPage({
             plan={metricPlan}
             initialSetup={savedMetricSetup}
             locale={locale}
+            connectedProviders={integrations.map((integration) => integration.provider)}
           />
         )}
       </div>

@@ -20,7 +20,7 @@ export default async function IntegrationsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ success?: string; error?: string }>;
+  searchParams?: Promise<{ success?: string; error?: string; onboarding?: string; connect?: string; queued?: string }>;
 }) {
   const { locale } = await params;
   const session = await getServerSession(authOptions);
@@ -78,6 +78,9 @@ export default async function IntegrationsPage({
       manualEntryCount={manualEntryCount}
       success={resolvedSearchParams.success}
       error={resolvedSearchParams.error}
+      onboarding={resolvedSearchParams.onboarding}
+      connect={resolvedSearchParams.connect}
+      queued={resolvedSearchParams.queued}
     />
   );
 }

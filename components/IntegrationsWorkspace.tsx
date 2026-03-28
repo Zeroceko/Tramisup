@@ -19,6 +19,9 @@ type IntegrationsWorkspaceProps = {
   manualEntryCount?: number;
   success?: string;
   error?: string;
+  onboarding?: string;
+  connect?: string;
+  queued?: string;
 };
 
 // Feedback from OAuth redirects
@@ -119,6 +122,9 @@ export default function IntegrationsWorkspace({
   manualEntryCount,
   success,
   error,
+  onboarding,
+  connect,
+  queued,
 }: IntegrationsWorkspaceProps) {
   const integrationMap = useMemo(
     () => new Map(integrations.map((i) => [i.provider, i])),
@@ -136,15 +142,36 @@ export default function IntegrationsWorkspace({
   const trustCfg = TRUST_CONFIG[trustLevel];
 
   const syncedSources = sourceStates.filter((s) => s === "SYNCED").length;
+  const queuedProviders = (queued ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const onboardingFeedback =
+    onboarding === "1" && connect
+      ? {
+          tone: "success" as const,
+          title: "Onboarding tamamlandi",
+          body:
+            queuedProviders.length > 0
+              ? `Sectigin kaynaklari baglamaya geciyoruz. Once ${connect}, sonra ${queuedProviders.join(", ")} kurulumu acilabilir.`
+              : `Sectigin kaynaklari baglamaya hazirsin. Once ${connect} kurulumu aciliyor.`,
+        }
+      : null;
   const feedback = success
     ? feedbackCopy[success]
     : error
     ? feedbackCopy[error]
-    : null;
+    : onboardingFeedback;
 
   // Auto-open wizard when returning from OAuth callback
+  const requestedProvider =
+    connect === "GA4" || connect === "STRIPE" ? connect : null;
   const autoOpenProvider: "GA4" | "STRIPE" | null =
-    success === "ga4_connected" ? "GA4" : success === "stripe_connected" ? "STRIPE" : null;
+    success === "ga4_connected"
+      ? "GA4"
+      : success === "stripe_connected"
+      ? "STRIPE"
+      : requestedProvider;
   const autoOpenIntegration = autoOpenProvider
     ? integrationMap.get(autoOpenProvider)
     : null;

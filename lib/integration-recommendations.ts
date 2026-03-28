@@ -29,6 +29,13 @@ export type MetricIntegrationRecommendation = {
   providers: MetricProviderRecommendation[];
 };
 
+export type StageAutomationGuide = {
+  stage: string;
+  supportedMetricKeys: string[];
+  connectedProviders: SupportedIntegrationProvider[];
+  preferredMetricKey: string | null;
+};
+
 const METRIC_PROVIDER_CONFIG: MetricRecommendationConfig[] = [
   {
     metricKey: "website-visits",
@@ -147,8 +154,98 @@ const METRIC_PROVIDER_CONFIG: MetricRecommendationConfig[] = [
   },
 ];
 
+// Real auto-sync coverage based on the metrics we currently ingest and bridge
+// into MetricSetup / MetricEntry. This is intentionally narrower than the
+// recommendation catalog above.
+const AUTO_SYNC_PROVIDER_CONFIG: MetricRecommendationConfig[] = [
+  {
+    metricKey: "website-visits",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync total users verisiyle beslenir." }],
+  },
+  {
+    metricKey: "reach",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync total users verisiyle proxy olarak beslenir." }],
+  },
+  {
+    metricKey: "visitor-to-signup",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync new users verisini acquisition proxy'si olarak kullanır." }],
+  },
+  {
+    metricKey: "waitlist-joins",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync new users verisini launch interest proxy'si olarak kullanır." }],
+  },
+  {
+    metricKey: "wau-mau",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync active users verisiyle retention sinyali üretir." }],
+  },
+  {
+    metricKey: "d1-d7-d30",
+    providers: [{ provider: "GA4", mode: "ready_now", note: "GA4 sync active users verisini retention proxy'si olarak kullanır." }],
+  },
+  {
+    metricKey: "mrr",
+    providers: [{ provider: "STRIPE", mode: "ready_now", note: "Stripe sync MRR verisini dogrudan doldurur." }],
+  },
+  {
+    metricKey: "arpu",
+    providers: [{ provider: "STRIPE", mode: "ready_now", note: "Stripe sync gelir verisiyle ARPU sinyali üretir." }],
+  },
+  {
+    metricKey: "trial-to-paid",
+    providers: [{ provider: "STRIPE", mode: "ready_now", note: "Stripe sync active subscription verisini kullanir." }],
+  },
+  {
+    metricKey: "churn",
+    providers: [{ provider: "STRIPE", mode: "ready_now", note: "Stripe sync cancelled subscriptions verisini kullanir." }],
+  },
+];
+
 function getCatalogItem(provider: SupportedIntegrationProvider) {
   return AVAILABLE_INTEGRATIONS.find((item) => item.provider === provider);
+}
+
+export function getStageAutomationGuides({
+  plan,
+  connectedProviders,
+}: {
+  plan: GrowthMetricPlan;
+  connectedProviders: string[];
+}): StageAutomationGuide[] {
+  const connectedSet = new Set(connectedProviders as SupportedIntegrationProvider[]);
+
+  return plan.sections.map((section) => {
+    const supportedMetrics = section.metrics.filter((metric) => {
+      const config = AUTO_SYNC_PROVIDER_CONFIG.find((item) => item.metricKey === metric.key);
+      return (config?.providers ?? []).some(
+        (providerConfig) =>
+          providerConfig.mode === "ready_now" && connectedSet.has(providerConfig.provider),
+      );
+    });
+
+    const stageProviders = Array.from(
+      new Set(
+        supportedMetrics.flatMap((metric) => {
+          const config = AUTO_SYNC_PROVIDER_CONFIG.find((item) => item.metricKey === metric.key);
+          return (config?.providers ?? [])
+            .filter(
+              (providerConfig) =>
+                providerConfig.mode === "ready_now" && connectedSet.has(providerConfig.provider),
+            )
+            .map((providerConfig) => providerConfig.provider);
+        }),
+      ),
+    );
+
+    const preferredMetric =
+      supportedMetrics.find((metric) => metric.recommended) ?? supportedMetrics[0] ?? null;
+
+    return {
+      stage: section.stage,
+      supportedMetricKeys: supportedMetrics.map((metric) => metric.key),
+      connectedProviders: stageProviders,
+      preferredMetricKey: preferredMetric?.key ?? null,
+    };
+  });
 }
 
 export function getRecommendedIntegrationsForSetup({

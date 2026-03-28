@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { GrowthMetricPlan, FunnelSection, FunnelMetricRecommendation } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
+import { getStageAutomationGuides } from "@/lib/integration-recommendations";
 
 // --- Types ---
 
@@ -123,10 +124,14 @@ function SummaryPanel({
 function MetricCard({
   metric,
   isSelected,
+  isDisabled = false,
+  sourceLabel,
   onSelect,
 }: {
   metric: FunnelMetricRecommendation;
   isSelected: boolean;
+  isDisabled?: boolean;
+  sourceLabel?: string | null;
   onSelect: () => void;
 }) {
   const [showAvoid, setShowAvoid] = useState(false);
@@ -135,9 +140,12 @@ function MetricCard({
     <button
       type="button"
       onClick={onSelect}
+      disabled={isDisabled}
       className={`w-full rounded-[14px] border p-4 text-left transition ${
         isSelected
           ? "border-[#95dbda] bg-[#f0fafa]"
+          : isDisabled
+          ? "border-[#ececec] bg-[#f7f7f7] opacity-55"
           : "border-[#e8e8e8] bg-[#fafafa] hover:border-[#cce8e8]"
       }`}
     >
@@ -147,6 +155,11 @@ function MetricCard({
           {metric.recommended && (
             <span className="rounded-full bg-[#ffd7ef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#0d0d12]">
               Önerilen
+            </span>
+          )}
+          {sourceLabel && (
+            <span className="rounded-full bg-[#eaf7f6] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#1c6b69]">
+              {sourceLabel}
             </span>
           )}
         </div>
@@ -209,6 +222,12 @@ function MetricCard({
           </p>
         </div>
       )}
+
+      {isDisabled && (
+        <p className="mt-3 text-[11px] leading-4 text-[#8a8fa0]">
+          Bu secenek bagli kaynaklarla otomatik dolmaz.
+        </p>
+      )}
     </button>
   );
 }
@@ -218,15 +237,22 @@ function MetricCard({
 function StageSection({
   section,
   selectedKey,
+  automation,
   onSelect,
   stageIndex,
 }: {
   section: FunnelSection;
   selectedKey: string | undefined;
+  automation: {
+    supportedMetricKeys: string[];
+    connectedProviders: string[];
+  };
   onSelect: (key: string) => void;
   stageIndex: number;
 }) {
   const isDone = !!selectedKey;
+  const hasAutomation = automation.supportedMetricKeys.length > 0;
+  const providerLabel = automation.connectedProviders.join(" + ");
 
   return (
     <div className={`rounded-[16px] border p-5 ${isDone ? "border-[#d1f0ef]" : "border-[#e8e8e8]"}`}>
@@ -253,16 +279,35 @@ function StageSection({
         </div>
       </div>
 
+      <div className={`mb-4 rounded-[12px] px-4 py-3 ${hasAutomation ? "bg-[#f0fafa]" : "bg-[#fafafa]"}`}>
+        <p className="text-[12px] font-semibold text-[#0d0d12]">
+          {hasAutomation
+            ? `${providerLabel} bu asamayi otomatik besliyor`
+            : "Bu asama manuel secim istiyor"}
+        </p>
+        <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+          {hasAutomation
+            ? "Bu kaynaklardan gercekten akitabildigimiz metrikleri one cikardik. Diger secenekler bu baglanti ile otomatik dolmaz."
+            : "Bu asama icin bagli kaynaklardan dogrudan veri gelmiyor. Buraya manuel girecegin bir metrik sec."}
+        </p>
+      </div>
+
       {/* Metrics grid */}
       <div className="grid gap-3 sm:grid-cols-3">
-        {section.metrics.map((metric) => (
+        {section.metrics.map((metric) => {
+          const isSupported = automation.supportedMetricKeys.includes(metric.key);
+          const shouldDisable = hasAutomation && !isSupported;
+          return (
           <MetricCard
             key={metric.key}
             metric={metric}
             isSelected={selectedKey === metric.key}
+            isDisabled={shouldDisable}
+            sourceLabel={isSupported ? providerLabel : null}
             onSelect={() => onSelect(metric.key)}
           />
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -275,21 +320,42 @@ export default function MetricSetupSelector({
   plan,
   initialSetup,
   locale,
+  connectedProviders,
 }: {
   productId: string;
   plan: GrowthMetricPlan;
   initialSetup: SavedMetricSetup | null;
   locale: string;
+  connectedProviders: string[];
 }) {
   const router = useRouter();
 
+  const automationGuides = useMemo(
+    () => getStageAutomationGuides({ plan, connectedProviders }),
+    [plan, connectedProviders],
+  );
+  const automationMap = useMemo(
+    () => new Map(automationGuides.map((guide) => [guide.stage, guide])),
+    [automationGuides],
+  );
+
   const initialMap = useMemo<Selected>(() => {
     const map: Selected = {};
-    for (const s of initialSetup?.selections ?? []) {
-      if (s.selectedMetricKeys[0]) map[s.stage] = s.selectedMetricKeys[0];
+    const hasSavedSelections = (initialSetup?.selections?.length ?? 0) > 0;
+    if (hasSavedSelections) {
+      for (const s of initialSetup?.selections ?? []) {
+        if (s.selectedMetricKeys[0]) map[s.stage] = s.selectedMetricKeys[0];
+      }
+      return map;
+    }
+
+    for (const guide of automationGuides) {
+      if (guide.preferredMetricKey) {
+        map[guide.stage] = guide.preferredMetricKey;
+      }
     }
     return map;
-  }, [initialSetup]);
+  }, [automationGuides, initialSetup]);
 
   const [selected, setSelected] = useState<Selected>(initialMap);
   const [saving, setSaving] = useState(false);
@@ -298,6 +364,13 @@ export default function MetricSetupSelector({
 
   const completedStages = plan.sections.filter((s) => !!selected[s.stage]).length;
   const allReady = completedStages === plan.sections.length;
+  const hasConnectedSources = connectedProviders.length > 0;
+  const automatedStages = automationGuides.filter((guide) => guide.supportedMetricKeys.length > 0);
+  const manualStages = automationGuides.filter((guide) => guide.supportedMetricKeys.length === 0);
+  const mismatchedStages = automationGuides.filter((guide) => {
+    const current = selected[guide.stage];
+    return current && guide.supportedMetricKeys.length > 0 && !guide.supportedMetricKeys.includes(current);
+  });
 
   function selectMetric(stage: string, key: string) {
     setError(null);
@@ -388,6 +461,18 @@ export default function MetricSetupSelector({
             </div>
           ))}
         </div>
+
+        {mismatchedStages.length > 0 && (
+          <div className="mt-5 rounded-[14px] border border-[#fed7aa] bg-[#fff7ed] p-4">
+            <p className="text-[12px] font-semibold text-[#c2410c]">
+              Bagli kaynaklarla uyumlu olmayan secimler var
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-[#c2410c]/80">
+              {mismatchedStages.map((item) => item.stage).join(", ")} asamalarinda secili metrikler otomatik dolmayacak.
+              Metrikleri gozden gecirirsen bagli kaynaklardan akan verilerle daha temiz bir setup kurabiliriz.
+            </p>
+          </div>
+        )}
       </section>
     );
   }
@@ -408,6 +493,27 @@ export default function MetricSetupSelector({
         </p>
       </div>
 
+      {hasConnectedSources && (automatedStages.length > 0 || manualStages.length > 0) && (
+        <div className="mb-5 rounded-[16px] border border-[#e8e8e8] bg-white p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
+            Kaynak uyumu
+          </p>
+          <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+            Bagli kaynaklardan gercekten akitabildigimiz asamalari otomatik oneriyoruz. Eksik kalan asamalar icin manuel takip edecegin metriği sen sececeksin.
+          </p>
+          {automatedStages.length > 0 && (
+            <p className="mt-3 text-[12px] leading-5 text-[#666d80]">
+              Otomatik dolacak asamalar: {automatedStages.map((guide) => guide.stage).join(", ")}
+            </p>
+          )}
+          {manualStages.length > 0 && (
+            <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+              Manuel secim gereken asamalar: {manualStages.map((guide) => guide.stage).join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Two-column layout */}
       <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
         {/* Stage sections */}
@@ -417,6 +523,10 @@ export default function MetricSetupSelector({
               key={section.stage}
               section={section}
               selectedKey={selected[section.stage]}
+              automation={{
+                supportedMetricKeys: automationMap.get(section.stage)?.supportedMetricKeys ?? [],
+                connectedProviders: automationMap.get(section.stage)?.connectedProviders ?? [],
+              }}
               onSelect={(key) => selectMetric(section.stage, key)}
               stageIndex={i}
             />

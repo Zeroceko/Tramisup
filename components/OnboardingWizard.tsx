@@ -42,6 +42,8 @@ type WizardData = {
   intendedSources: string[];
 };
 
+const CONNECTABLE_ONBOARDING_SOURCES = ["GA4", "Stripe"] as const;
+
 // ─── Option data ──────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
@@ -172,6 +174,23 @@ const STAGE_COLORS: Record<FunnelStageKey, string> = {
   Revenue: "bg-teal-50 text-teal-700 border-teal-100",
 };
 
+const STEP_META: Record<
+  StepId,
+  { eyebrow: string; title: string }
+> = {
+  name: { eyebrow: "Temel", title: "Urun kimligi" },
+  description: { eyebrow: "Temel", title: "Urun anlatimi" },
+  category: { eyebrow: "Kurgu", title: "Kategori secimi" },
+  platform: { eyebrow: "Kurgu", title: "Platformlar" },
+  stage: { eyebrow: "Durum", title: "Asama secimi" },
+  timing: { eyebrow: "Durum", title: "Launch zamani" },
+  business: { eyebrow: "Model", title: "Gelir modeli" },
+  audience: { eyebrow: "Model", title: "Hedef kitle" },
+  goal: { eyebrow: "Odak", title: "Buyume onceligi" },
+  sources: { eyebrow: "Veri", title: "Kaynaklar" },
+  metrics: { eyebrow: "Veri", title: "AARRR onerisi" },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isLaunchedStage(s: string) {
@@ -227,6 +246,25 @@ function getActiveSteps(data: Partial<WizardData>): StepId[] {
   ids.push("business", "audience", "goal", "sources");
   if (data.launchStatus && !isVeryEarlyStage(data.launchStatus)) ids.push("metrics");
   return ids;
+}
+
+function formatPlatforms(platforms: string[] | undefined) {
+  if (!platforms || platforms.length === 0) return "Secilmedi";
+  return platforms.join(", ");
+}
+
+function getStageLabel(value: string | undefined, items: { value: string; label: string }[]) {
+  return items.find((item) => item.value === value)?.label ?? value ?? "Secilmedi";
+}
+
+function getConnectableSources(intendedSources: string[] | undefined) {
+  return (intendedSources ?? []).filter((source): source is (typeof CONNECTABLE_ONBOARDING_SOURCES)[number] =>
+    CONNECTABLE_ONBOARDING_SOURCES.includes(source as (typeof CONNECTABLE_ONBOARDING_SOURCES)[number]),
+  );
+}
+
+function toIntegrationProvider(source: (typeof CONNECTABLE_ONBOARDING_SOURCES)[number]) {
+  return source === "Stripe" ? "STRIPE" : source;
 }
 
 // ─── Option Card ──────────────────────────────────────────────────────────────
@@ -307,11 +345,13 @@ function StepWrapper({
 function MetricsStep({
   autoMetrics,
   data,
+  hasConnectableSources,
   onAccept,
   onSkip,
 }: {
   autoMetrics: Partial<Record<FunnelStageKey, string>>;
   data: Partial<WizardData>;
+  hasConnectableSources: boolean;
   onAccept: () => void;
   onSkip: () => void;
 }) {
@@ -375,14 +415,14 @@ function MetricsStep({
           onClick={onAccept}
           className="h-11 rounded-full bg-[#0d0d12] px-6 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
         >
-          Bu kurulumu kullan
+          {hasConnectableSources ? "Bu kurulumu kullan ve kaynak bagla" : "Bu kurulumu kullan"}
         </button>
         <button
           type="button"
           onClick={onSkip}
           className="h-11 rounded-full border border-[#e5e7eb] px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12]"
         >
-          Sonra yapacağım
+          {hasConnectableSources ? "Kurulumsuz devam et" : "Sonra yapacağım"}
         </button>
       </div>
     </div>
@@ -439,11 +479,16 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const currentId = stepIds[stepIndex] ?? "name";
   const totalSteps = stepIds.length;
   const progressPct = totalSteps > 1 ? (stepIndex / (totalSteps - 1)) * 100 : 0;
+  const currentMeta = STEP_META[currentId];
 
   const autoMetrics = useMemo(
     () => computeAutoMetrics(data),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.category, data.launchStatus, data.businessModel]
+  );
+  const connectableSources = useMemo(
+    () => getConnectableSources(data.intendedSources),
+    [data.intendedSources],
   );
 
   function goNext() {
@@ -550,6 +595,24 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         });
       }
 
+      if (connectableSources.length > 0) {
+        const params = new URLSearchParams({
+          onboarding: "1",
+          connect: toIntegrationProvider(connectableSources[0]),
+        });
+        if (connectableSources.length > 1) {
+          params.set(
+            "queued",
+            connectableSources
+              .slice(1)
+              .map((source) => toIntegrationProvider(source))
+              .join(","),
+          );
+        }
+        router.push(`/${locale}/integrations?${params.toString()}`);
+        return;
+      }
+
       router.push(`/${locale}/dashboard`);
     } catch (err) {
       setIsCreating(false);
@@ -562,30 +625,122 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fafafa]">
-      {/* ── Header with progress ── */}
-      <div className="sticky top-0 z-10 border-b border-[#e8e8e8] bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-2xl items-center gap-4 px-6 py-4">
-          <span className="shrink-0 text-[15px] font-bold tracking-tight text-[#0d0d12]">
-            tiramisup
-          </span>
-          <div className="flex flex-1 items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f0f0f0]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,215,239,0.42),_transparent_24%),linear-gradient(180deg,_#fcfcfb_0%,_#f5f5f2_100%)] px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <div className="overflow-hidden rounded-[28px] border border-[#e8e8e8] bg-[#0d0d12] p-6 text-white shadow-[0_24px_70px_rgba(13,13,18,0.16)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+              Tiramisup setup
+            </p>
+            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.03em]">
+              Urununu sisteme yerlestirelim
+            </h2>
+            <p className="mt-3 text-[13px] leading-6 text-white/70">
+              Once urununu anlayalim, sonra dashboard, checklist ve growth alani buna gore sekillensin.
+            </p>
+
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-1.5 rounded-full bg-[#0d0d12] transition-[width] duration-500"
-                style={{ width: `${Math.max(3, progressPct)}%` }}
+                className="h-full rounded-full bg-[#95dbda] transition-[width] duration-500"
+                style={{ width: `${Math.max(4, progressPct)}%` }}
               />
             </div>
-            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-[#8a8fa0]">
-              {stepIndex + 1} / {totalSteps}
-            </span>
-          </div>
-        </div>
-      </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-white/55">
+              <span>{currentMeta.eyebrow}</span>
+              <span>
+                {stepIndex + 1} / {totalSteps}
+              </span>
+            </div>
 
-      {/* ── Step content ── */}
-      <div className="flex flex-1 flex-col items-center px-4 py-12 sm:py-16">
-        <div className="w-full max-w-2xl">
+            <div className="mt-6 space-y-2">
+              {stepIds.map((step, index) => {
+                const isCurrent = step === currentId;
+                const isDone = index < stepIndex;
+                return (
+                  <div
+                    key={step}
+                    className={`flex items-center gap-3 rounded-[16px] px-3 py-2.5 transition ${
+                      isCurrent
+                        ? "bg-white text-[#0d0d12]"
+                        : isDone
+                        ? "bg-white/8 text-white"
+                        : "bg-transparent text-white/52"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                        isCurrent
+                          ? "bg-[#0d0d12] text-white"
+                          : isDone
+                          ? "bg-[#95dbda] text-[#0d0d12]"
+                          : "border border-white/12"
+                      }`}
+                    >
+                      {isDone ? "✓" : index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-[0.12em] opacity-60">
+                        {STEP_META[step].eyebrow}
+                      </p>
+                      <p className="text-[13px] font-semibold">{STEP_META[step].title}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 rounded-[20px] border border-white/10 bg-white/6 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                Canli ozet
+              </p>
+              <div className="mt-3 space-y-3 text-[12px]">
+                <div>
+                  <p className="text-white/45">Urun</p>
+                  <p className="mt-0.5 font-semibold text-white">{data.name?.trim() || "Henuz ad verilmedi"}</p>
+                </div>
+                <div>
+                  <p className="text-white/45">Kategori</p>
+                  <p className="mt-0.5 font-semibold text-white">{data.category || "Secilmedi"}</p>
+                </div>
+                <div>
+                  <p className="text-white/45">Platform</p>
+                  <p className="mt-0.5 font-semibold text-white">{formatPlatforms(data.platforms)}</p>
+                </div>
+                <div>
+                  <p className="text-white/45">Asama</p>
+                  <p className="mt-0.5 font-semibold text-white">
+                    {getStageLabel(data.launchStatus, STAGES)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-white/45">Hedef kitle</p>
+                  <p className="mt-0.5 font-semibold text-white">
+                    {getStageLabel(data.targetAudience, AUDIENCES)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div className="overflow-hidden rounded-[30px] border border-[#e8e8e8] bg-white shadow-[0_24px_80px_rgba(13,13,18,0.08)]">
+          <div className="border-b border-[#eef1f2] bg-[linear-gradient(180deg,_#fffefe_0%,_#faf8fb_100%)] px-6 py-5 sm:px-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+                  {currentMeta.eyebrow}
+                </p>
+                <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                  {currentMeta.title}
+                </h1>
+              </div>
+              <div className="rounded-full border border-[#e8e8e8] bg-white px-3 py-1 text-[11px] font-semibold text-[#666d80]">
+                {stepIndex + 1} / {totalSteps}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-8 sm:px-8 sm:py-10">
           {/* Step: name */}
           {currentId === "name" && (
             <StepWrapper
@@ -775,7 +930,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           {currentId === "sources" && (
             <StepWrapper
               title="Hangi araçları kullanıyorsun?"
-              subtitle="Şimdi bağlamak zorunda değilsin — sadece planını bilelim."
+              subtitle="Istiyorsan setup biter bitmez secili canli kaynaklari baglama ekranina gecirecegiz."
               badge="İsteğe bağlı"
             >
               <div className="grid gap-2 sm:grid-cols-2">
@@ -797,6 +952,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
             <MetricsStep
               autoMetrics={autoMetrics}
               data={data}
+              hasConnectableSources={connectableSources.length > 0}
               onAccept={() => submit(true)}
               onSkip={() => submit(false)}
             />
@@ -832,7 +988,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                       onClick={() => submit(false)}
                       className="h-10 rounded-full bg-[#0d0d12] px-6 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
                     >
-                      Tamamla ve başla
+                      {connectableSources.length > 0 ? "Tamamla ve kaynak bagla" : "Tamamla ve basla"}
                     </button>
                   ) : (
                     <button
@@ -852,6 +1008,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           {error && !isCreating && (
             <p className="mt-4 text-[13px] text-red-600">{error}</p>
           )}
+        </div>
         </div>
       </div>
     </div>
