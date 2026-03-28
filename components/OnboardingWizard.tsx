@@ -309,7 +309,7 @@ function OptionCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-[14px] border p-4 text-left transition-all ${
+      className={`w-full rounded-[12px] border p-3.5 text-left transition-all ${
         selected
           ? "border-[#8dcfd2] bg-[#dff2f4] text-[#0d0d12] shadow-[0_4px_20px_rgba(84,141,146,0.16)]"
           : "border-[#dadbe0] bg-white text-[#0d0d12] hover:border-[#9fb5bf] hover:shadow-sm"
@@ -326,8 +326,8 @@ function OptionCard({
           </div>
         )}
         <div>
-          <p className="text-[14px] font-semibold leading-tight">{item.label}</p>
-          <p className={`mt-0.5 text-[12px] ${selected ? "text-[#50767a]" : "text-[#8a8fa0]"}`}>
+          <p className="text-[13px] font-semibold leading-tight">{item.label}</p>
+          <p className={`mt-0.5 text-[11px] ${selected ? "text-[#50767a]" : "text-[#8a8fa0]"}`}>
             {item.sub}
           </p>
         </div>
@@ -356,10 +356,10 @@ function StepWrapper({
           {badge}
         </span>
       )}
-      <h1 className="text-center text-[30px] font-semibold tracking-[-0.03em] text-[#0d0d12] sm:text-[44px]">
+      <h1 className="text-center text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12] sm:text-[30px]">
         {title}
       </h1>
-      <p className="mx-auto mb-7 mt-2 max-w-3xl text-center text-[16px] leading-[1.45] text-[#666d80] sm:text-[22px]">
+      <p className="mx-auto mb-6 mt-2 max-w-3xl text-center text-[14px] leading-[1.45] text-[#666d80] sm:text-[16px]">
         {subtitle}
       </p>
       {children}
@@ -406,7 +406,7 @@ function MetricsStep({
       <span className="mb-4 inline-block rounded-full border border-[#e5e7eb] px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8fa0]">
         İsteğe bağlı
       </span>
-      <h1 className="text-[26px] font-bold tracking-[-0.02em] text-[#0d0d12] sm:text-[30px]">
+      <h1 className="text-[22px] font-bold tracking-[-0.01em] text-[#0d0d12] sm:text-[26px]">
         Önerilen AARRR kurulumun
       </h1>
       <p className="mb-7 mt-2 text-[14px] leading-6 text-[#666d80]">
@@ -440,14 +440,14 @@ function MetricsStep({
         <button
           type="button"
           onClick={onAccept}
-          className="h-11 rounded-full bg-[#0d0d12] px-6 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
+          className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
         >
           {hasConnectableSources ? "Bu kurulumu kullan ve kaynak bagla" : "Bu kurulumu kullan"}
         </button>
         <button
           type="button"
           onClick={onSkip}
-          className="h-11 rounded-full border border-[#e5e7eb] px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12]"
+          className="h-10 rounded-full border border-[#e5e7eb] px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12]"
         >
           {hasConnectableSources ? "Kurulumsuz devam et" : "Sonra yapacağım"}
         </button>
@@ -655,16 +655,16 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,146,178,0.35),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,158,255,0.28),_transparent_34%),linear-gradient(135deg,_#ffd2df_0%,_#f1d8ff_46%,_#c9dcff_100%)] p-3 sm:p-6">
-      <div className="mx-auto max-w-[1220px] rounded-[18px] border border-white/55 bg-[#f2f2f2]/95 p-4 shadow-[0_24px_80px_rgba(65,38,72,0.22)] backdrop-blur">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,146,178,0.35),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,158,255,0.28),_transparent_34%),linear-gradient(135deg,_#ffd2df_0%,_#f1d8ff_46%,_#c9dcff_100%)] p-2 sm:p-4">
+      <div className="mx-auto max-w-[1100px] rounded-[14px] border border-white/55 bg-[#f2f2f2]/95 p-3 shadow-[0_20px_64px_rgba(65,38,72,0.2)] backdrop-blur">
         <div className="flex items-center justify-between gap-4 px-1 pb-3">
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1b1b1f] sm:text-[36px]">
+          <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-[#1b1b1f] sm:text-[28px]">
             Yeni Ürün Oluştur
           </h1>
           <button
             type="button"
             onClick={() => router.push(`/${locale}/dashboard`)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#d8d8d8] bg-[#f6f6f6] text-[#5f6674] transition hover:bg-white"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#d8d8d8] bg-[#f6f6f6] text-[#5f6674] transition hover:bg-white"
             aria-label="Kapat"
           >
             <X className="h-4 w-4" />
@@ -679,7 +679,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
               return (
                 <span
                   key={phase}
-                  className={`inline-flex h-9 items-center rounded-full px-4 text-[12px] font-medium ${
+                  className={`inline-flex h-8 items-center rounded-full px-3.5 text-[11px] font-medium ${
                     isCurrent
                       ? "border border-[#7ac9cf] bg-[#bde5e8] text-[#0f3b40]"
                       : isDone
@@ -695,8 +695,8 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           </div>
         </div>
 
-        <div className="rounded-[16px] border border-[#ececee] bg-[#f7f7f8] px-4 py-6 sm:px-6 sm:py-8">
-          <div className="mx-auto w-full max-w-5xl">
+        <div className="rounded-[14px] border border-[#ececee] bg-[#f7f7f8] px-4 py-5 sm:px-5 sm:py-6">
+          <div className="mx-auto w-full max-w-4xl">
             <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-[#e4e4e8]">
               <div
                 className="h-full rounded-full bg-[#8ecfd3] transition-[width] duration-500"
@@ -716,7 +716,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                 onChange={(e) => set("name", e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && canContinue() && goNext()}
                 placeholder="Ürün adını yaz…"
-                className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
               />
             </StepWrapper>
           )}
@@ -737,7 +737,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                 onChange={(e) => set("description", e.target.value)}
                 placeholder="Freelancerların teklif ve ödemelerini tek yerden yönetmesini sağlıyor."
                 rows={3}
-                className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
               />
               <div className="mt-4">
                 <label className="text-[12px] font-medium text-[#8a8fa0]">
@@ -749,7 +749,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   onChange={(e) => set("website", e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && canContinue() && goNext()}
                   placeholder="https://example.com"
-                  className="mt-1 w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                  className="mt-1 w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
                 />
               </div>
             </StepWrapper>
@@ -933,7 +933,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   <div className="grid gap-2 sm:grid-cols-3">
                     <button
                       type="button"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
                     >
                       <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f6f2dd] text-[#9c8f45]">
                         <Paperclip className="h-4 w-4" />
@@ -942,7 +942,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
                     >
                       <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#dff2f4] text-[#3f8b91]">
                         <Link2 className="h-4 w-4" />
@@ -951,7 +951,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#e5e5e8] bg-[#ececee] text-[14px] font-medium text-[#666d80] transition hover:bg-white"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
                     >
                       <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f2e8dc] text-[#8c6d43]">
                         <Plus className="h-4 w-4" />
@@ -966,7 +966,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   type="button"
                   onClick={goBack}
                   disabled={stepIndex === 0}
-                  className="flex h-11 items-center gap-2 rounded-full border border-[#d9dadd] bg-white px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
+                  className="flex h-10 items-center gap-2 rounded-full border border-[#d9dadd] bg-white px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
                 >
                   ← Geri
                 </button>
@@ -985,7 +985,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     <button
                       type="button"
                       onClick={() => submit(false)}
-                      className="h-11 rounded-full bg-[#edbfd9] px-7 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0]"
+                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0]"
                     >
                       {connectableSources.length > 0 ? "Tamamla ve kaynak bagla" : "Tamamla ve basla"}
                     </button>
@@ -994,7 +994,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                       type="button"
                       onClick={goNext}
                       disabled={!canContinue()}
-                      className="h-11 rounded-full bg-[#edbfd9] px-7 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Devam Et
                     </button>
