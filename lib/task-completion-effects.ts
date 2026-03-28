@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ProductStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 
@@ -114,7 +115,7 @@ export async function computeCompletionEffects(
       (metricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
     const hasSetup = selections.some((s) => s.selectedMetricKeys.length > 0);
 
-    if (!hasSetup && product?.status === "PRE_LAUNCH") {
+    if (!hasSetup && product?.status === ProductStatus.PRE_LAUNCH) {
       const exists = await prisma.task.findFirst({
         where: {
           productId,

@@ -1,9 +1,13 @@
+import Link from "next/link";
+
 type Indicator = {
   label: string;
   value: string;
   status: "healthy" | "warning" | "neutral" | "empty";
   /** Optional sub-label shown below value */
   hint?: string;
+  /** Optional link — makes the card clickable */
+  href?: string;
 };
 
 type DecisionStripProps = {
@@ -29,30 +33,52 @@ export default function DecisionStrip({ indicators }: DecisionStripProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {indicators.map((ind) => (
-        <div
-          key={ind.label}
-          className="rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3.5"
-        >
-          {/* Label row with status dot */}
-          <div className="flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[ind.status]}`} />
-            <span className="text-[11px] font-medium text-[#666d80]">
-              {ind.label}
-            </span>
+      {indicators.map((ind) => {
+        const inner = (
+          <>
+            {/* Label row with status dot */}
+            <div className="flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[ind.status]}`} />
+              <span className="text-[11px] font-medium text-[#666d80]">
+                {ind.label}
+              </span>
+              {ind.href && (
+                <span className="ml-auto text-[10px] text-[#c8ccd6]">→</span>
+              )}
+            </div>
+
+            {/* Value */}
+            <p className={`mt-1 text-[20px] font-bold tracking-[-0.02em] leading-tight ${STATUS_VALUE_COLOR[ind.status]}`}>
+              {ind.value}
+            </p>
+
+            {/* Hint */}
+            {ind.hint && (
+              <p className="mt-0.5 text-[11px] text-[#94a3b8]">{ind.hint}</p>
+            )}
+          </>
+        );
+
+        const baseClass = `rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3.5`;
+
+        if (ind.href) {
+          return (
+            <Link
+              key={ind.label}
+              href={ind.href}
+              className={`${baseClass} block transition hover:border-[#d0d0d0] hover:shadow-[0_2px_8px_rgba(13,13,18,0.06)]`}
+            >
+              {inner}
+            </Link>
+          );
+        }
+
+        return (
+          <div key={ind.label} className={baseClass}>
+            {inner}
           </div>
-
-          {/* Value — the number or status word */}
-          <p className={`mt-1 text-[20px] font-bold tracking-[-0.02em] leading-tight ${STATUS_VALUE_COLOR[ind.status]}`}>
-            {ind.value}
-          </p>
-
-          {/* Hint */}
-          {ind.hint && (
-            <p className="mt-0.5 text-[11px] text-[#94a3b8]">{ind.hint}</p>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

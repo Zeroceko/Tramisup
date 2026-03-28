@@ -1,27 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, RefreshCw, Settings2, Unplug } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import SourceSetupWizard from "@/components/SourceSetupWizard";
 
 export interface IntegrationDef {
   provider: string;
@@ -113,14 +99,6 @@ const SOURCE_VALUE: Record<
   },
 };
 
-type Ga4PropertyOption = {
-  accountName: string;
-  accountDisplayName: string;
-  propertyId: string;
-  propertyName: string;
-  propertyDisplayName: string;
-};
-
 export default function IntegrationCard({
   integration,
   existingIntegration,
@@ -134,13 +112,7 @@ export default function IntegrationCard({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [propertyDialogOpen, setPropertyDialogOpen] = useState(false);
-  const [propertiesLoading, setPropertiesLoading] = useState(false);
-  const [properties, setProperties] = useState<Ga4PropertyOption[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState(
-    existingIntegration?.selectedPropertyId ?? ""
-  );
-  const [savingProperty, setSavingProperty] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const sourceState = getSourceState(existingIntegration, integration.provider);
   const stateCfg = STATE_CONFIG[sourceState];
@@ -160,43 +132,11 @@ export default function IntegrationCard({
       })
     : null;
 
-  const loadProperties = useCallback(async () => {
-    if (!existingIntegration || integration.provider !== "GA4") return;
-    setPropertiesLoading(true);
-    try {
-      const res = await fetch(
-        `/api/integrations/${existingIntegration.id}/ga4-properties`
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "GA4 properties yüklenemedi");
-      setProperties(data.properties);
-      setSelectedPropertyId(
-        data.selectedPropertyId ?? data.properties[0]?.propertyId ?? ""
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "GA4 properties yüklenemedi"
-      );
-    } finally {
-      setPropertiesLoading(false);
-    }
-  }, [existingIntegration, integration.provider]);
-
-  const openPropertySelector = useCallback(async () => {
-    setPropertyDialogOpen(true);
-    await loadProperties();
-  }, [loadProperties]);
-
-  useEffect(() => {
-    setSelectedPropertyId(existingIntegration?.selectedPropertyId ?? "");
-  }, [existingIntegration?.selectedPropertyId]);
-
   useEffect(() => {
     if (autoOpenPropertySelector && needsGa4Property) {
-      setPropertyDialogOpen(true);
-      void loadProperties();
+      setWizardOpen(true);
     }
-  }, [autoOpenPropertySelector, needsGa4Property, loadProperties]);
+  }, [autoOpenPropertySelector, needsGa4Property]);
 
   const handleDisconnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -223,8 +163,8 @@ export default function IntegrationCard({
   const handleSync = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!existingIntegration) return;
-    if (integration.provider === "GA4" && !selectedPropertyId) {
-      await openPropertySelector();
+    if (integration.provider === "GA4" && !existingIntegration.selectedPropertyId) {
+      setWizardOpen(true);
       return;
     }
     setLoading(true);
@@ -249,42 +189,11 @@ export default function IntegrationCard({
   };
 
   const handleConnect = () => {
-    if (integration.comingSoon || isConnected || loading) return;
-    setLoading(true);
-    if (integration.provider === "GA4") {
-      window.location.href = `/api/integrations/google/link?productId=${productId}`;
-    } else if (integration.provider === "STRIPE") {
-      window.location.href = `/api/integrations/stripe/link?productId=${productId}`;
+    if (integration.comingSoon || loading) return;
+    if (integration.provider === "GA4" || integration.provider === "STRIPE") {
+      setWizardOpen(true);
     } else {
-      setLoading(false);
       toast.message("Bu kaynak henüz desteklenmiyor.");
-    }
-  };
-
-  const handleSaveProperty = async () => {
-    if (!existingIntegration || !selectedPropertyId) return;
-    setSavingProperty(true);
-    try {
-      const res = await fetch(
-        `/api/integrations/${existingIntegration.id}/ga4-properties`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ propertyId: selectedPropertyId }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "GA4 property kaydedilemedi");
-      toast.success(`${data.propertyDisplayName} seçildi.`);
-      setPropertyDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "GA4 property kaydedilemedi"
-      );
-    } finally {
-      setSavingProperty(false);
     }
   };
 
@@ -409,13 +318,24 @@ export default function IntegrationCard({
         <div className="mt-4 space-y-2">
           {isConnected ? (
             <>
+              {/* Guided setup CTA for NEEDS_SETUP */}
+              {sourceState === "NEEDS_SETUP" && (
+                <Button
+                  type="button"
+                  onClick={() => setWizardOpen(true)}
+                  className="h-10 w-full rounded-full border-0 bg-[#0d0d12] text-[13px] font-semibold text-white shadow-none hover:bg-[#1a1a24]"
+                >
+                  Kurulumu tamamla
+                </Button>
+              )}
+
               {/* GA4 property selector */}
-              {integration.provider === "GA4" && (
+              {integration.provider === "GA4" && sourceState !== "NEEDS_SETUP" && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => void openPropertySelector()}
-                  disabled={loading || propertiesLoading || integration.comingSoon}
+                  onClick={() => setWizardOpen(true)}
+                  disabled={loading || integration.comingSoon}
                   className="h-10 w-full rounded-full border-[#e8e8e8] bg-white text-[13px] text-[#0d0d12] hover:bg-[#f6f6f6]"
                 >
                   <Settings2 className="h-4 w-4" />
@@ -470,85 +390,21 @@ export default function IntegrationCard({
         </div>
       </div>
 
-      {/* GA4 Property Selector Dialog */}
-      <Dialog open={propertyDialogOpen} onOpenChange={setPropertyDialogOpen}>
-        <DialogContent className="rounded-[24px] border-[#e8e8e8] bg-white p-0 shadow-[0_24px_80px_rgba(13,13,18,0.12)] sm:max-w-[520px]">
-          <div className="border-b border-[#e8e8e8] p-6">
-            <DialogHeader className="space-y-2 text-left">
-              <DialogTitle className="text-[22px] font-semibold tracking-tight text-[#0d0d12]">
-                GA4 Property seç
-              </DialogTitle>
-              <DialogDescription className="text-[13px] leading-6 text-[#666d80]">
-                Google Analytics hesabında hangi property&apos;den veri çekeceğimizi sabitliyoruz.
-                Koç bundan sonra bu kaynağı senin ürünün olarak okur.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+      {/* Source Setup Wizard */}
+      {wizardOpen && (
+        <SourceSetupWizard
+          provider={integration.provider as "GA4" | "STRIPE"}
+          productId={productId}
+          integrationId={existingIntegration?.id ?? null}
+          isConnected={isConnected}
+          selectedPropertyId={existingIntegration?.selectedPropertyId}
+          onClose={() => {
+            setWizardOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
 
-          <div className="space-y-3 p-6">
-            <Select
-              value={selectedPropertyId}
-              onValueChange={setSelectedPropertyId}
-              disabled={propertiesLoading}
-            >
-              <SelectTrigger className="h-11 rounded-[14px] border-[#e8e8e8] bg-white text-left shadow-none focus:ring-[#95dbda]">
-                <SelectValue
-                  placeholder={
-                    propertiesLoading
-                      ? "Property'ler yükleniyor…"
-                      : "Bir GA4 property seç"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="rounded-[14px] border-[#e8e8e8] bg-white">
-                {properties.map((p) => (
-                  <SelectItem
-                    key={p.propertyId}
-                    value={p.propertyId}
-                    className="rounded-[10px] py-2.5"
-                  >
-                    {p.propertyDisplayName} · {p.accountDisplayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {!propertiesLoading && properties.length === 0 && (
-              <div className="rounded-[14px] border border-orange-100 bg-[#fff7ed] p-4 text-[13px] leading-6 text-[#c2410c]">
-                Bu Google hesabında erişilebilir GA4 property bulunamadı. Önce doğru Google hesabıyla property erişimini kontrol et.
-              </div>
-            )}
-
-            <div className="rounded-[14px] bg-[#f6f6f6] p-4">
-              <p className="text-[12px] font-semibold text-[#0d0d12]">
-                Bu seçim ne anlama gelir?
-              </p>
-              <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
-                DAU, retention ve funnel verisi bu property&apos;den çekilir. Yanlış property seçilirse metrikler başka bir ürüne ait veri gösterir.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter className="border-t border-[#e8e8e8] p-6 sm:justify-between sm:space-x-0">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setPropertyDialogOpen(false)}
-              className="h-10 rounded-full text-[#666d80] hover:bg-[#f6f6f6]"
-            >
-              Vazgeç
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveProperty}
-              disabled={savingProperty || !selectedPropertyId}
-              className="h-10 rounded-full bg-[#0d0d12] px-5 text-white hover:bg-[#1a1a24] disabled:opacity-50"
-            >
-              {savingProperty ? "Kaydediliyor…" : "Property'yi kaydet"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

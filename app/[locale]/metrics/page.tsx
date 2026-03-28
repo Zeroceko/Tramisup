@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import MetricsTrendChart from "@/components/MetricsTrendChart";
+import PageHeader from "@/components/PageHeader";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getMetricSetup } from "@/lib/metric-setup";
@@ -141,32 +142,31 @@ export default async function MetricsPage({
 
   const atRiskStage = funnelHealth?.stages.find((s) => s.status === "AT_RISK") ?? null;
 
+  const headerTitle =
+    dataState === "no_setup"
+      ? "Metrik kurulumu yok"
+      : dataState === "first_entry"
+      ? "İlk gününü kaydet"
+      : dataState === "building"
+      ? "Baz çizgisi kuruluyor"
+      : "Funnel ritmi";
+
+  const headerDescription =
+    dataState === "no_setup"
+      ? "Önce growth ekranında hangi metrikleri takip edeceğini seç."
+      : dataState === "first_entry"
+      ? `${selectedMetrics.length} metrik seçildi. Bugünkü değerleri gir — bu değerler baz çizgini oluşturacak.`
+      : dataState === "building"
+      ? `${entryCount} giriş var. ${5 - entryCount} giriş daha sonra trend grafiği açılır.`
+      : `${product.name} · ${selectedMetrics.length} metrik, ${entryCount} giriş takip ediliyor.`;
+
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-          Growth metrikleri
-        </p>
-        <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">
-          {dataState === "no_setup"
-            ? "Metrik kurulumu yok"
-            : dataState === "first_entry"
-            ? "İlk gününü kaydet"
-            : dataState === "building"
-            ? "Baz çizgisi kuruluyor"
-            : "Funnel ritmi"}
-        </h1>
-        <p className="mt-1 text-[14px] text-[#666d80]">
-          {dataState === "no_setup"
-            ? "Önce growth ekranında hangi metrikleri takip edeceğini seç."
-            : dataState === "first_entry"
-            ? `${selectedMetrics.length} metrik seçildi. Bugünkü değerleri gir — bu değerler baz çizgini oluşturacak.`
-            : dataState === "building"
-            ? `${entryCount} giriş var. ${5 - entryCount} giriş daha sonra trend grafiği açılır.`
-            : `${product.name} · ${selectedMetrics.length} metrik, ${entryCount} giriş takip ediliyor.`}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Growth metrikleri"
+        title={headerTitle}
+        description={headerDescription}
+      />
 
       {/* no_setup state */}
       {dataState === "no_setup" && (

@@ -16,23 +16,29 @@ type FunnelStageKey =
 
 type StepId =
   | "name"
+  | "description"
   | "category"
   | "platform"
   | "stage"
   | "timing"
   | "business"
+  | "audience"
   | "goal"
   | "sources"
   | "metrics";
 
 type WizardData = {
   name: string;
+  description: string;
+  website: string;
   category: string;
   platforms: string[];
+  targetAudience: string;
   launchStatus: string;
   timingOption: string;
   businessModel: string;
   growthGoal: string;
+  goalKey: string;
   intendedSources: string[];
 };
 
@@ -85,27 +91,58 @@ const BUSINESS_MODELS = [
   { value: "Henüz monetize etmedim", label: "Henüz gelir yok", sub: "Önce kullanıcı, sonra para" },
 ];
 
+const PLATFORMS = [
+  { value: "Web", label: "Web", sub: "Tarayıcı tabanlı uygulama" },
+  { value: "iOS", label: "iOS", sub: "Apple App Store" },
+  { value: "Android", label: "Android", sub: "Google Play Store" },
+  { value: "Desktop", label: "Desktop", sub: "Windows, macOS, Linux" },
+  { value: "API", label: "API / Backend", sub: "Geliştirici servisi" },
+  { value: "Multi-platform", label: "Multi-platform", sub: "Birden fazla platform" },
+];
+
+const AUDIENCES = [
+  { value: "Tüketiciler", label: "Tüketiciler", sub: "B2C bireysel kullanıcılar" },
+  { value: "Freelancerlar", label: "Freelancerlar", sub: "Bağımsız çalışanlar" },
+  { value: "Geliştiriciler", label: "Geliştiriciler", sub: "Yazılımcılar ve teknik ekipler" },
+  { value: "Startup ekipleri", label: "Startup ekipleri", sub: "Erken aşama takımlar" },
+  { value: "KOBİ'ler", label: "KOBİ'ler", sub: "Küçük ve orta ölçekli işletmeler" },
+  { value: "Kurumsal ekipler", label: "Kurumsal ekipler", sub: "Enterprise organizasyonlar" },
+  { value: "İç ekipler", label: "İç ekipler / Operasyon", sub: "Şirket içi kullanım" },
+  { value: "İçerik üreticileri", label: "İçerik üreticileri", sub: "Kreator ve influencerlar" },
+  { value: "Eğitim", label: "Eğitim", sub: "Öğrenci ve eğitimciler" },
+  { value: "Diğer", label: "Diğer", sub: "Başka bir kitle" },
+];
+
 const GROWTH_GOALS = [
   {
     value: "İlk kullanıcıları kazanmak",
+    key: "get_first_users",
     label: "İlk kullanıcıları kazanmak",
     sub: "Sıfırdan trafik oluştur",
   },
   {
+    value: "Ürünü doğrulamak",
+    key: "validate_product",
+    label: "Ürünü doğrulamak",
+    sub: "Kullanıcılar gerçekten kullanıyor mu?",
+  },
+  {
+    value: "İlk tekrar kullanımı sağlamak",
+    key: "reach_first_value_usage",
+    label: "İlk tekrar kullanımı sağlamak",
+    sub: "Kullanıcılar geri dönsün",
+  },
+  {
     value: "İlk ödeme yapan müşteriyi bulmak",
+    key: "get_first_revenue",
     label: "İlk ödeme yapan müşteriyi bulmak",
     sub: "Revenue hemen doğrulansın",
   },
   {
-    value: "Retention'ı güçlendirmek",
-    label: "Retention'ı güçlendirmek",
-    sub: "Kullanıcılar geri dönsün",
-  },
-  { value: "MRR'ı büyütmek", label: "MRR'ı büyütmek", sub: "Aylık geliri artır" },
-  {
-    value: "Büyümeyi ölçeklemek",
-    label: "Tüm kanalları genişletmek",
-    sub: "Her aşamayı optimize et",
+    value: "Büyüme ritmi kurmak",
+    key: "build_growth_rhythm",
+    label: "Büyüme ritmi kurmak",
+    sub: "Haftalık döngüyü oturt",
   },
 ];
 
@@ -151,18 +188,6 @@ function deriveStatus(launchStatus: string): "PRE_LAUNCH" | "LAUNCHED" | "GROWIN
   return "PRE_LAUNCH";
 }
 
-function deriveTargetAudience(category: string): string {
-  const map: Record<string, string> = {
-    SaaS: "İşletmeler ve ekipler",
-    "Mobil uygulama": "Bireysel kullanıcılar",
-    "E-ticaret": "Tüketiciler",
-    Marketplace: "Alıcılar ve satıcılar",
-    "İçerik/Medya": "İçerik tüketicileri",
-    Platform: "Geliştiriciler",
-  };
-  return map[category] ?? "Genel kullanıcılar";
-}
-
 function timingToDate(timing: string): string | null {
   const days: Record<string, number> = {
     "2 hafta içinde": 14,
@@ -185,7 +210,7 @@ function computeAutoMetrics(
     status: deriveStatus(data.launchStatus),
     category: data.category,
     businessModel: data.businessModel,
-    targetAudience: deriveTargetAudience(data.category),
+    targetAudience: data.targetAudience,
   });
   const result: Partial<Record<FunnelStageKey, string>> = {};
   for (const section of plan.sections) {
@@ -196,11 +221,10 @@ function computeAutoMetrics(
 }
 
 function getActiveSteps(data: Partial<WizardData>): StepId[] {
-  const ids: StepId[] = ["name", "category"];
-  if (data.category === "Mobil uygulama") ids.push("platform");
+  const ids: StepId[] = ["name", "description", "category", "platform"];
   ids.push("stage");
   if (data.launchStatus && !isLaunchedStage(data.launchStatus)) ids.push("timing");
-  ids.push("business", "goal", "sources");
+  ids.push("business", "audience", "goal", "sources");
   if (data.launchStatus && !isVeryEarlyStage(data.launchStatus)) ids.push("metrics");
   return ids;
 }
@@ -296,7 +320,7 @@ function MetricsStep({
     status: deriveStatus(data.launchStatus ?? ""),
     category: data.category,
     businessModel: data.businessModel,
-    targetAudience: deriveTargetAudience(data.category ?? ""),
+    targetAudience: data.targetAudience,
   });
 
   const metricNames: Partial<Record<FunnelStageKey, string>> = {};
@@ -447,6 +471,8 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     switch (currentId) {
       case "name":
         return (data.name ?? "").trim().length > 0;
+      case "description":
+        return (data.description ?? "").trim().length > 0;
       case "category":
         return !!data.category;
       case "platform":
@@ -457,6 +483,8 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         return !!data.timingOption;
       case "business":
         return !!data.businessModel;
+      case "audience":
+        return !!data.targetAudience;
       case "goal":
         return !!data.growthGoal;
       case "sources":
@@ -486,12 +514,16 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
+          description: data.description,
+          website: data.website || undefined,
           category: data.category,
-          mobilePlatforms: data.platforms ?? [],
-          targetAudience: deriveTargetAudience(data.category ?? ""),
+          platforms: data.platforms ?? [],
+          targetAudience: data.targetAudience,
           businessModel: data.businessModel,
           launchStatus: data.launchStatus,
           launchDate: data.timingOption ? timingToDate(data.timingOption) : undefined,
+          growthGoal: data.growthGoal,
+          goalKey: data.goalKey,
           stageContext: stageContext || undefined,
         }),
       });
@@ -572,6 +604,36 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
             </StepWrapper>
           )}
 
+          {/* Step: description */}
+          {currentId === "description" && (
+            <StepWrapper
+              title="Ürünün ne yapıyor?"
+              subtitle="Bir cümleyle açıkla — hangi problemi, kimin için çözüyor?"
+            >
+              <textarea
+                autoFocus
+                value={data.description ?? ""}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Freelancerların teklif ve ödemelerini tek yerden yönetmesini sağlıyor."
+                rows={3}
+                className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+              />
+              <div className="mt-4">
+                <label className="text-[12px] font-medium text-[#8a8fa0]">
+                  Website veya link (opsiyonel)
+                </label>
+                <input
+                  type="url"
+                  value={data.website ?? ""}
+                  onChange={(e) => set("website", e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && canContinue() && goNext()}
+                  placeholder="https://example.com"
+                  className="mt-1 w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                />
+              </div>
+            </StepWrapper>
+          )}
+
           {/* Step: category */}
           {currentId === "category" && (
             <StepWrapper
@@ -591,45 +653,22 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
             </StepWrapper>
           )}
 
-          {/* Step: platform — only for mobile */}
+          {/* Step: platform — universal */}
           {currentId === "platform" && (
             <StepWrapper
-              title="Hangi platform?"
-              subtitle="iOS, Android, ya da ikisi — App Store / Play Store checklist buna göre hazırlanır."
+              title="Hangi platformda çalışıyor?"
+              subtitle="Ürünün çalıştığı platformları seç — checklist ve metrik önerileri buna göre hazırlanır."
             >
-              <div className="grid gap-2 sm:grid-cols-3">
-                {(
-                  [
-                    { value: "iOS", label: "iOS", sub: "Apple App Store" },
-                    { value: "Android", label: "Android", sub: "Google Play Store" },
-                    { value: "İkisi de", label: "İkisi de", sub: "Çapraz platform" },
-                  ] as { value: string; label: string; sub: string }[]
-                ).map((item) => {
-                  const isBoth = item.value === "İkisi de";
-                  const selected = isBoth
-                    ? (data.platforms ?? []).includes("iOS") &&
-                      (data.platforms ?? []).includes("Android")
-                    : (data.platforms ?? []).includes(item.value);
-                  return (
-                    <OptionCard
-                      key={item.value}
-                      item={item}
-                      selected={selected}
-                      onClick={() => {
-                        if (isBoth) {
-                          set("platforms", ["iOS", "Android"]);
-                        } else {
-                          // deselect "both" shortcut if toggling individually
-                          const existing = (data.platforms ?? []) as string[];
-                          const next = existing.includes(item.value)
-                            ? existing.filter((p) => p !== item.value)
-                            : [...existing, item.value];
-                          set("platforms", next);
-                        }
-                      }}
-                    />
-                  );
-                })}
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PLATFORMS.map((item) => (
+                  <OptionCard
+                    key={item.value}
+                    item={item}
+                    multi
+                    selected={(data.platforms ?? []).includes(item.value)}
+                    onClick={() => toggleMulti("platforms", item.value)}
+                  />
+                ))}
               </div>
             </StepWrapper>
           )}
@@ -691,6 +730,25 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
             </StepWrapper>
           )}
 
+          {/* Step: audience */}
+          {currentId === "audience" && (
+            <StepWrapper
+              title="Kime satıyorsun?"
+              subtitle="Ana hedef kitleni seç — öneriler ve büyüme rehberi buna göre şekillenir."
+            >
+              <div className="grid gap-2 sm:grid-cols-2">
+                {AUDIENCES.map((item) => (
+                  <OptionCard
+                    key={item.value}
+                    item={item}
+                    selected={data.targetAudience === item.value}
+                    onClick={() => set("targetAudience", item.value)}
+                  />
+                ))}
+              </div>
+            </StepWrapper>
+          )}
+
           {/* Step: growth goal */}
           {currentId === "goal" && (
             <StepWrapper
@@ -703,7 +761,10 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     key={item.value}
                     item={item}
                     selected={data.growthGoal === item.value}
-                    onClick={() => set("growthGoal", item.value)}
+                    onClick={() => {
+                      set("growthGoal", item.value);
+                      set("goalKey", item.key);
+                    }}
                   />
                 ))}
               </div>

@@ -2,22 +2,25 @@
 
 import { useEffect, useState } from "react";
 
-type FounderCoachSuggestion = {
-  suggestedNextStep: string;
-  whyNow: string;
-  whatCanWait?: string;
-  confidence: "LOW" | "MEDIUM" | "HIGH";
+type Recommendation = {
+  title: string;
+  type: string;
+  priority: "high" | "medium" | "low";
+  impact_area: string;
+  why_now: string;
+  supporting_evidence: string[];
+  assumptions: string[];
+  missing_data: string[];
+  confidence: "high" | "medium" | "low";
+  expected_outcome: string;
+  user_action: string;
 };
 
-type FounderCoachResponse = {
-  title: string;
-  summary: string;
-  priorities: Array<{
-    title: string;
-    why: string;
-    priority: "CRITICAL" | "IMPORTANT" | "NICE";
-  }>;
-  whatCanWait?: string[];
+type CoachRecommendationOutput = {
+  primary_recommendation: Recommendation;
+  supporting_recommendations: Recommendation[];
+  missing_information_for_better_guidance: string[];
+  critic_status: string;
 };
 
 interface AdvisorCardProps {
@@ -35,12 +38,24 @@ function parseSuggestionError(err: unknown): string {
   return 'Öneri şu an alınamadı.';
 }
 
+const PRIORITY_DOT: Record<string, string> = {
+  high: "bg-[#ffd7ef]",
+  medium: "bg-[#95dbda]",
+  low: "bg-white/35",
+};
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  high: "Yüksek güven",
+  medium: "Orta güven",
+  low: "Düşük güven",
+};
+
 export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }: AdvisorCardProps) {
-  const [suggestion, setSuggestion] = useState<FounderCoachSuggestion | null>(null);
+  const [suggestion, setSuggestion] = useState<CoachRecommendationOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<FounderCoachResponse | null>(null);
+  const [answer, setAnswer] = useState<CoachRecommendationOutput | null>(null);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +68,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
         if (!r.ok) throw new Error(String(r.status));
         return r.json();
       })
-      .then((data: FounderCoachSuggestion | null) => {
+      .then((data: CoachRecommendationOutput | null) => {
         if (!cancelled) {
           setSuggestion(data);
           setLoading(false);
@@ -87,7 +102,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
       });
 
       if (!res.ok) throw new Error("request failed");
-      const data = (await res.json()) as FounderCoachResponse;
+      const data = (await res.json()) as CoachRecommendationOutput;
       setAnswer(data);
     } catch (err: unknown) {
       setError(parseSuggestionError(err));
@@ -106,15 +121,17 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
     );
   }
 
+  const suggestionPrimary = suggestion?.primary_recommendation;
+
   return (
     <div className="rounded-[20px] bg-[#0d0d12] p-6 text-white">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
           Tiramisup
         </span>
-        {suggestion?.confidence && (
+        {suggestionPrimary?.confidence && (
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
-            {suggestion.confidence}
+            {CONFIDENCE_LABEL[suggestionPrimary.confidence] ?? suggestionPrimary.confidence}
           </span>
         )}
       </div>
@@ -132,7 +149,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             Tekrar dene
           </button>
         </div>
-      ) : suggestion ? (
+      ) : suggestionPrimary ? (
         <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
@@ -149,14 +166,18 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             </button>
           </div>
           <p className="mt-2 text-[18px] font-semibold leading-snug tracking-[-0.01em]">
-            {suggestion.suggestedNextStep}
+            {suggestionPrimary.title}
           </p>
-          <p className="mt-2 text-[13px] leading-6 text-white/70">{suggestion.whyNow}</p>
-          {suggestion.whatCanWait && (
-            <p className="mt-2 text-[12px] text-white/45">Şimdilik bekleyebilir: {suggestion.whatCanWait}</p>
+          <p className="mt-2 text-[13px] leading-6 text-white/70">{suggestionPrimary.why_now}</p>
+          {suggestionPrimary.user_action && (
+            <p className="mt-2 text-[12px] text-[#95dbda]">{suggestionPrimary.user_action}</p>
           )}
         </div>
-      ) : null}
+      ) : (
+        <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
+          <p className="text-[13px] text-white/50">Şu an için bir öneri yok. Aşağıdan soru sorabilirsin.</p>
+        </div>
+      )}
 
       <div className="mb-4">
         <label className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
@@ -185,36 +206,47 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
 
       {answer && (
         <div className="space-y-3 rounded-[14px] border border-white/10 bg-white/5 p-4">
+          {/* Primary recommendation */}
           <div>
-            <p className="text-[16px] font-semibold text-white">{answer.title}</p>
-            <p className="mt-1 text-[13px] leading-6 text-white/70">{answer.summary}</p>
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_DOT[answer.primary_recommendation.priority] ?? "bg-white/35"}`} />
+              <p className="text-[16px] font-semibold text-white">{answer.primary_recommendation.title}</p>
+              {answer.primary_recommendation.confidence && (
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
+                  {CONFIDENCE_LABEL[answer.primary_recommendation.confidence] ?? answer.primary_recommendation.confidence}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-[13px] leading-6 text-white/70">{answer.primary_recommendation.why_now}</p>
+            {answer.primary_recommendation.user_action && (
+              <p className="mt-2 text-[12px] text-[#95dbda]">{answer.primary_recommendation.user_action}</p>
+            )}
+            {answer.primary_recommendation.expected_outcome && (
+              <p className="mt-1 text-[12px] text-white/45">{answer.primary_recommendation.expected_outcome}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            {answer.priorities.map((item, i) => (
-              <div key={`${item.title}-${i}`} className="rounded-[12px] border border-white/8 bg-black/20 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      item.priority === "CRITICAL"
-                        ? "bg-[#ffd7ef]"
-                        : item.priority === "IMPORTANT"
-                          ? "bg-[#95dbda]"
-                          : "bg-white/35"
-                    }`}
-                  />
-                  <p className="text-[13px] font-semibold text-white">{item.title}</p>
+          {/* Supporting recommendations */}
+          {(answer.supporting_recommendations ?? []).length > 0 && (
+            <div className="space-y-2">
+              {(answer.supporting_recommendations ?? []).map((rec, i) => (
+                <div key={`${rec.title}-${i}`} className="rounded-[12px] border border-white/8 bg-black/20 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_DOT[rec.priority] ?? "bg-white/35"}`} />
+                    <p className="text-[13px] font-semibold text-white">{rec.title}</p>
+                  </div>
+                  <p className="mt-1 text-[12px] leading-5 text-white/55">{rec.why_now}</p>
                 </div>
-                <p className="mt-1 text-[12px] leading-5 text-white/55">{item.why}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {answer.whatCanWait && answer.whatCanWait.length > 0 && (
+          {/* Missing information */}
+          {(answer.missing_information_for_better_guidance ?? []).length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">Şimdilik bekleyebilir</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">Daha iyi öneriler için</p>
               <ul className="mt-2 space-y-1 text-[12px] text-white/55">
-                {answer.whatCanWait.map((item, i) => (
+                {answer.missing_information_for_better_guidance.map((item, i) => (
                   <li key={`${item}-${i}`}>• {item}</li>
                 ))}
               </ul>

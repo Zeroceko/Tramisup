@@ -73,21 +73,23 @@ export default async function ProductsPage({
 
   // Get completed counts for each product
   const productIds = products.map((p) => p.id);
-  const [launchDone, growthDone] = await Promise.all([
-    prisma.launchChecklist.groupBy({
-      by: ["productId"],
-      where: { productId: { in: productIds }, completed: true },
-      _count: true,
-    }),
-    prisma.growthChecklist.groupBy({
-      by: ["productId"],
-      where: { productId: { in: productIds }, completed: true },
-      _count: true,
-    }),
-  ]);
+  const [launchDone, growthDone] = productIds.length
+    ? await Promise.all([
+        prisma.launchChecklist.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds }, completed: true },
+          _count: { _all: true },
+        }),
+        prisma.growthChecklist.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds }, completed: true },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
 
-  const launchMap = Object.fromEntries(launchDone.map((r) => [r.productId, r._count]));
-  const growthMap = Object.fromEntries(growthDone.map((r) => [r.productId, r._count]));
+  const launchMap = Object.fromEntries(launchDone.map((r) => [r.productId, r._count._all]));
+  const growthMap = Object.fromEntries(growthDone.map((r) => [r.productId, r._count._all]));
 
   const activeProductId = await getActiveProductId();
 
@@ -152,7 +154,7 @@ export default async function ProductsPage({
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5 mb-4">
                 <span className="rounded-full bg-[#fff3d7] px-2.5 py-0.5 text-[11px] font-medium text-[#8a6400]">
-                  {product.status.replace("_", " ")}
+                  {(product.status ?? "—").replaceAll("_", " ")}
                 </span>
                 {product.category && (
                   <span className="rounded-full bg-[#f0f0f0] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80]">

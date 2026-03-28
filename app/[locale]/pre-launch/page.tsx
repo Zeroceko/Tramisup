@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ProductStatus } from "@prisma/client";
 import { getActiveProductId } from "@/lib/activeProduct";
 import ChecklistSection from "@/components/ChecklistSection";
 import ActionsSection from "@/components/ActionsSection";
@@ -259,7 +260,7 @@ export default async function PreLaunchPage({
       )}
 
       {/* Launch button — only for PRE_LAUNCH products */}
-      {product && product.status === "PRE_LAUNCH" && (
+      {product && product.status === ProductStatus.PRE_LAUNCH && (
         <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
           <p className="text-[14px] font-semibold text-[#0d0d12]">
             {isEn ? "Ready to go live?" : "Ürününü yayınladın mı?"}

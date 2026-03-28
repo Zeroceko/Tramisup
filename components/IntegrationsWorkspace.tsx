@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import IntegrationCard, {
   type ExistingIntegration,
   type IntegrationDef,
   type SourceState,
   getSourceState,
 } from "@/components/IntegrationCard";
+import SourceSetupWizard from "@/components/SourceSetupWizard";
 import { BrandLogo } from "@/components/BrandLogo";
+import PageHeader from "@/components/PageHeader";
 
 type IntegrationsWorkspaceProps = {
   productName: string;
@@ -138,20 +140,21 @@ export default function IntegrationsWorkspace({
     ? feedbackCopy[error]
     : null;
 
+  // Auto-open wizard when returning from OAuth callback
+  const autoOpenProvider: "GA4" | "STRIPE" | null =
+    success === "ga4_connected" ? "GA4" : success === "stripe_connected" ? "STRIPE" : null;
+  const autoOpenIntegration = autoOpenProvider
+    ? integrationMap.get(autoOpenProvider)
+    : null;
+  const [wizardAutoOpen, setWizardAutoOpen] = useState(!!autoOpenProvider);
+
   return (
     <div className="space-y-4">
-      {/* Page header */}
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-          Veri güvenilirliği
-        </p>
-        <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">
-          Kaynaklar
-        </h1>
-        <p className="mt-1 text-[14px] text-[#666d80]">
-          {productName} · Metriklerini besleyen veri kaynakları burada yönetilir.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Veri güvenilirliği"
+        title="Kaynaklar"
+        description={`${productName} · Metriklerini besleyen veri kaynakları burada yönetilir.`}
+      />
 
       {/* OAuth feedback banner */}
       {feedback && (
@@ -277,6 +280,18 @@ export default function IntegrationsWorkspace({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Auto-opened wizard after OAuth return */}
+      {wizardAutoOpen && autoOpenProvider && (
+        <SourceSetupWizard
+          provider={autoOpenProvider}
+          productId={productId}
+          integrationId={autoOpenIntegration?.id ?? null}
+          isConnected={autoOpenIntegration?.status === "CONNECTED"}
+          selectedPropertyId={autoOpenIntegration?.selectedPropertyId}
+          onClose={() => setWizardAutoOpen(false)}
+        />
       )}
     </div>
   );

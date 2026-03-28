@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { ProductStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -12,6 +13,7 @@ import BlockerAlert from "@/components/today/BlockerAlert";
 import TodayTasks from "@/components/today/TodayTasks";
 import SourceHealth from "@/components/today/SourceHealth";
 import CoachInsight from "@/components/today/CoachInsight";
+import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -20,7 +22,7 @@ import CoachInsight from "@/components/today/CoachInsight";
 type PhaseKey = "pre-launch" | "launched";
 
 function derivePhase(status: string): PhaseKey {
-  if (status === "LAUNCHED" || status === "GROWING") return "launched";
+  if (status === ProductStatus.LAUNCHED || status === ProductStatus.GROWING) return "launched";
   return "pre-launch";
 }
 
@@ -219,10 +221,14 @@ function buildPrimaryAction(
 
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ justLaunched?: string }>;
 }) {
   const { locale } = await params;
+  const resolvedSearch = (await searchParams) ?? {};
+  const justLaunched = resolvedSearch.justLaunched === "1";
   const session = await getServerSession(authOptions);
   const isEn = locale === "en";
 
@@ -412,12 +418,17 @@ export default async function DashboardPage({
       <TodayHero
         userName={session?.user?.name}
         productName={product.name}
-        phase={product.status === "GROWING" ? "growing" : phase}
+        phase={product.status === ProductStatus.GROWING ? "growing" : phase}
         statusLine={statusLine}
         locale={locale}
       />
 
-      {/* 2. Primary Action — the dominant card */}
+      {/* 2. Launch moment banner — shown once after launch */}
+      {justLaunched && (
+        <LaunchMomentBanner locale={locale} productName={product.name} />
+      )}
+
+      {/* 3. Primary Action — the dominant card */}
       <PrimaryAction
         title={primaryAction.title}
         description={primaryAction.description}
@@ -486,28 +497,28 @@ function buildIndicators(
     value: string;
     status: "healthy" | "warning" | "neutral" | "empty";
     hint?: string;
+    href?: string;
   };
 
   const indicators: Indicator[] = [];
 
   if (phase === "pre-launch") {
-    // Readiness score
     indicators.push({
       label: isEn ? "Readiness" : "Hazırlık",
       value: `%${opts.readinessScore}`,
       status: opts.readinessScore >= 100 ? "healthy" : opts.readinessScore >= 60 ? "neutral" : "warning",
       hint: isEn ? "Launch checklist" : "Launch checklist",
+      href: `/${locale}/pre-launch`,
     });
 
-    // Tasks
     indicators.push({
       label: isEn ? "Tasks" : "Görevler",
       value: String(opts.totalPending),
       status: opts.totalPending === 0 ? "healthy" : "neutral",
       hint: isEn ? "pending" : "bekliyor",
+      href: `/${locale}/tasks`,
     });
 
-    // Placeholder for balance — show empty metric/source slots
     indicators.push({
       label: isEn ? "Metrics" : "Metrikler",
       value: "—",
@@ -522,23 +533,22 @@ function buildIndicators(
       hint: isEn ? "After launch" : "Launch sonrası",
     });
   } else {
-    // Growth score
     indicators.push({
       label: isEn ? "Growth" : "Büyüme",
       value: `%${opts.growthScore}`,
       status: opts.growthScore >= 80 ? "healthy" : opts.growthScore >= 40 ? "neutral" : "warning",
       hint: isEn ? "Growth checklist" : "Growth checklist",
+      href: `/${locale}/growth`,
     });
 
-    // Tasks
     indicators.push({
       label: isEn ? "Tasks" : "Görevler",
       value: String(opts.totalPending),
       status: opts.totalPending === 0 ? "healthy" : "neutral",
       hint: isEn ? "pending" : "bekliyor",
+      href: `/${locale}/tasks`,
     });
 
-    // Metrics health
     indicators.push({
       label: isEn ? "Metrics" : "Metrikler",
       value: opts.selectedMetricCount > 0
@@ -554,9 +564,9 @@ function buildIndicators(
       hint: opts.selectedMetricCount > 0
         ? `${opts.selectedMetricCount} ${isEn ? "tracked" : "takipte"}`
         : (isEn ? "Not set up" : "Kurulmadı"),
+      href: `/${locale}/metrics`,
     });
 
-    // Sources
     indicators.push({
       label: isEn ? "Sources" : "Kaynaklar",
       value: opts.connectedCount > 0 ? String(opts.connectedCount) : "—",
@@ -566,6 +576,7 @@ function buildIndicators(
         : opts.connectedCount > 0
           ? (isEn ? "connected" : "bağlı")
           : (isEn ? "None connected" : "Bağlı değil"),
+      href: `/${locale}/integrations`,
     });
   }
 

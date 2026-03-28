@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { syncMetricToEntry } from '@/lib/sync-to-metric-entry';
 
 export async function syncStripe(productId: string, configData: string): Promise<number> {
   const config = JSON.parse(configData);
@@ -68,6 +69,9 @@ export async function syncStripe(productId: string, configData: string): Promise
       source: 'INTEGRATION'
     }
   });
+
+  // Bridge: propagate synced values into AARRR MetricEntry
+  await syncMetricToEntry(productId, today);
 
   syncedRecords++;
   return syncedRecords;

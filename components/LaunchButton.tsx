@@ -77,7 +77,7 @@ export default function LaunchButton({
       });
       if (res.ok) {
         setOpen(false);
-        router.push(`/${locale}/growth`);
+        router.push(`/${locale}/dashboard?justLaunched=1`);
         router.refresh();
       }
     } finally {

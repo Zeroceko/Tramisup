@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getGrowthWorkspaceStep, type GrowthWorkspaceStepKey } from "@/lib/growth-workspace-step";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { normalizeProductContext, type NormalizedProductContext } from "@/lib/normalize-product-context";
+import { buildEvidenceMap, type EvidenceMap } from "@/lib/build-evidence-map";
 
 export type FounderCoachContext = {
   product: {
@@ -45,6 +47,8 @@ export type FounderCoachContext = {
     hasReviewAccount: boolean | null;
   };
   recentEvent?: { type: string; at?: string };
+  normalizedContext: NormalizedProductContext;
+  evidenceMap: EvidenceMap;
 };
 
 function inferPlatforms(product: {
@@ -60,7 +64,6 @@ function inferPlatforms(product: {
   if (/mobil uygulama|mobile app/.test(haystack) && inferred.length === 0) {
     inferred.push("iOS", "Android");
   }
-  if (!inferred.length) inferred.push("Web");
   return inferred;
 }
 
@@ -88,6 +91,8 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
         businessModel: true,
         website: true,
         launchStatus: true,
+        launchGoals: true,
+        launchDate: true,
         status: true,
       },
     }),
@@ -123,6 +128,7 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     goals,
     routines,
     integrationsConnected,
+    connectedIntegrations,
     latestMetric,
     latestRetention,
     latestActivation,
@@ -161,6 +167,10 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     prisma.goal.count({ where: { productId } }),
     prisma.growthRoutine.count({ where: { productId } }),
     prisma.integration.count({ where: { productId, status: "CONNECTED" } }),
+    prisma.integration.findMany({
+      where: { productId, status: "CONNECTED" },
+      select: { provider: true, lastSyncAt: true },
+    }),
     prisma.metric.findFirst({ where: { productId }, orderBy: { date: "desc" } }),
     prisma.retentionCohort.findFirst({ where: { productId }, orderBy: { cohortDate: "desc" } }),
     prisma.activationFunnel.findFirst({ where: { productId, step: "ACTIVATED" }, orderBy: { date: "desc" } }),
@@ -171,6 +181,19 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
     hasGoals: goals > 0,
     completedGrowthItems: growthCompleted,
     totalGrowthItems: growthTotal,
+  });
+
+  const nCtx = normalizeProductContext({
+    name: product.name,
+    description: product.description,
+    website: product.website,
+    category: product.category,
+    targetAudience: product.targetAudience,
+    businessModel: product.businessModel,
+    launchStatus: product.launchStatus,
+    launchDate: product.launchDate,
+    launchGoals: product.launchGoals,
+    platforms: metricSetup?.platforms ?? [],
   });
 
   return {
@@ -236,5 +259,24 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
       hasReviewAccount: null,
     },
     recentEvent,
+    normalizedContext: nCtx,
+    evidenceMap: buildEvidenceMap({
+      normalizedContext: nCtx,
+      productStatus: product.status,
+      checklist: { total: launchTotal, completed: launchCompleted, highBlockers: launchBlockers },
+      tasks: { total: openTasks + doneTasks, done: doneTasks, inProgress: 0 },
+      sources: {
+        providers: connectedIntegrations.map((i) => i.provider),
+        hasValidated: connectedIntegrations.some((i) => !!i.lastSyncAt),
+        hasSynced: connectedIntegrations.some((i) => !!i.lastSyncAt),
+      },
+      metrics: {
+        hasSetup: selectedMetricCount > 0,
+        selectedCount: selectedMetricCount,
+        entryCount: metricEntryCount,
+        lastEntryDate: latestSavedEntry?.date ?? null,
+      },
+      launchDate: product.launchDate,
+    }),
   };
 }

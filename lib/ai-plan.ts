@@ -3,6 +3,7 @@ import { defaultModel, withFallback, generateStructuredFallback } from "../Brand
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 import { loadProjectSkill } from "@/lib/project-skill-loader";
 import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
+import { normalizeProductContext, type NormalizedProductContext } from "@/lib/normalize-product-context";
 
 export type AiLaunchItem = {
   category: LaunchCategory;
@@ -189,7 +190,7 @@ async function loadLaunchAndAnalyticsGuidance(input: WizardInput) {
   return parts.join("\n\n---\n\n");
 }
 
-const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve Planlama Ajanısın. Bir kurucunun ürün bağlamını okuyup onun için tamamen o ürüne ÖZEL ilk çalışma sistemini, checklistini ve görevlerini yaratıyorsun.
+const PROMPT = (input: WizardInput, normalizedCtx?: NormalizedProductContext) => `Sen Tiramisup içindeki Founder Coach ve Planlama Ajanısın. Bir kurucunun ürün bağlamını okuyup onun için tamamen o ürüne ÖZEL ilk çalışma sistemini, checklistini ve görevlerini yaratıyorsun.
 
 ÜRÜN BİLGİLERİ:
 - Ad: ${input.name}
@@ -199,6 +200,13 @@ const PROMPT = (input: WizardInput) => `Sen Tiramisup içindeki Founder Coach ve
 - İş modeli: ${input.businessModel || "belirtilmemiş"}
 - Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
 ${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
+${normalizedCtx ? `\nNORMALİZE BAĞLAM (yapılandırılmış):
+- Aşama: ${normalizedCtx.stage}
+- Birincil hedef: ${normalizedCtx.primary_goal}
+- Platformlar: ${normalizedCtx.platforms.join(", ") || "belirtilmemiş"}
+- Bağlam güvenilirliği: ${normalizedCtx.context_confidence}
+${normalizedCtx.missing_fields.length > 0 ? `- Eksik bilgiler: ${normalizedCtx.missing_fields.join(", ")}` : ""}
+${normalizedCtx.ambiguity_flags.length > 0 ? `- Belirsizlik bayrakları: ${normalizedCtx.ambiguity_flags.join("; ")}` : ""}` : ""}
 ${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n` : ""}
 ${input.websiteContent ? `\n🔥 CRITICAL - FOUNDER'S WEBSITE CONTENT:\n${input.websiteContent}\n(IMPORTANT: Analyze this text. Read what problem the product actually solves and its features. Formulate all task and checklist items STRICTLY by referring to this content, the product's features, and promises!)\n` : ""}
 
@@ -233,11 +241,22 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     stageContext: [input.stageContext, launchGuidance].filter(Boolean).join(" "),
   };
 
+  // Build normalized context for structured AI consumption
+  const normalizedCtx = normalizeProductContext({
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    targetAudience: input.targetAudience,
+    businessModel: input.businessModel,
+    launchStatus: input.launchStatus,
+    platforms: input.mobilePlatforms ?? [],
+  });
+
   try {
-    // We use generateStructuredFallback because AI SDK's generateObject 
+    // We use generateStructuredFallback because AI SDK's generateObject
     // often fails with JSON parsing errors on Alibaba MaaS via compatibility mode.
     const object = await generateStructuredFallback<any>(
-      PROMPT(finalInput),
+      PROMPT(finalInput, normalizedCtx),
       PlanSchema,
       "ai-plan"
     );

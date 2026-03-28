@@ -2,6 +2,7 @@ import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/lib/prisma';
 import { getDefaultGa4Property } from '@/lib/ga4-admin';
+import { syncMetricToEntry } from '@/lib/sync-to-metric-entry';
 
 export async function syncGa4(productId: string, configData: string): Promise<number> {
   const config = JSON.parse(configData);
@@ -82,6 +83,10 @@ export async function syncGa4(productId: string, configData: string): Promise<nu
           source: 'INTEGRATION'
         }
       });
+
+      // Bridge: propagate synced values into AARRR MetricEntry
+      await syncMetricToEntry(productId, date);
+
       syncedRecords++;
     }
   }

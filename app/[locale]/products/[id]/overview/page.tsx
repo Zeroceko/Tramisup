@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ProductStatus } from "@prisma/client";
 
 export default async function ProductOverviewPage({
   params,
@@ -28,7 +29,7 @@ export default async function ProductOverviewPage({
 
   if (!product) redirect(`/${locale}/dashboard`);
 
-  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+  const isLaunched = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
   const founderSummary = product.metricSetup?.founderSummary as {
     headline?: string;
     summary?: string;
@@ -95,7 +96,7 @@ export default async function ProductOverviewPage({
             <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
               <p className="text-[11px] text-[#666d80]">Asama</p>
               <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                {product.launchStatus || product.status.replace("_", " ")}
+                {product.launchStatus || (product.status ?? "—").replaceAll("_", " ")}
               </p>
             </div>
           </div>

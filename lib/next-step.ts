@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ProductStatus } from "@prisma/client";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 
 export type NextStepKey =
@@ -67,7 +68,7 @@ export async function getProductNextStep(
     };
   }
 
-  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+  const isLaunched = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
 
   // Pre-launch flow
   if (!isLaunched) {

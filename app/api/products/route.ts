@@ -82,12 +82,15 @@ export async function POST(request: Request) {
       name,
       category,
       description,
+      platforms,
       mobilePlatforms,
       targetAudience,
       businessModel,
       launchStatus,
       launchDate,
       website,
+      growthGoal,
+      goalKey,
       stageContext,
       seedData = false,
     } = body;
@@ -99,20 +102,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedMobilePlatforms = Array.isArray(mobilePlatforms)
-      ? mobilePlatforms.filter((platform): platform is string => typeof platform === "string" && platform.trim().length > 0)
-      : [];
+    // Normalize platforms: prefer new universal `platforms` field, fallback to legacy `mobilePlatforms`
+    const normalizedPlatforms = Array.isArray(platforms)
+      ? platforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+      : Array.isArray(mobilePlatforms)
+        ? mobilePlatforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+        : [];
     const isMobileApp = /mobil uygulama|mobile app/i.test(category ?? "");
-    if (isMobileApp && normalizedMobilePlatforms.length === 0) {
-      return NextResponse.json(
-        { error: "Mobil uygulama için platform seçmelisin" },
-        { status: 400 }
-      );
-    }
-    const storeContext = isMobileApp
+    const hasMobilePlatform = normalizedPlatforms.some((p) => ["iOS", "Android"].includes(p));
+    const storeContext = isMobileApp || hasMobilePlatform
       ? ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
-        ? `Mobil uygulama platformlari: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. Urun yayinda; store listing ve ASO tarafini growth sinyali gibi yorumla, submission-ready checklist'e donme.`
-        : `Mobil uygulama platformlari: ${normalizedMobilePlatforms.length > 0 ? normalizedMobilePlatforms.join(", ") : "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
+        ? `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. Urun yayinda; store listing ve ASO tarafini growth sinyali gibi yorumla, submission-ready checklist'e donme.`
+        : `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
       : "";
 
     const dbUrl = process.env.DATABASE_URL || "";
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       businessModel,
       launchStatus,
       website,
-      mobilePlatforms: normalizedMobilePlatforms,
+      mobilePlatforms: normalizedPlatforms,
       websiteContent: websiteContent ?? undefined,
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     });
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
       businessModel,
       launchStatus,
       website,
-      mobilePlatforms: normalizedMobilePlatforms,
+      mobilePlatforms: normalizedPlatforms,
       websiteContent: websiteContent ?? undefined,
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     }, aiPlan);
@@ -168,6 +169,7 @@ export async function POST(request: Request) {
           targetAudience,
           businessModel,
           website,
+          launchGoals: goalKey ? JSON.stringify({ goalKey, growthGoal }) : undefined,
           launchDate: (() => {
             if (!launchDate) return undefined;
             const d = new Date(launchDate);
@@ -185,7 +187,7 @@ export async function POST(request: Request) {
         data: {
           productId: newProduct.id,
           selections: [],
-          platforms: normalizedMobilePlatforms,
+          platforms: normalizedPlatforms,
           founderSummary,
         },
       });

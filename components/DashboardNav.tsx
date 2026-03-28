@@ -56,8 +56,7 @@ export default function DashboardNav({
         tasks: "Tasks",
         metrics: "Metrics",
         growth: "Growth",
-        integrations: "Integrations",
-        connectorHub: "Connectors",
+        sources: "Sources",
         newProduct: "+ Add product",
         settings: "Settings",
         account: "Account",
@@ -69,8 +68,7 @@ export default function DashboardNav({
         tasks: "Görevler",
         metrics: "Metrikler",
         growth: "Büyüme",
-        integrations: "Entegrasyonlar",
-        connectorHub: "Bağlantılar",
+        sources: "Kaynaklar",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
         account: "Hesap",
@@ -84,6 +82,7 @@ export default function DashboardNav({
           { href: "/tasks", label: labels.tasks },
           { href: "/metrics", label: labels.metrics },
           { href: "/growth", label: labels.growth },
+          { href: "/integrations", label: labels.sources },
           { href: "/pre-launch", label: labels.launch, preview: true },
         ]
       : [
@@ -183,7 +182,7 @@ export default function DashboardNav({
 
           {!hasProducts && (
             <Link
-              href={withLocale("/products/new")}
+              href={withLocale("/onboarding")}
               className="hidden h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:inline-flex"
             >
               {labels.newProduct}

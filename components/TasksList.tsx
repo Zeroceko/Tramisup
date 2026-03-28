@@ -56,6 +56,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   const [showAdd, setShowAdd] = useState(false);
   const [showBacklog, setShowBacklog] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -296,9 +297,21 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
               {task.title}
             </h3>
 
-            {/* Description */}
+            {/* Description — click to expand */}
             {task.description && (
-              <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
+              <p
+                role="button"
+                onClick={() =>
+                  setExpandedDescs((prev) => {
+                    const next = new Set(prev);
+                    next.has(task.id) ? next.delete(task.id) : next.add(task.id);
+                    return next;
+                  })
+                }
+                className={`mt-1 cursor-pointer text-[13px] leading-5 text-[#666d80] ${
+                  expandedDescs.has(task.id) ? "" : "line-clamp-2"
+                }`}
+              >
                 {task.description}
               </p>
             )}
@@ -396,12 +409,20 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
               {task.title}
             </p>
 
-            {/* Description — always visible */}
+            {/* Description — click to expand */}
             {task.description && (
               <p
-                className={`mt-0.5 line-clamp-2 text-[12px] leading-5 ${
+                role="button"
+                onClick={() =>
+                  setExpandedDescs((prev) => {
+                    const next = new Set(prev);
+                    next.has(task.id) ? next.delete(task.id) : next.add(task.id);
+                    return next;
+                  })
+                }
+                className={`mt-0.5 cursor-pointer text-[12px] leading-5 ${
                   done ? "text-[#b0b7c3]" : "text-[#666d80]"
-                }`}
+                } ${expandedDescs.has(task.id) ? "" : "line-clamp-2"}`}
               >
                 {task.description}
               </p>

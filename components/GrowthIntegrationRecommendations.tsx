@@ -18,7 +18,7 @@ export default function GrowthIntegrationRecommendations({
     <section className="rounded-[18px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffdfd_0%,_#fff7fa_100%)] p-6 shadow-[0_20px_50px_rgba(17,16,20,0.04)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">Önerilen entegrasyonlar</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">Önerilen kaynaklar</p>
           <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
             Seçtiğin metrikleri otomatik takip etmek için bir sonraki katman
           </h2>
@@ -31,7 +31,7 @@ export default function GrowthIntegrationRecommendations({
           href={`/${locale}/integrations`}
           className="inline-flex h-11 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
         >
-          Önerilen entegrasyonlara git
+          Önerilen kaynaklara git
         </Link>
       </div>
 

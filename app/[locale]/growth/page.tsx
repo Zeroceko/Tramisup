@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ProductStatus } from "@prisma/client";
 import { getActiveProductId } from "@/lib/activeProduct";
 import GrowthRoutines from "@/components/GrowthRoutines";
 import GoalsSection from "@/components/GoalsSection";
@@ -80,7 +81,7 @@ export default async function GrowthPage({
   const hasMetricEntries = (savedMetricSetup?.entries?.length ?? 0) > 0;
   const hasGoals = goals.length > 0;
   const completedGrowthItems = growthChecklists.filter((item) => item.completed).length;
-  const isLaunched = product.status === "LAUNCHED" || product.status === "GROWING";
+  const isLaunched = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
   const nextStep = getGrowthWorkspaceStep({
     hasSetup,
     hasMetricEntries,

@@ -54,15 +54,15 @@ export default async function SettingsPage({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                Entegrasyonlar
+                Kaynaklar
               </p>
               <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                Veri kaynaklarini yonet
+                Veri kaynaklarını yönet
               </h2>
               <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
                 {connectedCount > 0
-                  ? `${connectedCount} entegrasyon bagli. Yeni kaynak ekle veya mevcut baglantilari yonet.`
-                  : "Henuz bagli entegrasyon yok. GA4 veya Stripe baglayarak metrik verisini otomatik cek."}
+                  ? `${connectedCount} kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.`
+                  : "Henüz bağlı kaynak yok. GA4 veya Stripe bağlayarak metrik verisini otomatik çek."}
               </p>
             </div>
             {connectedCount > 0 && (
@@ -123,7 +123,7 @@ export default async function SettingsPage({
             href={`/${locale}/integrations`}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
           >
-            {connectedCount > 0 ? "Entegrasyonlari yonet" : "Entegrasyon bagla"}
+            {connectedCount > 0 ? "Kaynakları yönet" : "Kaynak bağla"}
           </Link>
         </section>
       )}

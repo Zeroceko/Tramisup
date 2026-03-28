@@ -1,3 +1,5 @@
+import { ProductStatus } from "@prisma/client";
+
 export type FunnelMetricRecommendation = {
   key: string;
   name: string;
@@ -43,7 +45,7 @@ function isContentDriven(p: ProductInput) {
 export function getGrowthMetricRecommendations(product: ProductInput): GrowthMetricPlan {
   const b2b = isB2B(product);
   const content = isContentDriven(product);
-  const preLaunch = product.status === "PRE_LAUNCH";
+  const preLaunch = product.status === ProductStatus.PRE_LAUNCH;
 
   return {
     summary: preLaunch
