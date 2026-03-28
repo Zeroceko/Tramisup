@@ -53,7 +53,6 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   const isEn = locale === "en";
 
   const [loading, setLoading] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [showBacklog, setShowBacklog] = useState(false);
   const [showDone, setShowDone] = useState(false);
@@ -175,14 +174,6 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
     }
   }
 
-  function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   // --- Render helpers ---
 
@@ -365,7 +356,6 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
     const overdue = isOverdue(task.dueDate) && task.status !== "DONE";
     const today = isDueToday(task.dueDate);
     const isLoading = loading === task.id;
-    const isExp = expanded.has(task.id);
     const linked = task.launchChecklistItem;
     const catCfg = linked ? CATEGORY_CONFIG[linked.category] : null;
     const priCfg = PRIORITY_CONFIG[task.priority];
@@ -397,29 +387,22 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
           </button>
 
           <div className="min-w-0 flex-1">
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-2">
+            {/* Title */}
+            <p
+              className={`text-[14px] font-semibold leading-snug ${
+                done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
+              }`}
+            >
+              {task.title}
+            </p>
+
+            {/* Description — always visible */}
+            {task.description && (
               <p
-                className={`text-[14px] font-semibold leading-snug ${
-                  done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
+                className={`mt-0.5 line-clamp-2 text-[12px] leading-5 ${
+                  done ? "text-[#b0b7c3]" : "text-[#666d80]"
                 }`}
               >
-                {task.title}
-              </p>
-              {task.description && !done && (
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(task.id)}
-                  className="shrink-0 text-[11px] text-[#94a3b8] transition hover:text-[#666d80]"
-                >
-                  {isExp ? "↑" : "↓"}
-                </button>
-              )}
-            </div>
-
-            {/* Expanded description */}
-            {isExp && task.description && (
-              <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
                 {task.description}
               </p>
             )}
