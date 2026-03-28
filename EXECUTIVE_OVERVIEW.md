@@ -7,6 +7,7 @@ Tiramisup bugün çalışan bir çekirdeğe sahip:
 - sistem varsayılan bir ürün oluşturabiliyor
 - launch checklist, task listesi, metrics, goals, routines ve integrations yüzeyleri var
 - dashboard temel durumu özetleyebiliyor
+- EN/TR dil desteği var; varsayılan dil İngilizce, kullanıcı ayarlardan tercihini değiştirebiliyor
 
 Ama ürün henüz tam anlamıyla olgun değil:
 - multi-product schema var, ama multi-product UX yok

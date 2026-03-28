@@ -2,8 +2,8 @@
 
 Launch-to-growth dönemindeki startup ekipleri için sakin, aşamalı ve yönlendirici tek workspace.
 
-**Status:** Live MVP — integrations layer shipped, AI coach is stage-aware, all blank-page/emoji/routing bugs resolved
-**Last Updated:** 26 March 2026
+**Status:** Live MVP — EN/TR language support shipped, default locale is English, settings include language preference
+**Last Updated:** 29 March 2026
 
 ---
 
@@ -117,6 +117,9 @@ The app routes under locale prefixes:
 /tr/...
 /en/...
 ```
+
+**Default locale:** English  
+Language preference is persisted via `NEXT_LOCALE` cookie and stored on `User.preferredLocale`.
 
 ### Growth setup comes before growth complexity
 For launched products, the system should first ask:
@@ -317,6 +320,11 @@ npx prisma migrate dev
 npm run dev
 ```
 
+### Tests (local)
+```bash
+OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+```
+
 ### Important local note
 Local OAuth is configured around `http://localhost:3002`.
 Run the app on port `3002` so Google and Stripe callback URLs stay consistent.
@@ -345,19 +353,10 @@ https://tramisup.vercel.app
 
 ---
 
-## Current architectural shortcut
+## Current architectural note
 
-To move quickly without a DB migration, selected metric setup and daily AARRR entries are currently stored as JSON in `Product.launchGoals`.
-
-This is **not** the ideal long-term data model.
-It is a temporary UX-protecting bridge.
-
-Future cleanup should introduce explicit entities such as:
-- `MetricSetup`
-- `MetricEntry`
-- maybe `MetricDefinition`
-
-Do not build long-term complexity on top of the current shortcut unless intentionally migrating it.
+`User.preferredLocale` is now a first-class field, defaulting to `en`.  
+Landing + Settings allow language selection and persist via cookie + DB.
 
 ---
 

@@ -1,4 +1,4 @@
-# Project Snapshot - 21 March 2026
+# Project Snapshot - 29 March 2026
 
 **Purpose:** Current state of Tiramisup for handoff or deployment planning
 
@@ -9,27 +9,27 @@
 ### Repository
 ```
 Branch:              main
-Commits ahead:       7 (ready to push)
-Last commit:         8a63bd0 - refactor: properly separate unit and e2e tests
-Last sprint:         Sprint 2 - Launch Operating System (COMPLETE)
+Commits ahead:       0 (synced)
+Last commit:         5fbd0336 - docs: update handoff with language rollout
+Last sprint:         Language Support Rollout (EN/TR) + preference persistence (COMPLETE)
 ```
 
 ### Build Status
 ```
-npm run build:       ✅ PASSING
-Type checking:       ✅ 0 errors
-Linting:             ✅ Clean
-Console errors:      ✅ None (TC-071 verified)
+npm run build:       ✅ PASSING (last known)
+Type checking:       ✅ 0 errors (last known)
+Linting:             ✅ Clean (last known)
+Console errors:      ✅ None (last known)
 Production ready:    ✅ YES
 ```
 
-### Test Status (21 March 2026)
+### Test Status (29 March 2026)
 ```
-Unit Tests:          24 passed ✅
-E2E Tests:           38 passed, 4 skipped ✅
-Test Platforms:      Chromium (desktop) + iPhone 12 (mobile)
-Test Duration:       ~44 seconds
-Critical Path:       All passing (TC-071, TC-072, TC-053)
+Unit Tests:          68 passed ✅ (Vitest with dummy AI keys)
+E2E Tests:           Not run in this update
+Test Platforms:      —
+Test Duration:       ~1s (unit only)
+Critical Path:       Core unit tests passing
 ```
 
 ---
@@ -37,7 +37,7 @@ Critical Path:       All passing (TC-071, TC-072, TC-053)
 ## 🗄️ Database Schema (Current)
 
 ### User Authentication
-- `User`: email, name, passwordHash, createdAt, updatedAt
+- `User`: email, name, passwordHash, **preferredLocale**, createdAt, updatedAt
 - Auth via NextAuth 4 (Credentials provider)
 - Sessions: JWT-based, httpOnly cookies
 
@@ -83,7 +83,7 @@ Critical Path:       All passing (TC-071, TC-072, TC-053)
 
 ### Key Pages (App Router)
 ```
-/                      → Landing page
+/                      → Landing page (EN/TR, default EN)
 /login, /signup        → Auth pages
 /dashboard             → Main dashboard (overview)
 /products              → Product list + selector
@@ -145,7 +145,7 @@ PageHeader             → Standard page header
 ### Vitest (Unit Tests)
 - Config: `vitest.config.ts`
 - Exclude pattern: `tests/e2e/**`
-- 24 tests currently passing
+- 68 tests currently passing (with dummy AI keys)
 - Future: Add component and utility tests
 
 ### Playwright (E2E Tests)
@@ -162,6 +162,7 @@ npm run test:watch    → Unit tests in watch mode
 npm run test:e2e      → E2E tests (Playwright, headed)
 npm run test:e2e:ui   → E2E tests with UI
 npm run test:all      → Both unit + e2e
+OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 ```
 
 ---
@@ -177,6 +178,7 @@ npm run test:all      → Both unit + e2e
 ### Environment Variables (Needed)
 ```
 DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://...
 NEXTAUTH_SECRET=<32-char secret>
 NEXTAUTH_URL=https://your-domain.com
 NODE_ENV=production
@@ -186,6 +188,7 @@ NODE_ENV=production
 - **Recommended:** Supabase PostgreSQL
 - **Current:** PostgreSQL via Prisma
 - **Migrations:** Ready with `npx prisma migrate deploy`
+- Includes `User.preferredLocale`
 
 ### Pre-Deployment Checklist
 - [ ] All env variables set in Vercel
@@ -210,10 +213,10 @@ TypeScript coverage:   100%
 
 ### Tests
 ```
-Unit tests:            24
-E2E tests:             42 (38 passed, 4 skipped)
-Code coverage:         20% (low, but core paths tested)
-Test run time:         ~44 seconds (e2e)
+Unit tests:            68
+E2E tests:             Not run in this update
+Code coverage:         20% (last known)
+Test run time:         ~1s (unit only)
 ```
 
 ### Performance
@@ -229,7 +232,7 @@ Build size:            ~102kb shared JS
 ## 🎯 Current Limitations & Known Issues
 
 ### Not Implemented Yet
-- Real integrations (GA4, Stripe, PostHog)
+- Full cookie policy / privacy surface for language preference
 - Sync jobs for data collection
 - Growth readiness system
 - Weekly review workflow

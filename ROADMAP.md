@@ -1,7 +1,7 @@
 # Tiramisup Product Roadmap
 
-Son güncelleme: Mart 2026  
-Durum: **Temel ürün çekirdeği var; şimdi onu güçlü, tekrar kullanılabilir bir operating system’e dönüştürme zamanı**
+Son güncelleme: 29 Mart 2026  
+Durum: **Temel ürün çekirdeği var; EN/TR dil desteği ve dil tercihi kalıcılığı shipped**
 
 ---
 
@@ -18,6 +18,10 @@ Tiramisup bugün bir founder/operator workspace olma yolunda. Kod tabanı ürün
 Ama ürün hâlâ **feature-complete** değil; daha doğru ifade şu:
 
 > **Tiramisup bugün, olgun bir ürün mimarisine sahip erken aşama bir operational prototype.**
+
+Son sprint notu:
+- EN/TR dil desteği landing + settings üzerinde tamamlandı
+- Varsayılan dil İngilizce, kullanıcı tercihi DB + cookie ile kalıcı
 
 Bu roadmap’in amacı, onu üç katmanda büyütmek:
 
