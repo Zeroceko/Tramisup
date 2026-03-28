@@ -259,6 +259,7 @@ export default async function MetricsPage({
               selectedMetrics={selectedMetrics}
               latestEntry={latestEntry}
               locale={locale}
+              entryCount={entryCount}
             />
             {recentEntries.length > 0 && (
               <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">

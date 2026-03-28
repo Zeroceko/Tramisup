@@ -77,12 +77,14 @@ export default function MetricEntryForm({
   latestEntry,
   locale,
   compact = false,
+  entryCount = 0,
 }: {
   productId: string;
   selectedMetrics: SelectedMetricField[];
   latestEntry: MetricEntryRow | null;
   locale?: string;
   compact?: boolean;
+  entryCount?: number;
 }) {
   const router = useRouter();
 
@@ -97,6 +99,7 @@ export default function MetricEntryForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [postSave, setPostSave] = useState<PostSave | null>(null);
+  const [buildingDashboard, setBuildingDashboard] = useState(false);
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     values: initialValues,
@@ -133,17 +136,44 @@ export default function MetricEntryForm({
         throw new Error(data.error || "Kaydedilemedi");
       }
 
-      // Compute post-save interpretation
-      const deltas = computeDeltas(formData.values, latestEntry, selectedMetrics);
-      const droppedStage = findDroppedStage(deltas);
-      setPostSave({ deltas, droppedStage });
-      router.refresh();
+      // 5. giriş tamamlandıysa dashboard building popup göster
+      const isJustActivated = entryCount + 1 >= 5 && entryCount < 5;
+      if (isJustActivated) {
+        setBuildingDashboard(true);
+        await router.refresh();
+        setTimeout(() => setBuildingDashboard(false), 2200);
+      } else {
+        // Compute post-save interpretation
+        const deltas = computeDeltas(formData.values, latestEntry, selectedMetrics);
+        const droppedStage = findDroppedStage(deltas);
+        setPostSave({ deltas, droppedStage });
+        router.refresh();
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
     } finally {
       setLoading(false);
     }
   };
+
+  // --- Dashboard building popup (5th entry milestone) ---
+  if (buildingDashboard) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="mx-4 w-full max-w-sm rounded-[24px] bg-[#0d0d12] p-8 text-center text-white shadow-2xl">
+          <div className="mb-5 flex justify-center">
+            <svg className="animate-spin h-8 w-8 text-[#95dbda]" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+              <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">Tiramisup</p>
+          <p className="mt-2 text-[20px] font-semibold leading-snug tracking-[-0.01em]">Grafikler oluşturuluyor</p>
+          <p className="mt-2 text-[13px] leading-6 text-white/60">5 günlük veri tamamlandı. Dashboard hazırlanıyor…</p>
+        </div>
+      </div>
+    );
+  }
 
   // --- Post-save interpretation panel ---
   if (postSave) {
