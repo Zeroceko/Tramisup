@@ -51,7 +51,7 @@ const CATEGORIES = [
 const STAGES = [
   { value: "Geliştirme aşamasında", label: "Geliştiriyorum", sub: "Henüz kullanıcı yok" },
   {
-    value: "Test aşamasında",
+    value: "Test kullanıcıları var",
     label: "Beta / test kullanıcılarım var",
     sub: "Kapalı beta devam ediyor",
   },
@@ -142,7 +142,7 @@ function isLaunchedStage(s: string) {
 }
 
 function isVeryEarlyStage(s: string) {
-  return s === "Geliştirme aşamasında" || s === "Test aşamasında";
+  return s === "Geliştirme aşamasında" || s === "Test kullanıcıları var";
 }
 
 function deriveStatus(launchStatus: string): "PRE_LAUNCH" | "LAUNCHED" | "GROWING" {
@@ -742,38 +742,51 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           )}
 
           {/* ── Navigation (not shown on metrics step — it has its own CTAs) ── */}
-          {currentId !== "metrics" && (
-            <div className="mt-8 flex items-center justify-between gap-4">
-              <button
-                type="button"
-                onClick={goBack}
-                disabled={stepIndex === 0}
-                className="flex h-10 items-center gap-2 rounded-full border border-[#e5e7eb] px-4 text-[13px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
-              >
-                ← Geri
-              </button>
-
-              <div className="flex items-center gap-3">
-                {currentId === "sources" && (
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    className="text-[13px] text-[#8a8fa0] underline-offset-2 hover:text-[#666d80] hover:underline"
-                  >
-                    Atla
-                  </button>
-                )}
+          {currentId !== "metrics" && (() => {
+            const isLastStep = stepIndex === stepIds.length - 1;
+            return (
+              <div className="mt-8 flex items-center justify-between gap-4">
                 <button
                   type="button"
-                  onClick={goNext}
-                  disabled={!canContinue()}
-                  className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={goBack}
+                  disabled={stepIndex === 0}
+                  className="flex h-10 items-center gap-2 rounded-full border border-[#e5e7eb] px-4 text-[13px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
                 >
-                  Devam →
+                  ← Geri
                 </button>
+
+                <div className="flex items-center gap-3">
+                  {currentId === "sources" && !isLastStep && (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      className="text-[13px] text-[#8a8fa0] underline-offset-2 hover:text-[#666d80] hover:underline"
+                    >
+                      Atla
+                    </button>
+                  )}
+                  {isLastStep ? (
+                    <button
+                      type="button"
+                      onClick={() => submit(false)}
+                      className="h-10 rounded-full bg-[#0d0d12] px-6 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
+                    >
+                      Tamamla ve başla
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={!canContinue()}
+                      className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Devam →
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {error && !isCreating && (
             <p className="mt-4 text-[13px] text-red-600">{error}</p>
