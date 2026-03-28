@@ -1,7 +1,7 @@
 # Tiramisup - Handoff
 
-**Last Updated:** 26 March 2026
-**Status:** **MetricSetup/MetricEntry migration complete. Data-Driven AI Mentorship live. Integrations layer (GA4 + Stripe) operational.**
+**Last Updated:** 29 March 2026
+**Status:** **EN/TR language support shipped (landing + settings + persistence). Default locale switched to English. Migration added for user language preference.**
 
 ---
 
@@ -9,7 +9,26 @@
 
 Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-growth phase. The system guides founders through a calm, staged progression: define what to track, enter daily data, observe trends, then optimize.
 
-### What shipped in the latest sprint cycle (26 March 2026)
+### What shipped in the latest sprint cycle (29 March 2026)
+
+**Language Support (EN/TR)**
+- Added EN/TR language switcher on landing page (simple dropdown, no emojis)
+- Rewrote all visible landing copy in both languages (EN = sharp/global, TR = natural/human)
+- Added language setting in `/[locale]/settings` (persisted)
+- Default locale changed to **English** (middleware + next-intl config)
+- Language persisted via `NEXT_LOCALE` cookie and stored on `User.preferredLocale`
+- Added DB migration for `User.preferredLocale`
+
+**Tests**
+- Vitest runs with dummy keys: `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` → **8 test files / 68 tests passed**
+
+**Note (Local Dev)**
+- Local `supabase start` may fail if Docker image layer for `realtime` is corrupted (digest mismatch). Fix by removing/re-pulling the image:
+  - `docker image rm public.ecr.aws/supabase/realtime:v2.73.2`
+  - `docker pull public.ecr.aws/supabase/realtime:v2.73.2`
+  - `npx supabase start`
+
+### What shipped in the previous sprint cycle (26 March 2026)
 
 **Sprint 1 — DB Migration (Critical tech debt resolved)**
 - Replaced `Product.launchGoals` JSON blob with proper `MetricSetup` and `MetricEntry` Prisma models
@@ -43,7 +62,7 @@ Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-
 ### Database Models (Prisma + PostgreSQL)
 
 **Core:**
-- `User` — Auth (email + passwordHash, credentials + JWT)
+- `User` — Auth (email + passwordHash, credentials + JWT) + `preferredLocale` (default `en`)
 - `Product` — Main workspace entity (status: PRE_LAUNCH | LAUNCHED | GROWING)
 
 **Metric System (NEW — replaces launchGoals JSON):**
@@ -162,6 +181,7 @@ The system must not assume problems without supporting context. Founder Coach us
 - **Integrations hub** — connected provider status badges, last sync time, link to `/integrations`
 - **Growth tracking** — link to metric setup
 - **Profile** — name, project name, launch date, status
+- **Language** — English / Türkçe preference (persisted + stored on user)
 
 ### Integrations (`/[locale]/integrations`)
 - Dark mode marketplace UI
@@ -238,7 +258,7 @@ rm -rf .next && npm run dev
 3. `npx prisma db push` — sync schema
 4. `npm run dev` — verify on http://localhost:3002
 5. Create test user via `/tr/signup` with code `TT31623SEN`
-6. `npm test` — verify all 65 tests pass
+6. `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` — verify all 68 tests pass
 
 ---
 
@@ -278,13 +298,14 @@ rm -rf .next && npm run dev
 
 ## Test Coverage
 
-**Unit tests:** 7 files, 65 tests
+**Unit tests:** 8 files, 68 tests
 - `__tests__/api/auth/signup.test.ts` — 12 assertions
 - `__tests__/api/waitlist/join.test.ts` — 11 assertions
 - `__tests__/api/waitlist/check.test.ts`
 - `__tests__/api/waitlist/admin.test.ts`
 - `__tests__/lib/auth.test.ts`
 - `__tests__/lib/metric-context.test.ts` — 7 test cases
+- `__tests__/ai-fallback.test.ts`
 
 **E2E tests:** 5 Playwright files (not part of `npm test`, run via `npm run test:e2e`)
 
@@ -306,6 +327,15 @@ rm -rf .next && npm run dev
 ---
 
 ## Changelog
+
+### v0.3.0 — 29 March 2026
+
+**Language Support (EN/TR)**
+- Landing page fully bilingual; all copy rewritten in EN/TR
+- Language dropdown on landing (no emojis)
+- Language preference in Settings; persists via cookie + DB (`User.preferredLocale`)
+- Default locale switched to English
+- Added migration: `User.preferredLocale`
 
 ### v0.2.0 — 26 March 2026
 
