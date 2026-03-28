@@ -48,9 +48,12 @@ const FIELD_TO_KEYS: Record<string, string[]> = {
 
 // ─── Core bridge ─────────────────────────────────────────────────────────────
 
+export type MetricSyncMode = "merge" | "overwrite" | "missing_dates";
+
 export async function syncMetricToEntry(
   productId: string,
-  date: Date
+  date: Date,
+  mode: MetricSyncMode = "merge"
 ): Promise<void> {
   // 1. Get the legacy Metric row for this product + date
   const metric = await prisma.metric.findUnique({
@@ -115,13 +118,25 @@ export async function syncMetricToEntry(
     where: { productId_date: { productId, date } },
   });
 
-  const mergedValues = existingEntry
-    ? {
-        ...(values as Record<string, number>),
-        // Manual entries already present take precedence
-        ...(existingEntry.values as Record<string, number>),
-      }
-    : values;
+  if (mode === "missing_dates" && existingEntry) {
+    return;
+  }
+
+  const existingValues = existingEntry?.values as Record<string, number> | undefined;
+  const mergedValues =
+    existingEntry && existingValues
+      ? mode === "overwrite"
+        ? {
+            ...existingValues,
+            // Synced values override existing for mapped stages
+            ...(values as Record<string, number>),
+          }
+        : {
+            // Default: preserve manual values if they exist
+            ...(values as Record<string, number>),
+            ...existingValues,
+          }
+      : values;
 
   const metricSetup = await getOrCreateMetricSetup(productId);
 

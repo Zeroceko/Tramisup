@@ -103,11 +103,13 @@ export default function IntegrationCard({
   integration,
   existingIntegration,
   productId,
+  manualEntryCount,
   autoOpenPropertySelector = false,
 }: {
   integration: IntegrationDef;
   existingIntegration?: ExistingIntegration;
   productId: string;
+  manualEntryCount?: number;
   autoOpenPropertySelector?: boolean;
 }) {
   const router = useRouter();
@@ -164,6 +166,10 @@ export default function IntegrationCard({
     e.stopPropagation();
     if (!existingIntegration) return;
     if (integration.provider === "GA4" && !existingIntegration.selectedPropertyId) {
+      setWizardOpen(true);
+      return;
+    }
+    if (integration.provider === "GA4" && (manualEntryCount ?? 0) > 0) {
       setWizardOpen(true);
       return;
     }
@@ -398,6 +404,7 @@ export default function IntegrationCard({
           integrationId={existingIntegration?.id ?? null}
           isConnected={isConnected}
           selectedPropertyId={existingIntegration?.selectedPropertyId}
+          manualEntryCount={manualEntryCount}
           onClose={() => {
             setWizardOpen(false);
             router.refresh();

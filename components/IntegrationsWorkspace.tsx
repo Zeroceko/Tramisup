@@ -16,6 +16,7 @@ type IntegrationsWorkspaceProps = {
   integrations: ExistingIntegration[];
   availableIntegrations: IntegrationDef[];
   productId: string;
+  manualEntryCount?: number;
   success?: string;
   error?: string;
 };
@@ -115,6 +116,7 @@ export default function IntegrationsWorkspace({
   integrations,
   availableIntegrations,
   productId,
+  manualEntryCount,
   success,
   error,
 }: IntegrationsWorkspaceProps) {
@@ -235,6 +237,7 @@ export default function IntegrationsWorkspace({
               integration={integration}
               existingIntegration={integrationMap.get(integration.provider)}
               productId={productId}
+              manualEntryCount={manualEntryCount}
               autoOpenPropertySelector={
                 success === "ga4_connected" &&
                 integration.provider === "GA4"
@@ -290,6 +293,7 @@ export default function IntegrationsWorkspace({
           integrationId={autoOpenIntegration?.id ?? null}
           isConnected={autoOpenIntegration?.status === "CONNECTED"}
           selectedPropertyId={autoOpenIntegration?.selectedPropertyId}
+          manualEntryCount={manualEntryCount}
           onClose={() => setWizardAutoOpen(false)}
         />
       )}

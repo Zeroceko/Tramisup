@@ -45,6 +45,9 @@ export default async function IntegrationsPage({
   const existingIntegrations = await prisma.integration.findMany({
     where: { productId: product.id },
   });
+  const manualEntryCount = await prisma.metricEntry.count({
+    where: { productId: product.id },
+  });
 
   const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
     const config = parseConfig(integration.config);
@@ -72,6 +75,7 @@ export default async function IntegrationsPage({
       integrations={integrations}
       availableIntegrations={AVAILABLE_INTEGRATIONS as IntegrationDef[]}
       productId={product.id}
+      manualEntryCount={manualEntryCount}
       success={resolvedSearchParams.success}
       error={resolvedSearchParams.error}
     />

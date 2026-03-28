@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { syncStripe } from "@/BrandLib/sync/stripe";
 import { syncGa4 } from "@/BrandLib/sync/ga4";
+import type { MetricSyncMode } from "@/lib/sync-to-metric-entry";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -33,6 +34,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Missing integration configuration" }, { status: 400 });
     }
 
+    let syncMode: MetricSyncMode = "merge";
+    try {
+      const body = await request.json();
+      if (body?.syncMode === "overwrite" || body?.syncMode === "missing_dates" || body?.syncMode === "merge") {
+        syncMode = body.syncMode;
+      }
+    } catch {
+      // No body provided
+    }
+
     const syncJob = await prisma.syncJob.create({
       data: {
         integrationId: integration.id,
@@ -46,7 +57,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (integration.provider === "STRIPE") {
         recordsSynced = await syncStripe(integration.productId, integration.config);
       } else if (integration.provider === "GA4") {
-        recordsSynced = await syncGa4(integration.productId, integration.config);
+        recordsSynced = await syncGa4(integration.productId, integration.config, syncMode);
       } else {
         throw new Error("Provider sync algorithm not implemented");
       }

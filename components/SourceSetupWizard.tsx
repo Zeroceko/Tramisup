@@ -52,6 +52,7 @@ type WizardProps = {
   integrationId?: string | null;
   isConnected: boolean;
   selectedPropertyId?: string | null;
+  manualEntryCount?: number;
   onClose: () => void;
 };
 
@@ -146,6 +147,7 @@ export default function SourceSetupWizard({
   integrationId,
   isConnected,
   selectedPropertyId: initialPropertyId,
+  manualEntryCount,
   onClose,
 }: WizardProps) {
   const router = useRouter();
@@ -233,13 +235,15 @@ export default function SourceSetupWizard({
     }
   }, [integrationId]);
 
-  const runSync = async () => {
+  const runSync = async (syncMode?: "overwrite" | "missing_dates") => {
     if (!integrationId) return;
     setLoading(true);
     setSyncResult(null);
     try {
       const res = await fetch(`/api/integrations/${integrationId}/sync`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(syncMode ? { syncMode } : {}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.details);
@@ -574,6 +578,7 @@ export default function SourceSetupWizard({
   }
 
   function renderSync() {
+    const hasManualEntries = provider === "GA4" && (manualEntryCount ?? 0) > 0;
     return (
       <div className="space-y-5">
         <div>
@@ -608,6 +613,19 @@ export default function SourceSetupWizard({
           </div>
         ) : (
           <>
+            {hasManualEntries && (
+              <div className="rounded-[14px] border border-[#fed7aa] bg-[#fff7ed] p-4">
+                <p className="text-[13px] font-semibold text-[#c2410c]">
+                  Manuel girdiğin veriler var
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-[#c2410c]/80">
+                  GA4 bağlandığında aynı tarihler için veri çekebiliriz. İstersen
+                  tüm tarihleri GA4 verisiyle güncelleriz ya da sadece manuel girilmemiş
+                  tarihlere dokunuruz.
+                </p>
+              </div>
+            )}
+
             {/* What will happen */}
             <div className="rounded-[14px] bg-[#f7f9fa] p-4">
               <p className="text-[12px] font-semibold text-[#0d0d12]">Sync sırasında ne olacak?</p>
@@ -616,7 +634,7 @@ export default function SourceSetupWizard({
                   <>
                     <li className="text-[12px] leading-5 text-[#666d80]">• Son 14 günlük veri çekilir</li>
                     <li className="text-[12px] leading-5 text-[#666d80]">• DAU, toplam kullanıcı ve yeni kullanıcı kaydedilir</li>
-                    <li className="text-[12px] leading-5 text-[#666d80]">• Mevcut veriler güncellenir, yenileri eklenir</li>
+                    <li className="text-[12px] leading-5 text-[#666d80]">• Seçtiğin moda göre mevcut veriler güncellenir</li>
                   </>
                 ) : (
                   <>
@@ -628,15 +646,37 @@ export default function SourceSetupWizard({
               </ul>
             </div>
 
-            <button
-              type="button"
-              onClick={runSync}
-              disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Sync&apos;i başlat
-            </button>
+            {provider === "GA4" && hasManualEntries ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => runSync("overwrite")}
+                  disabled={loading}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Verileri güncelle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runSync("missing_dates")}
+                  disabled={loading}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#e8e8e8] bg-white text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
+                >
+                  Sadece eksik tarihleri güncelle
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={runSync}
+                disabled={loading}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Sync&apos;i başlat
+              </button>
+            )}
           </>
         )}
       </div>

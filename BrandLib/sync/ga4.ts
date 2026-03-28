@@ -3,8 +3,13 @@ import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/lib/prisma';
 import { getDefaultGa4Property } from '@/lib/ga4-admin';
 import { syncMetricToEntry } from '@/lib/sync-to-metric-entry';
+import type { MetricSyncMode } from '@/lib/sync-to-metric-entry';
 
-export async function syncGa4(productId: string, configData: string): Promise<number> {
+export async function syncGa4(
+  productId: string,
+  configData: string,
+  mode: MetricSyncMode = "merge"
+): Promise<number> {
   const config = JSON.parse(configData);
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -85,7 +90,7 @@ export async function syncGa4(productId: string, configData: string): Promise<nu
       });
 
       // Bridge: propagate synced values into AARRR MetricEntry
-      await syncMetricToEntry(productId, date);
+      await syncMetricToEntry(productId, date, mode);
 
       syncedRecords++;
     }
