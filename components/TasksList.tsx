@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/sonner";
+import type { CompletionEffects } from "@/lib/task-completion-effects";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
@@ -107,11 +109,43 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setLoading(taskId);
     try {
-      await fetch(`/api/actions/${taskId}`, {
+      const res = await fetch(`/api/actions/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+      const data = await res.json().catch(() => null) as {
+        effects?: CompletionEffects | null;
+        reversed?: boolean;
+      } | null;
+
+      // Show feedback based on effects
+      if (status === "DONE" && data?.effects) {
+        const e = data.effects;
+        if (e.milestones.includes("ALL_CHECKLIST_COMPLETE")) {
+          toast.success(isEn ? "All launch items complete!" : "Tüm launch maddeleri tamamlandı!", {
+            description: e.suggestion ?? undefined,
+          });
+        } else if (e.milestones.includes("ALL_HIGH_BLOCKERS_CLEARED")) {
+          toast.success(isEn ? "All critical blockers cleared!" : "Kritik blokajlar temizlendi!", {
+            description: e.suggestion ?? undefined,
+          });
+        } else if (e.checklistCompleted) {
+          toast.success(isEn ? "Task completed" : "Görev tamamlandı", {
+            description: e.checklistCompleted.title,
+          });
+        } else {
+          toast.success(isEn ? "Task completed" : "Görev tamamlandı");
+        }
+        if (e.followUpTaskCreated) {
+          toast(isEn ? "Follow-up task created" : "Yeni görev oluşturuldu", {
+            description: e.followUpTaskCreated.title,
+          });
+        }
+      } else if (data?.reversed) {
+        toast(isEn ? "Linked checklist item also reopened" : "Bağlı checklist maddesi de geri açıldı");
+      }
+
       router.refresh();
     } finally {
       setLoading(null);
