@@ -1,5 +1,64 @@
 # Tiramisup - Project Instructions
 
+## Source of Truth Documents
+
+Before making any changes to the AI layer, onboarding, recommendation system, or evidence map — read and follow these documents:
+
+- [`docs/ai-agent-system-playbook.md`](docs/ai-agent-system-playbook.md) — defines the full AI agent architecture: normalized context → evidence map → recommendation engine → critic pass → structured output contract
+- [`docs/product-intake-question-playbook.md`](docs/product-intake-question-playbook.md) — defines the intake question set, normalization rules, stage/goal enums, and onboarding UX guidelines
+
+These are non-negotiable. Code must stay aligned with them.
+
+---
+
+## AI Agent System — Current State
+
+The AI layer is fully implemented across Sprints 1–4 (+ QA pass). Here is what exists:
+
+### Pipeline
+```
+Onboarding intake
+  → normalizeProductContext()       lib/normalize-product-context.ts
+  → buildEvidenceMap()              lib/build-evidence-map.ts
+  → getFounderCoachContext()        lib/founder-coach-context.ts
+  → evidence-readiness gate         lib/founder-coach.ts
+  → AI prompt (normalized context)  lib/founder-coach.ts
+  → sanitizeRecommendationOutput()  lib/founder-coach.ts
+  → applyCriticPass()               lib/founder-coach.ts
+  → CoachRecommendationOutput       rendered in components/AdvisorCard.tsx
+```
+
+### Key types (lib/founder-coach.ts)
+- `Recommendation` — 11 fields: title, type, priority, impact_area, why_now, supporting_evidence, assumptions, missing_data, confidence, expected_outcome, user_action
+- `CoachRecommendationOutput` — primary_recommendation + supporting_recommendations (max 3) + missing_information_for_better_guidance + critic_status
+- `RecommendationType` — launch_blocker | readiness_next_step | source_setup | metric_selection | daily_action | weak_link | data_collection | weekly_focus
+
+### Evidence-readiness gating
+- `context_confidence === "low"` → always returns `data_collection` fallback, no AI call
+- relevant readiness domain `=== "low"` → same fallback
+- domain is mapped per stage: idea/dev/testing/launch_prep → launch, live → metrics, early_growth → growth
+
+### Critic rules (applyCriticPass)
+**Reject → buildStageFallback:**
+- stage mismatch (e.g. launch_blocker on early_growth, daily_action on launch_prep)
+- low confidence + high priority
+- empty supporting_evidence array
+
+**Revise → critic_status: "revised":**
+- high confidence + 3+ missing_data → downgrade to medium
+- medium confidence + high priority → downgrade priority to medium
+- supporting recs with stage mismatch → drop
+- supporting recs duplicating primary title → drop
+
+### Onboarding wizard (components/OnboardingWizard.tsx)
+Steps: `name → description → category → platform → stage → timing → business → audience → goal → sources → metrics`
+- Platform is universal (Web, iOS, Android, Desktop, API, Multi-platform)
+- Audience is structured selection (10 options)
+- Goal sets both `growthGoal` (display label) and `goalKey` (normalized enum key)
+- `goalKey` is serialized into `launchGoals` JSON field on the Product model
+
+---
+
 ## GSD Skills
 
 This project uses GSD (Get Shit Done) skills. When the user types any of the following commands, execute them according to the instructions below:
@@ -128,10 +187,13 @@ app/
 
 ### Onboarding
 **`components/OnboardingWizard.tsx`** — Multi-step product creation. Steps:
-`name → category → platform (mobile only) → stage → timing (pre-launch only) → business → goal → sources (optional) → metrics (optional)`
+`name → description → category → platform → stage → timing (pre-launch only) → business → audience → goal → sources (optional) → metrics (optional)`
+- Platform is now universal (6 options), not mobile-only
+- Audience is a structured selection step (10 options from playbook)
+- Goal sets both `growthGoal` (label) and `goalKey` (normalized enum key)
 - `getActiveSteps(data)` computes which steps are active based on collected data
 - Submits to `POST /api/products` + optionally `PATCH /api/products/[id]/metric-setup`
-- Skip logic: platform only for mobile, timing only for PRE_LAUNCH, metrics skipped for very early stage
+- Skip logic: timing only for PRE_LAUNCH, metrics skipped for very early stage
 
 **`app/[locale]/onboarding/page.tsx`** — Server wrapper with auth guard.
 
@@ -186,17 +248,20 @@ Both syncs write to the legacy `Metric` model (DAU, MRR, etc). The newer `Metric
 ## Environment variables required
 
 ```bash
-DATABASE_URL               # Supabase PostgreSQL connection string (no trailing \n)
+DATABASE_URL               # Supabase PgBouncer transaction mode URL — port 6543, ?pgbouncer=true&connection_limit=1&prepared_statements=false
+DIRECT_URL                 # Supabase direct connection URL — port 5432 (used by Prisma for migrations)
 NEXTAUTH_SECRET            # Any long random string
-NEXTAUTH_URL               # https://tiramisup.vercel.app (or http://localhost:3000)
+NEXTAUTH_URL               # https://tramisup.vercel.app (or http://localhost:3000)
 ACCESS_CODE                # TT31623SEN
 GOOGLE_CLIENT_ID           # For GA4 OAuth
 GOOGLE_CLIENT_SECRET       # For GA4 OAuth
 STRIPE_CLIENT_ID           # For Stripe Connect OAuth
 STRIPE_SECRET_KEY          # For Stripe API calls
-STRIPE_REDIRECT_URI        # https://tiramisup.vercel.app/api/integrations/stripe/callback
-OPENAI_API_KEY             # For AI coaching/insights features
+STRIPE_REDIRECT_URI        # https://tramisup.vercel.app/api/integrations/stripe/callback
+GOOGLE_GENERATIVE_AI_API_KEY  # For AI coaching (Gemini)
 ```
+
+> **Important:** `DATABASE_URL` must point to the PgBouncer **transaction mode** pooler (port 6543), not the direct connection. Direct connection (port 5432) goes in `DIRECT_URL`. Without this split, Vercel serverless functions hit `MaxClientsInSessionMode` and prepared statement errors.
 
 ---
 
@@ -224,8 +289,9 @@ npx next build
 ---
 
 ## Production
-- Deployed on Vercel (auto-deploy from main branch)
+- Deployed on Vercel (auto-deploy from main branch) at `https://tramisup.vercel.app`
 - DB: Supabase eu-west-3, project `ojecebxxcbxrofnbkaae`
+- Prisma datasource uses `url = DATABASE_URL` (pooler) + `directUrl = DIRECT_URL` (direct)
 - If Supabase pauses (free tier, 7 days inactivity): resume from supabase.com/dashboard
 
 ---
