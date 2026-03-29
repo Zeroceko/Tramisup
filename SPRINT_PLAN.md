@@ -2,6 +2,8 @@
 
 Son güncelleme: Mart 2026
 
+> Not: Bu belge tarihsel sprint planidir. Guncel urun akisi ve route gercegi icin `HANDOFF.md`, `CLAUDE.md`, `README.md` referans alinmalidir.
+
 Bu belge roadmap'i geliştirici ekip için uygulanabilir sprint paketlerine böler. Her sprint, net teslimatlar, bağımlılıklar ve doğrulama kriterleri içerir.
 
 ---
@@ -43,7 +45,7 @@ Kullanıcının ürünü generic seed yerine kendi bağlamıyla başlatmasını 
 
 ### Developer Tasks
 - [ ] `app/products/page.tsx` oluştur
-- [ ] `app/products/new/page.tsx` wizard oluştur
+- [ ] `app/[locale]/onboarding/page.tsx` wizard oluştur
 - [ ] API: `POST /api/products`
 - [ ] nav'a active product selector ekle
 - [ ] `Product` modeline eksik onboarding alanları ekle/gerekirse migration hazırla

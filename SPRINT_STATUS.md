@@ -3,6 +3,8 @@
 **Last Updated:** 21 March 2026  
 **Current Phase:** Launch Operating System (Sprint 2) - COMPLETE ✅
 
+> Note: This document is historical sprint tracking. For current production flow and routes, use `HANDOFF.md`, `CLAUDE.md`, and `README.md`.
+
 ---
 
 ## 📊 Sprint Overview
@@ -47,7 +49,7 @@ Sprint 5+: Platform Maturity        🔮 ROADMAP
 
 **Deliverables:**
 - ✅ Products page (`/products`) - list all user products
-- ✅ Create product wizard (`/products/new`) - 7-step onboarding
+- ✅ Create product wizard (`/{locale}/onboarding`) - guided onboarding
 - ✅ API: `POST /api/products` - product creation
 - ✅ Active product selector in DashboardNav
 - ✅ Active product context management (cookie-based)

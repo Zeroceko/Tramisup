@@ -164,7 +164,7 @@ components/
 
 #### Wizard Flow:
 
-1. User lands on `/products/new`
+1. User lands on `/{locale}/onboarding`
 2. Modal opens with 7-tab navigation
 3. Each step = one screen
 4. "Devam Et" button moves to next step
@@ -274,7 +274,7 @@ lib/hooks/useActiveProduct.ts   # Active product context
   - Status badge (PRE_LAUNCH/LAUNCHED/GROWING)
   - Last updated date
   - Click → navigate to /dashboard?productId=ID
-- "+ Yeni Ürün Oluştur" CTA → opens `/products/new`
+- "+ Yeni Ürün Oluştur" CTA → opens `/{locale}/onboarding`
 - Empty state if no products
 
 **Product Selector (Nav):**
