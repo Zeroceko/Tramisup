@@ -1,7 +1,7 @@
 # Tiramisup - Handoff
 
 **Last Updated:** 29 March 2026
-**Status:** **EN/TR language support shipped (landing + settings + persistence). Default locale switched to English. Migration added for user language preference.**
+**Status:** **EN/TR shipped + onboarding redesign + source-aware growth setup + onboarding-to-integrations handoff shipped.**
 
 ---
 
@@ -18,6 +18,20 @@ Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-
 - Default locale changed to **English** (middleware + next-intl config)
 - Language persisted via `NEXT_LOCALE` cookie and stored on `User.preferredLocale`
 - Added DB migration for `User.preferredLocale`
+
+**Onboarding UX + Source Connection Flow**
+- Redesigned `OnboardingWizard` to modal-style multi-phase layout (closer to product visual language)
+- Added phase pill rail + compact action area (`Devam Et`) and contextual quick actions in description step
+- If user selects `GA4` or `Stripe` in onboarding sources, product creation now redirects to `/{locale}/integrations` and auto-opens source setup flow
+- Integrations page now accepts onboarding query params (`onboarding`, `connect`, `queued`) for guided first connection
+
+**Growth Setup + Sync Behavior**
+- Growth metric selector now adapts to connected data sources using stage automation guides
+- For stages auto-supported by connected sources, compatible metrics are highlighted and unsupported options are disabled in that stage
+- Stages not covered by connected sources remain manual-select
+- GA4 sync now supports explicit merge modes for manual data coexistence:
+  - `overwrite` → replace mapped stage values with GA4 values
+  - `missing_dates` → only create entries for missing dates
 
 **Tests**
 - Vitest runs with dummy keys: `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` → **8 test files / 68 tests passed**
@@ -101,6 +115,7 @@ Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-
 | `lib/integration-recommendations.ts` | Maps metric keys to recommended providers |
 | `lib/integrations-catalog.ts` | Integration definitions + metadata |
 | `lib/ga4-admin.ts` | Google Analytics Admin API helpers |
+| `lib/sync-to-metric-entry.ts` | Bridges integration-synced `Metric` rows into `MetricEntry` with sync modes |
 
 ### AI Provider Chain
 
@@ -186,7 +201,14 @@ The system must not assume problems without supporting context. Founder Coach us
 ### Integrations (`/[locale]/integrations`)
 - Dark mode marketplace UI
 - Live integrations with property picker (GA4) and sync controls
+- Supports onboarding handoff params to auto-open selected provider setup flow
+- GA4 sync presents manual data handling choices (overwrite vs missing dates)
 - Roadmap section for P1/P2 providers
+
+### Onboarding (`/[locale]/onboarding`)
+- Modal-style, multi-phase guided product creation
+- Collects: name, description, category, platforms, stage, timing (if pre-launch), business model, audience, goal, optional sources, optional metric prefill
+- If onboarding sources include `GA4` or `Stripe`, user is redirected to Integrations and setup is auto-opened
 
 ### Post-wizard Overview (`/[locale]/products/[id]/overview`)
 - Shown after product creation

@@ -35,7 +35,7 @@ Tiramisup currently supports this focused MVP flow:
 2. **Waitlist capture** from the landing page CTA
 3. **Early-access signup** with access code (`TT31623SEN`)
 4. **Authenticated dashboard** with a short welcome/profile onboarding when no product exists
-5. **Product creation wizard** (`/{locale}/products/new`)
+5. **Product creation wizard** (`/{locale}/onboarding`)
 6. **Stage-aware product workspace** for launch and growth
 7. **Growth metric setup** where one primary metric is chosen for each AARRR category
 8. **Daily metric entry** based on the selected metric set
@@ -79,13 +79,15 @@ TT31623SEN
 Wizard now collects better product context:
 - product name
 - user-written product description
-- **multi-select categories**
-- **multi-select target audiences**
-- `Diğer` free-text support for both
-- business model
+- category (single select)
+- platform(s) (multi-select)
 - stage
+- timing (only when pre-launch)
+- business model
+- target audience (single select)
+- growth goal
 - optional website
-- planned launch date for `Yakında yayında`
+- optional source intent (`GA4`, `Stripe`, etc.)
 
 Current stage labels:
 - `Geliştirme aşamasında`
@@ -101,6 +103,7 @@ Removed for now:
 - Product is created through `/api/products`
 - AI plan generation seeds the initial structure
 - `Yayında` and `Büyüme aşamasında` map to launched behavior
+- If onboarding source intent includes `GA4` or `Stripe`, user is redirected to `/{locale}/integrations` and selected provider setup auto-opens
 
 ---
 
@@ -133,6 +136,12 @@ Not:
 - generic growth advice
 
 all at once.
+
+### Source-aware growth setup
+When integrations are connected, growth metric setup now prioritizes source-compatible metrics per stage:
+- source-supported options are highlighted
+- unsupported options in auto-covered stages are disabled
+- stages with no live source coverage remain manual
 
 ### Beginner-friendly metric language
 Metric labels should not assume the user is fluent in raw analytics acronyms.
