@@ -6,11 +6,14 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import PasswordChecklist from "@/components/ui/PasswordChecklist";
+import { isStrongPassword } from "@/lib/password-rules";
 
 const PRODUCT_TYPES = ["SaaS", "Mobile App", "E-commerce", "Other"] as const;
 
 const inputCls =
   "w-full rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-3 text-sm font-medium text-[#21231D] outline-none transition-all placeholder:text-[#21231D]/30 focus:border-[#C45D97] focus:ring-2 focus:ring-[#C45D97]/20";
+const errorCls = "rounded-xl border border-[#E9A9B5] bg-[#FFF1F3] px-4 py-3 text-sm font-medium text-[#A13F54]";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,13 +35,13 @@ export default function SignupPage() {
     setError("");
 
     if (!name.trim() || !email.trim() || !accessCode.trim()) {
-      setError(t("errors.createFailed"));
+      setError(t("errors.requiredFields"));
       return;
     }
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!isEmailValid) {
-      setError(t("errors.generic"));
+      setError(t("errors.invalidEmail"));
       return;
     }
 
@@ -50,14 +53,14 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    if (password.length < 8) {
+    if (!isStrongPassword(password)) {
       setError(t("passwordHint"));
       setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(locale === "tr" ? "Şifreler eşleşmiyor." : "Passwords don't match.");
+      setError(t("errors.passwordsMismatch"));
       setLoading(false);
       return;
     }
@@ -163,7 +166,7 @@ export default function SignupPage() {
 
                 <div>
                   <label htmlFor="productType" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
-                    Product Type
+                    {t("productType")}
                   </label>
                   <select
                     id="productType"
@@ -196,7 +199,7 @@ export default function SignupPage() {
 
                 <div>
                   <label htmlFor="accessCode" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
-                    {locale === "tr" ? "Erken Erişim Kodu" : "Early Access Code"}
+                    {t("accessCode")}
                   </label>
                   <input
                     id="accessCode"
@@ -210,23 +213,23 @@ export default function SignupPage() {
                   />
                 </div>
 
-                {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+                {error ? <p className={errorCls}>{error}</p> : null}
 
                 <button
                   type="submit"
                   className="w-full rounded-xl border-none bg-[#21231D] py-3.5 text-sm font-black text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,35,29,0.18)]"
                 >
-                  Continue →
+                  {t("continueButton")} →
                 </button>
               </form>
             </>
           ) : (
             <>
               <h2 className="mb-1 text-2xl font-black text-[#21231D]">
-                {locale === "tr" ? "Şifreni belirle" : "Set your password"}
+                {t("stepTwoTitle")}
               </h2>
               <p className="mb-6 text-sm text-[#21231D]/50">
-                {locale === "tr" ? "Hesabın için güçlü bir şifre seç." : "Choose a strong password for your account."}
+                {t("stepTwoSubtitle")}
               </p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -246,22 +249,32 @@ export default function SignupPage() {
                   />
                 </div>
 
+                <PasswordChecklist
+                  password={password}
+                  copy={{
+                    title: t("passwordChecklist.title"),
+                    minLength: t("passwordChecklist.minLength"),
+                    number: t("passwordChecklist.number"),
+                    special: t("passwordChecklist.special"),
+                  }}
+                />
+
                 <div>
                   <label htmlFor="confirmPassword" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
-                    {locale === "tr" ? "Şifreyi doğrula" : "Confirm password"}
+                    {t("confirmPassword")}
                   </label>
                   <input
                     id="confirmPassword"
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    placeholder={locale === "tr" ? "Şifreyi tekrar gir" : "Repeat password"}
+                    placeholder={t("confirmPasswordPlaceholder")}
                     className={inputCls}
                     required
                   />
                 </div>
 
-                {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+                {error ? <p className={errorCls}>{error}</p> : null}
 
                 <button
                   type="submit"
@@ -279,7 +292,7 @@ export default function SignupPage() {
                   }}
                   className="border-none bg-transparent text-sm font-medium text-[#21231D]/50 transition-colors hover:text-[#21231D]"
                 >
-                  ← {locale === "tr" ? "Geri" : "Back"}
+                  ← {t("backButton")}
                 </button>
               </form>
             </>

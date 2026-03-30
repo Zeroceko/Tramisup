@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { sendWaitlistConfirmationEmail, syncWaitlistLeadToResend } from "@/lib/resend-waitlist"
 
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -10,7 +11,7 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const { email, name, source = "landing" } = await request.json()
+    const { email, name, source = "landing", locale = "en" } = await request.json()
 
     // Validate email
     if (!email || typeof email !== "string") {
@@ -49,6 +50,21 @@ export async function POST(request: Request) {
         status: "PENDING",
       },
     })
+
+    await Promise.allSettled([
+      syncWaitlistLeadToResend({
+        email: cleanEmail,
+        name: name || null,
+        source,
+        locale,
+      }),
+      sendWaitlistConfirmationEmail({
+        email: cleanEmail,
+        name: name || null,
+        source,
+        locale,
+      }),
+    ])
 
     return NextResponse.json(
       {

@@ -5,8 +5,8 @@ import { useLocale } from "next-intl";
 import { useState, useRef, useEffect } from "react";
 
 const locales = [
-  { value: "tr", label: "Türkçe" },
   { value: "en", label: "English" },
+  { value: "tr", label: "Türkçe" },
 ];
 
 export default function LanguageSwitcher() {

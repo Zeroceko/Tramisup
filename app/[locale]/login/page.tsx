@@ -16,6 +16,7 @@ export default function LoginPage() {
   const locale = useLocale();
   const t = useTranslations("login");
   const callbackUrl = searchParams.get("callbackUrl");
+  const resetStatus = searchParams.get("reset");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,6 +79,11 @@ export default function LoginPage() {
           <p className="mb-6 text-sm text-[#21231D]/50">{t("subtitle")}</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {resetStatus === "success" ? (
+              <p className="rounded-xl border border-[#BFE3C8] bg-[#EDF8F0] px-4 py-3 text-sm font-medium text-[#27623A]">
+                {t("resetSuccess")}
+              </p>
+            ) : null}
             <div>
               <label htmlFor="email" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
                 {t("email")}
@@ -128,9 +134,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <button type="button" className="mt-4 w-full border-none bg-transparent text-sm font-medium text-[#C45D97] transition-colors hover:text-[#9F3E77]">
-            Forgot password?
-          </button>
+          <Link
+            href={`/${locale}/forgot-password`}
+            className="mt-4 block w-full text-center text-sm font-medium text-[#C45D97] transition-colors hover:text-[#9F3E77]"
+          >
+            {t("forgotPassword")}
+          </Link>
         </div>
 
         <p className="mt-6 text-center text-sm text-[#21231D]/50">

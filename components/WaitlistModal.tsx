@@ -32,6 +32,7 @@ export default function WaitlistModal({ open, onClose }: WaitlistModalProps) {
           email: email.trim(),
           name: name.trim() || null,
           source: "landing",
+          locale,
         }),
       })
 

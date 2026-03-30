@@ -18,6 +18,10 @@ export default async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
+  if (pathname === "/yayinda" || pathname === "/yayinda/") {
+    return NextResponse.rewrite(new URL("/en/yayinda", req.url));
+  }
+
   // If logged in and on landing page (e.g., /tr or /en), redirect to dashboard
   // next-intl middleware will redirect / to /[defaultLocale]
   // So we check if the pathname is exactly /[locale] or /[locale]/
@@ -33,5 +37,5 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
   // Match only internationalized pathnames
-  matcher: ['/', '/(tr|en)/:path*']
+  matcher: ['/', '/yayinda', '/(tr|en)/:path*']
 };

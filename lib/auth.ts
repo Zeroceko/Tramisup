@@ -39,6 +39,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          preferredLocale: user.preferredLocale,
         };
       }
     })
@@ -53,12 +54,15 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.preferredLocale = (user as { preferredLocale?: string }).preferredLocale;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        (session.user as { id: string; preferredLocale?: string }).id = token.id as string;
+        (session.user as { id: string; preferredLocale?: string }).preferredLocale =
+          token.preferredLocale as string | undefined;
       }
       return session;
     },

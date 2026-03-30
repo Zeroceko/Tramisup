@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { isStrongPassword } from "@/lib/password-rules";
 
 const EARLY_ACCESS_CODE = process.env.EARLY_ACCESS_CODE || "TT31623SEN";
 
@@ -39,9 +40,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 8) {
+    if (!isStrongPassword(password)) {
       return NextResponse.json(
-        { error: "Şifre en az 8 karakter olmalıdır" },
+        { error: "Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir" },
         { status: 400 }
       );
     }
