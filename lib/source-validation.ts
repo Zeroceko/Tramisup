@@ -36,6 +36,7 @@ export type Ga4ValidationResult = {
     newUsers: number;
     dataPointCount: number;
     dateRange: string;
+    hasHistoricalData: boolean;
   };
 };
 
@@ -141,12 +142,12 @@ export async function validateGa4(
     return { provider: "GA4", status: "UNTRUSTED", checks, errorCode: "WRONG_PROPERTY", properties, selectedPropertyId: propertyId };
   }
 
-  // Check 4: Recent data check — pull last 7 days
+  // Check 4: Data access test — an empty/new property should still be considered valid
   try {
     const analyticsClient = new BetaAnalyticsDataClient({ authClient: oauth2Client });
     const [response] = await analyticsClient.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
+      dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
       dimensions: [{ name: "date" }],
       metrics: [
         { name: "activeUsers" },
@@ -171,14 +172,14 @@ export async function validateGa4(
 
     checks.push({
       key: "recent_data",
-      label: "Son 7 gün verisi",
-      passed: hasData,
+      label: "Veri erişimi testi",
+      passed: true,
       detail: hasData
         ? `${rows.length} günlük veri bulundu. Toplam ${totalDau} aktif kullanıcı.`
-        : "Son 7 günde hiç veri yok. Property doğru mu kontrol et.",
+        : "Property erişilebilir ama henüz veri görünmüyor. Yeni kurulumlarda bu normal; sync yine çalışabilir.",
     });
 
-    const status: ValidationStatus = hasData ? "TRUSTED" : "UNTRUSTED";
+    const status: ValidationStatus = "TRUSTED";
 
     return {
       provider: "GA4",
@@ -186,19 +187,17 @@ export async function validateGa4(
       checks,
       properties,
       selectedPropertyId: propertyId,
-      errorCode: hasData ? undefined : "NO_DATA",
-      preview: hasData
-        ? {
-            dau: totalDau,
-            totalUsers: totalUsers,
-            newUsers: totalNew,
-            dataPointCount: rows.length,
-            dateRange: "Son 7 gün",
-          }
-        : undefined,
+      preview: {
+        dau: totalDau,
+        totalUsers: totalUsers,
+        newUsers: totalNew,
+        dataPointCount: rows.length,
+        dateRange: "Son 30 gün",
+        hasHistoricalData: hasData,
+      },
     };
   } catch {
-    checks.push({ key: "recent_data", label: "Son 7 gün verisi", passed: false, detail: "Veri çekilemedi. Property yetkileri kontrol edilmeli." });
+    checks.push({ key: "recent_data", label: "Veri erişimi testi", passed: false, detail: "Veri çekilemedi. Property yetkileri kontrol edilmeli." });
     return { provider: "GA4", status: "UNTRUSTED", checks, errorCode: "PERMISSION_DENIED", properties, selectedPropertyId: propertyId };
   }
 }

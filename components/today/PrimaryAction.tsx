@@ -14,19 +14,19 @@ type PrimaryActionProps = {
 
 const ACCENT_STYLES: Record<string, { bg: string; button: string; buttonHover: string; bar: string }> = {
   pink: {
-    bg: "bg-gradient-to-br from-[#fff9fb] to-[#fff0f6]",
+    bg: "bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_transparent_24%),linear-gradient(135deg,#fffdfd_0%,#fff4fa_56%,#fff0f6_100%)]",
     button: "bg-[#ffd7ef] text-[#0d0d12]",
     buttonHover: "hover:bg-[#f5c8e4]",
     bar: "bg-[#ffd7ef]",
   },
   teal: {
-    bg: "bg-gradient-to-br from-[#f6fdfd] to-[#eef9f9]",
+    bg: "bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_transparent_24%),linear-gradient(135deg,#fbffff_0%,#f2fbfb_56%,#eef9f9_100%)]",
     button: "bg-[#95dbda] text-[#0d0d12]",
     buttonHover: "hover:bg-[#7dcfce]",
     bar: "bg-[#95dbda]",
   },
   amber: {
-    bg: "bg-gradient-to-br from-[#fffdf5] to-[#fff8e1]",
+    bg: "bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_transparent_24%),linear-gradient(135deg,#fffef8_0%,#fffbee_56%,#fff8e1_100%)]",
     button: "bg-[#fee74e] text-[#0d0d12]",
     buttonHover: "hover:bg-[#fde032]",
     bar: "bg-[#fee74e]",
@@ -45,26 +45,26 @@ export default function PrimaryAction({
   const styles = ACCENT_STYLES[accent];
 
   return (
-    <div className={`rounded-[18px] border border-[#e8e8e8] ${styles.bg} p-6 sm:p-7`}>
+    <div className={`rounded-[28px] border border-white/70 ${styles.bg} p-6 shadow-[0_20px_60px_rgba(23,20,31,0.08)] backdrop-blur sm:p-7`}>
       {/* Why this matters — the reasoning line */}
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#747a88]">
         {why}
       </p>
 
       {/* Action title — the dominant text */}
-      <h2 className="mt-2.5 text-[22px] font-bold tracking-[-0.02em] text-[#0d0d12] sm:text-[24px]">
+      <h2 className="mt-3 text-[24px] font-bold tracking-[-0.03em] text-[#0d0d12] sm:text-[28px]">
         {title}
       </h2>
 
       {/* Description — context, not fluff */}
-      <p className="mt-1.5 text-[14px] leading-6 text-[#5e6678] max-w-2xl">
+      <p className="mt-2 text-[15px] leading-7 text-[#5e6678] max-w-2xl">
         {description}
       </p>
 
       {/* Progress bar (optional) */}
       {progress != null && (
         <div className="mt-4 flex items-center gap-3">
-          <div className="h-1.5 flex-1 rounded-full bg-[#e8e8e8]/60">
+          <div className="h-2 flex-1 rounded-full bg-white/70">
             <div
               className={`h-full rounded-full ${styles.bar} transition-all duration-500`}
               style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
@@ -79,7 +79,7 @@ export default function PrimaryAction({
       {/* Single CTA */}
       <Link
         href={href}
-        className={`mt-5 inline-flex h-11 items-center rounded-full px-6 text-[14px] font-semibold transition ${styles.button} ${styles.buttonHover}`}
+        className={`mt-6 inline-flex h-11 items-center rounded-full px-6 text-[14px] font-semibold shadow-[0_10px_24px_rgba(19,19,25,0.08)] transition ${styles.button} ${styles.buttonHover}`}
       >
         {cta}
       </Link>

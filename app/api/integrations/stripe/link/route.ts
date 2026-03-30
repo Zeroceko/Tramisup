@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getOAuthCallbackBaseUrl } from "@/lib/app-urls";
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +24,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "STRIPE_CLIENT_ID not configured locally." }, { status: 500 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002";
-    const redirectUri = `${baseUrl}/api/integrations/stripe/callback`;
+    const oauthBaseUrl = getOAuthCallbackBaseUrl();
+    const redirectUri = `${oauthBaseUrl}/api/integrations/stripe/callback`;
 
     // Encode contextual data
     const state = Buffer.from(JSON.stringify({ productId, userId: session.user.id })).toString('base64');

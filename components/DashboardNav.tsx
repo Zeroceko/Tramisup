@@ -56,7 +56,6 @@ export default function DashboardNav({
         tasks: "Tasks",
         metrics: "Metrics",
         growth: "Growth",
-        sources: "Sources",
         newProduct: "+ Add product",
         settings: "Settings",
         account: "Account",
@@ -68,7 +67,6 @@ export default function DashboardNav({
         tasks: "Görevler",
         metrics: "Metrikler",
         growth: "Büyüme",
-        sources: "Kaynaklar",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
         account: "Hesap",
@@ -82,8 +80,6 @@ export default function DashboardNav({
           { href: "/tasks", label: labels.tasks },
           { href: "/metrics", label: labels.metrics },
           { href: "/growth", label: labels.growth },
-          { href: "/integrations", label: labels.sources },
-          { href: "/pre-launch", label: labels.launch, preview: true },
         ]
       : [
           { href: "/dashboard", label: labels.overview },
@@ -103,39 +99,44 @@ export default function DashboardNav({
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#e8e8e8] bg-white">
-      <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 bg-transparent">
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-4 pt-4 sm:px-6 xl:px-8">
 
         {/* Left: Logo + pill nav */}
         <div className="flex items-center gap-4">
           <Link
             href={withLocale("/dashboard")}
-            className="flex shrink-0 items-center gap-2.5"
+            className="flex h-11 shrink-0 items-center gap-2.5 rounded-full border border-white/70 bg-white/88 px-4 shadow-[0_10px_30px_rgba(25,27,39,0.06)] backdrop-blur"
           >
             <img
               src="/assets/illus-tiramisu-slice.png"
               alt="Tiramisup"
-              className="h-9 w-9 object-contain"
+              className="h-8 w-8 object-contain"
             />
-            <span className="hidden font-semibold text-[15px] text-[#0d0d12] tracking-[-0.01em] sm:block">
-              Tiramisup
+            <span className="hidden sm:block">
+              <span className="block font-semibold text-[14px] text-[#0d0d12] tracking-[-0.02em]">
+                Tiramisup
+              </span>
+              <span className="block text-[8.5px] font-semibold uppercase tracking-[0.22em] text-[#8b8f9c]">
+                Launch to Growth
+              </span>
             </span>
           </Link>
 
           {/* Pill nav */}
-          <nav className="hidden items-center gap-0.5 rounded-full border border-[#e8e8e8] bg-white p-1 shadow-sm lg:flex">
+          <nav className="hidden items-center gap-1 rounded-full border border-white/70 bg-white/88 p-1.5 shadow-[0_10px_30px_rgba(25,27,39,0.06)] backdrop-blur lg:flex">
             {navItems.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link
                   key={item.href}
                   href={withLocale(item.href)}
-                  className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors ${
+                  className={`flex h-[36px] items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors ${
                     active
-                      ? "bg-[#ffd7ef] text-[#0d0d12]"
+                      ? "bg-[#ffd9ef] text-[#0d0d12] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)]"
                       : item.preview
                         ? "border border-dashed border-[#e8e8e8] text-[#8a8fa0] hover:border-[#d9d9d9] hover:bg-[#fafafa] hover:text-[#0d0d12]"
-                        : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
+                        : "text-[#666d80] hover:bg-[#f6f7fb] hover:text-[#0d0d12]"
                   }`}
                 >
                   {item.label}
@@ -146,10 +147,10 @@ export default function DashboardNav({
             {/* Settings icon in pill */}
             <Link
               href={withLocale("/settings")}
-              className={`flex h-[34px] w-[34px] items-center justify-center rounded-full transition-colors ${
+              className={`flex h-[36px] w-[36px] items-center justify-center rounded-full transition-colors ${
                 pathname?.startsWith(withLocale("/settings"))
-                  ? "bg-[#ffd7ef] text-[#0d0d12]"
-                  : "text-[#666d80] hover:bg-[#f6f6f6] hover:text-[#0d0d12]"
+                  ? "bg-[#ffd9ef] text-[#0d0d12]"
+                  : "text-[#666d80] hover:bg-[#f6f7fb] hover:text-[#0d0d12]"
               }`}
               aria-label={labels.settings}
               title={labels.settings}
@@ -171,8 +172,8 @@ export default function DashboardNav({
 
           <Link
             href={withLocale("/settings")}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e8e8] bg-white text-[#666d80] transition hover:border-[#d0d0d0] hover:text-[#0d0d12] lg:hidden ${
-              pathname?.startsWith(withLocale("/settings")) ? "border-[#f0bfd8] bg-[#fff1f8] text-[#0d0d12]" : ""
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/88 text-[#666d80] shadow-[0_10px_30px_rgba(25,27,39,0.06)] backdrop-blur transition hover:border-white hover:text-[#0d0d12] lg:hidden ${
+              pathname?.startsWith(withLocale("/settings")) ? "bg-[#fff1f8] text-[#0d0d12]" : ""
             }`}
             aria-label={labels.settings}
             title={labels.settings}
@@ -183,7 +184,7 @@ export default function DashboardNav({
           {!hasProducts && (
             <Link
               href={withLocale("/onboarding")}
-              className="hidden h-9 items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:inline-flex"
+              className="hidden h-11 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] shadow-[0_10px_30px_rgba(25,27,39,0.08)] transition hover:bg-[#f5c8e4] sm:inline-flex"
             >
               {labels.newProduct}
             </Link>
@@ -192,7 +193,7 @@ export default function DashboardNav({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d0d12] text-[11px] font-bold text-white transition hover:bg-[#2e2e2e]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1d1d22] text-[11px] font-bold text-white shadow-[0_12px_30px_rgba(16,16,22,0.18)] transition hover:bg-[#2e2e2e]"
                 title={labels.account}
               >
                 {getInitials(userName)}
@@ -226,7 +227,7 @@ export default function DashboardNav({
       </div>
 
       {/* Mobile bottom nav */}
-      <div className="border-t border-[#e8e8e8] px-4 pb-2 lg:hidden">
+      <div className="px-4 pb-2 lg:hidden">
         <nav className="flex gap-1 overflow-x-auto pt-2">
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -234,12 +235,12 @@ export default function DashboardNav({
               <Link
                 key={item.href}
                 href={withLocale(item.href)}
-                className={`flex h-[34px] items-center whitespace-nowrap rounded-full px-4 text-[12px] font-medium transition-colors ${
+                className={`flex h-[34px] items-center whitespace-nowrap rounded-full border px-4 text-[12px] font-medium shadow-[0_8px_24px_rgba(25,27,39,0.05)] backdrop-blur transition-colors ${
                   active
-                    ? "bg-[#ffd7ef] text-[#0d0d12]"
+                    ? "border-white/70 bg-[#ffd7ef] text-[#0d0d12]"
                     : item.preview
-                      ? "border border-dashed border-[#e8e8e8] text-[#8a8fa0]"
-                      : "border border-[#e8e8e8] text-[#666d80]"
+                      ? "border-dashed border-[#e8e8e8] bg-white/88 text-[#8a8fa0]"
+                      : "border-white/70 bg-white/88 text-[#666d80]"
                 }`}
               >
                 {item.label}

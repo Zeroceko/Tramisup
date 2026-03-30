@@ -64,7 +64,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
   // Empty state
   if (visibleTasks.length === 0 && totalPending === 0) {
     return (
-      <div className="rounded-[14px] border border-dashed border-[#e0e0e0] bg-[#fafafa] px-5 py-6 text-center">
+      <div className="rounded-[26px] border border-dashed border-[#dfe4eb] bg-white/72 px-5 py-7 text-center shadow-[0_14px_44px_rgba(23,20,31,0.05)] backdrop-blur">
         <p className="text-[13px] font-medium text-[#94a3b8]">
           {locale === "en"
             ? "No tasks yet. They appear as you work through your checklist."
@@ -77,7 +77,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
   // All completed in this session
   if (visibleTasks.length === 0) {
     return (
-      <div className="rounded-[14px] border border-[#d1fae5] bg-[#ecfdf5] px-5 py-5 text-center">
+      <div className="rounded-[26px] border border-[#d8f3e6] bg-[linear-gradient(135deg,#f4fff9_0%,#ecfdf5_100%)] px-5 py-6 text-center shadow-[0_14px_44px_rgba(23,20,31,0.05)]">
         <p className="text-[14px] font-semibold text-[#065f46]">
           {locale === "en" ? "All top tasks completed" : "Bugünkü öncelikli görevler tamamlandı"}
         </p>
@@ -92,10 +92,10 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
   }
 
   return (
-    <div>
+    <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur sm:p-6">
       {/* Section header */}
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6f7482]">
           {locale === "en" ? "Priority tasks" : "Öncelikli görevler"}
         </h3>
         {totalPending > visibleTasks.length && (
@@ -111,7 +111,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
       </div>
 
       {/* Task list */}
-      <ul className="space-y-2">
+      <ul className="space-y-2.5">
         {visibleTasks.map((task) => {
           const pri = PRIORITY_INDICATOR[task.priority];
           const overdue = isOverdue(task.dueDate);
@@ -120,7 +120,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
           return (
             <li
               key={task.id}
-              className={`group flex items-start gap-3 rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 transition ${
+              className={`group flex items-start gap-3 rounded-[20px] border border-[#edf0f4] bg-[linear-gradient(180deg,#ffffff_0%,#fbfbfd_100%)] px-4 py-3.5 transition ${
                 completing ? "opacity-50" : "hover:border-[#d0d0d0]"
               }`}
             >
@@ -142,7 +142,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
 
               {/* Task content */}
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-medium text-[#0d0d12] leading-snug">
+                <p className="text-[13px] font-semibold leading-snug text-[#0d0d12]">
                   {task.title}
                 </p>
                 <div className="mt-1 flex items-center gap-2 flex-wrap">

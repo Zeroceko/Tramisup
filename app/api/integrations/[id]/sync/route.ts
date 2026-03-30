@@ -35,10 +35,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     let syncMode: MetricSyncMode = "merge";
+    let historyDays = 365;
     try {
       const body = await request.json();
       if (body?.syncMode === "overwrite" || body?.syncMode === "missing_dates" || body?.syncMode === "merge") {
         syncMode = body.syncMode;
+      }
+      if (typeof body?.historyDays === "number" && Number.isFinite(body.historyDays)) {
+        historyDays = Math.max(30, Math.min(Math.floor(body.historyDays), 1095));
       }
     } catch {
       // No body provided
@@ -57,7 +61,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (integration.provider === "STRIPE") {
         recordsSynced = await syncStripe(integration.productId, integration.config);
       } else if (integration.provider === "GA4") {
-        recordsSynced = await syncGa4(integration.productId, integration.config, syncMode);
+        recordsSynced = await syncGa4(integration.productId, integration.config, syncMode, historyDays);
       } else {
         throw new Error("Provider sync algorithm not implemented");
       }

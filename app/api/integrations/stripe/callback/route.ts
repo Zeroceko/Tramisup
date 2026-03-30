@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAppBaseUrl } from "@/lib/app-urls";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,25 +12,25 @@ export async function GET(req: NextRequest) {
     const error = searchParams.get("error");
     const error_description = searchParams.get("error_description");
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002";
+    const appBaseUrl = getAppBaseUrl();
 
     if (error || !code || !state) {
       console.error("Stripe Callback Denied:", error_description);
-      return NextResponse.redirect(`${baseUrl}/tr/integrations?error=stripe_denied`);
+      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=stripe_denied`);
     }
 
     const { productId, userId } = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product || product.userId !== userId) {
-      return NextResponse.redirect(`${baseUrl}/tr/integrations?error=unauthorized_product`);
+      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=unauthorized_product`);
     }
 
     // Typically STRIPE_SECRET_KEY is the standard platform key
     const secretKey = process.env.STRIPE_SECRET_KEY; 
 
     if (!secretKey) {
-      return NextResponse.redirect(`${baseUrl}/tr/integrations?error=missing_stripe_secret`);
+      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=missing_stripe_secret`);
     }
 
     const tokenRes = await fetch("https://connect.stripe.com/oauth/token", {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     if (tokenData.error) {
        console.error("Stripe Token Exch error:", tokenData);
-       return NextResponse.redirect(`${baseUrl}/tr/integrations?error=exchange_failed`);
+       return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=exchange_failed`);
     }
 
     // Upsert integration with Stripe specific credentials
@@ -77,11 +78,11 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    return NextResponse.redirect(`${baseUrl}/tr/integrations?success=stripe_connected`);
+    return NextResponse.redirect(`${appBaseUrl}/tr/integrations?success=stripe_connected`);
 
   } catch(e) {
     console.error("Stripe callback crash", e);
-    const fallback = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002";
+    const fallback = getAppBaseUrl();
     return NextResponse.redirect(`${fallback}/tr/integrations?error=oauth_crash`);
   }
 }

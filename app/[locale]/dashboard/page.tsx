@@ -44,6 +44,11 @@ function buildStatusLine(
   const isEn = locale === "en";
 
   if (phase === "pre-launch") {
+    if (launchStatus === "Fikir aşamasında") {
+      return isEn
+        ? "Idea phase — validate the problem before you scale preparation."
+        : "Fikir aşaması — hazırlığı büyütmeden önce problemi doğrula.";
+    }
     if (blockerCount > 0 && daysUntilLaunch != null && daysUntilLaunch > 0) {
       return isEn
         ? `${daysUntilLaunch} days to launch. ${blockerCount} blocker${blockerCount > 1 ? "s" : ""} remaining.`
@@ -230,7 +235,12 @@ export default async function DashboardPage({
   const resolvedSearch = (await searchParams) ?? {};
   const justLaunched = resolvedSearch.justLaunched === "1";
   const session = await getServerSession(authOptions);
-  const isEn = locale === "en";
+  const preferredLocale = (session?.user as { preferredLocale?: string } | undefined)?.preferredLocale;
+  const uiLocale =
+    preferredLocale === "tr" || preferredLocale === "en"
+      ? preferredLocale
+      : locale;
+  const isEn = uiLocale === "en";
 
   // ---- Product resolution ----
   const activeId = await getActiveProductId();
@@ -267,9 +277,9 @@ export default async function DashboardPage({
           productName={isEn ? "Welcome" : "Hoş geldin"}
           phase="pre-launch"
           statusLine={isEn ? "Create your first product to get started." : "Başlamak için ilk ürününü oluştur."}
-          locale={locale}
+          locale={uiLocale}
         />
-        <FirstRunOnboarding locale={locale} userName={session?.user?.name} userEmail={session?.user?.email} />
+        <FirstRunOnboarding locale={uiLocale} userName={session?.user?.name} userEmail={session?.user?.email} />
       </div>
     );
   }
@@ -374,11 +384,11 @@ export default async function DashboardPage({
         selectedMetricCount,
         enteredToday,
         funnelOverall: null, // TODO: wire buildFunnelHealthSummary when entries exist
-        locale,
+        locale: uiLocale,
       });
 
   // ---- Primary action ----
-  const primaryAction = buildPrimaryAction(phase, locale, {
+  const primaryAction = buildPrimaryAction(phase, uiLocale, {
     readinessScore,
     launchCompleted: completedLaunchChecklists,
     launchTotal,
@@ -391,7 +401,7 @@ export default async function DashboardPage({
   });
 
   // ---- Decision strip indicators ----
-  const indicators = buildIndicators(phase, locale, {
+  const indicators = buildIndicators(phase, uiLocale, {
     readinessScore,
     growthScore,
     totalPending,
@@ -420,55 +430,70 @@ export default async function DashboardPage({
         productName={product.name}
         phase={product.status === ProductStatus.GROWING ? "growing" : phase}
         statusLine={statusLine}
-        locale={locale}
+        locale={uiLocale}
       />
 
       {/* 2. Launch moment banner — shown once after launch */}
       {justLaunched && (
-        <LaunchMomentBanner locale={locale} productName={product.name} />
+        <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
-      {/* 3. Primary Action — the dominant card */}
-      <PrimaryAction
-        title={primaryAction.title}
-        description={primaryAction.description}
-        why={primaryAction.why}
-        cta={primaryAction.cta}
-        href={primaryAction.href}
-        accent={primaryAction.accent}
-        progress={primaryAction.progress}
-      />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+        <PrimaryAction
+          title={primaryAction.title}
+          description={primaryAction.description}
+          why={primaryAction.why}
+          cta={primaryAction.cta}
+          href={primaryAction.href}
+          accent={primaryAction.accent}
+          progress={primaryAction.progress}
+        />
 
-      {/* 3. Decision Strip — compact health indicators */}
-      <DecisionStrip indicators={indicators} />
-
-      {/* 4. Blockers — only if they exist */}
-      <BlockerAlert blockers={blockers} locale={locale} />
-
-      {/* 5. Today's Focus — split layout */}
-      <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        {/* Left: priority tasks */}
-        <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
-
-        {/* Right: source health (only post-launch with metrics) */}
-        {isLaunched && selectedMetricCount > 0 && (
-          <SourceHealth
-            connectedCount={connectedCount}
-            errorCount={errorCount}
-            totalMetrics={selectedMetricCount}
-            automatedMetrics={0}
-            enteredToday={enteredToday}
-            locale={locale}
-          />
-        )}
+        <CoachInsight
+          productId={product.id}
+          stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
+          locale={uiLocale}
+        />
       </section>
 
-      {/* 6. Coach — collapsed by default, user triggers it */}
-      <CoachInsight
-        productId={product.id}
-        stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
-        locale={locale}
-      />
+      {/* 4. Blockers — only if they exist */}
+      <BlockerAlert blockers={blockers} locale={uiLocale} />
+
+      {/* 5. Board layout — KPI strip + work surfaces */}
+      <section className="space-y-4">
+        <DecisionStrip indicators={indicators} />
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
+
+          <div className="space-y-4">
+            {isLaunched && selectedMetricCount > 0 ? (
+              <SourceHealth
+                connectedCount={connectedCount}
+                errorCount={errorCount}
+                totalMetrics={selectedMetricCount}
+                automatedMetrics={0}
+                enteredToday={enteredToday}
+                locale={uiLocale}
+              />
+            ) : (
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                  {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
+                </p>
+                <h3 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                  {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
+                </h3>
+                <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
+                  {uiLocale === "en"
+                    ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
+                    : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

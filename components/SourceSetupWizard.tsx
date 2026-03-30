@@ -56,6 +56,13 @@ type WizardProps = {
   onClose: () => void;
 };
 
+const GA4_HISTORY_OPTIONS = [
+  { value: 30, label: "Son 30 gün" },
+  { value: 90, label: "Son 90 gün" },
+  { value: 365, label: "Son 12 ay" },
+  { value: 1095, label: "Mümkün olan en geniş aralık" },
+] as const;
+
 // ─── Step definitions ────────────────────────────────────────────────────────
 
 function getSteps(provider: "GA4" | "STRIPE"): SetupStep[] {
@@ -87,7 +94,7 @@ const PROVIDER_META = {
     validateTitle: "Veri doğrulama",
     validateDesc: "Bağlantı ve veri erişimini kontrol ediyoruz. Bu adım gerçek veri çekmeyi denemeden önce her şeyin hazır olduğunu doğrular.",
     syncTitle: "İlk veri çekimi",
-    syncDesc: "Son 14 günlük GA4 verisini içeri alıyoruz. DAU, toplam kullanıcı ve yeni kullanıcı verileri otomatik olarak kaydedilir.",
+    syncDesc: "GA4 verisini geniş tarih aralığıyla içeri alıyoruz. Varsayılan olarak son 12 ayın verisi çekilir; DAU, toplam kullanıcı ve yeni kullanıcı verileri otomatik kaydedilir.",
     doneTitle: "GA4 hazır",
     doneDesc: "Google Analytics bağlantısı kuruldu, doğrulandı ve ilk veri çekimi tamamlandı. Metrikler artık otomatik olarak güncellenecek.",
     metrics: ["DAU (günlük aktif kullanıcı)", "Toplam kullanıcı", "Yeni kullanıcılar", "Retention sinyalleri"],
@@ -122,8 +129,8 @@ const ERROR_GUIDANCE: Record<string, { title: string; action: string }> = {
     action: "Google hesabında GA4 verilerine erişim izni olduğundan emin ol. Gerekirse yeniden bağlan.",
   },
   NO_DATA: {
-    title: "Kaynak boş görünüyor",
-    action: "Seçili property/hesapta veri bulunmuyor. Doğru kaynağı seçtiğinden emin ol.",
+    title: "Henüz veri görünmüyor",
+    action: "Property yeni olabilir. Erişim doğruysa bağlantı yine geçerlidir; veri geldikçe sync kayıt oluşturmaya başlar.",
   },
   WRONG_PROPERTY: {
     title: "Seçili property erişilemiyor",
@@ -162,6 +169,7 @@ export default function SourceSetupWizard({
   const [properties, setProperties] = useState<Ga4Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>(initialPropertyId ?? "");
   const [syncResult, setSyncResult] = useState<{ recordsSynced: number } | null>(null);
+  const [ga4HistoryDays, setGa4HistoryDays] = useState<number>(365);
 
   const stepIndex = steps.indexOf(currentStep);
   const progress = ((stepIndex + 1) / steps.length) * 100;
@@ -243,7 +251,10 @@ export default function SourceSetupWizard({
       const res = await fetch(`/api/integrations/${integrationId}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(syncMode ? { syncMode } : {}),
+        body: JSON.stringify({
+          ...(syncMode ? { syncMode } : {}),
+          ...(provider === "GA4" ? { historyDays: ga4HistoryDays } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.details);
@@ -510,7 +521,9 @@ export default function SourceSetupWizard({
                   Veri önizleme
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  {Object.entries(validation.preview).map(([key, value]) => (
+                  {Object.entries(validation.preview)
+                    .filter(([key]) => key !== "hasHistoricalData")
+                    .map(([key, value]) => (
                     <div key={key}>
                       <p className="text-[11px] text-[#666d80]">{formatPreviewKey(key)}</p>
                       <p className="text-[16px] font-semibold text-[#0d0d12]">
@@ -519,6 +532,15 @@ export default function SourceSetupWizard({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {provider === "GA4" && validation.preview && !validation.preview.hasHistoricalData && (
+              <div className="rounded-[12px] border border-[#bfdbfe] bg-[#eff6ff] p-4">
+                <p className="text-[13px] font-semibold text-[#1d4ed8]">Property yeni görünüyor</p>
+                <p className="mt-1 text-[12px] leading-5 text-[#1d4ed8]/80">
+                  Erişim doğru ve property seçimi geçerli. Henüz geçmiş veri yoksa bu bağlantıyı engellemez; veri geldikçe sync otomatik kayıt oluşturmaya başlayacak.
+                </p>
               </div>
             )}
 
@@ -629,10 +651,32 @@ export default function SourceSetupWizard({
             {/* What will happen */}
             <div className="rounded-[14px] bg-[#f7f9fa] p-4">
               <p className="text-[12px] font-semibold text-[#0d0d12]">Sync sırasında ne olacak?</p>
+              {provider === "GA4" && (
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-[12px] font-semibold text-[#0d0d12]">
+                    Ne kadar geçmiş veri çekelim?
+                  </label>
+                  <select
+                    value={ga4HistoryDays}
+                    onChange={(event) => setGa4HistoryDays(Number(event.target.value))}
+                    className="w-full rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
+                  >
+                    {GA4_HISTORY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-[12px] leading-5 text-[#666d80]">
+                    Seçtiğin aralık üst sınırdır. Kaynakta daha az veri varsa sistem mevcut olan tüm günleri alır; eksik günler yüzünden hata vermez.
+                  </p>
+                </div>
+              )}
               <ul className="mt-2 space-y-1.5">
                 {provider === "GA4" ? (
                   <>
-                    <li className="text-[12px] leading-5 text-[#666d80]">• Son 14 günlük veri çekilir</li>
+                    <li className="text-[12px] leading-5 text-[#666d80]">• Seçtiğin aralığa kadar veri istenir</li>
+                    <li className="text-[12px] leading-5 text-[#666d80]">• Kaynakta daha az veri varsa mevcut olan günler eksiksiz alınır</li>
                     <li className="text-[12px] leading-5 text-[#666d80]">• DAU, toplam kullanıcı ve yeni kullanıcı kaydedilir</li>
                     <li className="text-[12px] leading-5 text-[#666d80]">• Seçtiğin moda göre mevcut veriler güncellenir</li>
                   </>

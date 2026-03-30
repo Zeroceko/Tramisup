@@ -6,10 +6,13 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import MetricsTrendChart from "@/components/MetricsTrendChart";
 import PageHeader from "@/components/PageHeader";
+import MetricSetupSelector from "@/components/MetricSetupSelector";
+import GrowthIntegrationRecommendations from "@/components/GrowthIntegrationRecommendations";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelStageKey } from "@/lib/metric-setup";
+import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
 
 function formatMetricValue(value: number | null | undefined) {
   if (value == null) return "—";
@@ -69,6 +72,17 @@ export default async function MetricsPage({
     );
   }
 
+  const connectedIntegrations = await prisma.integration.findMany({
+    where: {
+      productId: product.id,
+      status: "CONNECTED",
+    },
+    select: {
+      provider: true,
+    },
+  });
+  const connectedSourceCount = connectedIntegrations.length;
+
   const metricPlan = getGrowthMetricRecommendations({
     name: product.name,
     status: product.status,
@@ -103,6 +117,11 @@ export default async function MetricsPage({
     date: entry.date.slice(5),
     ...entry.values,
   }));
+  const integrationRecommendations = getRecommendedIntegrationsForSetup({
+    setup: savedSetup,
+    plan: metricPlan,
+    connectedProviders: connectedIntegrations.map((integration) => integration.provider),
+  });
 
   const dataState: "no_setup" | "first_entry" | "building" | "active" =
     selectedMetrics.length === 0
@@ -144,43 +163,83 @@ export default async function MetricsPage({
 
   const headerTitle =
     dataState === "no_setup"
-      ? "Metrik kurulumu yok"
+      ? "Ölçüm sistemini kur"
       : dataState === "first_entry"
-      ? "İlk gününü kaydet"
+      ? "İlk baz çizgisini kaydet"
       : dataState === "building"
-      ? "Baz çizgisi kuruluyor"
-      : "Funnel ritmi";
+      ? "Ölçüm sistemi kuruluyor"
+      : "Ölçüm sistemi";
 
   const headerDescription =
     dataState === "no_setup"
-      ? "Önce growth ekranında hangi metrikleri takip edeceğini seç."
+      ? "Tiramisup'un neyi okuyacağını burada tanımlarsın. Takip edeceğin metrikler, kaynak uyumu ve veri akışı bu çalışma alanında yönetilir."
       : dataState === "first_entry"
-      ? `${selectedMetrics.length} metrik seçildi. Bugünkü değerleri gir — bu değerler baz çizgini oluşturacak.`
+      ? `${selectedMetrics.length} metrik seçili. İlk gerçek değerleri girerek baz çizgini oluştur.`
       : dataState === "building"
-      ? `${entryCount} giriş var. ${5 - entryCount} giriş daha sonra trend grafiği açılır.`
-      : `${product.name} · ${selectedMetrics.length} metrik, ${entryCount} giriş takip ediliyor.`;
+      ? `${entryCount} giriş var. Trend ve ritim yorumları düzenli veri geldikçe daha güvenilir olacak.`
+      : `${product.name} için ${selectedMetrics.length} metrik seçili. Veri akışı, son girişler ve trendler burada yönetiliyor.`;
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Growth metrikleri"
+        eyebrow="Ölçüm sistemi"
         title={headerTitle}
         description={headerDescription}
       />
 
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Takip edilen sinyal</p>
+          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+            {selectedMetrics.length > 0 ? `${selectedMetrics.length} metrik seçili` : "Henüz seçim yok"}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+            AARRR boyunca hangi sayıları izleyeceğini burada düzenlersin.
+          </p>
+        </div>
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Kaynak durumu</p>
+          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+            {connectedSourceCount > 0 ? `${connectedSourceCount} kaynak bağlı` : "Kaynak bağlı değil"}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+            Otomatik veri akışı ve manuel giriş dengesi burada şekillenir.
+          </p>
+        </div>
+        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Veri ritmi</p>
+          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+            {entryCount > 0 ? `${entryCount} giriş kaydedildi` : "Henüz veri yok"}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
+            Growth yorumları bu ritim oturdukça daha güvenilir hale gelir.
+          </p>
+        </div>
+      </div>
+
+      <MetricSetupSelector
+        productId={product.id}
+        plan={metricPlan}
+        initialSetup={savedSetup}
+        locale={locale}
+        connectedProviders={connectedIntegrations.map((integration) => integration.provider)}
+      />
+
+      {selectedMetrics.length > 0 && (
+        <GrowthIntegrationRecommendations
+          metricRecommendations={integrationRecommendations.metricRecommendations}
+          uncoveredMetricNames={integrationRecommendations.uncoveredMetricNames}
+          locale={locale}
+        />
+      )}
+
       {/* no_setup state */}
       {dataState === "no_setup" && (
-        <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-white p-10 text-center">
-          <p className="text-[15px] font-semibold text-[#0d0d12]">Henüz metrik setup&apos;ı yok</p>
-          <p className="mt-2 text-[13px] leading-5 text-[#666d80]">
-            Her AARRR aşaması için bir ana metrik seç. Sonra burada günlük değer gireceksin.
+        <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-white p-8">
+          <p className="text-[15px] font-semibold text-[#0d0d12]">İlk iş: ölçüm yapısını netleştir</p>
+          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+            Growth ekranında yorum ve öncelik görürsün. Ama o yorumun güvenilir olması için önce burada neyi ölçtüğünü seçmen gerekir.
           </p>
-          <a
-            href={`/${locale}/growth`}
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
-          >
-            Büyüme setup&apos;ına git
-          </a>
         </div>
       )}
 
@@ -215,6 +274,22 @@ export default async function MetricsPage({
               <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
                 Trend grafiği, zayıf halka tespiti ve büyüme ritmi görünür hale gelir.
               </p>
+            </div>
+            <div className="mt-3 rounded-[12px] border border-[#d7efef] bg-[#f4fbfb] p-4">
+              <p className="text-[12px] font-semibold text-[#0d0d12]">
+                Kaynak bağlayarak bunu hızlandırabilirsin
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-[#6a7283]">
+                {connectedSourceCount > 0
+                  ? "Bağlı kaynakların oldukça veri akışı daha düzenli olur. İstersen integrations ekranından yeni kaynak ekleyip manuel giriş yükünü azaltabilirsin."
+                  : "GA4 veya Stripe gibi kaynaklar bağlandığında veriler daha hızlı ve daha doğru akar. Böylece sadece sayı girmek yerine sinyallere göre aksiyon alman kolaylaşır."}
+              </p>
+              <a
+                href={`/${locale}/integrations`}
+                className="mt-3 inline-flex h-9 items-center justify-center rounded-full border border-[#0d0d12] bg-white px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#0d0d12] hover:text-white"
+              >
+                Entegrasyonlara git
+              </a>
             </div>
           </div>
         </div>

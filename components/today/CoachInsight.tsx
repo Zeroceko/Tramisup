@@ -31,16 +31,16 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
       <button
         type="button"
         onClick={handleAsk}
-        className="group w-full rounded-[14px] border border-dashed border-[#e0e0e0] bg-[#fafafa] px-5 py-4 text-left transition hover:border-[#c45d97]/40 hover:bg-[#fdf6fa]"
+        className="group w-full rounded-[26px] border border-dashed border-[#eadde6] bg-white/76 px-5 py-5 text-left shadow-[0_14px_44px_rgba(23,20,31,0.05)] backdrop-blur transition hover:border-[#c45d97]/40 hover:bg-[#fff8fb]"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fdf2f8] text-[#c45d97] transition group-hover:bg-[#fce7f3]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdf2f8] text-[#c45d97] transition group-hover:bg-[#fce7f3]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
           </span>
           <div>
-            <p className="text-[13px] font-semibold text-[#0d0d12]">
+            <p className="text-[14px] font-semibold text-[#0d0d12]">
               {isEn ? "Ask Tiramisup" : "Tiramisup'a sor"}
             </p>
             <p className="text-[11px] text-[#94a3b8]">
@@ -56,7 +56,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
 
   // Expanded state — loading or response
   return (
-    <div className="rounded-[14px] border border-[#f3e8ef] bg-gradient-to-br from-[#fdf9fb] to-[#fdf2f8] p-5">
+    <div className="rounded-[28px] border border-[#f3e8ef] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_transparent_26%),linear-gradient(135deg,#fefbfc_0%,#fdf7fa_55%,#fdf2f8_100%)] p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)]">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fce7f3] text-[#c45d97]">

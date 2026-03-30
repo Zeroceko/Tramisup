@@ -25,6 +25,8 @@ type PostSave = {
   droppedStage: FunnelStageKey | null;
 };
 
+const DECIMAL_METRIC_KEYS = new Set(["mrr", "arpu"]);
+
 const STAGE_ACTION_HINTS: Partial<Record<FunnelStageKey, string>> = {
   Awareness: "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
   Acquisition: "Landing page dönüşümünü test et. Signup adımlarını azalt.",
@@ -42,6 +44,10 @@ const FUNNEL_ORDER: FunnelStageKey[] = [
   "Referral",
   "Revenue",
 ];
+
+function metricAllowsDecimals(metric: SelectedMetricField) {
+  return metric.stage === "Revenue" && DECIMAL_METRIC_KEYS.has(metric.metricKey);
+}
 
 function computeDeltas(
   submitted: Record<string, string>,
@@ -114,6 +120,22 @@ export default function MetricEntryForm({
       setError("Tüm metriklere bugünkü değeri gir.");
       return;
     }
+
+    for (const metric of selectedMetrics) {
+      const rawValue = formData.values[metric.stage];
+      const numericValue = Number(rawValue);
+
+      if (Number.isNaN(numericValue) || numericValue < 0) {
+        setError(`${metric.metricName} için geçerli bir sayı gir.`);
+        return;
+      }
+
+      if (!metricAllowsDecimals(metric) && !Number.isInteger(numericValue)) {
+        setError(`${metric.metricName} için sadece tam sayı girebilirsin.`);
+        return;
+      }
+    }
+
     setLoading(true);
     setError("");
     setPostSave(null);
@@ -303,6 +325,7 @@ export default function MetricEntryForm({
         {/* Per-metric inputs */}
         {selectedMetrics.map((metric) => {
           const lastVal = latestEntry?.values?.[metric.stage];
+          const allowsDecimals = metricAllowsDecimals(metric);
           return (
             <div key={metric.stage}>
               <label className="mb-1 block text-[11px] font-semibold text-[#666d80]">
@@ -315,8 +338,9 @@ export default function MetricEntryForm({
               )}
               <input
                 type="number"
-                step="0.01"
+                step={allowsDecimals ? "0.01" : "1"}
                 min="0"
+                inputMode={allowsDecimals ? "decimal" : "numeric"}
                 value={formData.values[metric.stage] ?? ""}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -327,6 +351,11 @@ export default function MetricEntryForm({
                 placeholder={lastVal !== undefined ? String(lastVal) : "0"}
                 className={inputCls}
               />
+              {!allowsDecimals && (
+                <p className="mt-1 text-[11px] text-[#8a8fa0]">
+                  Bu alan sadece tam sayı kabul eder.
+                </p>
+              )}
             </div>
           );
         })}

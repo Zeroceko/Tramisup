@@ -104,12 +104,26 @@
     "title": "Create workspace for your launch team",
     "subtitle": "Create your account and start with launch planning; expand to metrics and growth routines.",
     "name": "Full Name",
+    "productType": "Product Type",
+    "accessCode": "Early Access Code",
     "namePlaceholder": "Ada Lovelace",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
     "password": "Password",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password",
     "passwordPlaceholder": "Min. 8 characters",
-    "passwordHint": "Your password must be at least 8 characters.",
+    "passwordHint": "Your password must be at least 8 characters and include a number and a special character.",
+    "stepTwoTitle": "Set your password",
+    "stepTwoSubtitle": "Choose a strong password for your account.",
+    "passwordChecklist": {
+      "title": "Password requirements",
+      "minLength": "At least 8 characters",
+      "number": "At least 1 number",
+      "special": "At least 1 special character"
+    },
+    "continueButton": "Continue",
+    "backButton": "Back",
     "createAccount": "Create Account",
     "creating": "Creating account…",
     "haveAccount": "Already have an account?",
@@ -135,6 +149,9 @@
       "notApproved": "Your account hasn't been approved yet. You'll receive an email soon. Please check back.",
       "createFailed": "Could not create account",
       "loginAfterCreate": "Account created but login failed. Please try the login screen.",
+      "requiredFields": "Please complete all required fields.",
+      "invalidEmail": "Enter a valid email address.",
+      "passwordsMismatch": "Passwords don't match.",
       "generic": "An error occurred. Please try again."
     }
   },
@@ -148,6 +165,8 @@
     "passwordPlaceholder": "••••••••",
     "loginButton": "Log In",
     "loggingIn": "Logging in…",
+    "forgotPassword": "Forgot password?",
+    "resetSuccess": "Your password has been updated. You can log in with your new password now.",
     "noAccount": "Don't have an account?",
     "signupHere": "Sign up",
     "sidebarTitle": "Your single workspace from\nlaunch to growth.",
@@ -159,6 +178,42 @@
     ],
     "errors": {
       "wrongCredentials": "Incorrect email or password",
+      "generic": "An error occurred. Please try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "subtitle": "Enter your email and we'll send you a secure reset link.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "submit": "Send reset link",
+    "sending": "Sending…",
+    "success": "If this email belongs to an account, we've sent a password reset link.",
+    "backToLogin": "Back to login",
+    "errors": {
+      "generic": "We couldn't send the reset email. Please try again."
+    }
+  },
+  "resetPassword": {
+    "title": "Create a new password",
+    "subtitle": "Choose a stronger password for your account.",
+    "password": "New password",
+    "passwordPlaceholder": "Min. 8 characters",
+    "confirmPassword": "Confirm new password",
+    "confirmPasswordPlaceholder": "Repeat new password",
+    "submit": "Update password",
+    "submitting": "Updating…",
+    "backToLogin": "Back to login",
+    "passwordChecklist": {
+      "title": "Password requirements",
+      "minLength": "At least 8 characters",
+      "number": "At least 1 number",
+      "special": "At least 1 special character"
+    },
+    "errors": {
+      "invalidToken": "This reset link is missing or invalid.",
+      "passwordRules": "Your password must be at least 8 characters and include a number and a special character.",
+      "passwordsMismatch": "Passwords don't match.",
       "generic": "An error occurred. Please try again."
     }
   },

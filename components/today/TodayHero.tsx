@@ -56,20 +56,20 @@ export default function TodayHero({
   const phaseLabel = locale === "en" ? phaseConfig.labelEn : phaseConfig.label;
 
   return (
-    <div className="mb-6">
+    <div className="mb-7 rounded-[28px] border border-white/65 bg-white/76 px-6 py-6 shadow-[0_18px_60px_rgba(26,24,35,0.08)] backdrop-blur sm:px-7 sm:py-7">
       {/* Greeting */}
-      <p className="text-[14px] text-[#666d80]">
+      <p className="text-[13px] font-medium text-[#6f7482]">
         {greeting}
         {userName ? `, ${userName}` : ""}
       </p>
 
       {/* Product name + phase badge */}
-      <div className="mt-1.5 flex items-center gap-3 flex-wrap">
-        <h1 className="text-[28px] font-bold text-[#0d0d12] tracking-[-0.03em] leading-tight">
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.04em] text-[#131319] sm:text-[40px]">
           {productName}
         </h1>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${phaseConfig.bg}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)] ${phaseConfig.bg}`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${phaseConfig.dot}`} />
           {phaseLabel}
@@ -77,7 +77,7 @@ export default function TodayHero({
       </div>
 
       {/* Status line — the one-sentence state of the product */}
-      <p className="mt-2 text-[14px] leading-6 text-[#5e6678] max-w-2xl">
+      <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#5e6678]">
         {statusLine}
       </p>
     </div>

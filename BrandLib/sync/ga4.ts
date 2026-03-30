@@ -8,7 +8,8 @@ import type { MetricSyncMode } from '@/lib/sync-to-metric-entry';
 export async function syncGa4(
   productId: string,
   configData: string,
-  mode: MetricSyncMode = "merge"
+  mode: MetricSyncMode = "merge",
+  historyDays = 365,
 ): Promise<number> {
   const config = JSON.parse(configData);
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -26,12 +27,13 @@ export async function syncGa4(
       : (await getDefaultGa4Property(configData)).propertyId;
 
   const analyticsDataClient = new BetaAnalyticsDataClient({ authClient: oauth2Client });
+  const normalizedHistoryDays = Math.max(30, Math.min(historyDays, 1095));
 
   const [response] = await analyticsDataClient.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [
       {
-        startDate: '14daysAgo',
+        startDate: `${normalizedHistoryDays}daysAgo`,
         endDate: 'today',
       },
     ],

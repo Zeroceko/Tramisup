@@ -23,7 +23,7 @@ export default function BlockerAlert({ blockers, locale }: BlockerAlertProps) {
       : `${blockers.length} kritik blokaj dikkatini bekliyor`;
 
   return (
-    <div className="rounded-[14px] border border-[#fde68a] bg-[#fffdf5] px-5 py-4">
+    <div className="rounded-[26px] border border-[#f6df9c] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_transparent_24%),linear-gradient(135deg,#fffef8_0%,#fffbee_58%,#fff7da_100%)] px-5 py-4 shadow-[0_16px_44px_rgba(23,20,31,0.06)]">
       {/* Header */}
       <div className="flex items-center gap-2">
         <svg

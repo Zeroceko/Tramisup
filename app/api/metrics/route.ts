@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import type { FunnelStageKey } from "@/lib/metric-setup";
 import { saveMetricEntry } from "@/lib/metric-setup";
 
+const DECIMAL_METRIC_KEYS = new Set(["mrr", "arpu"]);
+
+function stageAllowsDecimals(stage: FunnelStageKey, metricKey: string | null | undefined) {
+  return stage === "Revenue" && !!metricKey && DECIMAL_METRIC_KEYS.has(metricKey);
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,9 +39,34 @@ export async function POST(request: Request) {
 
     const setup = await prisma.metricSetup.findUnique({
       where: { productId },
+      select: {
+        selections: true,
+      },
     });
     if (!setup) {
       return NextResponse.json({ error: "Önce metrik setup'ını oluştur" }, { status: 400 });
+    }
+
+    const selections =
+      (setup.selections as Array<{ stage: FunnelStageKey; selectedMetricKeys: string[] }>) ?? [];
+    const selectedMetricKeyByStage = new Map(
+      selections.map((selection) => [selection.stage, selection.selectedMetricKeys[0] ?? null] as const)
+    );
+
+    for (const [stageKey, value] of Object.entries(values)) {
+      const numericValue = Number(value);
+      const stage = stageKey as FunnelStageKey;
+
+      if (Number.isNaN(numericValue) || numericValue < 0) {
+        return NextResponse.json({ error: "Geçersiz metrik değeri" }, { status: 400 });
+      }
+
+      if (!stageAllowsDecimals(stage, selectedMetricKeyByStage.get(stage)) && !Number.isInteger(numericValue)) {
+        return NextResponse.json(
+          { error: `${stage} aşaması için yalnızca tam sayı kaydedebilirsin.` },
+          { status: 400 }
+        );
+      }
     }
 
     const sanitizedValues = Object.fromEntries(

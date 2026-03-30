@@ -30,6 +30,8 @@ type ProductInput = {
   businessModel?: string | null;
   website?: string | null;
   description?: string | null;
+  platforms?: string[] | null;
+  goalKey?: string | null;
 };
 
 function isB2B(p: ProductInput) {
@@ -42,10 +44,34 @@ function isContentDriven(p: ProductInput) {
   return /content|newsletter|media|community|creator|blog/.test(h);
 }
 
+function isMobileProduct(p: ProductInput) {
+  const h = `${p.category ?? ""} ${(p.platforms ?? []).join(" ")} ${p.description ?? ""}`.toLowerCase();
+  return /mobil|mobile|ios|android|app/.test(h);
+}
+
+function prefersRevenueSignal(p: ProductInput) {
+  const h = `${p.businessModel ?? ""} ${p.goalKey ?? ""}`.toLowerCase();
+  return /abonelik|subscription|freemium|trial|revenue|get_first_revenue/.test(h);
+}
+
+function prefersActivationSignal(p: ProductInput) {
+  const h = `${p.goalKey ?? ""} ${p.description ?? ""}`.toLowerCase();
+  return /validate_product|reach_first_value_usage|onboarding|activation|aha/.test(h);
+}
+
+function prefersRetentionSignal(p: ProductInput) {
+  const h = `${p.goalKey ?? ""}`.toLowerCase();
+  return /build_growth_rhythm/.test(h);
+}
+
 export function getGrowthMetricRecommendations(product: ProductInput): GrowthMetricPlan {
   const b2b = isB2B(product);
   const content = isContentDriven(product);
+  const mobile = isMobileProduct(product);
   const preLaunch = product.status === ProductStatus.PRE_LAUNCH;
+  const revenueFocused = prefersRevenueSignal(product);
+  const activationFocused = prefersActivationSignal(product);
+  const retentionFocused = prefersRetentionSignal(product);
 
   return {
     summary: preLaunch
@@ -63,7 +89,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Landing page veya ana sitene gelen toplam ziyaretçi sayısı.",
             whenToUse: "Web sitesi üzerinden ilgi topluyorsan. En evrensel ve ölçülmesi en kolay awareness metriği.",
             whenToAvoid: "Trafik kaynağını izlemeden sadece toplam ziyareti takip etme — kaynak kalitesi de önemli.",
-            recommended: !content,
+            recommended: !content && !mobile,
           },
           {
             key: "reach",
@@ -75,7 +101,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
               ? "İçerik, bülten veya topluluk odaklı büyüme yapıyorsan."
               : "Organik içerik, launch postu veya topluluk dağıtımı yapıyorsan.",
             whenToAvoid: "Erişim sayısı yüksek ama dönüşüm yoksa bu metrik tek başına anlam ifade etmez.",
-            recommended: content,
+            recommended: content || mobile,
           },
           {
             key: "ad-impressions",
@@ -98,7 +124,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Siteye gelenlerin ne kadarının kayıt veya talep bıraktığını gösterir.",
             whenToUse: "Landing page, waitlist veya signup akışın varsa. En net acquisition sinyali.",
             whenToAvoid: "Günde 10'dan az ziyaretçin varsa dönüşüm oranı istatistiksel anlam taşımaz.",
-            recommended: !preLaunch,
+            recommended: !preLaunch && !mobile,
           },
           {
             key: "waitlist-joins",
@@ -106,7 +132,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Launch öncesi ilgiyi ölçmek için en iyi erken sinyallerden biri.",
             whenToUse: "Henüz herkese açık değilsen ya da launch öncesi talep doğrulamak istiyorsan.",
             whenToAvoid: "Launch sonrasında bu metriğin yerine signup dönüşümüne geç.",
-            recommended: preLaunch,
+            recommended: preLaunch || mobile,
           },
           {
             key: "cac",
@@ -128,7 +154,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Kayıt olanların ne kadarının gerçekten değerli ilk adıma ulaştığını ölçer.",
             whenToUse: "Tek bir erken başarı metriği seçmek istiyorsan. En evrensel aktivasyon sinyali.",
             whenToAvoid: "Neyin aktivasyon saydığı tanımlanmadan bu metriği takip etme.",
-            recommended: !b2b,
+            recommended: !b2b && activationFocused,
           },
           {
             key: "first-value-action",
@@ -138,7 +164,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
               : "Örn: ilk içerik oluşturma, ilk paylaşım, ilk hedef tamamlama.",
             whenToUse: "Ürünün 'aha moment' noktası net tanımlanabiliyorsa.",
             whenToAvoid: "Tek bir kritik ilk aksiyon yoksa ya da kullanıcılar farklı yollarla değer buluyorsa yanıltıcı olabilir.",
-            recommended: b2b,
+            recommended: b2b || (!activationFocused && (revenueFocused || retentionFocused)),
           },
           {
             key: "onboarding-completion",
@@ -160,7 +186,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Ürünün bir hafta içinde ne kadar tekrar kullanıldığını gösterir.",
             whenToUse: "Düzenli kullanım beklenen ürünlerde. Günlük aktif olmayan ama sık kullanılan araçlar için ideal.",
             whenToAvoid: "Kullanım doğası gereği aylık olan ürünlerde haftalık yerine aylık aktife bak.",
-            recommended: !content,
+            recommended: !content && !mobile && retentionFocused,
           },
           {
             key: "d1-d7-d30",
@@ -168,7 +194,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "İlk gün, hafta ve ay içinde geri dönen kullanıcı oranını takip et.",
             whenToUse: "Kullanıcıların geri gelip gelmediğini zaman bazlı görmek istiyorsan. İçerik ve medya için ideal.",
             whenToAvoid: "10'dan az kullanıcın varsa bu oran istatistiksel anlam taşımaz.",
-            recommended: content,
+            recommended: content || mobile || !retentionFocused,
           },
           {
             key: "churn",
@@ -200,7 +226,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             whenToUse: "Ürün doğası gereği paylaşılabilir veya ekip tabanlıysa.",
             whenToAvoid: "Ürün-pazar uyumu oturmadan viral katsayıyı optimize etmeye çalışma.",
             vanityWarning: "Viral katsayı hesaplamak için yeterli kullanıcı tabanı gerekir. Erken aşamada düşük K-faktörü yanıltıcı olabilir.",
-            recommended: b2b,
+            recommended: b2b || /invite|team|collaboration|ekip/.test(`${product.description ?? ""} ${product.category ?? ""}`.toLowerCase()),
           },
           {
             key: "invites-sent",
@@ -223,7 +249,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Her ay tekrar eden toplam geliri gösterir. Abonelik büyümesinin temel göstergesi.",
             whenToUse: "Abonelik veya düzenli ödeme modelin varsa. En evrensel gelir sinyali.",
             whenToAvoid: "Tek seferlik satışlarda MRR hesaplanamaz — aylık toplam geliri izle.",
-            recommended: true,
+            recommended: revenueFocused || /abonelik|subscription|recurring/.test(`${product.businessModel ?? ""}`.toLowerCase()),
           },
           {
             key: "trial-to-paid",
@@ -231,6 +257,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Deneme veya ücretsiz kullanıcıların ne kadarının ödeme yaptığını ölçer.",
             whenToUse: "Freemium veya trial modelin varsa. Ödeme niyetini ve ürün değerini doğrudan ölçer.",
             whenToAvoid: "Trial yoksa bu metrik anlam taşımaz.",
+            recommended: /freemium|trial/.test(`${product.businessModel ?? ""}`.toLowerCase()),
           },
           {
             key: "arpu",
@@ -238,6 +265,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: "Toplam gelirin kullanıcı veya hesap başına nasıl dağıldığını gösterir.",
             whenToUse: "Gelirin kalitesine — sadece toplamına değil — bakmak istiyorsan.",
             whenToAvoid: "Kullanıcı tabanı çok küçükken ARPU dalgalı ve yanıltıcı olur.",
+            recommended: /marketplace|kullanıma göre ödeme|usage|reklam|enterprise|kurumsal/.test(`${product.businessModel ?? ""}`.toLowerCase()),
           },
         ],
       },

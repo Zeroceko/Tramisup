@@ -104,12 +104,26 @@
     "title": "Launch ekibin için workspace oluştur",
     "subtitle": "Hesabını oluştur ve launch planlamasıyla başla; metrikler ve büyüme rutinlerine genişlet.",
     "name": "Ad Soyad",
+    "productType": "Ürün Tipi",
+    "accessCode": "Erken Erişim Kodu",
     "namePlaceholder": "Ada Lovelace",
     "email": "E-posta",
     "emailPlaceholder": "sen@ornek.com",
     "password": "Şifre",
+    "confirmPassword": "Şifreyi doğrula",
+    "confirmPasswordPlaceholder": "Şifreyi tekrar gir",
     "passwordPlaceholder": "En az 8 karakter",
-    "passwordHint": "Şifren en az 8 karakter olmalı.",
+    "passwordHint": "Şifren en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermeli.",
+    "stepTwoTitle": "Şifreni belirle",
+    "stepTwoSubtitle": "Hesabın için güçlü bir şifre seç.",
+    "passwordChecklist": {
+      "title": "Şifre gereksinimleri",
+      "minLength": "En az 8 karakter",
+      "number": "En az 1 sayı",
+      "special": "En az 1 özel karakter"
+    },
+    "continueButton": "Devam Et",
+    "backButton": "Geri",
     "createAccount": "Hesap Oluştur",
     "creating": "Hesap oluşturuluyor…",
     "haveAccount": "Zaten hesabın var mı?",
@@ -135,6 +149,9 @@
       "notApproved": "Hesabın henüz onaylanmamış. Yakında email alacaksın. Lütfen kontrol et.",
       "createFailed": "Hesap oluşturulamadı",
       "loginAfterCreate": "Hesap oluşturuldu ama giriş başarısız. Lütfen giriş ekranını dene.",
+      "requiredFields": "Lütfen tüm zorunlu alanları doldur.",
+      "invalidEmail": "Geçerli bir e-posta adresi gir.",
+      "passwordsMismatch": "Şifreler eşleşmiyor.",
       "generic": "Bir hata oluştu. Lütfen tekrar dene."
     }
   },
@@ -148,6 +165,8 @@
     "passwordPlaceholder": "••••••••",
     "loginButton": "Giriş Yap",
     "loggingIn": "Giriş yapılıyor…",
+    "forgotPassword": "Şifremi unuttum",
+    "resetSuccess": "Şifren güncellendi. Artık yeni şifrenle giriş yapabilirsin.",
     "noAccount": "Hesabın yok mu?",
     "signupHere": "Kayıt ol",
     "sidebarTitle": "Launch'tan büyümeye giden\ntek çalışma alanın.",
@@ -162,15 +181,51 @@
       "generic": "Bir hata oluştu. Lütfen tekrar dene."
     }
   },
+  "forgotPassword": {
+    "title": "Şifreni sıfırla",
+    "subtitle": "E-postanı gir, sana güvenli bir sıfırlama bağlantısı gönderelim.",
+    "email": "E-posta",
+    "emailPlaceholder": "sen@ornek.com",
+    "submit": "Sıfırlama bağlantısı gönder",
+    "sending": "Gönderiliyor…",
+    "success": "Bu e-posta bir hesaba aitse, şifre sıfırlama bağlantısını gönderdik.",
+    "backToLogin": "Giriş ekranına dön",
+    "errors": {
+      "generic": "Sıfırlama e-postası gönderilemedi. Lütfen tekrar dene."
+    }
+  },
+  "resetPassword": {
+    "title": "Yeni şifre oluştur",
+    "subtitle": "Hesabın için daha güçlü bir şifre seç.",
+    "password": "Yeni şifre",
+    "passwordPlaceholder": "En az 8 karakter",
+    "confirmPassword": "Yeni şifreyi doğrula",
+    "confirmPasswordPlaceholder": "Yeni şifreyi tekrar gir",
+    "submit": "Şifreyi güncelle",
+    "submitting": "Güncelleniyor…",
+    "backToLogin": "Giriş ekranına dön",
+    "passwordChecklist": {
+      "title": "Şifre gereksinimleri",
+      "minLength": "En az 8 karakter",
+      "number": "En az 1 sayı",
+      "special": "En az 1 özel karakter"
+    },
+    "errors": {
+      "invalidToken": "Bu sıfırlama bağlantısı eksik veya geçersiz.",
+      "passwordRules": "Şifren en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermeli.",
+      "passwordsMismatch": "Şifreler eşleşmiyor.",
+      "generic": "Bir hata oluştu. Lütfen tekrar dene."
+    }
+  },
   "products": {
     "eyebrow": "Ürünler",
     "title": "Ürünleriniz",
     "createNew": "Yeni Ürün",
     "newProduct": "Yeni Ürün Oluştur",
     "status": {
-      "preLaunch": "Pre-Launch",
-      "launched": "Launched",
-      "growing": "Büyüyor"
+      "preLaunch": "Launch hazırlığında",
+      "launched": "Yayında",
+      "growing": "Büyüme aşamasında"
     },
     "actions": {
       "goToDashboard": "Dashboard'a git →",
