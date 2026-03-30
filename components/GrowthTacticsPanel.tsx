@@ -2,10 +2,13 @@ import type { GrowthTacticsPlan } from "@/lib/growth-tactics";
 
 export default function GrowthTacticsPanel({
   plan,
+  locale,
 }: {
   plan: GrowthTacticsPlan | null;
+  locale: string;
 }) {
   if (!plan) return null;
+  const isEn = locale === "en";
 
   return (
     <section className="rounded-[18px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffefe_0%,_#fff7fa_100%)] p-6">
@@ -44,10 +47,10 @@ export default function GrowthTacticsPanel({
                 }`}
               >
                 {tactic.confidence === "high"
-                  ? "Yüksek güven"
+                  ? isEn ? "High confidence" : "Yüksek güven"
                   : tactic.confidence === "medium"
-                    ? "Orta güven"
-                    : "Düşük güven"}
+                    ? isEn ? "Medium confidence" : "Orta güven"
+                    : isEn ? "Low confidence" : "Düşük güven"}
               </span>
             </div>
             <h3 className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
@@ -59,13 +62,13 @@ export default function GrowthTacticsPanel({
             <div className="mt-4 space-y-3">
               <div className="rounded-[12px] bg-[#faf7f9] px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b93a6]">
-                  Nasıl başlarsın?
+                  {isEn ? "How to start" : "Nasıl başlarsın?"}
                 </p>
                 <p className="mt-1 text-[12px] leading-5 text-[#3f4656]">{tactic.howToStart}</p>
               </div>
               <div className="rounded-[12px] bg-[#f8fbfb] px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b93a6]">
-                  Başarı sinyali
+                  {isEn ? "Success signal" : "Başarı sinyali"}
                 </p>
                 <p className="mt-1 text-[12px] leading-5 text-[#3f4656]">{tactic.successSignal}</p>
               </div>

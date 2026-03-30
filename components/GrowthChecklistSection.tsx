@@ -43,10 +43,12 @@ function SegmentBar({ completed, total, active }: { completed: number; total: nu
 
 interface GrowthChecklistSectionProps {
   items: GrowthItem[];
+  locale: string;
 }
 
-export default function GrowthChecklistSection({ items: initialItems }: GrowthChecklistSectionProps) {
+export default function GrowthChecklistSection({ items: initialItems, locale }: GrowthChecklistSectionProps) {
   const [items, setItems] = useState(initialItems);
+  const isEn = locale === "en";
   const categories = Object.keys(CATEGORY_LABELS).filter((cat) =>
     items.some((i) => i.category === cat)
   );
@@ -75,9 +77,11 @@ export default function GrowthChecklistSection({ items: initialItems }: GrowthCh
   if (items.length === 0) {
     return (
       <div className="rounded-[15px] border border-dashed border-[#e8e8e8] bg-white p-10 text-center">
-        <p className="text-[14px] font-semibold text-[#0d0d12]">Henüz growth checklist oluşmadı</p>
+        <p className="text-[14px] font-semibold text-[#0d0d12]">{isEn ? "No growth checklist yet" : "Henüz growth checklist oluşmadı"}</p>
         <p className="mt-1 text-[13px] text-[#666d80]">
-          Bu ürün için growth execution maddeleri henüz üretilmedi. Metric setup yine çalışır; checklist hazır olduğunda burada görünür.
+          {isEn
+            ? "Growth execution items have not been generated for this product yet. Metric setup still works; the checklist will appear here once it is ready."
+            : "Bu ürün için growth execution maddeleri henüz üretilmedi. Metric setup yine çalışır; checklist hazır olduğunda burada görünür."}
         </p>
       </div>
     );
@@ -119,7 +123,7 @@ export default function GrowthChecklistSection({ items: initialItems }: GrowthCh
                 )}
               </div>
               <p className={`text-[11px] mb-2 ${isActive ? "text-white/60" : "text-[#666d80]"}`}>
-                Tamamlandı
+                {isEn ? "Completed" : "Tamamlandı"}
               </p>
               <p className={`text-[13px] font-bold mb-3 ${isActive ? "text-white" : "text-[#0d0d12]"}`}>
                 {done}/{catItems.length}
@@ -138,7 +142,7 @@ export default function GrowthChecklistSection({ items: initialItems }: GrowthCh
               <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
             </svg>
             <p className="text-[14px] font-semibold text-[#0d0d12]">
-              {CATEGORY_LABELS[activeCategory]} Checklist
+              {CATEGORY_LABELS[activeCategory]} {isEn ? "Checklist" : "Checklist"}
             </p>
           </div>
           <span className="text-[12px] text-[#666d80]">
@@ -148,7 +152,7 @@ export default function GrowthChecklistSection({ items: initialItems }: GrowthCh
 
         <div className="border-b border-[#f5f5f5] bg-[#fbfbfb] px-6 py-3">
           <p className="text-[12px] text-[#666d80]">
-            Toplam ilerleme: <span className="font-semibold text-[#0d0d12]">{totalCompleted}/{items.length}</span>
+            {isEn ? "Overall progress:" : "Toplam ilerleme:"} <span className="font-semibold text-[#0d0d12]">{totalCompleted}/{items.length}</span>
           </p>
         </div>
 

@@ -15,6 +15,7 @@ export default function GrowthIntegrationRecommendations({
   locale: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const isEn = locale === "en";
 
   if (metricRecommendations.length === 0 && uncoveredMetricNames.length === 0) {
     return null;
@@ -29,12 +30,14 @@ export default function GrowthIntegrationRecommendations({
           className="flex w-full items-start justify-between gap-4 text-left lg:flex-1"
         >
           <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">Önerilen kaynaklar</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">{isEn ? "Recommended sources" : "Önerilen kaynaklar"}</p>
             <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-              Bu metrikleri otomatik akıtmak için uygun kaynaklar
+              {isEn ? "Best sources to automate these metrics" : "Bu metrikleri otomatik akıtmak için uygun kaynaklar"}
             </h2>
             <p className="mt-2 text-[12px] leading-6 text-[#666d80]">
-              Seçtiğin sinyalleri mümkün olduğunca otomatik besleyecek kaynakları stage bazında öneriyoruz.
+              {isEn
+                ? "We suggest stage-aware sources that can automate the signals you selected as much as possible."
+                : "Seçtiğin sinyalleri mümkün olduğunca otomatik besleyecek kaynakları stage bazında öneriyoruz."}
             </p>
           </div>
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#eadfe6] bg-white text-[#666d80] transition hover:text-[#0d0d12]">
@@ -57,7 +60,7 @@ export default function GrowthIntegrationRecommendations({
           href={`/${locale}/integrations`}
           className="inline-flex h-9 items-center justify-center rounded-full bg-[#111014] px-4 text-[12px] font-semibold text-white transition hover:bg-[#28232a] lg:ml-4"
         >
-          Kaynaklara git
+          {isEn ? "Open sources" : "Kaynaklara git"}
         </Link>
       </div>
 
@@ -76,7 +79,11 @@ export default function GrowthIntegrationRecommendations({
                 <h3 className="mt-1 text-[15px] font-semibold text-[#0d0d12]">{recommendation.metricName}</h3>
               </div>
               <span className="rounded-full bg-[#fff0f7] px-2.5 py-1 text-[10px] font-semibold text-[#b85e88]">
-                {recommendation.providers.length > 0 ? `${recommendation.providers.length} öneri` : "Manual"}
+                {recommendation.providers.length > 0
+                  ? isEn
+                    ? `${recommendation.providers.length} suggestion${recommendation.providers.length > 1 ? "s" : ""}`
+                    : `${recommendation.providers.length} öneri`
+                  : "Manual"}
               </span>
             </div>
 
@@ -107,10 +114,10 @@ export default function GrowthIntegrationRecommendations({
                         }`}
                       >
                         {provider.connected
-                          ? "Bağlı"
+                          ? isEn ? "Connected" : "Bağlı"
                           : provider.mode === "ready_now"
-                            ? "Hazır"
-                            : "Ek kurulum"}
+                            ? isEn ? "Ready" : "Hazır"
+                            : isEn ? "Extra setup" : "Ek kurulum"}
                       </span>
                     </div>
                   </div>
@@ -118,7 +125,9 @@ export default function GrowthIntegrationRecommendations({
               </div>
             ) : (
               <p className="mt-3 text-[12px] leading-6 text-[#5e6678]">
-                Bu metrik için henüz doğrudan bir entegrasyon önerimiz yok. Şimdilik Metrics ekranından manuel takip etmek daha güvenli.
+                {isEn
+                  ? "We do not have a direct integration recommendation for this metric yet. For now, manual tracking in Metrics is the safer option."
+                  : "Bu metrik için henüz doğrudan bir entegrasyon önerimiz yok. Şimdilik Metrics ekranından manuel takip etmek daha güvenli."}
               </p>
             )}
           </div>
@@ -128,10 +137,11 @@ export default function GrowthIntegrationRecommendations({
 
       {isOpen && uncoveredMetricNames.length > 0 ? (
         <div className="mt-4 rounded-[14px] border border-dashed border-[#eadfe6] bg-white/70 p-4">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">Manuel veya ek entegrasyon gerektirenler</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "Manual or extra-setup items" : "Manuel veya ek entegrasyon gerektirenler"}</p>
           <p className="mt-2 text-[12px] leading-6 text-[#666d80]">
-            Şu seçimler için henüz doğrudan önerilen connector eşlemesi yok: {uncoveredMetricNames.join(", ")}.
-            Bunları şimdilik Metrics ekranından manuel takip edebiliriz.
+            {isEn
+              ? `There is no direct connector match yet for these selections: ${uncoveredMetricNames.join(", ")}. For now, we can track them manually in Metrics.`
+              : `Şu seçimler için henüz doğrudan önerilen connector eşlemesi yok: ${uncoveredMetricNames.join(", ")}. Bunları şimdilik Metrics ekranından manuel takip edebiliriz.`}
           </p>
         </div>
       ) : null}

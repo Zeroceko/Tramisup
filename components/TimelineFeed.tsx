@@ -31,19 +31,22 @@ const eventIcon: Record<string, string> = {
 export default function TimelineFeed({
   events,
   productId,
+  locale,
 }: {
   events: TimelineEvent[];
   productId: string;
+  locale: string;
 }) {
   void productId;
+  const isEn = locale === "en";
 
   return (
     <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5 sticky top-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">Geçmiş</p>
-      <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Zaman Tüneli</h2>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">{isEn ? "History" : "Geçmiş"}</p>
+      <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-5">{isEn ? "Timeline" : "Zaman Tüneli"}</h2>
 
       {events.length === 0 ? (
-        <p className="text-center text-[13px] text-[#9ca3af] py-8">Henüz olay yok</p>
+        <p className="text-center text-[13px] text-[#9ca3af] py-8">{isEn ? "No events yet" : "Henüz olay yok"}</p>
       ) : (
         <div className="space-y-4">
           {events.map((event, i) => (
@@ -61,7 +64,11 @@ export default function TimelineFeed({
                   <p className="text-[12px] text-[#666d80] mt-1 ml-6">{event.description}</p>
                 )}
                 <p className="text-[11px] text-[#9ca3af] mt-1 ml-6">
-                  {format(new Date(event.date), "d MMM yyyy")}
+                  {new Date(event.date).toLocaleDateString(isEn ? "en-US" : "tr-TR", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
             </div>

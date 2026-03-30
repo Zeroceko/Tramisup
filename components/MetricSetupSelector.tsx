@@ -15,10 +15,13 @@ type Selected = Record<string, string>;
 function SummaryPanel({
   plan,
   selected,
+  locale,
 }: {
   plan: GrowthMetricPlan;
   selected: Selected;
+  locale: string;
 }) {
+  const isEn = locale === "en";
   const selectedCount = plan.sections.filter((s) => !!selected[s.stage]).length;
   const total = plan.sections.length;
   const allDone = selectedCount === total;
@@ -41,13 +44,13 @@ function SummaryPanel({
   return (
     <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-        Ölçüm sistemi
+        {isEn ? "Measurement system" : "Ölçüm sistemi"}
       </p>
       <div className="mt-1 flex items-baseline gap-1.5">
         <span className="text-[28px] font-bold tracking-[-0.02em] text-[#0d0d12]">
           {selectedCount}
         </span>
-        <span className="text-[14px] text-[#666d80]">/ {total} aşama</span>
+        <span className="text-[14px] text-[#666d80]">/ {total} {isEn ? "stages" : "aşama"}</span>
       </div>
 
       {/* Funnel coverage dots */}
@@ -79,7 +82,7 @@ function SummaryPanel({
                   {metric.name}
                 </p>
               ) : (
-                <p className="text-[12px] text-[#c0c0c0]">Seçilmedi</p>
+                <p className="text-[12px] text-[#c0c0c0]">{isEn ? "Not selected" : "Seçilmedi"}</p>
               )}
             </div>
           </div>
@@ -90,7 +93,9 @@ function SummaryPanel({
       {vanitySelections.length > 0 && (
         <div className="mt-4 rounded-[12px] border border-orange-100 bg-[#fff7ed] p-3">
           <p className="text-[11px] font-semibold text-[#c2410c]">
-            {vanitySelections.length === 1 ? "1 düşük güven metriği" : `${vanitySelections.length} düşük güven metriği`}
+            {vanitySelections.length === 1
+              ? isEn ? "1 low-confidence metric" : "1 düşük güven metriği"
+              : isEn ? `${vanitySelections.length} low-confidence metrics` : `${vanitySelections.length} düşük güven metriği`}
           </p>
           {vanitySelections.map(({ stage, warning }) => (
             <p key={stage} className="mt-1 text-[11px] leading-4 text-[#c2410c]">
@@ -103,16 +108,20 @@ function SummaryPanel({
       {/* Coach explanation */}
       {allDone && vanitySelections.length === 0 && (
         <div className="mt-4 rounded-[12px] bg-[#f0fafa] p-3">
-          <p className="text-[12px] font-semibold text-[#0d0d12]">Koç ne yapacak?</p>
+          <p className="text-[12px] font-semibold text-[#0d0d12]">{isEn ? "What will the coach do?" : "Koç ne yapacak?"}</p>
           <p className="mt-1 text-[11px] leading-4 text-[#666d80]">
-            Bu {total} metrik her gün güncellendikçe koç trendi okuyacak, zayıf halkayı tespit edecek ve ne yapman gerektiğini söyleyecek.
+            {isEn
+              ? `As these ${total} metrics are updated daily, the coach will read the trend, identify the weak link, and tell you what to do next.`
+              : `Bu ${total} metrik her gün güncellendikçe koç trendi okuyacak, zayıf halkayı tespit edecek ve ne yapman gerektiğini söyleyecek.`}
           </p>
         </div>
       )}
 
       {!allDone && (
         <p className="mt-4 text-[11px] leading-4 text-[#8a8fa0]">
-          {total - selectedCount} aşama daha seçilince dashboard ve koç bu metrikleri kullanmaya başlar.
+          {isEn
+            ? `Once ${total - selectedCount} more stages are selected, the dashboard and coach will start using these metrics.`
+            : `${total - selectedCount} aşama daha seçilince dashboard ve koç bu metrikleri kullanmaya başlar.`}
         </p>
       )}
     </div>
@@ -126,14 +135,17 @@ function MetricCard({
   isSelected,
   isDisabled = false,
   sourceLabel,
+  locale,
   onSelect,
 }: {
   metric: FunnelMetricRecommendation;
   isSelected: boolean;
   isDisabled?: boolean;
   sourceLabel?: string | null;
+  locale: string;
   onSelect: () => void;
 }) {
+  const isEn = locale === "en";
   const [showAvoid, setShowAvoid] = useState(false);
 
   return (
@@ -154,7 +166,7 @@ function MetricCard({
         <div className="flex flex-wrap items-center gap-1.5">
           {metric.recommended && (
             <span className="rounded-full bg-[#ffd7ef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#0d0d12]">
-              Önerilen
+              {isEn ? "Recommended" : "Önerilen"}
             </span>
           )}
           {sourceLabel && (
@@ -193,7 +205,7 @@ function MetricCard({
 
       {/* When to use */}
       <p className="mt-2 text-[11px] leading-4 text-[#8a8fa0]">
-        <span className="font-semibold">Ne zaman: </span>
+        <span className="font-semibold">{isEn ? "When to use: " : "Ne zaman: "}</span>
         {metric.whenToUse}
       </p>
 
@@ -204,12 +216,12 @@ function MetricCard({
           onClick={(e) => { e.stopPropagation(); setShowAvoid((v) => !v); }}
           className="mt-1.5 text-[11px] text-[#94a3b8] underline-offset-2 hover:underline"
         >
-          {showAvoid ? "Gizle" : "Ne zaman seçme?"}
+          {showAvoid ? (isEn ? "Hide" : "Gizle") : isEn ? "When not to choose?" : "Ne zaman seçme?"}
         </button>
       )}
       {showAvoid && metric.whenToAvoid && (
         <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
-          <span className="font-semibold">Kaçın: </span>
+          <span className="font-semibold">{isEn ? "Avoid when: " : "Kaçın: "}</span>
           {metric.whenToAvoid}
         </p>
       )}
@@ -225,7 +237,7 @@ function MetricCard({
 
       {isDisabled && (
         <p className="mt-3 text-[11px] leading-4 text-[#8a8fa0]">
-          Bu secenek bagli kaynaklarla otomatik dolmaz.
+          {isEn ? "This option will not auto-fill from connected sources." : "Bu secenek bagli kaynaklarla otomatik dolmaz."}
         </p>
       )}
     </button>
@@ -238,6 +250,7 @@ function StageSection({
   section,
   selectedKey,
   automation,
+  locale,
   onSelect,
   stageIndex,
 }: {
@@ -247,9 +260,11 @@ function StageSection({
     supportedMetricKeys: string[];
     connectedProviders: string[];
   };
+  locale: string;
   onSelect: (key: string) => void;
   stageIndex: number;
 }) {
+  const isEn = locale === "en";
   const isDone = !!selectedKey;
   const hasAutomation = automation.supportedMetricKeys.length > 0;
   const providerLabel = automation.connectedProviders.join(" + ");
@@ -282,13 +297,17 @@ function StageSection({
       <div className={`mb-4 rounded-[12px] px-4 py-3 ${hasAutomation ? "bg-[#f0fafa]" : "bg-[#fafafa]"}`}>
         <p className="text-[12px] font-semibold text-[#0d0d12]">
           {hasAutomation
-            ? `${providerLabel} bu asamayi otomatik besliyor`
-            : "Bu asama manuel secim istiyor"}
+            ? isEn ? `${providerLabel} can automate this stage` : `${providerLabel} bu asamayi otomatik besliyor`
+            : isEn ? "This stage needs a manual choice" : "Bu asama manuel secim istiyor"}
         </p>
         <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
           {hasAutomation
-            ? "Bu kaynaklardan gercekten akitabildigimiz metrikleri one cikardik. Diger secenekler bu baglanti ile otomatik dolmaz."
-            : "Bu asama icin bagli kaynaklardan dogrudan veri gelmiyor. Buraya manuel girecegin bir metrik sec."}
+            ? isEn
+              ? "We highlight the metrics that can truly flow from these sources. Other choices will not auto-fill through this connection."
+              : "Bu kaynaklardan gercekten akitabildigimiz metrikleri one cikardik. Diger secenekler bu baglanti ile otomatik dolmaz."
+            : isEn
+              ? "No direct data arrives from connected sources for this stage. Choose a metric you will track manually."
+              : "Bu asama icin bagli kaynaklardan dogrudan veri gelmiyor. Buraya manuel girecegin bir metrik sec."}
         </p>
       </div>
 
@@ -304,6 +323,7 @@ function StageSection({
             isSelected={selectedKey === metric.key}
             isDisabled={shouldDisable}
             sourceLabel={isSupported ? providerLabel : null}
+            locale={locale}
             onSelect={() => onSelect(metric.key)}
           />
           );
@@ -329,6 +349,7 @@ export default function MetricSetupSelector({
   connectedProviders: string[];
 }) {
   const router = useRouter();
+  const isEn = locale === "en";
 
   const automationGuides = useMemo(
     () => getStageAutomationGuides({ plan, connectedProviders }),
@@ -379,7 +400,7 @@ export default function MetricSetupSelector({
 
   async function saveSetup() {
     if (!allReady) {
-      setError("Devam etmeden önce her aşama için bir metrik seç.");
+      setError(isEn ? "Choose one metric for every stage before continuing." : "Devam etmeden önce her aşama için bir metrik seç.");
       return;
     }
     setSaving(true);
@@ -403,7 +424,7 @@ export default function MetricSetupSelector({
       router.push(`/${locale}/metrics`);
       router.refresh();
     } catch {
-      setError("Metrik tercihleri kaydedilemedi. Tekrar dene.");
+      setError(isEn ? "Metric preferences could not be saved. Try again." : "Metrik tercihleri kaydedilemedi. Tekrar dene.");
     } finally {
       setSaving(false);
     }
@@ -422,13 +443,13 @@ export default function MetricSetupSelector({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-              Seçilen ölçüm sistemi
+              {isEn ? "Selected measurement system" : "Seçilen ölçüm sistemi"}
             </p>
             <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-              {plan.sections.length} aşama tanımlı
+              {isEn ? `${plan.sections.length} stages defined` : `${plan.sections.length} aşama tanımlı`}
             </h2>
             <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
-              Günlük veri girişi ve trend takibi için Metrics ekranını kullan.
+              {isEn ? "Use the Metrics screen for daily entries and trend tracking." : "Günlük veri girişi ve trend takibi için Metrics ekranını kullan."}
             </p>
           </div>
           <button
@@ -436,7 +457,7 @@ export default function MetricSetupSelector({
             onClick={() => setEditing(true)}
             className="shrink-0 inline-flex h-9 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
           >
-            Metrikleri değiştir
+            {isEn ? "Change metrics" : "Metrikleri değiştir"}
           </button>
         </div>
 
@@ -451,12 +472,12 @@ export default function MetricSetupSelector({
                   <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">{metric.name}</p>
                   {metric.vanityWarning && (
                     <p className="mt-1.5 text-[11px] leading-4 text-[#f97316]">
-                      ⚠ Düşük güven metriği
+                      ⚠ {isEn ? "Low-confidence metric" : "Düşük güven metriği"}
                     </p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-[13px] text-[#8a8fa0]">Seçilmedi</p>
+                <p className="mt-1 text-[13px] text-[#8a8fa0]">{isEn ? "Not selected" : "Seçilmedi"}</p>
               )}
             </div>
           ))}
@@ -465,11 +486,12 @@ export default function MetricSetupSelector({
         {mismatchedStages.length > 0 && (
           <div className="mt-5 rounded-[14px] border border-[#fed7aa] bg-[#fff7ed] p-4">
             <p className="text-[12px] font-semibold text-[#c2410c]">
-              Bagli kaynaklarla uyumlu olmayan secimler var
+              {isEn ? "Some selections are not compatible with connected sources" : "Bagli kaynaklarla uyumlu olmayan secimler var"}
             </p>
             <p className="mt-1 text-[12px] leading-5 text-[#c2410c]/80">
-              {mismatchedStages.map((item) => item.stage).join(", ")} asamalarinda secili metrikler otomatik dolmayacak.
-              Metrikleri gozden gecirirsen bagli kaynaklardan akan verilerle daha temiz bir setup kurabiliriz.
+              {isEn
+                ? `Selected metrics in ${mismatchedStages.map((item) => item.stage).join(", ")} will not auto-fill. Review them to build a cleaner setup around the data already flowing from connected sources.`
+                : `${mismatchedStages.map((item) => item.stage).join(", ")} asamalarinda secili metrikler otomatik dolmayacak. Metrikleri gozden gecirirsen bagli kaynaklardan akan verilerle daha temiz bir setup kurabiliriz.`}
             </p>
           </div>
         )}
@@ -483,32 +505,36 @@ export default function MetricSetupSelector({
       {/* Header */}
       <div className="mb-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-          Growth = neyi takip edeceğiz?
+          {isEn ? "Growth = what will we track?" : "Growth = neyi takip edeceğiz?"}
         </p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          Her aşama için tek bir ana sinyal seç
+          {isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
         </h2>
         <p className="mt-1.5 text-[13px] leading-5 text-[#666d80]">
-          Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.
+          {isEn
+            ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
+            : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.</>}
         </p>
       </div>
 
       {hasConnectedSources && (automatedStages.length > 0 || manualStages.length > 0) && (
         <div className="mb-5 rounded-[16px] border border-[#e8e8e8] bg-white p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-            Kaynak uyumu
+            {isEn ? "Source fit" : "Kaynak uyumu"}
           </p>
           <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
-            Bagli kaynaklardan gercekten akitabildigimiz asamalari otomatik oneriyoruz. Eksik kalan asamalar icin manuel takip edecegin metriği sen sececeksin.
+            {isEn
+              ? "We automatically prioritize stages that connected sources can actually feed. For remaining stages, you choose the metric you will track manually."
+              : "Bagli kaynaklardan gercekten akitabildigimiz asamalari otomatik oneriyoruz. Eksik kalan asamalar icin manuel takip edecegin metriği sen sececeksin."}
           </p>
           {automatedStages.length > 0 && (
             <p className="mt-3 text-[12px] leading-5 text-[#666d80]">
-              Otomatik dolacak asamalar: {automatedStages.map((guide) => guide.stage).join(", ")}
+              {isEn ? "Auto-filled stages" : "Otomatik dolacak asamalar"}: {automatedStages.map((guide) => guide.stage).join(", ")}
             </p>
           )}
           {manualStages.length > 0 && (
             <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
-              Manuel secim gereken asamalar: {manualStages.map((guide) => guide.stage).join(", ")}
+              {isEn ? "Stages needing manual choice" : "Manuel secim gereken asamalar"}: {manualStages.map((guide) => guide.stage).join(", ")}
             </p>
           )}
         </div>
@@ -527,6 +553,7 @@ export default function MetricSetupSelector({
                 supportedMetricKeys: automationMap.get(section.stage)?.supportedMetricKeys ?? [],
                 connectedProviders: automationMap.get(section.stage)?.connectedProviders ?? [],
               }}
+              locale={locale}
               onSelect={(key) => selectMetric(section.stage, key)}
               stageIndex={i}
             />
@@ -535,7 +562,7 @@ export default function MetricSetupSelector({
 
         {/* Summary panel (sticky on desktop) */}
         <div className="xl:sticky xl:top-4 xl:self-start">
-          <SummaryPanel plan={plan} selected={selected} />
+          <SummaryPanel plan={plan} selected={selected} locale={locale} />
         </div>
       </div>
 
@@ -544,11 +571,13 @@ export default function MetricSetupSelector({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[13px] font-semibold text-[#0d0d12]">
-              {completedStages} / {plan.sections.length} aşama seçildi
+              {completedStages} / {plan.sections.length} {isEn ? "stages selected" : "aşama seçildi"}
             </p>
             {!allReady && (
               <p className="mt-0.5 text-[12px] text-[#666d80]">
-                Kalan {plan.sections.filter((s) => !selected[s.stage]).map((s) => s.stage).join(", ")} aşamaları için seçim yap.
+                {isEn
+                  ? `Choose metrics for the remaining stages: ${plan.sections.filter((s) => !selected[s.stage]).map((s) => s.stage).join(", ")}.`
+                  : `Kalan ${plan.sections.filter((s) => !selected[s.stage]).map((s) => s.stage).join(", ")} aşamaları için seçim yap.`}
               </p>
             )}
           </div>
@@ -560,7 +589,7 @@ export default function MetricSetupSelector({
                 disabled={saving}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
               >
-                Vazgeç
+                {isEn ? "Cancel" : "Vazgeç"}
               </button>
             ) : null}
             <button
@@ -569,7 +598,7 @@ export default function MetricSetupSelector({
               disabled={saving || !allReady}
               className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Kaydediliyor…" : "Kaydet ve metrik girişine geç"}
+              {saving ? (isEn ? "Saving…" : "Kaydediliyor…") : isEn ? "Save and continue to metric entry" : "Kaydet ve metrik girişine geç"}
             </button>
           </div>
         </div>

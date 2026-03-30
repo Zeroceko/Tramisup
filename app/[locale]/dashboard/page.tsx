@@ -156,12 +156,12 @@ function buildPrimaryAction(
 
   if (opts.selectedMetricCount === 0) {
     return {
-      title: isEn ? "Set up growth tracking" : "Büyüme takibini kur",
+      title: isEn ? "Open Growth and choose your metrics" : "Growth'a geç ve metriklerini seç",
       description: isEn
-        ? "Select one key metric per AARRR category. This becomes your daily pulse."
-        : "Her AARRR kategorisi için 1 ana metrik seç. Bu senin günlük nabzın olacak.",
+        ? "Growth should point you to Metrics first. Select one key metric per AARRR stage so the system knows what to read."
+        : "Önce Growth tarafına geç, sonra Metrics ekranında her AARRR aşaması için 1 ana metrik seç. Sistem neyi okuyacağını böyle anlar.",
       why: isEn ? "First step after launch" : "Launch sonrası ilk adım",
-      cta: isEn ? "Go to growth setup" : "Growth setup'a git →",
+      cta: isEn ? "Open Growth" : "Growth'a git →",
       href: `/${locale}/growth`,
       accent: "teal" as const,
     };
@@ -235,11 +235,7 @@ export default async function DashboardPage({
   const resolvedSearch = (await searchParams) ?? {};
   const justLaunched = resolvedSearch.justLaunched === "1";
   const session = await getServerSession(authOptions);
-  const preferredLocale = (session?.user as { preferredLocale?: string } | undefined)?.preferredLocale;
-  const uiLocale =
-    preferredLocale === "tr" || preferredLocale === "en"
-      ? preferredLocale
-      : locale;
+  const uiLocale = locale;
   const isEn = uiLocale === "en";
 
   // ---- Product resolution ----

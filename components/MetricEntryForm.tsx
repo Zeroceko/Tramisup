@@ -27,15 +27,6 @@ type PostSave = {
 
 const DECIMAL_METRIC_KEYS = new Set(["mrr", "arpu"]);
 
-const STAGE_ACTION_HINTS: Partial<Record<FunnelStageKey, string>> = {
-  Awareness: "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
-  Acquisition: "Landing page dönüşümünü test et. Signup adımlarını azalt.",
-  Activation: "Onboarding akışını gözden geçir. Aha moment'a giden adımları kısalt.",
-  Retention: "En aktif kullanıcılarla görüş — neden geri geliyor?",
-  Referral: "Referral mekanizması yeterince görünür mü? Davet sürtüşmesini azalt.",
-  Revenue: "Trial süresi yeterli mi? Ücretli geçişin önündeki engeli bul.",
-};
-
 const FUNNEL_ORDER: FunnelStageKey[] = [
   "Awareness",
   "Acquisition",
@@ -93,6 +84,17 @@ export default function MetricEntryForm({
   entryCount?: number;
 }) {
   const router = useRouter();
+  const isEn = locale === "en";
+  const nf = new Intl.NumberFormat(isEn ? "en-US" : "tr-TR", { maximumFractionDigits: 1 });
+  const intFormatter = new Intl.NumberFormat(isEn ? "en-US" : "tr-TR");
+  const stageActionHints: Partial<Record<FunnelStageKey, string>> = {
+    Awareness: isEn ? "Diversify traffic sources or increase content output." : "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
+    Acquisition: isEn ? "Test landing-page conversion and reduce signup friction." : "Landing page dönüşümünü test et. Signup adımlarını azalt.",
+    Activation: isEn ? "Review onboarding and shorten the path to the aha moment." : "Onboarding akışını gözden geçir. Aha moment'a giden adımları kısalt.",
+    Retention: isEn ? "Talk to your most active users and learn why they return." : "En aktif kullanıcılarla görüş — neden geri geliyor?",
+    Referral: isEn ? "Make the invite mechanic more visible and reduce sharing friction." : "Referral mekanizması yeterince görünür mü? Davet sürtüşmesini azalt.",
+    Revenue: isEn ? "Find the main blocker in the paid conversion step." : "Trial süresi yeterli mi? Ücretli geçişin önündeki engeli bul.",
+  };
 
   const initialValues = useMemo(() => {
     const base: Record<string, string> = {};
@@ -117,7 +119,7 @@ export default function MetricEntryForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allFilled) {
-      setError("Tüm metriklere bugünkü değeri gir.");
+      setError(isEn ? "Enter today's value for every metric." : "Tüm metriklere bugünkü değeri gir.");
       return;
     }
 
@@ -126,12 +128,12 @@ export default function MetricEntryForm({
       const numericValue = Number(rawValue);
 
       if (Number.isNaN(numericValue) || numericValue < 0) {
-        setError(`${metric.metricName} için geçerli bir sayı gir.`);
+        setError(isEn ? `Enter a valid number for ${metric.metricName}.` : `${metric.metricName} için geçerli bir sayı gir.`);
         return;
       }
 
       if (!metricAllowsDecimals(metric) && !Number.isInteger(numericValue)) {
-        setError(`${metric.metricName} için sadece tam sayı girebilirsin.`);
+        setError(isEn ? `Only whole numbers are allowed for ${metric.metricName}.` : `${metric.metricName} için sadece tam sayı girebilirsin.`);
         return;
       }
     }
@@ -155,7 +157,7 @@ export default function MetricEntryForm({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Kaydedilemedi");
+        throw new Error(data.error || (isEn ? "Could not save the entry." : "Kaydedilemedi"));
       }
 
       // 5. giriş tamamlandıysa dashboard building popup göster
@@ -172,7 +174,7 @@ export default function MetricEntryForm({
         router.refresh();
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setError(err instanceof Error ? err.message : isEn ? "Something went wrong." : "Bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -190,8 +192,8 @@ export default function MetricEntryForm({
             </svg>
           </div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">Tiramisup</p>
-          <p className="mt-2 text-[20px] font-semibold leading-snug tracking-[-0.01em]">Grafikler oluşturuluyor</p>
-          <p className="mt-2 text-[13px] leading-6 text-white/60">5 günlük veri tamamlandı. Dashboard hazırlanıyor…</p>
+          <p className="mt-2 text-[20px] font-semibold leading-snug tracking-[-0.01em]">{isEn ? "Building your dashboard" : "Grafikler oluşturuluyor"}</p>
+          <p className="mt-2 text-[13px] leading-6 text-white/60">{isEn ? "You now have 5 days of data. The dashboard is being prepared…" : "5 günlük veri tamamlandı. Dashboard hazırlanıyor…"}</p>
         </div>
       </div>
     );
@@ -206,7 +208,7 @@ export default function MetricEntryForm({
             ✓
           </span>
           <p className="text-[13px] font-semibold text-[#0d0d12]">
-            Bugünkü veriler kaydedildi
+            {isEn ? "Today's data has been saved" : "Bugünkü veriler kaydedildi"}
           </p>
         </div>
 
@@ -223,10 +225,10 @@ export default function MetricEntryForm({
               </div>
               <div className="text-right">
                 <p className="text-[14px] font-bold text-[#0d0d12]">
-                  {new Intl.NumberFormat("tr-TR").format(d.newValue)}
+                  {intFormatter.format(d.newValue)}
                 </p>
                 {d.direction === "first" ? (
-                  <p className="text-[10px] text-[#8a8fa0]">İlk kayıt</p>
+                  <p className="text-[10px] text-[#8a8fa0]">{isEn ? "First entry" : "İlk kayıt"}</p>
                 ) : (
                   <p
                     className={`text-[11px] font-semibold ${
@@ -239,7 +241,7 @@ export default function MetricEntryForm({
                   >
                     {d.direction === "up" ? "↑" : d.direction === "down" ? "↓" : "→"}{" "}
                     {d.change !== null
-                      ? `${d.change > 0 ? "+" : ""}${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(d.change)}`
+                      ? `${d.change > 0 ? "+" : ""}${nf.format(d.change)}`
                       : ""}
                   </p>
                 )}
@@ -252,16 +254,16 @@ export default function MetricEntryForm({
         {postSave.droppedStage && (
           <div className="mt-3 rounded-[12px] border border-orange-100 bg-[#fff7ed] p-3">
             <p className="text-[12px] font-semibold text-[#c2410c]">
-              {postSave.droppedStage} aşamasında düşüş var
+              {isEn ? `Drop detected in ${postSave.droppedStage}` : `${postSave.droppedStage} aşamasında düşüş var`}
             </p>
             <p className="mt-0.5 text-[11px] leading-4 text-[#c2410c]">
-              {STAGE_ACTION_HINTS[postSave.droppedStage] ?? "Bu aşama için görev oluşturmayı düşün."}
+              {stageActionHints[postSave.droppedStage] ?? (isEn ? "Consider creating a task for this stage." : "Bu aşama için görev oluşturmayı düşün.")}
             </p>
             <a
               href={locale ? `/${locale}/tasks` : "/tasks"}
               className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#c2410c] underline underline-offset-2"
             >
-              Görevlere git →
+              {isEn ? "Go to tasks" : "Görevlere git"} →
             </a>
           </div>
         )}
@@ -269,9 +271,11 @@ export default function MetricEntryForm({
         {/* All good */}
         {!postSave.droppedStage && postSave.deltas.some((d) => d.direction === "up") && (
           <div className="mt-3 rounded-[12px] bg-[#f0fdf4] p-3">
-            <p className="text-[12px] font-semibold text-[#15803d]">İyi gidiyor</p>
+            <p className="text-[12px] font-semibold text-[#15803d]">{isEn ? "Looking healthy" : "İyi gidiyor"}</p>
             <p className="mt-0.5 text-[11px] leading-4 text-[#15803d]">
-              Hiç düşüş yok — sıradaki dar boğazı bulmak için trend görünümüne bak.
+              {isEn
+                ? "No visible drop right now. Check the trend view to spot the next bottleneck."
+                : "Hiç düşüş yok — sıradaki dar boğazı bulmak için trend görünümüne bak."}
             </p>
           </div>
         )}
@@ -284,7 +288,7 @@ export default function MetricEntryForm({
           }}
           className="mt-4 w-full rounded-full border border-[#e8e8e8] py-2 text-[12px] font-semibold text-[#666d80] transition hover:bg-white"
         >
-          Yeni giriş yap
+          {isEn ? "Add another entry" : "Yeni giriş yap"}
         </button>
       </div>
     );
@@ -296,13 +300,17 @@ export default function MetricEntryForm({
       {!compact && (
         <div className="mb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-            Günlük giriş
+            {isEn ? "Daily entry" : "Günlük giriş"}
           </p>
-          <h3 className="mt-0.5 text-[16px] font-semibold text-[#0d0d12]">Bugün neler oldu?</h3>
+          <h3 className="mt-0.5 text-[16px] font-semibold text-[#0d0d12]">{isEn ? "What happened today?" : "Bugün neler oldu?"}</h3>
           <p className="mt-1 text-[12px] leading-4 text-[#666d80]">
             {latestEntry
-              ? `Son giriş: ${latestEntry.date}. Değerlerin değişmediyse aynı sayıları girebilirsin.`
-              : "İlk veri girişin. Bu değerler trend analizinin baz çizgisini oluşturur."}
+              ? isEn
+                ? `Last entry: ${latestEntry.date}. If values did not change, you can enter the same numbers again.`
+                : `Son giriş: ${latestEntry.date}. Değerlerin değişmediyse aynı sayıları girebilirsin.`
+              : isEn
+                ? "This is your first data entry. These values will become the baseline for trend analysis."
+                : "İlk veri girişin. Bu değerler trend analizinin baz çizgisini oluşturur."}
           </p>
         </div>
       )}
@@ -311,7 +319,7 @@ export default function MetricEntryForm({
         {/* Date */}
         <div>
           <label className="mb-1 block text-[11px] font-semibold text-[#666d80]">
-            Tarih
+            {isEn ? "Date" : "Tarih"}
           </label>
           <input
             type="date"
@@ -333,7 +341,7 @@ export default function MetricEntryForm({
               </label>
               {lastVal !== undefined && (
                 <p className="mb-1 text-[11px] text-[#8a8fa0]">
-                  Son değer: {new Intl.NumberFormat("tr-TR").format(lastVal)}
+                  {isEn ? "Last value:" : "Son değer:"} {intFormatter.format(lastVal)}
                 </p>
               )}
               <input
@@ -353,7 +361,7 @@ export default function MetricEntryForm({
               />
               {!allowsDecimals && (
                 <p className="mt-1 text-[11px] text-[#8a8fa0]">
-                  Bu alan sadece tam sayı kabul eder.
+                  {isEn ? "This field only accepts whole numbers." : "Bu alan sadece tam sayı kabul eder."}
                 </p>
               )}
             </div>
@@ -369,7 +377,9 @@ export default function MetricEntryForm({
         {/* Progress hint */}
         {!allFilled && filledCount > 0 && (
           <p className="text-[11px] text-[#8a8fa0]">
-            {selectedMetrics.length - filledCount} alan daha doldurulacak
+            {isEn
+              ? `${selectedMetrics.length - filledCount} more field${selectedMetrics.length - filledCount > 1 ? "s" : ""} to fill`
+              : `${selectedMetrics.length - filledCount} alan daha doldurulacak`}
           </p>
         )}
 
@@ -378,7 +388,7 @@ export default function MetricEntryForm({
           disabled={loading || !allFilled}
           className="h-10 w-full rounded-full bg-[#0d0d12] text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Kaydediliyor…" : "Kaydet"}
+          {loading ? (isEn ? "Saving…" : "Kaydediliyor…") : isEn ? "Save entry" : "Kaydet"}
         </button>
       </form>
     </div>

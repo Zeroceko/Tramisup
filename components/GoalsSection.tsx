@@ -28,12 +28,15 @@ export default function GoalsSection({
   goals,
   productId,
   metricSetup,
+  locale,
 }: {
   goals: Goal[];
   productId: string;
   metricSetup?: MetricSetupLike | null;
+  locale: string;
 }) {
   const router = useRouter();
+  const isEn = locale === "en";
   const [loading, setLoading] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newGoal, setNewGoal] = useState({
@@ -89,25 +92,29 @@ export default function GoalsSection({
     <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">Büyüme</p>
-          <h2 className="text-[16px] font-semibold text-[#0d0d12]">Hedefler</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-0.5">{isEn ? "Growth" : "Büyüme"}</p>
+          <h2 className="text-[16px] font-semibold text-[#0d0d12]">{isEn ? "Goals" : "Hedefler"}</h2>
           <p className="mt-1 max-w-2xl text-[12px] leading-5 text-[#666d80]">
-            AARRR metriklerini seçmek neyi takip edeceğini belirler. Buradaki hedefler ise o metriklerde hangi sonuca ulaşmak istediğini netleştirir.
+            {isEn
+              ? "Choosing AARRR metrics defines what you track. Goals clarify the outcome you want to reach in those metrics."
+              : "AARRR metriklerini seçmek neyi takip edeceğini belirler. Buradaki hedefler ise o metriklerde hangi sonuca ulaşmak istediğini netleştirir."}
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-[#e8e8e8] text-[12px] font-semibold text-[#0d0d12] hover:bg-[#f6f6f6] transition"
         >
-          {showAddForm ? "İptal" : "+ Hedef Ekle"}
+          {showAddForm ? (isEn ? "Cancel" : "İptal") : isEn ? "+ Add goal" : "+ Hedef Ekle"}
         </button>
       </div>
 
       {trackedStages.length > 0 && !showAddForm ? (
         <div className="mb-4 rounded-[12px] border border-[#eef1f2] bg-[#fbfcfc] px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">Takip ettiğin alanlar</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "Tracked areas" : "Takip ettiğin alanlar"}</p>
           <p className="mt-1 text-[13px] leading-6 text-[#4c5567]">
-            Şu anda {trackedStages.join(", ")} için ana metrik seçtin. Buraya örneğin “30 günde Activation metriğini 120’ye çıkar” gibi ulaşılacak hedefler ekleyebilirsin.
+            {isEn
+              ? `You selected core metrics for ${trackedStages.join(", ")}. Add concrete targets here, like “raise Activation to 120 within 30 days.”`
+              : `Şu anda ${trackedStages.join(", ")} için ana metrik seçtin. Buraya örneğin “30 günde Activation metriğini 120’ye çıkar” gibi ulaşılacak hedefler ekleyebilirsin.`}
           </p>
         </div>
       ) : null}
@@ -116,7 +123,7 @@ export default function GoalsSection({
         <form onSubmit={addGoal} className="mb-4 p-4 bg-[#f6f6f6] rounded-[12px] space-y-3">
           <input
             type="text"
-            placeholder="Hedef başlığı (örn. 1000 kullanıcıya ulaş)"
+            placeholder={isEn ? "Goal title (e.g. reach 1,000 users)" : "Hedef başlığı (örn. 1000 kullanıcıya ulaş)"}
             value={newGoal.title}
             onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
             required
@@ -126,7 +133,7 @@ export default function GoalsSection({
             <input
               type="number"
               step="0.01"
-              placeholder="Hedef değer"
+              placeholder={isEn ? "Target value" : "Hedef değer"}
               value={newGoal.targetValue}
               onChange={(e) => setNewGoal({ ...newGoal, targetValue: e.target.value })}
               required
@@ -134,7 +141,7 @@ export default function GoalsSection({
             />
             <input
               type="text"
-              placeholder="Birim (kullanıcı, $)"
+              placeholder={isEn ? "Unit (users, $)" : "Birim (kullanıcı, $)"}
               value={newGoal.unit}
               onChange={(e) => setNewGoal({ ...newGoal, unit: e.target.value })}
               required
@@ -143,11 +150,11 @@ export default function GoalsSection({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <p className="text-[11px] font-semibold text-[#666d80] mb-1">Başlangıç</p>
+              <p className="text-[11px] font-semibold text-[#666d80] mb-1">{isEn ? "Start" : "Başlangıç"}</p>
               <input type="date" value={newGoal.startDate} onChange={(e) => setNewGoal({ ...newGoal, startDate: e.target.value })} required className={inputCls} />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-[#666d80] mb-1">Bitiş</p>
+              <p className="text-[11px] font-semibold text-[#666d80] mb-1">{isEn ? "End" : "Bitiş"}</p>
               <input type="date" value={newGoal.endDate} onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })} required className={inputCls} />
             </div>
           </div>
@@ -156,13 +163,13 @@ export default function GoalsSection({
             disabled={loading === "new"}
             className="w-full h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] hover:bg-[#f5c8e4] transition disabled:opacity-50"
           >
-            {loading === "new" ? "Ekleniyor…" : "Hedef Ekle"}
+            {loading === "new" ? (isEn ? "Adding…" : "Ekleniyor…") : isEn ? "Add goal" : "Hedef Ekle"}
           </button>
         </form>
       )}
 
       {activeGoals.length === 0 && !showAddForm ? (
-        <p className="text-center text-[13px] text-[#9ca3af] py-8">Aktif hedef yok. İlk hedefinizi oluşturun!</p>
+        <p className="text-center text-[13px] text-[#9ca3af] py-8">{isEn ? "No active goals yet. Create your first one." : "Aktif hedef yok. İlk hedefinizi oluşturun!"}</p>
       ) : (
         <div className="space-y-3">
           {activeGoals.map((goal) => {
@@ -172,9 +179,9 @@ export default function GoalsSection({
                 <div className="mb-3">
                   <h3 className="text-[14px] font-semibold text-[#0d0d12]">{goal.title}</h3>
                   <div className="flex items-center gap-2 mt-1 text-[12px] text-[#666d80]">
-                    <span>{goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()} {goal.unit}</span>
+                    <span>{goal.currentValue.toLocaleString(isEn ? "en-US" : "tr-TR")} / {goal.targetValue.toLocaleString(isEn ? "en-US" : "tr-TR")} {goal.unit}</span>
                     <span>·</span>
-                    <span>Bitiş {format(new Date(goal.endDate), "d MMM yyyy")}</span>
+                    <span>{isEn ? "Ends" : "Bitiş"} {new Date(goal.endDate).toLocaleDateString(isEn ? "en-US" : "tr-TR", { day: "numeric", month: "short", year: "numeric" })}</span>
                   </div>
                 </div>
                 <div className="w-full bg-[#f0f0f0] rounded-full h-1.5 mb-3">
@@ -184,11 +191,11 @@ export default function GoalsSection({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-[#666d80]">{Math.round(progress)}% tamamlandı</span>
+                  <span className="text-[12px] font-semibold text-[#666d80]">{Math.round(progress)}% {isEn ? "complete" : "tamamlandı"}</span>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="Güncelle"
+                    placeholder={isEn ? "Update" : "Güncelle"}
                     onBlur={(e) => {
                       const value = parseFloat(e.target.value);
                       if (!isNaN(value) && value !== goal.currentValue) updateProgress(goal.id, value);
@@ -207,7 +214,7 @@ export default function GoalsSection({
       {completedGoals.length > 0 && (
         <div className="mt-4 pt-4 border-t border-[#e8e8e8]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af] mb-2">
-            Tamamlandı ({completedGoals.length})
+            {isEn ? "Completed" : "Tamamlandı"} ({completedGoals.length})
           </p>
           <div className="space-y-2">
             {completedGoals.map((goal) => (
@@ -218,7 +225,7 @@ export default function GoalsSection({
                   </svg>
                 </span>
                 <p className="text-[13px] font-medium text-[#0d0d12]">{goal.title}</p>
-                <span className="ml-auto text-[11px] text-[#666d80]">{goal.targetValue.toLocaleString()} {goal.unit}</span>
+                <span className="ml-auto text-[11px] text-[#666d80]">{goal.targetValue.toLocaleString(isEn ? "en-US" : "tr-TR")} {goal.unit}</span>
               </div>
             ))}
           </div>

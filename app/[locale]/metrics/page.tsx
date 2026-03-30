@@ -14,16 +14,16 @@ import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelStageKey } from "@/lib/metric-setup";
 import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
 
-function formatMetricValue(value: number | null | undefined) {
+function formatMetricValue(value: number | null | undefined, locale: string) {
   if (value == null) return "—";
-  return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "tr-TR", { maximumFractionDigits: 1 }).format(value);
 }
 
-function formatDelta(current: number | null | undefined, previous: number | null | undefined) {
+function formatDelta(current: number | null | undefined, previous: number | null | undefined, locale: string) {
   if (current == null || previous == null) return null;
   const delta = Number(current) - Number(previous);
   if (delta === 0) return null;
-  return `${delta > 0 ? "+" : ""}${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(delta)}`;
+  return `${delta > 0 ? "+" : ""}${new Intl.NumberFormat(locale === "en" ? "en-US" : "tr-TR", { maximumFractionDigits: 1 }).format(delta)}`;
 }
 
 const STATUS_STYLES = {
@@ -33,32 +33,32 @@ const STATUS_STYLES = {
   NEEDS_BASELINE: "bg-[#f6f6f6] text-[#666d80] border-[#e8e8e8]",
 } as const;
 
-const STATUS_LABELS = {
-  AHEAD: "Hızlı gidiyor",
-  ON_TRACK: "Takipte",
-  AT_RISK: "Zayıf halka",
-  NEEDS_BASELINE: "Baz çizgisi",
-} as const;
-
-const STAGE_ACTION_HINTS: Partial<Record<FunnelStageKey, string>> = {
-  Awareness: "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
-  Acquisition: "Landing page dönüşümünü test et. Signup adımlarını azalt.",
-  Activation: "Onboarding akışını gözden geçir. Aha moment'a giden adımları kısalt.",
-  Retention: "En aktif kullanıcılarla görüş — neden geri geliyor?",
-  Referral: "Referral mekanizması yeterince görünür mü? Davet sürtüşmesini azalt.",
-  Revenue: "Trial süresi yeterli mi? Ücretli geçişin önündeki engeli bul.",
-};
-
 export default async function MetricsPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const isEn = locale === "en";
+  const numberLocale = isEn ? "en-US" : "tr-TR";
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const activeId = await getActiveProductId();
+  const statusLabels = {
+    AHEAD: isEn ? "Ahead" : "Hızlı gidiyor",
+    ON_TRACK: isEn ? "On track" : "Takipte",
+    AT_RISK: isEn ? "Weak link" : "Zayıf halka",
+    NEEDS_BASELINE: isEn ? "Baseline" : "Baz çizgisi",
+  } as const;
+  const stageActionHints: Partial<Record<FunnelStageKey, string>> = {
+    Awareness: isEn ? "Diversify traffic sources or increase content output." : "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
+    Acquisition: isEn ? "Test landing-page conversion and reduce signup friction." : "Landing page dönüşümünü test et. Signup adımlarını azalt.",
+    Activation: isEn ? "Review onboarding and shorten the path to the aha moment." : "Onboarding akışını gözden geçir. Aha moment'a giden adımları kısalt.",
+    Retention: isEn ? "Talk to your most active users and learn why they return." : "En aktif kullanıcılarla görüş — neden geri geliyor?",
+    Referral: isEn ? "Make the referral flow visible and reduce invite friction." : "Referral mekanizması yeterince görünür mü? Davet sürtüşmesini azalt.",
+    Revenue: isEn ? "Find the main blocker in the paid conversion step." : "Trial süresi yeterli mi? Ücretli geçişin önündeki engeli bul.",
+  };
   const product = await prisma.product.findFirst({
     where: {
       userId: session?.user?.id,
@@ -68,7 +68,7 @@ export default async function MetricsPage({
 
   if (!product) {
     return (
-      <div className="py-20 text-center text-[14px] text-[#666d80]">Ürün bulunamadı</div>
+      <div className="py-20 text-center text-[14px] text-[#666d80]">{isEn ? "Product not found" : "Ürün bulunamadı"}</div>
     );
   }
 
@@ -91,6 +91,7 @@ export default async function MetricsPage({
     targetAudience: product.targetAudience,
     businessModel: product.businessModel,
     website: product.website,
+    locale,
   });
 
   const savedSetup = await getMetricSetup(product.id);
@@ -163,56 +164,70 @@ export default async function MetricsPage({
 
   const headerTitle =
     dataState === "no_setup"
-      ? "Ölçüm sistemini kur"
+      ? isEn ? "Set up your measurement system" : "Ölçüm sistemini kur"
       : dataState === "first_entry"
-      ? "İlk baz çizgisini kaydet"
+      ? isEn ? "Save your first baseline" : "İlk baz çizgisini kaydet"
       : dataState === "building"
-      ? "Ölçüm sistemi kuruluyor"
-      : "Ölçüm sistemi";
+      ? isEn ? "Measurement system is taking shape" : "Ölçüm sistemi kuruluyor"
+      : isEn ? "Measurement system" : "Ölçüm sistemi";
 
   const headerDescription =
     dataState === "no_setup"
-      ? "Tiramisup'un neyi okuyacağını burada tanımlarsın. Takip edeceğin metrikler, kaynak uyumu ve veri akışı bu çalışma alanında yönetilir."
+      ? isEn
+        ? "This is where you define what Tiramisup should read. Metrics, source fit, and data flow are managed in this workspace."
+        : "Tiramisup'un neyi okuyacağını burada tanımlarsın. Takip edeceğin metrikler, kaynak uyumu ve veri akışı bu çalışma alanında yönetilir."
       : dataState === "first_entry"
-      ? `${selectedMetrics.length} metrik seçili. İlk gerçek değerleri girerek baz çizgini oluştur.`
+      ? isEn
+        ? `${selectedMetrics.length} metrics selected. Enter the first real values to create your baseline.`
+        : `${selectedMetrics.length} metrik seçili. İlk gerçek değerleri girerek baz çizgini oluştur.`
       : dataState === "building"
-      ? `${entryCount} giriş var. Trend ve ritim yorumları düzenli veri geldikçe daha güvenilir olacak.`
-      : `${product.name} için ${selectedMetrics.length} metrik seçili. Veri akışı, son girişler ve trendler burada yönetiliyor.`;
+      ? isEn
+        ? `${entryCount} entries are in. Trend and rhythm insights become more reliable as data arrives regularly.`
+        : `${entryCount} giriş var. Trend ve ritim yorumları düzenli veri geldikçe daha güvenilir olacak.`
+      : isEn
+        ? `${selectedMetrics.length} metrics are selected for ${product.name}. Data flow, recent entries, and trends are managed here.`
+        : `${product.name} için ${selectedMetrics.length} metrik seçili. Veri akışı, son girişler ve trendler burada yönetiliyor.`;
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Ölçüm sistemi"
+        eyebrow={isEn ? "Measurement system" : "Ölçüm sistemi"}
         title={headerTitle}
         description={headerDescription}
       />
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Takip edilen sinyal</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Tracked signal" : "Takip edilen sinyal"}</p>
           <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {selectedMetrics.length > 0 ? `${selectedMetrics.length} metrik seçili` : "Henüz seçim yok"}
+            {selectedMetrics.length > 0
+              ? isEn ? `${selectedMetrics.length} metrics selected` : `${selectedMetrics.length} metrik seçili`
+              : isEn ? "No selection yet" : "Henüz seçim yok"}
           </p>
           <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            AARRR boyunca hangi sayıları izleyeceğini burada düzenlersin.
+            {isEn ? "This is where you define which numbers matter across AARRR." : "AARRR boyunca hangi sayıları izleyeceğini burada düzenlersin."}
           </p>
         </div>
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Kaynak durumu</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Source status" : "Kaynak durumu"}</p>
           <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {connectedSourceCount > 0 ? `${connectedSourceCount} kaynak bağlı` : "Kaynak bağlı değil"}
+            {connectedSourceCount > 0
+              ? isEn ? `${connectedSourceCount} sources connected` : `${connectedSourceCount} kaynak bağlı`
+              : isEn ? "No connected source" : "Kaynak bağlı değil"}
           </p>
           <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            Otomatik veri akışı ve manuel giriş dengesi burada şekillenir.
+            {isEn ? "This is where automated flow and manual input balance is shaped." : "Otomatik veri akışı ve manuel giriş dengesi burada şekillenir."}
           </p>
         </div>
         <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">Veri ritmi</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Data rhythm" : "Veri ritmi"}</p>
           <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {entryCount > 0 ? `${entryCount} giriş kaydedildi` : "Henüz veri yok"}
+            {entryCount > 0
+              ? isEn ? `${entryCount} entries recorded` : `${entryCount} giriş kaydedildi`
+              : isEn ? "No data yet" : "Henüz veri yok"}
           </p>
           <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            Growth yorumları bu ritim oturdukça daha güvenilir hale gelir.
+            {isEn ? "Growth insights become more reliable as this rhythm settles." : "Growth yorumları bu ritim oturdukça daha güvenilir hale gelir."}
           </p>
         </div>
       </div>
@@ -236,9 +251,11 @@ export default async function MetricsPage({
       {/* no_setup state */}
       {dataState === "no_setup" && (
         <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-white p-8">
-          <p className="text-[15px] font-semibold text-[#0d0d12]">İlk iş: ölçüm yapısını netleştir</p>
+          <p className="text-[15px] font-semibold text-[#0d0d12]">{isEn ? "First job: define your measurement setup" : "İlk iş: ölçüm yapısını netleştir"}</p>
           <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-            Growth ekranında yorum ve öncelik görürsün. Ama o yorumun güvenilir olması için önce burada neyi ölçtüğünü seçmen gerekir.
+            {isEn
+              ? "Growth gives you interpretation and prioritization. But for those recommendations to be trustworthy, you first need to define what you measure here."
+              : "Growth ekranında yorum ve öncelik görürsün. Ama o yorumun güvenilir olması için önce burada neyi ölçtüğünü seçmen gerekir."}
           </p>
         </div>
       )}
@@ -254,7 +271,7 @@ export default async function MetricsPage({
           />
           <div className="rounded-[16px] border border-[#e8e8e8] bg-[#fafafa] p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-              Bunu doldurursan ne göreceksin?
+              {isEn ? "What appears after you fill this in?" : "Bunu doldurursan ne göreceksin?"}
             </p>
             <div className="mt-4 space-y-3">
               {selectedMetrics.map((metric) => (
@@ -264,31 +281,35 @@ export default async function MetricsPage({
                   </span>
                   <div>
                     <p className="text-[13px] font-semibold text-[#0d0d12]">{metric.metricName}</p>
-                    <p className="text-[11px] text-[#8a8fa0]">{metric.stage} · Baz çizgisi kurulacak</p>
+                    <p className="text-[11px] text-[#8a8fa0]">{metric.stage} · {isEn ? "Baseline will be created" : "Baz çizgisi kurulacak"}</p>
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-5 rounded-[12px] bg-white p-4">
-              <p className="text-[12px] font-semibold text-[#0d0d12]">5 giriş sonra</p>
+              <p className="text-[12px] font-semibold text-[#0d0d12]">{isEn ? "After 5 entries" : "5 giriş sonra"}</p>
               <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
-                Trend grafiği, zayıf halka tespiti ve büyüme ritmi görünür hale gelir.
+                {isEn ? "Trend chart, weak-link detection, and growth rhythm become visible." : "Trend grafiği, zayıf halka tespiti ve büyüme ritmi görünür hale gelir."}
               </p>
             </div>
             <div className="mt-3 rounded-[12px] border border-[#d7efef] bg-[#f4fbfb] p-4">
               <p className="text-[12px] font-semibold text-[#0d0d12]">
-                Kaynak bağlayarak bunu hızlandırabilirsin
+                {isEn ? "You can speed this up by connecting sources" : "Kaynak bağlayarak bunu hızlandırabilirsin"}
               </p>
               <p className="mt-1 text-[11px] leading-5 text-[#6a7283]">
                 {connectedSourceCount > 0
-                  ? "Bağlı kaynakların oldukça veri akışı daha düzenli olur. İstersen integrations ekranından yeni kaynak ekleyip manuel giriş yükünü azaltabilirsin."
-                  : "GA4 veya Stripe gibi kaynaklar bağlandığında veriler daha hızlı ve daha doğru akar. Böylece sadece sayı girmek yerine sinyallere göre aksiyon alman kolaylaşır."}
+                  ? isEn
+                    ? "With connected sources, data flow becomes more consistent. You can add more sources from Integrations to reduce manual input."
+                    : "Bağlı kaynakların oldukça veri akışı daha düzenli olur. İstersen integrations ekranından yeni kaynak ekleyip manuel giriş yükünü azaltabilirsin."
+                  : isEn
+                    ? "When sources like GA4 or Stripe are connected, data flows faster and more accurately. That makes it easier to act on signals instead of manually typing numbers."
+                    : "GA4 veya Stripe gibi kaynaklar bağlandığında veriler daha hızlı ve daha doğru akar. Böylece sadece sayı girmek yerine sinyallere göre aksiyon alman kolaylaşır."}
               </p>
               <a
                 href={`/${locale}/integrations`}
                 className="mt-3 inline-flex h-9 items-center justify-center rounded-full border border-[#0d0d12] bg-white px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#0d0d12] hover:text-white"
               >
-                Entegrasyonlara git
+                {isEn ? "Open integrations" : "Entegrasyonlara git"}
               </a>
             </div>
           </div>
@@ -300,7 +321,7 @@ export default async function MetricsPage({
         <div className="space-y-4">
           <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-4">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-              Funnel durumu
+              {isEn ? "Funnel status" : "Funnel durumu"}
             </p>
             <div className="flex flex-wrap gap-2">
               {stageSnapshots.map((metric) => (
@@ -311,7 +332,7 @@ export default async function MetricsPage({
                   <span>{metric.stage}</span>
                   {metric.currentValue !== null && (
                     <span className="font-normal opacity-70">
-                      {formatMetricValue(metric.currentValue)}
+                      {formatMetricValue(metric.currentValue, locale)}
                     </span>
                   )}
                 </div>
@@ -324,7 +345,7 @@ export default async function MetricsPage({
               />
             </div>
             <p className="mt-1.5 text-[11px] text-[#8a8fa0]">
-              Trend grafiği için {5 - entryCount} giriş kaldı
+              {isEn ? `${5 - entryCount} entries left for trend view` : `Trend grafiği için ${5 - entryCount} giriş kaldı`}
             </p>
           </div>
 
@@ -338,12 +359,12 @@ export default async function MetricsPage({
             />
             {recentEntries.length > 0 && (
               <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
-                <p className="mb-3 text-[13px] font-semibold text-[#0d0d12]">Son girişler</p>
+                <p className="mb-3 text-[13px] font-semibold text-[#0d0d12]">{isEn ? "Recent entries" : "Son girişler"}</p>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-[12px]">
                     <thead>
                       <tr className="border-b border-[#f1f1f2] text-[#8a8fa0]">
-                        <th className="py-2 pr-4 font-medium">Tarih</th>
+                        <th className="py-2 pr-4 font-medium">{isEn ? "Date" : "Tarih"}</th>
                         {selectedMetrics.map((m) => (
                           <th key={m.stage} className="py-2 pr-4 font-medium">
                             {m.stage}
@@ -361,7 +382,7 @@ export default async function MetricsPage({
                               className="py-2.5 pr-4 font-semibold text-[#0d0d12]"
                             >
                               {entry.values?.[m.stage] != null
-                                ? formatMetricValue(entry.values[m.stage])
+                                ? formatMetricValue(entry.values[m.stage], locale)
                                 : "—"}
                             </td>
                           ))}
@@ -385,21 +406,21 @@ export default async function MetricsPage({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#c2410c]">
-                    Zayıf halka
+                    {isEn ? "Weak link" : "Zayıf halka"}
                   </p>
                   <p className="mt-1 text-[16px] font-bold text-[#0d0d12]">
                     {atRiskStage.stageLabel} · {atRiskStage.metricName}
                   </p>
                   <p className="mt-1 text-[13px] leading-5 text-[#c2410c]">
-                    {STAGE_ACTION_HINTS[atRiskStage.stage] ??
-                      "Bu aşama için görev oluşturmayı düşün."}
+                    {stageActionHints[atRiskStage.stage] ??
+                      (isEn ? "Consider creating a task for this stage." : "Bu aşama için görev oluşturmayı düşün.")}
                   </p>
                 </div>
                 <a
                   href={`/${locale}/tasks`}
                   className="shrink-0 rounded-full bg-[#c2410c] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#9a3410]"
                 >
-                  Görev oluştur
+                  {isEn ? "Create task" : "Görev oluştur"}
                 </a>
               </div>
             </div>
@@ -410,7 +431,7 @@ export default async function MetricsPage({
               {/* Stage snapshot cards */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {stageSnapshots.map((metric) => {
-                  const delta = formatDelta(metric.currentValue, metric.previousValue);
+                  const delta = formatDelta(metric.currentValue, metric.previousValue, locale);
                   return (
                     <div
                       key={metric.stage}
@@ -423,14 +444,14 @@ export default async function MetricsPage({
                         <span
                           className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[metric.status]}`}
                         >
-                          {STATUS_LABELS[metric.status]}
+                          {statusLabels[metric.status]}
                         </span>
                       </div>
                       <p className="mt-1.5 text-[13px] font-semibold text-[#0d0d12]">
                         {metric.metricName}
                       </p>
                       <p className="mt-3 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
-                        {formatMetricValue(metric.currentValue)}
+                        {formatMetricValue(metric.currentValue, locale)}
                       </p>
                       {delta ? (
                         <p
@@ -438,12 +459,12 @@ export default async function MetricsPage({
                             delta.startsWith("+") ? "text-[#15803d]" : "text-[#dc2626]"
                           }`}
                         >
-                          {delta} önceki girişe göre
+                          {isEn ? `${delta} vs previous entry` : `${delta} önceki girişe göre`}
                         </p>
                       ) : metric.currentValue !== null ? (
-                        <p className="mt-1 text-[11px] text-[#8a8fa0]">Değişim yok</p>
+                        <p className="mt-1 text-[11px] text-[#8a8fa0]">{isEn ? "No change" : "Değişim yok"}</p>
                       ) : (
-                        <p className="mt-1 text-[11px] text-[#8a8fa0]">Henüz giriş yok</p>
+                        <p className="mt-1 text-[11px] text-[#8a8fa0]">{isEn ? "No entry yet" : "Henüz giriş yok"}</p>
                       )}
                     </div>
                   );
@@ -454,9 +475,9 @@ export default async function MetricsPage({
               {chartEntries.length >= 2 && (
                 <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-[13px] font-semibold text-[#0d0d12]">Trend</p>
+                    <p className="text-[13px] font-semibold text-[#0d0d12]">{isEn ? "Trend" : "Trend"}</p>
                     <span className="rounded-full bg-[#f6f6f6] px-3 py-1 text-[11px] font-medium text-[#666d80]">
-                      Son {Math.min(14, chartEntries.length)} giriş
+                      {isEn ? `Last ${Math.min(14, chartEntries.length)} entries` : `Son ${Math.min(14, chartEntries.length)} giriş`}
                     </span>
                   </div>
                   <MetricsTrendChart entries={chartEntries} series={selectedMetrics} />
@@ -466,12 +487,12 @@ export default async function MetricsPage({
               {/* Recent entries table */}
               {recentEntries.length > 0 && (
                 <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
-                  <p className="mb-3 text-[13px] font-semibold text-[#0d0d12]">Son girişler</p>
+                  <p className="mb-3 text-[13px] font-semibold text-[#0d0d12]">{isEn ? "Recent entries" : "Son girişler"}</p>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-left text-[12px]">
                       <thead>
                         <tr className="border-b border-[#f1f1f2] text-[#8a8fa0]">
-                          <th className="py-2 pr-5 font-medium">Tarih</th>
+                          <th className="py-2 pr-5 font-medium">{isEn ? "Date" : "Tarih"}</th>
                           {selectedMetrics.map((m) => (
                             <th key={m.stage} className="py-2 pr-5 font-medium">
                               {m.stage}
@@ -489,7 +510,7 @@ export default async function MetricsPage({
                                 className="py-2.5 pr-5 font-semibold text-[#0d0d12]"
                               >
                                 {entry.values?.[m.stage] != null
-                                  ? formatMetricValue(entry.values[m.stage])
+                                  ? formatMetricValue(entry.values[m.stage], locale)
                                   : "—"}
                               </td>
                             ))}
@@ -513,7 +534,7 @@ export default async function MetricsPage({
               {funnelHealth && (
                 <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-                    Koç yorumu
+                    {isEn ? "Coach summary" : "Koç yorumu"}
                   </p>
                   <p className="mt-2 text-[13px] font-semibold text-[#0d0d12]">
                     {funnelHealth.headline}
