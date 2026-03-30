@@ -3,9 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
-import SettingsForm from "@/components/SettingsForm";
 import PageHeader from "@/components/PageHeader";
-import Link from "next/link";
+import SettingsWorkspace from "@/components/SettingsWorkspace";
 
 export default async function SettingsPage({
   params,
@@ -22,15 +21,19 @@ export default async function SettingsPage({
     include: { products: true },
   });
 
-  const user = userWithProducts ? {
-    ...userWithProducts,
-    product: userWithProducts.products.find((product) => product.id === activeProductId) || userWithProducts.products[0] || null,
-  } : null;
+  const user = userWithProducts
+    ? {
+        ...userWithProducts,
+        product:
+          userWithProducts.products.find((product) => product.id === activeProductId) ||
+          userWithProducts.products[0] ||
+          null,
+      }
+    : null;
 
   const activeProduct = user?.product;
   const isEn = locale === "en";
 
-  // Fetch connected integrations for active product
   const integrations = activeProduct
     ? await prisma.integration.findMany({
         where: { productId: activeProduct.id },
@@ -40,14 +43,31 @@ export default async function SettingsPage({
     : [];
 
   const connectedCount = integrations.filter((i) => i.status === "CONNECTED").length;
+  const latestSync = integrations
+    .filter((integration) => integration.lastSyncAt)
+    .sort((a, b) => new Date(b.lastSyncAt!).getTime() - new Date(a.lastSyncAt!).getTime())[0]
+    ?.lastSyncAt;
+
   const copy = isEn
     ? {
+        overviewLabel: "Workspace overview",
+        overviewTitle: "Keep profile, project, and data settings tidy",
+        overviewDesc:
+          "Use this area to manage your account details, update your active product settings, and keep source connections healthy.",
+        profileCard: "Profile",
+        profileReady: "Account ready",
+        projectCard: "Active product",
+        noProduct: "No active product",
+        languageCard: "Language",
+        sectionsLabel: "Sections",
+        sectionsValue: "personal, project, security",
         sourcesLabel: "Sources",
         sourcesTitle: "Manage data sources",
-        sourcesWithCount: (count: number) =>
-          `${count} source${count === 1 ? "" : "s"} connected. Add new sources or manage existing ones.`,
+        sourcesWithCountLabel: "source connected. Add new sources or manage existing ones.",
         sourcesEmpty: "No sources connected yet. Connect GA4 or Stripe to pull metrics automatically.",
         lastSync: "Last sync",
+        latestSync: "Latest sync",
+        noSyncYet: "No sync yet",
         connected: "Connected",
         error: "Error",
         disconnected: "Not connected",
@@ -58,14 +78,32 @@ export default async function SettingsPage({
         growthDesc:
           "You can update AARRR tracking metrics for this product anytime. This takes you back to the metric setup step in Growth.",
         growthCta: "Open growth tracking",
+        navOverview: "Overview",
+        navProfile: "Profile",
+        navProduct: "Product",
+        navSources: "Sources",
+        navTracking: "Tracking",
+        navSecurity: "Security",
       }
     : {
+        overviewLabel: "Genel görünüm",
+        overviewTitle: "Profil, proje ve veri ayarlarını tek yerde toparla",
+        overviewDesc:
+          "Bu alan hesap bilgilerini güncellemek, aktif ürün ayarlarını net tutmak ve veri bağlantılarını sağlıklı yönetmek için kullanılır.",
+        profileCard: "Profil",
+        profileReady: "Hesap hazır",
+        projectCard: "Aktif ürün",
+        noProduct: "Aktif ürün yok",
+        languageCard: "Dil",
+        sectionsLabel: "Bölümler",
+        sectionsValue: "kişisel, proje, güvenlik",
         sourcesLabel: "Kaynaklar",
         sourcesTitle: "Veri kaynaklarını yönet",
-        sourcesWithCount: (count: number) =>
-          `${count} kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.`,
+        sourcesWithCountLabel: "kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.",
         sourcesEmpty: "Henüz bağlı kaynak yok. GA4 veya Stripe bağlayarak metrik verisini otomatik çek.",
         lastSync: "Son senkron",
+        latestSync: "En son senkron",
+        noSyncYet: "Henüz senkron yok",
         connected: "Bağlı",
         error: "Hata",
         disconnected: "Bağlı değil",
@@ -76,119 +114,100 @@ export default async function SettingsPage({
         growthDesc:
           "Seçili ürün için AARRR takip metriklerini istediğin zaman güncelleyebilirsin. Bu alan seni Growth tarafındaki metrik kurulumuna geri götürür.",
         growthCta: "Büyüme takibini aç",
+        navOverview: "Genel görünüm",
+        navProfile: "Profil",
+        navProduct: "Ürün",
+        navSources: "Kaynaklar",
+        navTracking: "Takip sistemi",
+        navSecurity: "Güvenlik",
       };
 
+  const latestSyncLabel = latestSync
+    ? new Intl.DateTimeFormat(isEn ? "en-US" : "tr-TR", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(latestSync))
+    : copy.noSyncYet;
+
   return (
-    <div className="max-w-xl">
+    <div className="max-w-6xl">
       <PageHeader
         eyebrow={t("eyebrow")}
         title={t("title")}
         description={t("description")}
       />
 
-      {/* Integrations section */}
-      {activeProduct && (
-        <section className="mb-4 rounded-[18px] border border-[#e8e8e8] bg-white p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                {copy.sourcesLabel}
-              </p>
-              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                {copy.sourcesTitle}
-              </h2>
-              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-                {connectedCount > 0
-                  ? copy.sourcesWithCount(connectedCount)
-                  : copy.sourcesEmpty}
-              </p>
-            </div>
-            {connectedCount > 0 && (
-              <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0fffe] text-[13px] font-bold text-[#0d9488]">
-                {connectedCount}
-              </span>
-            )}
+      <section className="mb-6 overflow-hidden rounded-[24px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffefe_0%,_#fff7fa_100%)]">
+        <div className="border-b border-[#f1e5eb] px-6 py-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
+            {copy.overviewLabel}
+          </p>
+          <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
+            {copy.overviewTitle}
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-7 text-[#666d80]">
+            {copy.overviewDesc}
+          </p>
+        </div>
+
+        <div className="grid gap-3 px-6 py-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
+              {copy.profileCard}
+            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
+              {user?.name || user?.email || "—"}
+            </p>
+            <p className="mt-1 text-[13px] text-[#666d80]">{copy.profileReady}</p>
           </div>
 
-          {/* Connected integrations list */}
-          {integrations.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {integrations.map((integration) => {
-                const isConnected = integration.status === "CONNECTED";
-                const lastSync = integration.lastSyncAt
-                  ? new Intl.DateTimeFormat(isEn ? "en-US" : "tr-TR", {
-                      day: "2-digit",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }).format(new Date(integration.lastSyncAt))
-                  : null;
+          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
+              {copy.projectCard}
+            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
+              {activeProduct?.name || copy.noProduct}
+            </p>
+            <p className="mt-1 text-[13px] text-[#666d80]">
+              {activeProduct?.status || "—"}
+            </p>
+          </div>
 
-                return (
-                  <div
-                    key={integration.provider}
-                    className="flex items-center justify-between gap-3 rounded-[12px] bg-[#fafafa] px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full ${isConnected ? "bg-[#0d9488]" : integration.status === "ERROR" ? "bg-[#ef4444]" : "bg-[#d1d5db]"}`} />
-                      <div>
-                        <p className="text-[13px] font-semibold text-[#0d0d12]">
-                          {integration.provider}
-                        </p>
-                        {lastSync && (
-                          <p className="text-[11px] text-[#8b93a6]">
-                            {copy.lastSync}: {lastSync}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      isConnected
-                        ? "bg-[#f0fffe] text-[#0d9488]"
-                        : integration.status === "ERROR"
-                          ? "bg-[#fee2e2] text-[#ef4444]"
-                          : "bg-[#f5f5f5] text-[#8b93a6]"
-                    }`}>
-                      {isConnected ? copy.connected : integration.status === "ERROR" ? copy.error : copy.disconnected}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
+              {copy.sourcesLabel}
+            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">{connectedCount}</p>
+            <p className="mt-1 text-[13px] text-[#666d80]">
+              {copy.latestSync}: {latestSyncLabel}
+            </p>
+          </div>
 
-          <Link
-            href={`/${locale}/integrations`}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
-          >
-            {connectedCount > 0 ? copy.manageSources : copy.connectSource}
-          </Link>
-        </section>
-      )}
+          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
+              {copy.languageCard}
+            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
+              {user?.preferredLocale === "tr" ? "Türkçe" : "English"}
+            </p>
+            <p className="mt-1 text-[13px] text-[#666d80]">
+              {copy.sectionsLabel}: {copy.sectionsValue}
+            </p>
+          </div>
+        </div>
+      </section>
 
-      {/* Growth tracking section */}
-      {activeProduct ? (
-        <section className="mb-4 rounded-[18px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffdfd_0%,_#fff7fa_100%)] p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
-            {copy.growthLabel}
-          </p>
-          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-            {copy.growthTitle}
-          </h2>
-          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            {copy.growthDesc}
-          </p>
-          <Link
-            href={`/${locale}/growth#tracking-metrics`}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
-          >
-            {copy.growthCta}
-          </Link>
-        </section>
-      ) : null}
-
-      {/* Profile & project settings form */}
-      <SettingsForm user={user} locale={locale} />
+      <SettingsWorkspace
+        locale={locale}
+        user={user}
+        activeProduct={activeProduct}
+        integrations={integrations}
+        connectedCount={connectedCount}
+        copy={copy}
+        isEn={isEn}
+      />
     </div>
   );
 }
