@@ -68,6 +68,7 @@ function serializeNormalizedContext(ctx: NormalizedProductContext): string {
     stage: ctx.stage,
     primary_goal: ctx.primary_goal,
     planned_launch_date: ctx.planned_launch_date,
+    description_understanding: ctx.description_understanding,
     context_confidence: ctx.context_confidence,
     missing_fields: ctx.missing_fields,
     ambiguity_flags: ctx.ambiguity_flags,

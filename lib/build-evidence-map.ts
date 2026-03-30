@@ -101,8 +101,26 @@ export function buildEvidenceMap(input: EvidenceInput): EvidenceMap {
   if (input.metrics.entryCount > 0) known.push(`${input.metrics.entryCount} metric entries recorded`);
 
   // Inferred facts
-  if (ctx.product_summary) {
-    inferred.push(`Product focus (from description): ${ctx.product_summary.slice(0, 100)}`);
+  if (ctx.description_understanding.problem_summary) {
+    inferred.push(`Problem summary inferred from description: ${ctx.description_understanding.problem_summary}`);
+  }
+  if (ctx.description_understanding.user_segments.length > 0) {
+    inferred.push(`Audience hints from description: ${ctx.description_understanding.user_segments.join(", ")}`);
+  }
+  if (ctx.description_understanding.pain_points.length > 0) {
+    inferred.push(`Pain-point hints from description: ${ctx.description_understanding.pain_points.join(", ")}`);
+  }
+  if (ctx.description_understanding.value_props.length > 0) {
+    inferred.push(`Value-prop hints from description: ${ctx.description_understanding.value_props.join(", ")}`);
+  }
+  if (ctx.description_understanding.use_cases.length > 0) {
+    inferred.push(`Use-case hints from description: ${ctx.description_understanding.use_cases.join(", ")}`);
+  }
+  if (ctx.description_understanding.acquisition_channels.length > 0) {
+    inferred.push(`Acquisition channel hints from description: ${ctx.description_understanding.acquisition_channels.join(", ")}`);
+  }
+  if (ctx.description_understanding.evidence_phrases.length > 0) {
+    inferred.push(`Evidence phrases from founder description: ${ctx.description_understanding.evidence_phrases.join(" | ")}`);
   }
   if (ctx.stage === "live" && input.metrics.entryCount === 0) {
     inferred.push("Product is live but has no metric data — measurement not yet active");
@@ -123,6 +141,9 @@ export function buildEvidenceMap(input: EvidenceInput): EvidenceMap {
   }
   if (ctx.product_url === "") {
     unknown.push("No product URL provided");
+  }
+  if (ctx.description_understanding.source_quality === "low") {
+    unknown.push("Founder description is too weak for high-confidence product-specific recommendations");
   }
 
   // Checklist state

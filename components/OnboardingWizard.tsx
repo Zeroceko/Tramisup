@@ -20,11 +20,11 @@ type StepId =
   | "description"
   | "category"
   | "platform"
-  | "stage"
-  | "timing"
-  | "business"
   | "audience"
+  | "business"
+  | "stage"
   | "goal"
+  | "timing"
   | "sources"
   | "metrics";
 
@@ -32,18 +32,22 @@ type WizardData = {
   name: string;
   description: string;
   website: string;
-  category: string;
+  categories: string[];
+  categoryOther: string;
   platforms: string[];
-  targetAudience: string;
+  targetAudiences: string[];
+  targetAudienceOther: string;
   launchStatus: string;
   timingOption: string;
-  businessModel: string;
+  businessModels: string[];
+  businessModelOther: string;
   growthGoal: string;
   goalKey: string;
   intendedSources: string[];
 };
 
 const CONNECTABLE_ONBOARDING_SOURCES = ["GA4", "Stripe"] as const;
+const OTHER_OPTION_VALUE = "Diğer";
 
 // ─── Option data ──────────────────────────────────────────────────────────────
 
@@ -54,20 +58,22 @@ const CATEGORIES = [
   { value: "Marketplace", label: "Marketplace", sub: "Alıcı-satıcı platformu" },
   { value: "İçerik/Medya", label: "İçerik / Medya", sub: "Newsletter, blog, podcast" },
   { value: "Platform", label: "Platform / Araç", sub: "Geliştirici araçları, API" },
+  { value: "AI Product", label: "AI Product", sub: "LLM, agent veya AI destekli ürün" },
   { value: "Diğer", label: "Diğer", sub: "Başka bir şey" },
 ];
 
 const STAGES = [
+  { value: "Fikir aşamasında", label: "Fikir aşamasındayım", sub: "Problemi ve çözümü netleştiriyorum" },
   { value: "Geliştirme aşamasında", label: "Geliştiriyorum", sub: "Henüz kullanıcı yok" },
   {
     value: "Test kullanıcıları var",
-    label: "Beta / test kullanıcılarım var",
+    label: "Test kullanıcılarım var",
     sub: "Kapalı beta devam ediyor",
   },
   {
     value: "Yakında yayında",
-    label: "Yakında yayına çıkıyorum",
-    sub: "Launch hazırlığındayım",
+    label: "Launch hazırlığındayım",
+    sub: "Yakında yayına çıkıyorum",
   },
   { value: "Yayında", label: "Yayındayım", sub: "Gerçek kullanıcılarım var" },
   {
@@ -85,13 +91,15 @@ const TIMING_OPTIONS = [
 ];
 
 const BUSINESS_MODELS = [
-  { value: "Freemium", label: "Freemium", sub: "Ücretsiz + ücretli plan" },
   { value: "Abonelik", label: "Abonelik", sub: "Aylık / yıllık ödeme" },
+  { value: "Freemium", label: "Freemium + ücretli plan", sub: "Ücretsiz giriş + yükseltme" },
   { value: "Tek seferlik ödeme", label: "Tek seferlik satış", sub: "Bir kez satın al" },
   { value: "Kullanıma göre ödeme", label: "Kullanım bazlı", sub: "Pay-per-use" },
   { value: "Kurumsal/özel teklif", label: "Kurumsal / B2B", sub: "Sales-led, özel fiyat" },
   { value: "Marketplace komisyonu", label: "Marketplace komisyonu", sub: "İşlem başına % al" },
+  { value: "Reklam", label: "Reklam", sub: "Reklam veya sponsorluk geliri" },
   { value: "Henüz monetize etmedim", label: "Henüz gelir yok", sub: "Önce kullanıcı, sonra para" },
+  { value: "Diğer", label: "Diğer", sub: "Farklı bir gelir modeli" },
 ];
 
 const PLATFORMS = [
@@ -183,11 +191,11 @@ const STEP_META: Record<
   description: { eyebrow: "Temel", title: "Urun anlatimi" },
   category: { eyebrow: "Kurgu", title: "Kategori secimi" },
   platform: { eyebrow: "Kurgu", title: "Platformlar" },
-  stage: { eyebrow: "Durum", title: "Asama secimi" },
-  timing: { eyebrow: "Durum", title: "Launch zamani" },
-  business: { eyebrow: "Model", title: "Gelir modeli" },
   audience: { eyebrow: "Model", title: "Hedef kitle" },
+  business: { eyebrow: "Model", title: "Gelir modeli" },
+  stage: { eyebrow: "Durum", title: "Asama secimi" },
   goal: { eyebrow: "Odak", title: "Buyume onceligi" },
+  timing: { eyebrow: "Durum", title: "Launch zamani" },
   sources: { eyebrow: "Veri", title: "Kaynaklar" },
   metrics: { eyebrow: "Veri", title: "AARRR onerisi" },
 };
@@ -196,10 +204,9 @@ const ONBOARDING_PHASES = [
   "Ürününü Anlat",
   "Tip&Kanallar",
   "Ürün Profilleri",
-  "Veri & İzler",
+  "Go-to-Market",
   "Launch Hazırlık",
-  "Growth Setup",
-  "Öncelikler",
+  "Veri & İzler",
 ] as const;
 
 const STEP_TO_PHASE: Record<StepId, number> = {
@@ -207,12 +214,12 @@ const STEP_TO_PHASE: Record<StepId, number> = {
   description: 0,
   category: 1,
   platform: 1,
-  stage: 2,
-  timing: 4,
-  business: 2,
   audience: 2,
-  goal: 6,
-  sources: 3,
+  business: 2,
+  stage: 3,
+  goal: 3,
+  timing: 4,
+  sources: 5,
   metrics: 5,
 };
 
@@ -223,7 +230,7 @@ function isLaunchedStage(s: string) {
 }
 
 function isVeryEarlyStage(s: string) {
-  return s === "Geliştirme aşamasında" || s === "Test kullanıcıları var";
+  return s === "Fikir aşamasında" || s === "Geliştirme aşamasında" || s === "Test kullanıcıları var";
 }
 
 function deriveStatus(launchStatus: string): "PRE_LAUNCH" | "LAUNCHED" | "GROWING" {
@@ -248,13 +255,20 @@ function timingToDate(timing: string): string | null {
 function computeAutoMetrics(
   data: Partial<WizardData>
 ): Partial<Record<FunnelStageKey, string>> {
-  if (!data.category || !data.launchStatus) return {};
+  const category = joinSelections(data.categories, data.categoryOther);
+  const targetAudience = joinSelections(data.targetAudiences, data.targetAudienceOther);
+  const businessModel = joinSelections(data.businessModels, data.businessModelOther);
+
+  if (!category || !data.launchStatus) return {};
   const plan = getGrowthMetricRecommendations({
     name: data.name ?? "",
     status: deriveStatus(data.launchStatus),
-    category: data.category,
-    businessModel: data.businessModel,
-    targetAudience: data.targetAudience,
+    category,
+    businessModel,
+    targetAudience,
+    description: data.description,
+    platforms: data.platforms,
+    goalKey: data.goalKey,
   });
   const result: Partial<Record<FunnelStageKey, string>> = {};
   for (const section of plan.sections) {
@@ -266,9 +280,9 @@ function computeAutoMetrics(
 
 function getActiveSteps(data: Partial<WizardData>): StepId[] {
   const ids: StepId[] = ["name", "description", "category", "platform"];
-  ids.push("stage");
+  ids.push("audience", "business", "stage", "goal");
   if (data.launchStatus && !isLaunchedStage(data.launchStatus)) ids.push("timing");
-  ids.push("business", "audience", "goal", "sources");
+  ids.push("sources");
   if (data.launchStatus && !isVeryEarlyStage(data.launchStatus)) ids.push("metrics");
   return ids;
 }
@@ -276,6 +290,24 @@ function getActiveSteps(data: Partial<WizardData>): StepId[] {
 function formatPlatforms(platforms: string[] | undefined) {
   if (!platforms || platforms.length === 0) return "Secilmedi";
   return platforms.join(", ");
+}
+
+function joinSelections(selected: string[] | undefined, otherValue?: string) {
+  const items = [...(selected ?? [])];
+  const otherIndex = items.indexOf(OTHER_OPTION_VALUE);
+  if (otherIndex !== -1) {
+    const trimmedOther = otherValue?.trim();
+    if (trimmedOther) {
+      items[otherIndex] = trimmedOther;
+    } else {
+      items.splice(otherIndex, 1);
+    }
+  }
+  return items.join(", ");
+}
+
+function hasOtherSelection(selected: string[] | undefined) {
+  return (selected ?? []).includes(OTHER_OPTION_VALUE);
 }
 
 function getStageLabel(value: string | undefined, items: { value: string; label: string }[]) {
@@ -385,9 +417,12 @@ function MetricsStep({
   const plan = getGrowthMetricRecommendations({
     name: data.name ?? "",
     status: deriveStatus(data.launchStatus ?? ""),
-    category: data.category,
-    businessModel: data.businessModel,
-    targetAudience: data.targetAudience,
+    category: joinSelections(data.categories, data.categoryOther),
+    businessModel: joinSelections(data.businessModels, data.businessModelOther),
+    targetAudience: joinSelections(data.targetAudiences, data.targetAudienceOther),
+    description: data.description,
+    platforms: data.platforms,
+    goalKey: data.goalKey,
   });
 
   const metricNames: Partial<Record<FunnelStageKey, string>> = {};
@@ -449,7 +484,7 @@ function MetricsStep({
           onClick={onSkip}
           className="h-10 rounded-full border border-[#e5e7eb] px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12]"
         >
-          {hasConnectableSources ? "Kurulumsuz devam et" : "Sonra yapacağım"}
+          Daha sonra devam et
         </button>
       </div>
     </div>
@@ -493,7 +528,16 @@ function CreatingScreen({ error }: { error: string | null }) {
 export default function OnboardingWizard({ locale }: { locale: string }) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
-  const [data, setData] = useState<Partial<WizardData>>({ platforms: [], intendedSources: [] });
+  const [data, setData] = useState<Partial<WizardData>>({
+    categories: [],
+    categoryOther: "",
+    platforms: [],
+    targetAudiences: [],
+    targetAudienceOther: "",
+    businessModels: [],
+    businessModelOther: "",
+    intendedSources: [],
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -501,7 +545,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const stepIds = useMemo(
     () => getActiveSteps(data),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data.category, data.launchStatus]
+    [data.launchStatus]
   );
   const currentId = stepIds[stepIndex] ?? "name";
   const totalSteps = stepIds.length;
@@ -514,7 +558,19 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const autoMetrics = useMemo(
     () => computeAutoMetrics(data),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data.category, data.launchStatus, data.businessModel]
+    [
+      data.categories,
+      data.categoryOther,
+      data.launchStatus,
+      data.businessModels,
+      data.businessModelOther,
+      data.targetAudiences,
+      data.targetAudienceOther,
+      data.platforms,
+      data.goalKey,
+      data.description,
+      data.name,
+    ]
   );
   const connectableSources = useMemo(
     () => getConnectableSources(data.intendedSources),
@@ -532,7 +588,10 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     setData((d) => ({ ...d, [key]: value }));
   }
 
-  function toggleMulti(field: "platforms" | "intendedSources", value: string) {
+  function toggleMulti(
+    field: "categories" | "platforms" | "targetAudiences" | "businessModels" | "intendedSources",
+    value: string
+  ) {
     setData((d) => {
       const arr = (d[field] ?? []) as string[];
       return {
@@ -549,7 +608,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       case "description":
         return (data.description ?? "").trim().length > 0;
       case "category":
-        return !!data.category;
+        return (data.categories ?? []).length > 0 && (!hasOtherSelection(data.categories) || (data.categoryOther ?? "").trim().length > 0);
       case "platform":
         return (data.platforms ?? []).length > 0;
       case "stage":
@@ -557,9 +616,9 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       case "timing":
         return !!data.timingOption;
       case "business":
-        return !!data.businessModel;
+        return (data.businessModels ?? []).length > 0 && (!hasOtherSelection(data.businessModels) || (data.businessModelOther ?? "").trim().length > 0);
       case "audience":
-        return !!data.targetAudience;
+        return (data.targetAudiences ?? []).length > 0 && (!hasOtherSelection(data.targetAudiences) || (data.targetAudienceOther ?? "").trim().length > 0);
       case "goal":
         return !!data.growthGoal;
       case "sources":
@@ -591,10 +650,10 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           name: data.name,
           description: data.description,
           website: data.website || undefined,
-          category: data.category,
+          category: joinSelections(data.categories, data.categoryOther),
           platforms: data.platforms ?? [],
-          targetAudience: data.targetAudience,
-          businessModel: data.businessModel,
+          targetAudience: joinSelections(data.targetAudiences, data.targetAudienceOther),
+          businessModel: joinSelections(data.businessModels, data.businessModelOther),
           launchStatus: data.launchStatus,
           launchDate: data.timingOption ? timingToDate(data.timingOption) : undefined,
           growthGoal: data.growthGoal,
@@ -625,7 +684,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         });
       }
 
-      if (connectableSources.length > 0) {
+      if (useMetrics && connectableSources.length > 0) {
         const params = new URLSearchParams({
           onboarding: "1",
           connect: toIntegrationProvider(connectableSources[0]),
@@ -640,6 +699,11 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           );
         }
         router.push(`/${locale}/integrations?${params.toString()}`);
+        return;
+      }
+
+      if (!useMetrics) {
+        router.push(`/${locale}/products/${product.id}/overview?onboarding=continue`);
         return;
       }
 
@@ -725,20 +789,29 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           {currentId === "description" && (
             <StepWrapper
               title="Ürünün ne yapıyor?"
-              subtitle="Bir cümleyle açıkla — hangi problemi, kimin için çözüyor?"
+              subtitle="Bu alan ürününü tanımamız ve sana gerçekten ürüne özel plan oluşturmamız için çok önemli. Ne yaptığını, kimin için yaptığını ve hangi problemi çözdüğünü net yaz."
             >
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#ececef] px-3 py-1 text-[12px] text-[#6e7483]">
                 <Sparkles className="h-3.5 w-3.5" />
-                Ürününü kısaca anlatın
+                Bunu AI planı ve önerileri kişiselleştirmek için kullanıyoruz
+              </div>
+              <div className="mb-3 rounded-[12px] border border-[#e7e8ee] bg-white/70 px-4 py-3 text-[13px] leading-6 text-[#5f6674]">
+                Kısa ama gerçek yaz. Pazarlama sloganı değil; ürünün bugün pratikte ne yaptığını anlat.
+                Mümkünse şu formatta düşün:
+                {" "}
+                <span className="font-medium text-[#0d0d12]">[kim için] + [hangi problemi] + [nasıl çözüyor]</span>
               </div>
               <textarea
                 autoFocus
                 value={data.description ?? ""}
                 onChange={(e) => set("description", e.target.value)}
-                placeholder="Freelancerların teklif ve ödemelerini tek yerden yönetmesini sağlıyor."
-                rows={3}
+                placeholder="Freelancerların dağınık teklif ve ödeme süreçlerini tek panelde yönetmesini sağlıyor; teklif oluşturma, takip ve tahsilat akışını tek yerde topluyor."
+                rows={4}
                 className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
               />
+              <p className="mt-2 text-[12px] leading-5 text-[#8a8fa0]">
+                Ne kadar net yazarsan, checklist, metrik önerileri ve sonraki adımlar o kadar isabetli olur.
+              </p>
               <div className="mt-4">
                 <label className="text-[12px] font-medium text-[#8a8fa0]">
                   Website veya link (opsiyonel)
@@ -766,11 +839,26 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   <OptionCard
                     key={item.value}
                     item={item}
-                    selected={data.category === item.value}
-                    onClick={() => set("category", item.value)}
+                    multi
+                    selected={(data.categories ?? []).includes(item.value)}
+                    onClick={() => toggleMulti("categories", item.value)}
                   />
                 ))}
               </div>
+              {hasOtherSelection(data.categories) && (
+                <div className="mt-4">
+                  <label className="mb-1 block text-[12px] font-medium text-[#8a8fa0]">
+                    Diğer seçtin, belirtin
+                  </label>
+                  <input
+                    type="text"
+                    value={data.categoryOther ?? ""}
+                    onChange={(e) => set("categoryOther", e.target.value)}
+                    placeholder="Örn. İç operasyon aracı"
+                    className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                  />
+                </div>
+              )}
             </StepWrapper>
           )}
 
@@ -843,11 +931,26 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   <OptionCard
                     key={item.value}
                     item={item}
-                    selected={data.businessModel === item.value}
-                    onClick={() => set("businessModel", item.value)}
+                    multi
+                    selected={(data.businessModels ?? []).includes(item.value)}
+                    onClick={() => toggleMulti("businessModels", item.value)}
                   />
                 ))}
               </div>
+              {hasOtherSelection(data.businessModels) && (
+                <div className="mt-4">
+                  <label className="mb-1 block text-[12px] font-medium text-[#8a8fa0]">
+                    Diğer seçtin, belirtin
+                  </label>
+                  <input
+                    type="text"
+                    value={data.businessModelOther ?? ""}
+                    onChange={(e) => set("businessModelOther", e.target.value)}
+                    placeholder="Örn. Hizmet + yazılım paketi"
+                    className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                  />
+                </div>
+              )}
             </StepWrapper>
           )}
 
@@ -862,11 +965,26 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   <OptionCard
                     key={item.value}
                     item={item}
-                    selected={data.targetAudience === item.value}
-                    onClick={() => set("targetAudience", item.value)}
+                    multi
+                    selected={(data.targetAudiences ?? []).includes(item.value)}
+                    onClick={() => toggleMulti("targetAudiences", item.value)}
                   />
                 ))}
               </div>
+              {hasOtherSelection(data.targetAudiences) && (
+                <div className="mt-4">
+                  <label className="mb-1 block text-[12px] font-medium text-[#8a8fa0]">
+                    Diğer seçtin, belirtin
+                  </label>
+                  <input
+                    type="text"
+                    value={data.targetAudienceOther ?? ""}
+                    onChange={(e) => set("targetAudienceOther", e.target.value)}
+                    placeholder="Örn. Operasyon yöneticileri"
+                    className="w-full rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] outline-none placeholder:text-[#b0b7c3] focus:border-[#0d0d12] focus:ring-2 focus:ring-[#0d0d12]/10"
+                  />
+                </div>
+              )}
             </StepWrapper>
           )}
 
@@ -994,7 +1112,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                       type="button"
                       onClick={goNext}
                       disabled={!canContinue()}
-                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:bg-[#F4DDE9] disabled:text-[#7E6674] disabled:opacity-100"
                     >
                       Devam Et
                     </button>

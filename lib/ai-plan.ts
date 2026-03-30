@@ -40,6 +40,8 @@ export type WizardInput = {
   targetAudience?: string;
   businessModel?: string;
   launchStatus?: string;
+  goalKey?: string;
+  growthGoal?: string;
   website?: string;
   mobilePlatforms?: string[];
   websiteContent?: string;
@@ -116,12 +118,7 @@ function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
   const launchChecklist: AiLaunchItem[] = [];
   const growthChecklist: AiGrowthItem[] = [];
 
-  if (context.isLaunched) {
-    launchChecklist.push(
-      makeLaunchItem("MARKETING", "Store veya landing mesajini gercek degerle hizala", `${productName} icin ilk gorulen mesaj ile gercek deneyim arasinda kopukluk varsa acquisition kalitesi dusurur.`, "HIGH"),
-      makeLaunchItem("PRODUCT", "Ilk deger anina giden akis kopuslerini not et", `${audience} urunu gordukten sonra ilk faydali aksiyona ne kadar rahat gidiyor, gozden gecir.`, "HIGH")
-    );
-  } else {
+  if (!context.isLaunched) {
     launchChecklist.push(
       makeLaunchItem("PRODUCT", "Ilk deger anini launch oncesi netlestir", `${productName} yayina ciktiginda ${audience} hangi ilk aksiyonla deger gordugunu anlamali.`, "HIGH"),
       makeLaunchItem("MARKETING", "Launch gunu mesajini ve dagitim planini hazirla", `Ilk trafik dalgasi geldigi anda hangi kanalda ne soylenecegi net olmali.`, "HIGH")
@@ -135,11 +132,18 @@ function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
     makeGrowthItem("REVENUE", "Ucretliye gecis veya gelir ritmini izle", `Gelir davranisi acquisition kadar net okunmali.`)
   );
 
-  const dedupedLaunch = dedupeByTitle(launchChecklist).slice(0, 12);
+  const dedupedLaunch = context.isLaunched ? [] : dedupeByTitle(launchChecklist).slice(0, 12);
   const dedupedGrowth = dedupeByTitle(growthChecklist).slice(0, 8);
   const tasks = dedupeByTitle([
-    ...dedupedLaunch.slice(0, 2).map<AiTask>((item) => ({ title: item.title, description: item.description, priority: item.priority, status: "TODO" })),
-    ...dedupedGrowth.slice(0, 3).map<AiTask>((item, index) => ({ title: item.title, description: item.description, priority: index === 0 ? "HIGH" : "MEDIUM", status: "TODO" })),
+    ...(!context.isLaunched
+      ? dedupedLaunch.slice(0, 2).map<AiTask>((item) => ({ title: item.title, description: item.description, priority: item.priority, status: "TODO" }))
+      : []),
+    ...dedupedGrowth.slice(0, context.isLaunched ? 4 : 3).map<AiTask>((item, index) => ({
+      title: item.title,
+      description: item.description,
+      priority: index === 0 ? "HIGH" : "MEDIUM",
+      status: "TODO",
+    })),
   ]).slice(0, 5);
 
   return {
@@ -204,6 +208,9 @@ ${normalizedCtx ? `\nNORMALİZE BAĞLAM (yapılandırılmış):
 - Aşama: ${normalizedCtx.stage}
 - Birincil hedef: ${normalizedCtx.primary_goal}
 - Platformlar: ${normalizedCtx.platforms.join(", ") || "belirtilmemiş"}
+- Problem özeti: ${normalizedCtx.description_understanding.problem_summary || "belirtilmemiş"}
+- Açıklamadan çıkarılan kullanıcı sinyalleri: ${normalizedCtx.description_understanding.user_segments.join(", ") || "belirtilmemiş"}
+- Açıklamadan çıkarılan kullanım sinyalleri: ${normalizedCtx.description_understanding.use_cases.join(", ") || "belirtilmemiş"}
 - Bağlam güvenilirliği: ${normalizedCtx.context_confidence}
 ${normalizedCtx.missing_fields.length > 0 ? `- Eksik bilgiler: ${normalizedCtx.missing_fields.join(", ")}` : ""}
 ${normalizedCtx.ambiguity_flags.length > 0 ? `- Belirsizlik bayrakları: ${normalizedCtx.ambiguity_flags.join("; ")}` : ""}` : ""}
@@ -214,6 +221,11 @@ GÖREVİN:
 Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
 - Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik görevlerini oluştur.
 - Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
+
+STAGE KURALI:
+- Eğer mevcut aşama "Yayında" veya "Büyüme aşamasında" ise launch checklist yazma.
+- Bu iki aşamada görevler launch hazırlığına değil growth, measurement, activation, retention veya revenue odağına hizmet etmeli.
+- Eğer mevcut aşama launch öncesiyse growth ölçekleme görevi yazma.
 
 ÖZEL KURAL: Asla ezber veya jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere atıf yap.
 DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
@@ -249,6 +261,10 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     targetAudience: input.targetAudience,
     businessModel: input.businessModel,
     launchStatus: input.launchStatus,
+    launchGoals:
+      input.goalKey || input.growthGoal
+        ? JSON.stringify({ goalKey: input.goalKey, growthGoal: input.growthGoal })
+        : undefined,
     platforms: input.mobilePlatforms ?? [],
   });
 
@@ -261,14 +277,26 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
       "ai-plan"
     );
 
-    const orderedLaunch = assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
+    const isLaunchedStage = ["yayında", "büyüme aşamasında"].includes((input.launchStatus ?? "").toLowerCase());
+    const orderedLaunch = isLaunchedStage
+      ? []
+      : assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
     const orderedGrowth = assignOrder(dedupeByTitle(object.growthChecklist as AiGrowthItem[]));
 
     console.log(`[ai-plan] SUCCESS: Generated structured plan with ${orderedLaunch.length} launch items and ${orderedGrowth.length} growth items`);
     const aiGeneratedPlan: AiPlan = {
       launchChecklist: orderedLaunch,
       growthChecklist: orderedGrowth,
-      tasks: dedupeByTitle(object.tasks as AiTask[]),
+      tasks: isLaunchedStage
+        ? dedupeByTitle(
+            orderedGrowth.slice(0, 4).map<AiTask>((item, index) => ({
+              title: item.title,
+              description: item.description,
+              priority: index === 0 ? "HIGH" : "MEDIUM",
+              status: "TODO",
+            }))
+          )
+        : dedupeByTitle(object.tasks as AiTask[]),
     };
     return mergeMobileLaunchBaseline(aiGeneratedPlan, finalInput);
   } catch (error) {

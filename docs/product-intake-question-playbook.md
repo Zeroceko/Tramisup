@@ -187,6 +187,7 @@ Suggested primary categories:
 
 Note:
 - avoid category labels that are too broad and ambiguous
+- if `Other` is selected, require a short clarification field
 
 ### Question 4 — Which platform does it run on?
 Purpose:
@@ -233,6 +234,7 @@ Suggested options:
 
 Design note:
 - if multiple segments are selected, the system should flag multi-segment complexity
+- if `Other` is selected, require a short clarification field
 
 ### Question 6 — How do you make money?
 Purpose:
@@ -257,6 +259,17 @@ Suggested options:
 
 Design note:
 - “freemium” alone should not be treated as a complete monetization model
+- if `Other` is selected, require a short clarification field
+
+## 5.1 Current implementation notes
+
+The current product implementation now follows these additional rules:
+- category, audience, and business model support multi-select
+- `Other` reveals a clarification field instead of staying ambiguous
+- after stage selection, the user is asked for the current number-one priority
+- intake output should continue to feed stage-aware task generation and metric suggestions
+
+These implementation rules should remain aligned with the downstream AI system and should not be simplified back into vague single-choice flows without a deliberate product decision.
 
 ### Question 7 — What stage is your product in?
 Purpose:

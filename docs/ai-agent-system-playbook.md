@@ -57,6 +57,10 @@ Examples:
 - do not present metric interpretations with certainty when no trusted source exists
 - do not recommend scale tactics before launch readiness is established
 
+UI implication:
+- launched / growing products should not keep seeing launch-first navigation or launch-primary work surfaces
+- the main recommendation surface should reflect the current stage, not legacy setup structure
+
 ### 2.5 Prefer silence over nonsense
 If there is not enough evidence, the system should say less.
 No recommendation is better than a bad recommendation.
@@ -92,6 +96,14 @@ Recommended flow:
 
 Formula:
 **Answers → Normalized Context → Evidence Map → Recommendation Candidates → Critic Filter → Final Guidance**
+
+### 3.1 Surface mapping
+Current product surface mapping should stay consistent with this playbook:
+- `Dashboard`: what is the next correct step right now?
+- `Growth`: where is the weak link and what should we do next?
+- `Metrics`: what do we measure, how does data arrive, and what changed?
+
+Do not casually merge these surfaces back together unless the playbook itself is revised.
 
 ## 4. Agent team structure
 
@@ -183,6 +195,7 @@ Rules:
 - no duplicates
 - no high-priority recommendation with weak evidence presented as strong
 - high-confidence output requires threshold satisfaction
+- if measurement setup is incomplete, prefer a setup / data-quality recommendation over an optimization recommendation
 
 ### 4.4 Critic / Sanity Checker Agent
 Responsibilities:
@@ -222,6 +235,8 @@ Rules:
 - clear separation between certainty and probability
 - minimal jargon
 - concise formatting
+- do not turn the product into an open-ended chat surface
+- growth-facing UI should usually surface one main recommendation and a short supporting context block, not a sprawling mixed workspace
 
 Output:
 - primary recommendation

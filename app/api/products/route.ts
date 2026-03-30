@@ -130,6 +130,8 @@ export async function POST(request: Request) {
       targetAudience,
       businessModel,
       launchStatus,
+      goalKey,
+      growthGoal,
       website,
       mobilePlatforms: normalizedPlatforms,
       websiteContent: websiteContent ?? undefined,
