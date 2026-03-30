@@ -1,407 +1,222 @@
-# Tiramisup - Handoff
-
-**Last Updated:** 29 March 2026
-**Status:** **EN/TR shipped + onboarding redesign + source-aware growth setup + onboarding-to-integrations handoff shipped.**
-
----
-
-## Executive Summary
-
-Tiramisup is a data-aware founder co-pilot for startup teams in their launch-to-growth phase. The system guides founders through a calm, staged progression: define what to track, enter daily data, observe trends, then optimize.
-
-### What shipped in the latest sprint cycle (29 March 2026)
-
-**Language Support (EN/TR)**
-- Added EN/TR language switcher on landing page (simple dropdown, no emojis)
-- Rewrote all visible landing copy in both languages (EN = sharp/global, TR = natural/human)
-- Added language setting in `/[locale]/settings` (persisted)
-- Default locale changed to **English** (middleware + next-intl config)
-- Language persisted via `NEXT_LOCALE` cookie and stored on `User.preferredLocale`
-- Added DB migration for `User.preferredLocale`
-
-**Onboarding UX + Source Connection Flow**
-- Redesigned `OnboardingWizard` to modal-style multi-phase layout (closer to product visual language)
-- Added phase pill rail + compact action area (`Devam Et`) and contextual quick actions in description step
-- If user selects `GA4` or `Stripe` in onboarding sources, product creation now redirects to `/{locale}/integrations` and auto-opens source setup flow
-- Integrations page now accepts onboarding query params (`onboarding`, `connect`, `queued`) for guided first connection
-
-**Growth Setup + Sync Behavior**
-- Growth metric selector now adapts to connected data sources using stage automation guides
-- For stages auto-supported by connected sources, compatible metrics are highlighted and unsupported options are disabled in that stage
-- Stages not covered by connected sources remain manual-select
-- GA4 sync now supports explicit merge modes for manual data coexistence:
-  - `overwrite` → replace mapped stage values with GA4 values
-  - `missing_dates` → only create entries for missing dates
-
-**Tests**
-- Vitest runs with dummy keys: `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` → **8 test files / 68 tests passed**
-
-**Note (Local Dev)**
-- Local `supabase start` may fail if Docker image layer for `realtime` is corrupted (digest mismatch). Fix by removing/re-pulling the image:
-  - `docker image rm public.ecr.aws/supabase/realtime:v2.73.2`
-  - `docker pull public.ecr.aws/supabase/realtime:v2.73.2`
-  - `npx supabase start`
-
-### What shipped in the previous sprint cycle (26 March 2026)
-
-**Sprint 1 — DB Migration (Critical tech debt resolved)**
-- Replaced `Product.launchGoals` JSON blob with proper `MetricSetup` and `MetricEntry` Prisma models
-- All API routes, pages, and lib files migrated to use new DB entities
-- Migration script available at `scripts/migrate-launch-goals.ts`
-- Legacy `parseSavedMetricSetup()` kept for backward compatibility but no longer used by active code
-
-**Sprint 2 — Metric Trend Visualization + Navigation**
-- `MetricsTrendChart` upgraded: area charts with gradient fills, per-stage sparkline cards with trend percentages
-- `DashboardNav` improved: pre-launch products now see Tasks in nav, Growth shown as preview
-- Post-wizard product overview page (`/products/[id]/overview`) — clear orientation after product creation
-
-**Sprint 3 — Smart Coach + Unified Orchestration**
-- Founder Coach now receives AARRR funnel data + integration metrics in AI prompts
-- `lib/next-step.ts` — unified next-step orchestration across all pages
-- Enhanced fallback responses with metric-aware logic (DAU < 10 → acquisition focus, no integrations → suggest connection)
-
-**Settings & Integrations UX Fix**
-- Settings page restructured as a hub: Entegrasyonlar (with live status), Growth Tracking, Profil
-- Users can now discover and navigate to Integrations from Settings
-
-**Bug Fixes**
-- Signup route no longer leaks error details in 500 responses
-- Vitest config excludes `Landing Page/` directory (was causing false test failures)
-- Advisor route updated to check `MetricSetup` table instead of legacy `launchGoals` field
-
----
-
-## Architecture Overview
-
-### Database Models (Prisma + PostgreSQL)
-
-**Core:**
-- `User` — Auth (email + passwordHash, credentials + JWT) + `preferredLocale` (default `en`)
-- `Product` — Main workspace entity (status: PRE_LAUNCH | LAUNCHED | GROWING)
-
-**Metric System (NEW — replaces launchGoals JSON):**
-- `MetricSetup` — One per product. Stores AARRR metric selections (JSON), platforms, ignoredChecklistIds, founderSummary
-- `MetricEntry` — One per product+date. Stores user-entered AARRR funnel values (JSON)
-- `Metric` — Integration-synced daily data (DAU, MAU, MRR, churn, etc.) from GA4/Stripe
-
-**Growth Infrastructure:**
-- `LaunchChecklist` — Pre-launch blockers (PRODUCT/MARKETING/LEGAL/TECH)
-- `GrowthChecklist` — Growth execution items (ACQUISITION/ACTIVATION/RETENTION/REVENUE)
-- `Task` — Standalone tasks linked to checklist items
-- `Goal` — Numeric targets with progress tracking
-- `GrowthRoutine` — Recurring weekly/monthly tasks
-
-**Integrations:**
-- `Integration` — OAuth config per provider per product (status: DISCONNECTED | CONNECTED | ERROR)
-- `SyncJob` — Job logs for each sync run
-
-**Other:**
-- `Waitlist` — Pre-launch signups with invite codes
-- `RetentionCohort`, `ActivationFunnel`, `TimelineEvent`
-
-### Key Library Files
-
-| File | Purpose |
-|------|---------|
-| `lib/metric-setup.ts` | DB-backed CRUD for MetricSetup/MetricEntry + legacy JSON parser |
-| `lib/next-step.ts` | Unified next-step orchestration across all pages |
-| `lib/metric-context.ts` | Builds metric snapshot + Turkish context string for AI prompts |
-| `lib/founder-coach.ts` | Turkish-first mentorship engine (Qwen → DeepSeek → Gemini fallback) |
-| `lib/founder-coach-context.ts` | Aggregates product state for Founder Coach |
-| `lib/founder-coach-agent.ts` | Skill-loading decision maker for advisory routing |
-| `lib/founder-summary.ts` | Builds data-driven founder summary during product creation |
-| `lib/funnel-health.ts` | Computes AARRR funnel health status per stage |
-| `lib/growth-workspace-step.ts` | Growth page step logic (SETUP → ENTER → GOAL → CHECKLIST → COACH) |
-| `lib/integration-recommendations.ts` | Maps metric keys to recommended providers |
-| `lib/integrations-catalog.ts` | Integration definitions + metadata |
-| `lib/ga4-admin.ts` | Google Analytics Admin API helpers |
-| `lib/sync-to-metric-entry.ts` | Bridges integration-synced `Metric` rows into `MetricEntry` with sync modes |
-
-### AI Provider Chain
-
-All AI calls fall through this provider chain in order:
-1. **Qwen** (`qwen-plus` via Alibaba Cloud MaaS) — fastest, cheapest
-2. **DeepSeek** (`deepseek-chat`) — fallback
-3. **Gemini** (`gemini-2.0-flash`, `GEMINI_API_KEY`) — second fallback
-4. **Gemini backup** (`gemini-2.0-flash`, `GEMINI_API_KEY_2`) — last resort
-
-If all fail, static hardcoded fallback responses are returned (no crash).
-
-### Integration Roadmap
-
-| Priority | Providers | Status |
-|----------|-----------|--------|
-| **P0** | GA4, Stripe | Operational — OAuth + sync workers live |
-| **P1** | RevenueCat, App Store Connect, Google Play, Meta Ads | Enum ready, sync workers not built |
-| **P2** | Google Ads, TikTok Ads, AppsFlyer | Enum ready, placeholder only |
-
----
-
-## Current UX/Product Principles
-
-### 1. Calm, staged progression
-- One main decision per screen
-- One obvious next step
-- Secondary systems only after primary setup is done
-
-### 2. Stage-aware navigation
-For **launched** products: Overview → Tasks → Metrics → Growth (Launch as preview)
-For **pre-launch** products: Overview → Launch → Tasks (Growth as preview)
-Settings → Integrations accessible via Settings hub
-
-### 3. Evidence-first recommendations
-The system must not assume problems without supporting context. Founder Coach uses real metric data from `MetricSetup`/`MetricEntry` tables and `Metric` integration data.
-
-### 4. Setup before optimization
-1. Choose tracking metrics → 2. Enter daily values → 3. View trends → 4. Set targets → 5. Optimize
-
-### 5. Growth vs Metrics distinction
-- **Growth** = "Neyi takip edeceğiz?" (What to track)
-- **Metrics** = "Bugün ne oldu ve ne değişti?" (What happened today)
-
----
-
-## Page-by-Page State
-
-### Dashboard (`/[locale]/dashboard`)
-- Shows next-step card based on product state (unified via `lib/next-step.ts`)
-- Displays founderSummary from `MetricSetup.founderSummary`
-- Quick links to all sections with live counts
-- First-run: welcome onboarding with no fake data
-
-### Growth (`/[locale]/growth`)
-- Pre-launch: preview card explaining Growth is the next stage
-- Launched: AARRR metric selection (MetricSetupSelector), growth checklist, goals, routines
-- Integration recommendations based on selected metrics
-- Advisor card with stage-aware guidance
-
-### Metrics (`/[locale]/metrics`)
-- Shows only user-selected metrics (from `MetricSetup.selections`)
-- Funnel health analysis with AT_RISK / ON_TRACK / AHEAD status per stage
-- Trend chart (area + sparklines) for last 14 entries
-- Daily entry form with last-known value hints
-- Recent entries table with delta comparison
-
-### Tasks (`/[locale]/tasks`)
-- Surfaces one main task first
-- Quick start/complete actions
-- Supporting task list underneath
-
-### Pre-launch (`/[locale]/pre-launch`)
-- Category-based checklist (Product, Marketing, Legal, Tech)
-- Ignored items stored in `MetricSetup.ignoredChecklistIds`
-- Launch button when ready
-
-### Settings (`/[locale]/settings`)
-- **Integrations hub** — connected provider status badges, last sync time, link to `/integrations`
-- **Growth tracking** — link to metric setup
-- **Profile** — name, project name, launch date, status
-- **Language** — English / Türkçe preference (persisted + stored on user)
-
-### Integrations (`/[locale]/integrations`)
-- Dark mode marketplace UI
-- Live integrations with property picker (GA4) and sync controls
-- Supports onboarding handoff params to auto-open selected provider setup flow
-- GA4 sync presents manual data handling choices (overwrite vs missing dates)
-- Roadmap section for P1/P2 providers
-
-### Onboarding (`/[locale]/onboarding`)
-- Modal-style, multi-phase guided product creation
-- Collects: name, description, category, platforms, stage, timing (if pre-launch), business model, audience, goal, optional sources, optional metric prefill
-- If onboarding sources include `GA4` or `Stripe`, user is redirected to Integrations and setup is auto-opened
-
-### Post-wizard Overview (`/[locale]/products/[id]/overview`)
-- Shown after product creation
-- Product summary, what Tiramisup prepared, clear next-step CTA
-
----
-
-## Environment Variables
-
-```bash
-# AI Providers
-QWEN_API_KEY="..."
-DEEPSEEK_API_KEY="..."
-GEMINI_API_KEY="..."
-GEMINI_API_KEY_2="..."
-
-# Auth
-NEXTAUTH_URL="http://localhost:3002"
-NEXTAUTH_SECRET="..."
-
-# App
-NEXT_PUBLIC_APP_URL="http://localhost:3002"
-
-# Database
-DATABASE_URL="postgresql://..."
-
-# Google OAuth (GA4)
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-
-# Stripe
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-```
-
----
-
-## Local Development
-
-```bash
-npm install
-npx prisma generate
-npx prisma db push        # sync schema to local DB
-npm run dev                # starts on port 3002
-```
-
-Access code for signup: `TT31623SEN`
-
-If dev becomes flaky:
-```bash
-rm -rf .next && npm run dev
-```
-
----
-
-## Production
-
-**URL:** https://tramisup.vercel.app
-**Hosting:** Vercel (`zerocekos-projects/tramisup`)
-**DB:** Supabase PostgreSQL (free tier — pauses after inactivity)
-
----
-
-## First thing to do when you take over
-
-1. `npm install && npx prisma generate`
-2. Copy `.env.example` to `.env.local`, fill in keys
-3. `npx prisma db push` — sync schema
-4. `npm run dev` — verify on http://localhost:3002
-5. Create test user via `/tr/signup` with code `TT31623SEN`
-6. `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` — verify all 68 tests pass
-
----
-
-## What is NOT done yet
-
-### High Priority
-1. **P1 Integration sync workers** — RevenueCat, App Store Connect, Google Play, Meta Ads (enums exist, OAuth + sync code not built)
-2. **Email notification flow** — waitlist approval, onboarding emails
-3. **Multi-product switching UX** — basic product selector exists but could be smoother
-4. **Remove `Product.launchGoals` column** — field still in schema but no longer used by any code. Can be dropped in a future migration.
-
-### Medium Priority
-1. Expand Founder Coach proposal modes (draft tasks / draft metrics / draft checklists)
-2. Reintroduce website / SEO analysis only when triggered by context
-3. Add proper retention cohort visualization
-4. Implement activation funnel drill-down
-
-### Low Priority
-1. Figma design system alignment pass
-2. PWA / mobile optimization
-3. Team/collaboration features
-
----
-
-## What Must Not Regress
-
-1. No fake workspace data on signup
-2. Launched products must not feel trapped in pre-launch UX
-3. Growth must stay staged: preview for pre-launch, workspace for launched
-4. Metric entry must stay tied to selected setup (from `MetricSetup` table)
-5. Advice must not assume problems without evidence
-6. User-written product description must remain central context
-7. The product should guide, not lecture
-8. `MetricSetup`/`MetricEntry` tables are the source of truth — never revert to `launchGoals` JSON
-
----
-
-## Test Coverage
-
-**Unit tests:** 8 files, 68 tests
-- `__tests__/api/auth/signup.test.ts` — 12 assertions
-- `__tests__/api/waitlist/join.test.ts` — 11 assertions
-- `__tests__/api/waitlist/check.test.ts`
-- `__tests__/api/waitlist/admin.test.ts`
-- `__tests__/lib/auth.test.ts`
-- `__tests__/lib/metric-context.test.ts` — 7 test cases
-- `__tests__/ai-fallback.test.ts`
-
-**E2E tests:** 5 Playwright files (not part of `npm test`, run via `npm run test:e2e`)
-
----
-
-## Technical Stack
-
-- **Framework:** Next.js 15 (App Router)
-- **UI:** React 19 + Tailwind CSS 3
-- **Language:** TypeScript 5
-- **Auth:** NextAuth 4 (Credentials + JWT)
-- **DB:** Prisma 6 + PostgreSQL (Supabase)
-- **AI:** Qwen + DeepSeek + Gemini (fallback chain)
-- **Charts:** Recharts
-- **i18n:** next-intl
-- **Tests:** Vitest + Playwright
-- **Deploy:** Vercel
-
----
-
-## Changelog
-
-### v0.3.0 — 29 March 2026
-
-**Language Support (EN/TR)**
-- Landing page fully bilingual; all copy rewritten in EN/TR
-- Language dropdown on landing (no emojis)
-- Language preference in Settings; persists via cookie + DB (`User.preferredLocale`)
-- Default locale switched to English
-- Added migration: `User.preferredLocale`
-
-### v0.2.0 — 26 March 2026
-
-**DB Migrasyonu (Teknik Borc Temizligi)**
-- `Product.launchGoals` JSON blob kaldirildi, yerine `MetricSetup` ve `MetricEntry` Prisma modelleri geldi
-- 15+ dosya yeni DB entity'lerine tasirildi
-- Mevcut veriyi tasimak icin migration scripti hazir (`scripts/migrate-launch-goals.ts`)
-
-**Veri Odakli AI Mentorluk**
-- Founder Coach artik gercek AARRR funnel verisini + entegrasyon metriklerini prompt'a enjekte ediyor
-- DAU < 10 ise acquisition odagi, entegrasyon yoksa baglanti onerisi gibi akilli fallback'ler
-- Advisor route duzeltildi: artik `MetricSetup` tablosunu kontrol ediyor
-
-**Unified Next-Step Sistemi**
-- Yeni `lib/next-step.ts`: tum sayfalarda tek bir "siradaki adim" mantigi
-- Akis: Urun olustur → Launch checklist → Metrik kur → Ilk veri gir → Hedef koy → Checklist ilerlet → Gunluk metrik
-
-**Metrik Trend Gorsellestirme**
-- `MetricsTrendChart` yeniden yazildi: AreaChart + gradient dolgular
-- Her AARRR asamasi icin sparkline kartlari + trend yuzdesi
-
-**Navigasyon Iyilestirmeleri**
-- Pre-launch urunler artik nav'da Tasks goruyor, Growth "preview" olarak isaretli
-- Post-wizard overview sayfasi eklendi (`/products/[id]/overview`)
-- Urun olusturma sonrasi artik overview'a yonleniyor
-
-**Settings Hub**
-- Settings sayfasi 3 bolumlu hub oldu: Entegrasyonlar (durum + sync), Growth Tracking, Profil
-- Kullanicilar artik entegrasyonlari Settings'ten bulabiliyor
-
-**Entegrasyon Altyapisi**
-- Entegrasyon oneri sistemi: secilen metriklere gore provider onerisi
-- GA4 property picker + sync kontrolleri
-- P0 (GA4, Stripe) operasyonel, P1/P2 roadmap'te
-
-**Guvenlik & Stabilite**
-- Signup route artik 500 hatalarinda detay sizdirmiyor
-- Vitest config `Landing Page/` dizinini disliyor
-- Advisor route'taki eski `launchGoals` referansi duzeltildi
-
-### v0.1.0 — Initial Release
-- Core product creation wizard
-- Pre-launch checklist system
-- Basic metric tracking with launchGoals JSON
-- AI mentorship with Qwen/DeepSeek/Gemini fallback chain
-- GA4 + Stripe integration OAuth flows
-- Waitlist system with invite codes
+# Tiramisup Handoff
+
+**Date:** 30 March 2026
+**Production:** `https://tiramisup.app`
+**Status:** Live and handoff-ready
+
+## What is live right now
+
+### Public site
+- Simplified waitlist-first landing page is the production homepage.
+- The original fuller landing page is preserved on `/yayinda`.
+- Privacy and Terms are live.
+- Consent-aware Clarity and GA4 are live on the public site.
+
+### Waitlist
+- Waitlist email collection is live.
+- Waitlist confirmation emails are live via Resend.
+- Thank-you page tracking is live.
+
+### Auth
+- Early-access signup is live.
+- Login is live.
+- Forgot password is live.
+- Reset password is live.
+- Change password from Settings is live.
+- Password strength requirements are enforced in both UI and backend.
+
+### Product app
+- Dashboard, onboarding, integrations, growth, metrics, tasks, and settings are live.
+- Dashboard and onboarding work should remain aligned with:
+  - `docs/ai-agent-system-playbook.md`
+  - `docs/product-intake-question-playbook.md`
+- Current surface split:
+  - `Growth` = recommendation + weak-link + execution surface
+  - `Metrics` = measurement setup + source flow + manual entry + trends
+  - `Settings` = account, product, sources, tracking, and security
+- `Growth` now also includes a deterministic tactics layer:
+  - max 3 tactics
+  - diagnosis-led, not generic
+  - hidden for pre-launch products
+  - guarded by measurement readiness
+
+## Production routes that matter most
+
+### Marketing / public
+- `/en`
+- `/tr`
+- `/en/yayinda`
+- `/tr/yayinda`
+- `/en/privacy`
+- `/tr/privacy`
+- `/en/terms`
+- `/tr/terms`
+
+### Auth
+- `/en/signup`
+- `/tr/signup`
+- `/en/login`
+- `/tr/login`
+- `/en/forgot-password`
+- `/tr/forgot-password`
+- `/en/reset-password`
+- `/tr/reset-password`
+
+### App
+- `/en/dashboard`
+- `/tr/dashboard`
+- `/en/settings`
+- `/tr/settings`
+- `/en/integrations`
+- `/tr/integrations`
+
+## Critical implementation decisions
+
+### 1. English is the master language
+- Default locale is `en`.
+- Turkish is secondary.
+- Do not flip the source language back to Turkish.
+
+### 2. Public domain and OAuth callback are intentionally separated
+- Public app URL is `tiramisup.app`.
+- OAuth callback base is separately configurable via `OAUTH_CALLBACK_BASE_URL`.
+- This prevents Google/Stripe OAuth from breaking when the public domain changes.
+
+### 3. Password reset is stateless
+- No password-reset DB table is required.
+- Reset links are signed.
+- Links expire automatically.
+- Links are invalidated when the password changes.
+
+### 4. Waitlist root and preserved landing must remain separate
+- `/` is now conversion-oriented.
+- `/yayinda` is the preserved fuller page.
+- Do not overwrite one with the other by accident.
+
+### 5. Stage-appropriate navigation matters
+- `Launch` should not appear in top navigation for `LAUNCHED` or `GROWING` products.
+- `Sources` should not appear as a top-level app nav item.
+- Source management now lives under `Settings`.
+
+### 6. Metrics entry constraints are intentional
+- Manual entries should be integers by default.
+- Decimals are allowed only for revenue-style monetary metrics such as `mrr` and `arpu`.
+- This is enforced in both client and backend to avoid dirty data.
+
+### 7. Free-text onboarding understanding is now part of core product logic
+- Product description free text is normalized into structured inferred context.
+- This understanding feeds downstream AI planning and evidence mapping.
+- Treat this as product logic, not decorative copy.
+
+### 8. Growth tactics belong in Growth first
+- Tactical advice should be diagnosis-led and stage-appropriate.
+- `Growth` is the primary home for tactics.
+- `Metrics` can support tactic readiness, but should not become a channel-tip surface.
+- `Settings`, auth, and public landing should not become tactic surfaces.
+
+## Files new teams should inspect first
+
+### Product and routing
+- `app/[locale]/page.tsx`
+- `app/[locale]/waitlist/page.tsx`
+- `app/[locale]/yayinda/page.tsx`
+- `middleware.ts`
+- `i18n.ts`
+
+### Auth
+- `app/[locale]/signup/page.tsx`
+- `app/[locale]/login/page.tsx`
+- `app/[locale]/forgot-password/page.tsx`
+- `app/[locale]/reset-password/page.tsx`
+- `app/api/auth/signup/route.ts`
+- `app/api/auth/forgot-password/route.ts`
+- `app/api/auth/reset-password/route.ts`
+- `app/api/auth/change-password/route.ts`
+- `lib/password-rules.ts`
+- `lib/password-reset.ts`
+
+### Public analytics and waitlist
+- `components/analytics/`
+- `lib/analytics.ts`
+- `app/api/waitlist/join/route.ts`
+- `lib/resend-waitlist.ts`
+
+### OAuth and app URLs
+- `lib/app-urls.ts`
+- `app/api/integrations/google/link/route.ts`
+- `app/api/integrations/google/callback/route.ts`
+- `app/api/integrations/stripe/link/route.ts`
+- `app/api/integrations/stripe/callback/route.ts`
+
+### Settings and security
+- `components/SettingsForm.tsx`
+- `components/SettingsWorkspace.tsx`
+
+### Growth / metrics split
+- `app/[locale]/growth/page.tsx`
+- `app/[locale]/metrics/page.tsx`
+- `components/GrowthTacticsPanel.tsx`
+- `components/GrowthIntegrationRecommendations.tsx`
+- `components/MetricEntryForm.tsx`
+- `lib/growth-tactics.ts`
+- `docs/growth-tactics-layer.md`
+
+### AI context and onboarding understanding
+- `components/OnboardingWizard.tsx`
+- `lib/normalize-product-context.ts`
+- `lib/ai-plan.ts`
+- `lib/build-evidence-map.ts`
+- `lib/founder-coach.ts`
+- `docs/internal-growth-rules.md`
+- `docs/free-text-understanding-plan.md`
+- `docs/free-text-eval-rubric.md`
+- `docs/free-text-dataset-schema.md`
+- `docs/free-text-normalize-pipeline.md`
+
+## Production env checklist
+
+These should exist and be correct in Vercel production:
+- `NEXT_PUBLIC_APP_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `STRIPE_CLIENT_ID`
+- `STRIPE_SECRET_KEY`
+- `OAUTH_CALLBACK_BASE_URL`
+
+## Known operational lessons
+
+### Vercel env hygiene
+There was a real production issue caused by env values saved with trailing `\\n` characters. If production starts behaving inexplicably, inspect the exact raw env values first.
+
+### OAuth testing
+If Google OAuth shows verification warnings, that is not a code bug by itself. It usually means either:
+- test user not whitelisted in Google Cloud, or
+- OAuth app verification is incomplete for broader access.
+
+### Resend dependency
+Forgot-password and waitlist confirmation emails depend on Resend being healthy and the sender domain staying verified.
+
+### Server-to-client serialization
+Do not pass functions from server components into client components in settings/dashboard composition. This caused a real runtime crash during the settings workspace refactor.
+
+### Local E2E caveat
+Local founder-flow tests depend on a working database connection. If Prisma cannot reach the local database, signup will fail with a server error before product-flow UX can be evaluated.
+
+### Current product debt worth keeping visible
+- Some locale-routed app screens still contain Turkish-first hardcoded copy.
+- Signup currently asks for a product-type selection that is not sent to the backend.
+- Dashboard routing for launched products without metrics still needs careful review so Metrics ownership stays clear.
+
+## Safe next steps for a new team
+1. Validate the live `Growth` tactics layer with real founder flows before expanding tactics into other surfaces.
+2. Refine settings polish and tab interaction without re-expanding all sections at once.
+3. Improve locale consistency so English stays the master language across app surfaces.
+4. Tighten dashboard and onboarding flow details while staying inside the playbooks.
+5. Add better event naming and funnel reporting in GA4.

@@ -1,150 +1,153 @@
-# Tiramisup Handoff Notes
+# Engineering Handoff Notes
 
-**Last Updated:** 27 March 2026
+## Snapshot
 
-## Current focus
+This repo is already in production and should be treated as a live system, not a prototype sandbox.
 
-This sprint is a product-logic reset, not a visual-polish sprint.
+- Production domain: `https://tiramisup.app`
+- Default locale: English
+- Secondary locale: Turkish
+- Main public goal: waitlist conversion
+- Main app goal: staged launch-to-growth workflow
 
-Current reset themes:
-- first-login onboarding
-- Growth vs Metrics separation
-- beginner-friendly metric language
-- metrics feedback loop
-- task surface clarity
-- docs consistency
+## Non-obvious architecture choices
 
-First login is no longer meant to feel like an empty dashboard.
+### Public domain vs OAuth callback base
+The app intentionally separates public URLs from OAuth callback URLs.
 
-If the authenticated user has no product yet, the dashboard should now:
-- show a short welcome/profile onboarding
-- keep one obvious primary CTA into product creation
-- preview the staged product journey in simple language
-- avoid fake metrics, fake tasks, and fake checklist content
+Why:
+- marketing and email links should use `tiramisup.app`
+- Google/Stripe OAuth can break if callback domains drift from the ones whitelisted in provider dashboards
 
-Current product surfaces also include:
-- a pre-launch Growth preview that stays visible as the next stage instead of disappearing
-- a launch review surface that still shows remaining non-critical items after launch
-- a real metrics trend chart once enough daily entries exist
-- a clearer metrics feedback loop with last-known-value hints, save feedback, and latest-vs-previous comparison
-- a clearer Growth page framing that explains Growth as metric-selection/setup and Metrics as daily entry + change review
-- a dedicated tasks shell so task work keeps the same app framing as the other workspace pages
-- a task spotlight surface that brings one main job to the top of the page
-- mobile product setup now asks for iOS / Android platform selection so store requirements can be surfaced early
-- ASO now has its own skill boundary for store-page conversion guidance
-- launch readiness and analytics instrumentation now have dedicated skill boundaries too
-- a project-level skill gateway now routes ambiguous or multi-domain skill requests
+Implementation:
+- public URL helpers come from `lib/app-urls.ts`
+- callback URLs can use `OAUTH_CALLBACK_BASE_URL`
 
-## Current implementation boundary
+### Stateless password reset
+Password reset does not use a Prisma reset-token table.
 
-- Runtime entry point: `app/[locale]/dashboard/page.tsx`
-- First-run UI component: `components/FirstRunOnboarding.tsx`
-- Growth framing: `app/[locale]/growth/page.tsx`, `components/MetricSetupSelector.tsx`
-- Metrics loop: `app/[locale]/metrics/page.tsx`, `components/MetricEntryForm.tsx`
-- Task work surface: `components/TasksList.tsx`
-- Product creation flow still starts at `/{locale}/products/new`
-- Existing calm/staged rules from `README.md`, `HANDOFF.md`, and `.gsd/KNOWLEDGE.md` remain in force
-- The workspace should not fabricate fallback checklist/task data when AI is unavailable
-- App Store / Google Play submission guidance should be pulled into AI output when the product is a mobile app
-- ASO questions should route separately from policy/compliance questions
-- launch blocker questions should route to launch readiness, and tracking-plan questions should route to analytics instrumentation
-- skill-routing questions should route to the new gateway skill
+Why:
+- avoids extra migration risk in production
+- easier operationally
+- existing links automatically become invalid when password changes
 
-## March 27 — Today Screen Redesign
+Implementation:
+- `lib/password-reset.ts`
+- `app/api/auth/forgot-password/route.ts`
+- `app/api/auth/reset-password/route.ts`
 
-Dashboard replaced with a phase-adaptive "Today" command center.
+### Shared password rules
+The same password rules are reused across signup, reset, and in-app password change.
 
-### Architecture decisions
-- `GROWING` and `LAUNCHED` are merged at the UI level. GROWING is only cosmetic (purple badge). All post-launch behavior is identical. Wizard still writes GROWING to DB for "Büyüme aşamasında" selections.
-- `PhaseKey` is now `"pre-launch" | "launched"` — two operating modes only.
-- Pre-launch and post-launch render completely different primary actions, decision strips, and blocker surfaces.
+Implementation:
+- `lib/password-rules.ts`
+- `components/ui/PasswordChecklist.tsx`
 
-### New components (`components/today/`)
-| Component | Purpose |
-|-----------|---------|
-| `TodayHero` | Greeting + product name + phase badge + one-line status |
-| `PrimaryAction` | Single dominant action card with progress bar. Phase-adaptive. |
-| `DecisionStrip` | 4 compact health indicators (readiness/growth, tasks, metrics, sources) |
-| `BlockerAlert` | Conditional — only renders when HIGH priority checklist items or ERROR integrations exist |
-| `TodayTasks` | Top 3 priority tasks with quick-complete (PATCH `/api/actions/[id]`) |
-| `SourceHealth` | Today's entry status, manual vs automated metric breakdown, integration health |
-| `CoachInsight` | Opt-in AI coach (collapsed by default). Prompt always sent in English, response forced to user locale. |
+## Public-site analytics
 
-### Data fetching
-`app/[locale]/dashboard/page.tsx` now fetches in a single parallel `Promise.all`:
-- `LaunchChecklist` HIGH+incomplete items (blockers)
-- `Task` top 3 by priority (not DONE)
-- `Task` grouped by status (counts)
-- `Integration` ERROR status
-- `MetricEntry` for today's date
-- `Goal` count
-- `MetricSetup` (AARRR selections + founder summary)
+Current setup:
+- Clarity: integrated on public site, consent-aware
+- GA4: integrated on public site, consent-aware
+- event coverage includes CTA clicks, waitlist signup, and thank-you page
 
-### CoachInsight language fix
-Prompts are always sent in English for better AI reasoning. A `You MUST respond in Turkish` instruction is appended when `locale === "tr"`. This prevents the model from defaulting to English regardless of prompt language.
+Do not casually move analytics scripts into authenticated product pages without an explicit product/privacy decision.
 
-## March 28 — Launch Readiness Screen Redesign
+## Product rules that should survive team transition
 
-Launch Readiness reframed as a "launch control system" with gate logic, weighted scoring, and severity hierarchy.
+- English remains the source-of-truth locale.
+- `/` remains the simplified waitlist-first landing page.
+- `/yayinda` remains the preserved fuller landing page.
+- Dashboard/onboarding logic should stay aligned with:
+  - `docs/ai-agent-system-playbook.md`
+  - `docs/product-intake-question-playbook.md`
+- Do not inflate the product with generic AI surfaces that are not grounded in those playbooks.
+- `Growth` and `Metrics` now have intentionally different jobs:
+  - `Growth` = evidence-aware next step, weak link, and execution focus
+  - `Metrics` = metric definition, source setup, manual entry, and trend reading
+- `Growth` now also contains a deterministic V1 tactics layer:
+  - tactics are diagnosis-led
+  - tactics are not generic startup tips
+  - tactics appear only when stage and measurement readiness allow it
+  - the current home for tactics is `Growth`, not `Metrics` or `Settings`
+- `Launch` should stay hidden in top nav for launched/growing products.
+- `Sources` should stay out of top nav and live under `Settings`.
+- Free-text onboarding understanding is now part of normalized product context and should remain aligned with the related eval and normalization docs.
 
-### Gate model
-Three gate states derived at page level:
-- `HARD_BLOCKED` — any active HIGH-priority incomplete checklist item. Button locked.
-- `WARNING` — no active blockers, but ignored blockers or non-critical items remain. Button enabled with risk acknowledgment.
-- `CLEAR` — zero blockers, zero ignored. Full green light.
+## Current UI architecture notes
 
-### Weighted score
-`HIGH=3, MEDIUM=2, LOW=1`. Score = completedWeight / totalWeight × 100. Simple % was misleading (9/10 with 1 critical LEGAL = 90% — wrong).
+### Settings
+- Settings now uses top category tabs instead of a long all-sections page.
+- Only one settings category should be visible at a time.
+- Current categories:
+  - Profile
+  - Product
+  - Sources
+  - Tracking
+  - Security
 
-### New and updated components
-| Component | Change |
-|-----------|--------|
-| `components/launch/LaunchGateStatus.tsx` | New hero. Weighted score (large display), gate state badge, 4 confidence indicators (Product/Tech/Legal/Marketing), anchor to #blockers when hard blocked. |
-| `components/ChecklistSection.tsx` | Risk label per category, RED border on HIGH items, red counter badge, expandable description, "Göreve ekle" CTA. |
-| `components/BlockerSummary.tsx` | CRITICAL (LEGAL/TECH) vs IMPORTANT (PRODUCT/MARKETING) severity. Sorted by severity. "Riski kabul et, geç" replaces "Yoksay". |
-| `components/LaunchButton.tsx` | `gateOpen` prop — lock icon when blocked. Ignored blocker warning in modal. Risk acknowledgment checkbox required when ignored blockers exist. |
+### Metrics
+- Recommended source suggestions are collapsible by default.
+- Manual metric inputs accept integers by default.
+- Decimal values are only allowed for monetary revenue metrics such as `mrr` and `arpu`.
 
-### Page (`app/[locale]/pre-launch/page.tsx`)
-Computes weighted score, gate state, and 4 confidence indicators. Passes `gateOpen`, `ignoredBlockers`, `nonCriticalRemaining`, and `locale` to all components. `LaunchReviewSummary` removed — replaced by `LaunchGateStatus`.
+### Onboarding
+- Category, audience, and business model now support multi-select.
+- Choosing `Other` reveals a clarification field.
+- Onboarding asks for current top priority after stage selection.
+- Product description guidance now explicitly asks for a concrete explanation because this field is used to build a product-specific plan.
+- Skip/continue flows should remain product-first, not drop the user into generic AI surfaces without a product context.
 
----
+### Growth
+- The current V1 tactics layer is intentionally deterministic and narrow.
+- Do not broaden it into a generic “tips feed.”
+- If tactics expand later, keep the order:
+  1. diagnosis
+  2. tactic eligibility
+  3. tactic ranking
+  4. surface placement
 
-## March 28 — Tasks Screen Redesign
+## Quick smoke tests after any risky release
 
-Tasks reframed as a founder execution queue with impact-based prioritization and linked system effects.
+### Public
+1. Open `/en`
+2. Accept cookies
+3. Submit waitlist email
+4. Confirm thank-you page load
+5. Check GA4 realtime if relevant
 
-### Section model
-Tasks are sorted into four execution lanes (derived, not stored in DB):
-- **Şimdi yap / Do now** — `IN_PROGRESS` tasks + `HIGH` priority tasks that are overdue or due today. Shown as prominent focus cards with a large CTA.
-- **Sırada / Up next** — `HIGH` and `MEDIUM` priority `TODO` tasks not in the focus lane.
-- **Bekleyen / Backlog** — `LOW` priority `TODO` tasks. Collapsed by default.
-- **Tamamlandı / Done** — `DONE` tasks. Collapsed by default.
+### Auth
+1. Open `/en/forgot-password`
+2. Request reset email
+3. Open reset link
+4. Set a password that satisfies rules
+5. Log in with new password
+6. Open `/en/settings` and change password again from the security section
 
-### Linked system effect
-When a task is marked DONE via `PATCH /api/actions/[id]`, the API now also auto-completes the linked `LaunchChecklist` item (if one exists and is not already completed). This means completing a task from the launch checklist on the Tasks screen is reflected immediately in Launch Readiness — no manual double-update needed.
+### OAuth
+1. Log in
+2. Open `/en/integrations`
+3. Start GA4 connect
+4. Confirm redirect and callback complete successfully
 
-### Card metadata surface
-- Priority shown as impact label (`Yüksek etki / High impact`) with colored dot
-- Linked checklist category badge (LEGAL / TECH / PRODUCT / MARKETING) — shows which launch gate this task affects
-- Overdue / due today / in-progress state badges
-- Expandable description (collapse toggle button)
-- Inline "Başla / Start" button to move task → IN_PROGRESS
+### Local founder flow
+1. Confirm local database is reachable before testing signup
+2. Create a new account from `/en/signup`
+3. Complete onboarding with a realistic free-text description
+4. Confirm product creation succeeds
+5. Review dashboard, growth, and metrics surfaces in sequence
 
-### Momentum bar
-Completion progress bar at the top: `doneTasks.length / tasks.length × 100`. Thin green bar, always visible when tasks exist.
+## If something breaks first
 
-### Task creation
-Inline add form with title, description (new), due date, priority. Uses `POST /api/actions`. Description field was always in the DB but never exposed in the UI until now.
+Check in this order:
+1. Vercel production env values
+2. Resend domain / API key health
+3. OAuth provider whitelists and test-user settings
+4. GA4 and Clarity consent gating
+5. Only then app code
 
-### Updated files
-| File | Change |
-|------|--------|
-| `app/api/actions/[id]/route.ts` | PATCH now includes `launchChecklistItem` in the query and auto-completes it when task → DONE |
-| `app/[locale]/tasks/page.tsx` | Fetches tasks with `include: { launchChecklistItem }`, removed next-intl dependency (hardcoded bilingual), passes `locale` to TasksList |
-| `components/TasksList.tsx` | Full rewrite — 4-lane execution queue, focus cards, momentum bar, collapsible backlog/done, bilingual |
+## Current known product debt
 
-## Notes
-
-- Figma MCP was not available in this terminal harness, so the first-run surface was implemented against the existing product system and documented constraints instead of a direct frame import.
-- Keep the first-run state locale-aware and beginner-friendly.
-- Do not regress to a generic empty state unless explicitly redesigning onboarding again.
+- Some locale-routed product screens still contain Turkish-first hardcoded copy.
+- Local signup and founder-flow testing fail early if Prisma cannot reach the local database.
+- Signup still asks for a product-type selection that is not submitted to backend state.
+- Dashboard-to-Metrics ownership still needs careful review for launched products that have no metric setup yet.
