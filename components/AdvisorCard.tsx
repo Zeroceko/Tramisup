@@ -28,6 +28,7 @@ interface AdvisorCardProps {
   productId: string;
   productName: string;
   eventType?: string;
+  variant?: "default" | "launcher";
 }
 
 function parseSuggestionError(err: unknown, locale: "en" | "tr"): string {
@@ -59,9 +60,14 @@ const CONFIDENCE_LABEL: Record<string, string> = {
   low: "Düşük güven",
 };
 
-export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }: AdvisorCardProps) {
+export default function AdvisorCard({
+  productId,
+  eventType = "DASHBOARD_VIEW",
+  variant = "default",
+}: AdvisorCardProps) {
   const locale = useLocale() === "tr" ? "tr" : "en";
   const isEn = locale === "en";
+  const isLauncher = variant === "launcher";
   const [suggestion, setSuggestion] = useState<CoachRecommendationOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
@@ -124,7 +130,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
 
   if (loading) {
     return (
-      <div className="rounded-[20px] bg-[#0d0d12] p-6 animate-pulse">
+      <div className={`${isLauncher ? "rounded-[24px] border border-white/60 bg-white/72 p-5 backdrop-blur-xl" : "rounded-[20px] bg-[#0d0d12] p-6"} animate-pulse`}>
         <div className="mb-3 h-4 w-32 rounded bg-white/10" />
         <div className="mb-4 h-6 w-3/4 rounded bg-white/10" />
         <div className="h-20 rounded-[12px] bg-white/5" />
@@ -133,6 +139,114 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
   }
 
   const suggestionPrimary = suggestion?.primary_recommendation;
+
+  if (isLauncher) {
+    return (
+      <div className="overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,250,246,0.78))] p-5 text-[#1f1d1a] shadow-[0_24px_80px_rgba(25,27,39,0.12)] backdrop-blur-2xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b8f9c]">
+              Tiramisup
+            </p>
+            <p className="mt-1 text-[18px] font-semibold tracking-[-0.03em] text-[#221f1a]">
+              {isEn ? "Suggestion for right now" : "Şu an için öneri"}
+            </p>
+          </div>
+          {suggestionPrimary?.confidence && (
+            <span className="rounded-full border border-[#eadfe7] bg-white/72 px-2.5 py-1 text-[11px] font-medium text-[#615767]">
+              {CONFIDENCE_LABEL[suggestionPrimary.confidence] ?? suggestionPrimary.confidence}
+            </span>
+          )}
+        </div>
+
+        {suggestionError ? (
+          <div className="rounded-[20px] border border-[#f0e7ee] bg-white/72 p-4">
+            <p className="text-[13px] leading-6 text-[#5e6678]">{suggestionError}</p>
+            <button
+              onClick={loadSuggestion}
+              className="mt-3 inline-flex h-9 items-center rounded-full border border-[#e8dfe7] bg-white px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#faf7fb]"
+            >
+              {isEn ? "Try again" : "Tekrar dene"}
+            </button>
+          </div>
+        ) : suggestionPrimary ? (
+          <div className="rounded-[22px] border border-[#efe5ec] bg-white/78 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b8f9c]">
+                  {isEn ? "Recommended move" : "Önerilen hamle"}
+                </p>
+                <p className="mt-2 text-[18px] font-semibold leading-snug tracking-[-0.02em] text-[#1f1d1a]">
+                  {suggestionPrimary.title}
+                </p>
+              </div>
+              <button
+                onClick={loadSuggestion}
+                title={isEn ? "Refresh" : "Yenile"}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#efe5ec] bg-white text-[#6a6372] transition hover:bg-[#faf7fb]"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6l1.59-1.59A2.5 2.5 0 1 0 8.5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <p className="mt-3 text-[13px] leading-6 text-[#5e6678]">{suggestionPrimary.why_now}</p>
+            {suggestionPrimary.user_action && (
+              <p className="mt-3 rounded-[16px] bg-[#fff0f8] px-3 py-2 text-[12px] font-medium text-[#8d4972]">
+                {suggestionPrimary.user_action}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-[20px] border border-[#efe5ec] bg-white/72 p-4">
+            <p className="text-[13px] leading-6 text-[#5e6678]">
+              {isEn ? "No suggestion is available right now. You can still ask a product question below." : "Şu an için bir öneri yok. Aşağıdan ürünle ilgili soru sorabilirsin."}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b8f9c]">
+            {isEn ? "Ask Tiramisup" : "Tiramisup'a sor"}
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void askCoach();
+              }}
+              placeholder={isEn ? "What should we focus on next?" : "Sırada neye odaklanmalıyız?"}
+              className="h-11 flex-1 rounded-full border border-[#ece3ea] bg-white/80 px-4 text-[13px] text-[#1f1d1a] placeholder:text-[#8b8f9c] outline-none transition focus:border-[#d8bfd0]"
+            />
+            <button
+              onClick={() => void askCoach()}
+              disabled={asking || !question.trim()}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {asking ? (isEn ? "Thinking…" : "Soruluyor…") : isEn ? "Ask" : "Sor"}
+            </button>
+          </div>
+          {error && <p className="mt-2 text-[12px] text-[#8d4972]">{error}</p>}
+        </div>
+
+        {answer && (
+          <div className="mt-4 rounded-[22px] border border-[#efe5ec] bg-white/72 p-4">
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_DOT[answer.primary_recommendation.priority] ?? "bg-[#d6cfd8]"}`} />
+              <p className="text-[15px] font-semibold text-[#1f1d1a]">{answer.primary_recommendation.title}</p>
+            </div>
+            <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">{answer.primary_recommendation.why_now}</p>
+            {answer.primary_recommendation.user_action && (
+              <p className="mt-3 rounded-[16px] bg-[#fff0f8] px-3 py-2 text-[12px] font-medium text-[#8d4972]">
+                {answer.primary_recommendation.user_action}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[20px] bg-[#0d0d12] p-6 text-white">
