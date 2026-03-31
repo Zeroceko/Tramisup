@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import SettingsForm, { type SettingsSectionKey } from "@/components/SettingsForm";
+import SettingsForm from "@/components/SettingsForm";
 import { BrandLogo } from "@/components/BrandLogo";
 
 type IntegrationItem = {
@@ -39,14 +39,12 @@ type CopyShape = {
   growthTitle: string;
   growthDesc: string;
   growthCta: string;
-  navProfile: string;
   navProduct: string;
   navSources: string;
   navTracking: string;
-  navSecurity: string;
 };
 
-type WorkspaceSectionKey = SettingsSectionKey | "sources" | "tracking";
+type WorkspaceSectionKey = "product" | "sources" | "tracking";
 
 export default function SettingsWorkspace({
   locale,
@@ -65,7 +63,7 @@ export default function SettingsWorkspace({
   copy: CopyShape;
   isEn: boolean;
 }) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>("profile");
+  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>("product");
   const sourcesSummary =
     connectedCount > 0
       ? `${connectedCount} ${copy.sourcesWithCountLabel}`
@@ -74,11 +72,9 @@ export default function SettingsWorkspace({
   const navItems = useMemo(
     () =>
       [
-        { key: "profile", label: copy.navProfile },
         { key: "product", label: copy.navProduct },
         { key: "sources", label: copy.navSources },
         { key: "tracking", label: copy.navTracking },
-        { key: "security", label: copy.navSecurity },
       ] satisfies Array<{ key: WorkspaceSectionKey; label: string }>,
     [copy]
   );
@@ -108,7 +104,7 @@ export default function SettingsWorkspace({
       </div>
 
       <div className="px-5 py-5 sm:px-6 sm:py-6">
-        {activeSection === "profile" || activeSection === "product" || activeSection === "security" ? (
+        {activeSection === "product" ? (
           <SettingsForm
             user={user}
             locale={locale}

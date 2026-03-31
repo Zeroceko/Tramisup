@@ -16,6 +16,13 @@ interface User {
     name: string;
     launchDate: Date | null;
     status: string;
+    description?: string | null;
+    category?: string | null;
+    targetAudience?: string | null;
+    businessModel?: string | null;
+    website?: string | null;
+    launchStatus?: string | null;
+    launchGoals?: string | null;
   } | null;
 }
 
@@ -81,8 +88,17 @@ export default function SettingsForm({
         email: "Email",
         language: "Language",
         projectTitle: "Project",
-        projectDesc: "Keep the active product name, launch date, and current operating stage aligned.",
+        projectDesc: "Update the active product's onboarding context, links, and launch stage from one place.",
         projectName: "Project name",
+        description: "Product description",
+        website: "Primary website",
+        category: "Category",
+        audience: "Target audience",
+        businessModel: "Business model",
+        launchStage: "Launch / growth stage",
+        topPriority: "Current top priority",
+        contextLinks: "Links and docs",
+        contextLinksHint: "One link per line. Add docs, demos, landing pages, or source material that helps Tiramisup understand the product.",
         launchDate: "Launch date",
         optional: "(optional)",
         status: "Status",
@@ -116,6 +132,14 @@ export default function SettingsForm({
         },
         save: "Save changes",
         saving: "Saving…",
+        launchStatusOptions: {
+          IDEA: "Idea stage",
+          BUILDING: "Building",
+          TESTING: "I have test users",
+          PREPARING: "Preparing for launch",
+          LIVE: "Live",
+          GROWING: "Growing",
+        },
       }
     : {
         errorGeneric: "Bir hata oluştu.",
@@ -126,8 +150,17 @@ export default function SettingsForm({
         email: "E-posta",
         language: "Dil",
         projectTitle: "Proje Bilgileri",
-        projectDesc: "Aktif ürünün adı, launch tarihi ve mevcut çalışma aşamasını burada net tut.",
+        projectDesc: "Aktif ürünün onboarding bağlamını, bağlantılarını ve launch aşamasını buradan güncelle.",
         projectName: "Proje Adı",
+        description: "Ürün açıklaması",
+        website: "Ana website",
+        category: "Kategori",
+        audience: "Hedef kitle",
+        businessModel: "İş modeli",
+        launchStage: "Launch / growth aşaması",
+        topPriority: "Şu anki ana öncelik",
+        contextLinks: "Bağlantılar ve dokümanlar",
+        contextLinksHint: "Her satıra bir link yaz. Ürünü anlamaya yardımcı olacak doc, demo, landing veya kaynak ekleyebilirsin.",
         launchDate: "Launch Tarihi",
         optional: "(opsiyonel)",
         status: "Durum",
@@ -161,11 +194,44 @@ export default function SettingsForm({
         },
         save: "Değişiklikleri Kaydet",
         saving: "Kaydediliyor…",
+        launchStatusOptions: {
+          IDEA: "Fikir aşamasında",
+          BUILDING: "Geliştirme aşamasında",
+          TESTING: "Test kullanıcıları var",
+          PREPARING: "Yakında yayında",
+          LIVE: "Yayında",
+          GROWING: "Büyüme aşamasında",
+        },
       };
 
+  const parsedLaunchGoals = (() => {
+    if (!user?.product?.launchGoals) return {};
+    try {
+      return JSON.parse(user.product.launchGoals) as {
+        growthGoal?: string;
+        goalKey?: string;
+        contextLinks?: string[];
+      };
+    } catch {
+      return {};
+    }
+  })();
+
   const [formData, setFormData] = useState({
+    productId: user?.product?.id || "",
     name: user?.name || "",
     projectName: user?.product?.name || "",
+    description: user?.product?.description || "",
+    website: user?.product?.website || "",
+    category: user?.product?.category || "",
+    targetAudience: user?.product?.targetAudience || "",
+    businessModel: user?.product?.businessModel || "",
+    launchStatus: user?.product?.launchStatus || "Yakında yayında",
+    growthGoal: parsedLaunchGoals.growthGoal || "",
+    goalKey: parsedLaunchGoals.goalKey || "",
+    contextLinks: Array.isArray(parsedLaunchGoals.contextLinks)
+      ? parsedLaunchGoals.contextLinks.join("\n")
+      : "",
     launchDate: user?.product?.launchDate
       ? format(new Date(user.product.launchDate), "yyyy-MM-dd")
       : "",
@@ -344,6 +410,57 @@ export default function SettingsForm({
               />
             </div>
 
+            <div className="md:col-span-2">
+              <label className={labelCls}>{copy.description}</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+                className={`${inputCls} min-h-[120px]`}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelCls}>{copy.website}</label>
+              <input
+                type="url"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className={inputCls}
+                placeholder="https://example.com"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>{copy.category}</label>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>{copy.audience}</label>
+              <input
+                type="text"
+                value={formData.targetAudience}
+                onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>{copy.businessModel}</label>
+              <input
+                type="text"
+                value={formData.businessModel}
+                onChange={(e) => setFormData({ ...formData, businessModel: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+
             <div>
               <label className={labelCls}>
                 {copy.launchDate} <span className="font-normal text-[#9ca3af]">{copy.optional}</span>
@@ -357,16 +474,43 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>{copy.status}</label>
+              <label className={labelCls}>{copy.launchStage}</label>
               <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                value={formData.launchStatus}
+                onChange={(e) => setFormData({ ...formData, launchStatus: e.target.value })}
                 className={inputCls}
               >
-                <option value="PRE_LAUNCH">{copy.statusOptions.PRE_LAUNCH}</option>
-                <option value="LAUNCHED">{copy.statusOptions.LAUNCHED}</option>
-                <option value="GROWING">{copy.statusOptions.GROWING}</option>
+                <option value="Fikir aşamasında">{copy.launchStatusOptions.IDEA}</option>
+                <option value="Geliştirme aşamasında">{copy.launchStatusOptions.BUILDING}</option>
+                <option value="Test kullanıcıları var">{copy.launchStatusOptions.TESTING}</option>
+                <option value="Yakında yayında">{copy.launchStatusOptions.PREPARING}</option>
+                <option value="Yayında">{copy.launchStatusOptions.LIVE}</option>
+                <option value="Büyüme aşamasında">{copy.launchStatusOptions.GROWING}</option>
               </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelCls}>{copy.topPriority}</label>
+              <input
+                type="text"
+                value={formData.growthGoal}
+                onChange={(e) => setFormData({ ...formData, growthGoal: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelCls}>{copy.contextLinks}</label>
+              <textarea
+                value={formData.contextLinks}
+                onChange={(e) => setFormData({ ...formData, contextLinks: e.target.value })}
+                rows={5}
+                className={`${inputCls} min-h-[140px]`}
+                placeholder={"https://example.com/docs\nhttps://example.com/demo"}
+              />
+              <p className="mt-2 text-[12px] leading-5 text-[#8a8fa0]">
+                {copy.contextLinksHint}
+              </p>
             </div>
           </div>
         </div>

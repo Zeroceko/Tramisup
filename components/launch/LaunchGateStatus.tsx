@@ -125,39 +125,16 @@ export default function LaunchGateStatus({
   const headline = isEn ? cfg.headlineEn : cfg.headline;
 
   return (
-    <div className={`rounded-[18px] border ${cfg.border} ${cfg.bg} p-6`}>
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+    <div className={`rounded-[18px] border ${cfg.border} ${cfg.bg} px-5 py-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
 
-        {/* Left: gate state + score */}
-        <div className="flex-1">
-          {/* Status badge */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotColor}`} />
-              {headline}
-            </span>
-            {daysUntilLaunch != null && daysUntilLaunch > 0 && (
-              <span className="inline-flex items-center rounded-full bg-[#f0f0f0] px-2.5 py-1 text-[11px] font-medium text-[#666d80]">
-                {isEn ? `${daysUntilLaunch} days to target` : `Hedef tarihe ${daysUntilLaunch} gün`}
-              </span>
-            )}
-          </div>
-
-          {/* Weighted score */}
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-[52px] font-bold leading-none tracking-[-0.04em] text-[#0d0d12]">
-              {weightedScore}
-            </span>
-            <span className="text-[15px] font-medium text-[#666d80]">/ 100</span>
-          </div>
-          <p className="mt-0.5 text-[12px] text-[#94a3b8]">
-            {isEn
-              ? "Weighted launch score — critical items count 3×"
-              : "Ağırlıklı launch skoru — kritik maddeler 3× sayılır"}
-          </p>
-
-          {/* Subline */}
-          <p className="mt-3 text-[13px] leading-6 text-[#5e6678] max-w-lg">
+        {/* Left: status + subline */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotColor}`} />
+            {headline}
+          </span>
+          <p className="text-[13px] text-[#5e6678]">
             <GateSubline
               gateState={gateState}
               activeBlockerCount={activeBlockerCount}
@@ -168,56 +145,55 @@ export default function LaunchGateStatus({
           </p>
         </div>
 
-        {/* Right: confidence indicators */}
-        <div className="shrink-0 w-full lg:w-[280px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-3">
-            {isEn ? "Launch confidence" : "Launch güven göstergeleri"}
-          </p>
-          <div className="space-y-3">
-            {confidence.map((ind) => {
-              const s = CONFIDENCE_STATUS_STYLES[ind.status];
-              const statusLabel =
-                ind.status === "CLEAR"
-                  ? (isEn ? "Clear" : "Hazır")
-                  : ind.status === "PARTIAL"
-                    ? (isEn ? "Partial" : "İlerliyor")
-                    : (isEn ? "Blocked" : "Blokeli");
-
-              return (
-                <div key={ind.label}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[12px] font-medium text-[#0d0d12]">
-                      {ind.label}
-                    </span>
-                    <span className={`text-[11px] font-semibold ${s.label}`}>
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-[#e8e8e8]">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${s.bar}`}
-                      style={{ width: `${Math.min(100, ind.score)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+        {/* Right: score + days */}
+        <div className="flex items-center gap-3">
+          {daysUntilLaunch != null && daysUntilLaunch > 0 && (
+            <span className="inline-flex items-center rounded-full bg-white/70 border border-[#e8e8e8] px-2.5 py-1 text-[11px] font-medium text-[#666d80]">
+              {isEn ? `${daysUntilLaunch}d to target` : `Hedefe ${daysUntilLaunch}g`}
+            </span>
+          )}
+          <div className="flex items-baseline gap-1">
+            <span className="text-[28px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
+              {weightedScore}
+            </span>
+            <span className="text-[13px] text-[#94a3b8]">/100</span>
           </div>
-
-          {/* Quick nav when blocked */}
           {gateState === "HARD_BLOCKED" && (
             <Link
               href="#blockers"
-              className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-full border border-[#fecaca] bg-white px-3 text-[12px] font-medium text-[#b91c1c] transition hover:bg-[#fee2e2]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#fecaca] bg-white px-3 text-[12px] font-medium text-[#b91c1c] transition hover:bg-[#fee2e2]"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12l7 7 7-7" />
               </svg>
-              {isEn ? "Go to blockers" : "Blokajlara git"}
+              {isEn ? "Blockers" : "Blokajlar"}
             </Link>
           )}
         </div>
       </div>
+
+      {/* Confidence indicators — compact row */}
+      {confidence.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-3 border-t border-black/5 pt-3">
+          {confidence.map((ind) => {
+            const s = CONFIDENCE_STATUS_STYLES[ind.status];
+            return (
+              <div key={ind.label} className="flex items-center gap-2 min-w-[120px] flex-1">
+                <span className="text-[12px] text-[#5e6678] shrink-0">{ind.label}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-[#e8e8e8] min-w-[40px]">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${s.bar}`}
+                    style={{ width: `${Math.min(100, ind.score)}%` }}
+                  />
+                </div>
+                <span className={`text-[11px] font-semibold shrink-0 ${s.label}`}>
+                  {ind.score}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

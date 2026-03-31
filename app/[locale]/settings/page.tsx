@@ -50,17 +50,14 @@ export default async function SettingsPage({
 
   const copy = isEn
     ? {
-        overviewLabel: "Workspace overview",
-        overviewTitle: "Keep profile, project, and data settings tidy",
+        overviewLabel: "Product settings",
+        overviewTitle: "Manage product context, sources, and tracking in one place",
         overviewDesc:
-          "Use this area to manage your account details, update your active product settings, and keep source connections healthy.",
-        profileCard: "Profile",
-        profileReady: "Account ready",
+          "This area is for product-related configuration only: onboarding context, source connections, and the measurement system.",
         projectCard: "Active product",
         noProduct: "No active product",
-        languageCard: "Language",
-        sectionsLabel: "Sections",
-        sectionsValue: "personal, project, security",
+        contextCard: "Context",
+        contextReady: "Onboarding inputs editable",
         sourcesLabel: "Sources",
         sourcesTitle: "Manage data sources",
         sourcesWithCountLabel: "source connected. Add new sources or manage existing ones.",
@@ -76,9 +73,8 @@ export default async function SettingsPage({
         growthLabel: "Growth tracking",
         growthTitle: "Update growth tracking metrics",
         growthDesc:
-          "You can update AARRR tracking metrics for this product anytime. This takes you back to the metric setup step in Growth.",
+          "Metric selection belongs to the Growth workspace. Open that setup from here whenever you want to revise the tracked signals.",
         growthCta: "Open growth tracking",
-        navOverview: "Overview",
         navProfile: "Profile",
         navProduct: "Product",
         navSources: "Sources",
@@ -86,17 +82,14 @@ export default async function SettingsPage({
         navSecurity: "Security",
       }
     : {
-        overviewLabel: "Genel görünüm",
-        overviewTitle: "Profil, proje ve veri ayarlarını tek yerde toparla",
+        overviewLabel: "Ürün ayarları",
+        overviewTitle: "Ürün bağlamını, kaynakları ve takip sistemini tek yerde yönet",
         overviewDesc:
-          "Bu alan hesap bilgilerini güncellemek, aktif ürün ayarlarını net tutmak ve veri bağlantılarını sağlıklı yönetmek için kullanılır.",
-        profileCard: "Profil",
-        profileReady: "Hesap hazır",
+          "Burası sadece ürünle ilgili ayarlar içindir: onboarding bağlamı, kaynak bağlantıları ve ölçüm sistemi burada yönetilir.",
         projectCard: "Aktif ürün",
         noProduct: "Aktif ürün yok",
-        languageCard: "Dil",
-        sectionsLabel: "Bölümler",
-        sectionsValue: "kişisel, proje, güvenlik",
+        contextCard: "Bağlam",
+        contextReady: "Onboarding girdileri düzenlenebilir",
         sourcesLabel: "Kaynaklar",
         sourcesTitle: "Veri kaynaklarını yönet",
         sourcesWithCountLabel: "kaynak bağlı. Yeni kaynak ekle veya mevcut bağlantıları yönet.",
@@ -112,9 +105,8 @@ export default async function SettingsPage({
         growthLabel: "Büyüme takibi",
         growthTitle: "Büyüme metriklerini güncelle",
         growthDesc:
-          "Seçili ürün için AARRR takip metriklerini istediğin zaman güncelleyebilirsin. Bu alan seni Growth tarafındaki metrik kurulumuna geri götürür.",
+          "Takip edilen metriklerin yeri Growth çalışma alanıdır. Buradan istediğin zaman metric setup ekranına geçebilirsin.",
         growthCta: "Büyüme takibini aç",
-        navOverview: "Genel görünüm",
         navProfile: "Profil",
         navProduct: "Ürün",
         navSources: "Kaynaklar",
@@ -155,16 +147,6 @@ export default async function SettingsPage({
         <div className="grid gap-3 px-6 py-5 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
-              {copy.profileCard}
-            </p>
-            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
-              {user?.name || user?.email || "—"}
-            </p>
-            <p className="mt-1 text-[13px] text-[#666d80]">{copy.profileReady}</p>
-          </div>
-
-          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
               {copy.projectCard}
             </p>
             <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
@@ -177,23 +159,23 @@ export default async function SettingsPage({
 
           <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
-              {copy.sourcesLabel}
+              {copy.contextCard}
             </p>
-            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">{connectedCount}</p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
+              {activeProduct?.category || "—"}
+            </p>
             <p className="mt-1 text-[13px] text-[#666d80]">
-              {copy.latestSync}: {latestSyncLabel}
+              {copy.contextReady}
             </p>
           </div>
 
           <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
-              {copy.languageCard}
+              {copy.sourcesLabel}
             </p>
-            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
-              {user?.preferredLocale === "tr" ? "Türkçe" : "English"}
-            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">{connectedCount}</p>
             <p className="mt-1 text-[13px] text-[#666d80]">
-              {copy.sectionsLabel}: {copy.sectionsValue}
+              {copy.latestSync}: {latestSyncLabel}
             </p>
           </div>
         </div>

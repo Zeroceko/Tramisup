@@ -65,10 +65,10 @@ function SegmentBar({
       {Array.from({ length: segments }).map((_, i) => (
         <div
           key={i}
-          className={`h-[5px] flex-1 rounded-[2px] transition-colors ${
+          className={`h-[8px] flex-1 rounded-[3px] transition-colors ${
             i < completed
               ? active
-                ? "bg-white"
+                ? "bg-[#95dbda]"
                 : "bg-[#95dbda]"
               : active
                 ? "bg-white/20"
@@ -175,13 +175,13 @@ export default function ChecklistSection({
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`rounded-[15px] p-4 text-left transition ${
+              className={`rounded-[18px] p-4 text-left transition ${
                 isActive
                   ? "bg-[#0d0d12] text-white"
                   : "border border-[#e8e8e8] bg-white text-[#0d0d12] hover:border-[#d0d0d0]"
               }`}
             >
-              <div className="flex items-start justify-between mb-1">
+              <div className="flex items-start justify-between mb-3">
                 <p
                   className={`text-[13px] font-semibold leading-snug ${
                     isActive ? "text-white" : "text-[#0d0d12]"
@@ -189,23 +189,33 @@ export default function ChecklistSection({
                 >
                   {meta.label}
                 </p>
-                {critical > 0 && (
-                  <span className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white">
+                {isActive ? (
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15">
+                    <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                      <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                ) : critical > 0 ? (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white">
                     {critical}
                   </span>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#94a3b8]">
+                    <path d="M2.5 11.5L11.5 2.5M11.5 2.5H5M11.5 2.5V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 )}
               </div>
 
               <p
-                className={`text-[11px] mb-2.5 leading-4 ${
+                className={`text-[11px] mb-3 leading-4 ${
                   isActive ? "text-white/50" : "text-[#94a3b8]"
                 }`}
               >
-                {isEn ? meta.riskEn : meta.risk}
+                {isEn ? "Completed" : "Tamamlandı"}
               </p>
 
               <p
-                className={`text-[13px] font-bold mb-2 ${
+                className={`text-[20px] font-bold mb-2.5 ${
                   isActive ? "text-white" : "text-[#0d0d12]"
                 }`}
               >
@@ -218,27 +228,31 @@ export default function ChecklistSection({
       </div>
 
       {/* Active category checklist */}
-      <div className="rounded-[15px] border border-[#e8e8e8] bg-white overflow-hidden">
+      <div className="rounded-[18px] border border-[#e8e8e8] bg-white overflow-hidden">
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b border-[#f0f0f0]">
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-[14px] font-semibold text-[#0d0d12]">
-                {categoryMeta.label}
-              </p>
-              <span className="text-[12px] text-[#94a3b8]">
-                {activeCompleted}/{activeItems.length}
-              </span>
-              {activeCritical > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#fee2e2] px-2 py-0.5 text-[10px] font-semibold text-[#b91c1c]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
-                  {activeCritical} {isEn ? "critical" : "kritik"}
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-[12px] text-[#94a3b8]">
-              {isEn ? categoryMeta.riskEn : categoryMeta.risk}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0]">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#0d0d12]">
+              <path d="M5 7L6.5 8.5L9 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="1" y="1" width="12" height="12" rx="3" stroke="currentColor" strokeWidth="1.3"/>
+            </svg>
+            <p className="text-[14px] font-semibold text-[#0d0d12]">
+              {categoryMeta.label} {isEn ? "Checklist" : "Checklist"}
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition text-[#5e6678]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 2V12M2 7H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <button className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition text-[#5e6678]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="3" r="1" fill="currentColor"/>
+                <circle cx="7" cy="7" r="1" fill="currentColor"/>
+                <circle cx="7" cy="11" r="1" fill="currentColor"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -256,22 +270,22 @@ export default function ChecklistSection({
                   loading === item.id ? "opacity-50" : ""
                 } ${
                   item.completed
-                    ? "bg-[#fafffe]"
+                    ? "bg-[#fff0f6]"
                     : isHigh && !item.completed
                       ? "bg-[#fff8f8]"
                       : "hover:bg-[#fafafa]"
                 }`}
               >
-                <div className="flex items-start gap-4 px-6 py-4">
+                <div className="flex items-center gap-4 px-6 py-4">
                   {/* Checkbox */}
                   <button
                     onClick={() => handleToggle(item.id, item.completed)}
                     disabled={loading === item.id}
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition ${
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition ${
                       item.completed
-                        ? "border-[#95dbda] bg-[#95dbda]"
+                        ? "border-[#2d0e1f] bg-[#2d0e1f]"
                         : isHigh
-                          ? "border-[#ef4444] hover:border-[#ef4444] hover:bg-[#fee2e2]"
+                          ? "border-[#ef4444] hover:bg-[#fee2e2]"
                           : "border-[#d9d9d9] hover:border-[#95dbda]"
                     }`}
                   >
@@ -280,7 +294,7 @@ export default function ChecklistSection({
                         <path
                           d="M1 4L3.5 6.5L9 1"
                           stroke="white"
-                          strokeWidth="1.5"
+                          strokeWidth="1.8"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -290,41 +304,26 @@ export default function ChecklistSection({
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2">
-                      <p
-                        className={`flex-1 text-[14px] leading-snug ${
-                          item.completed
-                            ? "line-through text-[#9ca3af]"
-                            : "text-[#0d0d12]"
-                        }`}
-                      >
-                        {item.title}
-                      </p>
-
-                      {/* Priority badge — only for HIGH and MEDIUM */}
-                      {!item.completed && item.priority !== "LOW" && (
-                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-white border border-[#e8e8e8]">
-                          <span className={`h-1.5 w-1.5 rounded-full ${pri.dot}`} />
-                          <span className="text-[#666d80]">
-                            {isEn ? pri.labelEn : pri.label}
-                          </span>
-                        </span>
-                      )}
-                    </div>
+                    <p
+                      className={`text-[14px] leading-snug ${
+                        item.completed
+                          ? "text-[#9ca3af]"
+                          : "text-[#0d0d12]"
+                      }`}
+                    >
+                      {item.title}
+                    </p>
 
                     {/* Description — expandable */}
                     {item.description && !item.completed && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedDesc(isExpanded ? null : item.id)
-                        }
+                        onClick={() => setExpandedDesc(isExpanded ? null : item.id)}
                         className="mt-1 text-[11px] font-medium text-[#94a3b8] hover:text-[#666d80] transition"
                       >
                         {isExpanded
                           ? (isEn ? "Hide detail" : "Detayı gizle")
-                          : (isEn ? "Why this matters" : "Neden önemli")}
-                        {" "}
+                          : (isEn ? "Why this matters" : "Neden önemli")}{" "}
                         {isExpanded ? "↑" : "↓"}
                       </button>
                     )}
@@ -333,43 +332,43 @@ export default function ChecklistSection({
                         {item.description}
                       </p>
                     )}
+                  </div>
 
-                    {/* Task link status */}
+                  {/* Right side actions */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!item.completed && !item.linkedTaskId && (
+                      <button
+                        onClick={() => handleCreateTask(item.id)}
+                        disabled={loading === item.id}
+                        className="hidden h-7 items-center rounded-full bg-[#ffd7ef] px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:flex"
+                      >
+                        {loading === item.id ? "..." : (isEn ? "Add to tasks" : "Göreve ekle")}
+                      </button>
+                    )}
+                    {!item.completed && !item.linkedTaskId && (
+                      <button
+                        onClick={() => handleIgnore(item.id, true)}
+                        disabled={loading === item.id}
+                        className="hidden h-7 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#94a3b8] transition hover:border-[#d5d9e2] hover:text-[#666d80] sm:flex"
+                      >
+                        {isEn ? "Ignore" : "Yoksay"}
+                      </button>
+                    )}
                     {item.linkedTaskId && !item.completed && (
-                      <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-[#34d399]">
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#34d399]">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        {isEn ? "Task created" : "Görev oluşturuldu"}
+                        {isEn ? "Task added" : "Görev eklendi"}
                       </span>
                     )}
+                    {/* Arrow icon */}
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition cursor-pointer text-[#94a3b8]">
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M2 11L11 2M11 2H4.5M11 2V8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
                   </div>
-
-                  {/* Actions */}
-                  {!item.completed && (
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {!item.linkedTaskId && (
-                        <button
-                          onClick={() => handleCreateTask(item.id)}
-                          disabled={loading === item.id}
-                          className="hidden h-7 items-center rounded-full bg-[#ffd7ef] px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:flex"
-                        >
-                          {loading === item.id
-                            ? "..."
-                            : (isEn ? "Add to tasks" : "Göreve ekle")}
-                        </button>
-                      )}
-                      {!item.linkedTaskId && (
-                        <button
-                          onClick={() => handleIgnore(item.id, true)}
-                          disabled={loading === item.id}
-                          className="hidden h-7 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#94a3b8] transition hover:border-[#d5d9e2] hover:text-[#666d80] sm:flex"
-                        >
-                          {isEn ? "Ignore" : "Yoksay"}
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             );

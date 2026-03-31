@@ -343,25 +343,39 @@ function OptionCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-[12px] border p-3.5 text-left transition-all ${
+      className={`w-full rounded-[14px] border p-3.5 text-left transition-all ${
         selected
-          ? "border-[#8dcfd2] bg-[#dff2f4] text-[#0d0d12] shadow-[0_4px_20px_rgba(84,141,146,0.16)]"
-          : "border-[#dadbe0] bg-white text-[#0d0d12] hover:border-[#9fb5bf] hover:shadow-sm"
+          ? multi
+            ? "border-[#f5c0dc] bg-[#fff0f7] text-[#0d0d12]"
+            : "border-[#f5c0dc] bg-[#fff0f7] text-[#0d0d12]"
+          : "border-[#e8e8e8] bg-white text-[#0d0d12] hover:border-[#d0b8c8] hover:bg-[#fdfafa]"
       }`}
     >
-      <div className="flex items-start gap-3">
-        {multi && (
+      <div className="flex items-center gap-3">
+        {multi ? (
           <div
-            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
-              selected ? "border-white bg-white" : "border-[#d0d5dd] bg-white"
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border-2 transition ${
+              selected ? "border-[#c77daa] bg-[#c77daa]" : "border-[#d0d5dd] bg-white"
             }`}
           >
-            {selected && <div className="h-2 w-2 rounded-sm bg-[#0d0d12]" />}
+            {selected && (
+              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+        ) : (
+          <div
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition ${
+              selected ? "border-[#c77daa]" : "border-[#d0d5dd]"
+            }`}
+          >
+            {selected && <div className="h-2 w-2 rounded-full bg-[#c77daa]" />}
           </div>
         )}
         <div>
           <p className="text-[13px] font-semibold leading-tight">{item.label}</p>
-          <p className={`mt-0.5 text-[11px] ${selected ? "text-[#50767a]" : "text-[#8a8fa0]"}`}>
+          <p className={`mt-0.5 text-[11px] ${selected ? "text-[#9c6080]" : "text-[#8a8fa0]"}`}>
             {item.sub}
           </p>
         </div>
@@ -822,53 +836,49 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,146,178,0.35),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(120,158,255,0.28),_transparent_34%),linear-gradient(135deg,_#ffd2df_0%,_#f1d8ff_46%,_#c9dcff_100%)] p-2 sm:p-4">
-      <div className="mx-auto max-w-[1100px] rounded-[14px] border border-white/55 bg-[#f2f2f2]/95 p-3 shadow-[0_20px_64px_rgba(65,38,72,0.2)] backdrop-blur">
+      <div className="mx-auto max-w-[1100px] rounded-[24px] border border-white/60 bg-white p-3 shadow-[0_24px_72px_rgba(65,38,72,0.22)] backdrop-blur">
         <div className="flex items-center justify-between gap-4 px-1 pb-3">
-          <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-[#1b1b1f] sm:text-[28px]">
+          <h1 className="text-[16px] font-semibold tracking-[-0.01em] text-[#1b1b1f] sm:text-[20px]">
             {isEn ? "Create New Product" : "Yeni Ürün Oluştur"}
           </h1>
           <button
             type="button"
             onClick={() => router.push(`/${locale}/dashboard`)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#d8d8d8] bg-[#f6f6f6] text-[#5f6674] transition hover:bg-white"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e8e8] bg-white text-[#5f6674] transition hover:bg-[#f6f6f6]"
             aria-label={isEn ? "Close" : "Kapat"}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="scrollbar-hide mb-5 overflow-x-auto">
-          <div className="flex min-w-max items-center gap-2">
+        <div className="scrollbar-hide mb-4 overflow-x-auto">
+          <div className="flex min-w-max items-center gap-2 px-1">
             {onboardingPhases.map((phase, index) => {
               const isCurrent = index === activePhaseIndex;
               const isDone = index < activePhaseIndex;
               return (
                 <span
                   key={phase}
-                  className={`inline-flex h-8 items-center rounded-full px-3.5 text-[11px] font-medium ${
+                  className={`inline-flex h-8 items-center rounded-full px-4 text-[11px] font-semibold transition-all ${
                     isCurrent
-                      ? "border border-[#7ac9cf] bg-[#bde5e8] text-[#0f3b40]"
+                      ? "bg-[#95dbda] text-[#0f3b40]"
                       : isDone
-                      ? "bg-[#cfd2d7] text-[#4f5563]"
-                      : "bg-[#b5b6ba] text-white/85"
+                      ? "bg-[#e0e0e4] text-[#666d80]"
+                      : "bg-[#e8e8ec] text-[#a0a4b0]"
                   }`}
                 >
                   {phase}
-                  {isCurrent ? ` (${activePhaseStepIndex + 1}/${Math.max(1, activePhaseSteps.length)})` : ""}
+                  {isCurrent && activePhaseSteps.length > 1
+                    ? ` (${activePhaseStepIndex + 1}/${activePhaseSteps.length})`
+                    : ""}
                 </span>
               );
             })}
           </div>
         </div>
 
-        <div className="rounded-[14px] border border-[#ececee] bg-[#f7f7f8] px-4 py-5 sm:px-5 sm:py-6">
-          <div className="mx-auto w-full max-w-4xl">
-            <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-[#e4e4e8]">
-              <div
-                className="h-full rounded-full bg-[#8ecfd3] transition-[width] duration-500"
-                style={{ width: `${Math.max(6, progressPct)}%` }}
-              />
-            </div>
+        <div className="rounded-[18px] bg-[#f9f9fb] px-4 py-8 sm:px-8 sm:py-10">
+          <div className="mx-auto w-full max-w-2xl">
           {/* Step: name */}
           {currentId === "name" && (
             <StepWrapper
@@ -1186,7 +1196,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                   type="button"
                   onClick={goBack}
                   disabled={stepIndex === 0}
-                  className="flex h-10 items-center gap-2 rounded-full border border-[#d9dadd] bg-white px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-40"
+                  className="flex h-10 items-center gap-2 rounded-full border border-[#e8e8e8] bg-white px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12] disabled:pointer-events-none disabled:opacity-30"
                 >
                   {isEn ? "← Back" : "← Geri"}
                 </button>
@@ -1205,7 +1215,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     <button
                       type="button"
                       onClick={() => submit(false)}
-                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0]"
+                      className="h-10 rounded-full bg-[#ffd7ef] px-6 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
                     >
                       {connectableSources.length > 0
                         ? isEn ? "Finish and connect sources" : "Tamamla ve kaynak bagla"
@@ -1216,7 +1226,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                       type="button"
                       onClick={goNext}
                       disabled={!canContinue()}
-                      className="h-10 rounded-full bg-[#edbfd9] px-6 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#e7b0d0] disabled:cursor-not-allowed disabled:bg-[#F4DDE9] disabled:text-[#7E6674] disabled:opacity-100"
+                      className="h-10 rounded-full bg-[#ffd7ef] px-6 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isEn ? "Continue" : "Devam Et"}
                     </button>
