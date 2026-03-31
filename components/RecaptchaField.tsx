@@ -1,6 +1,7 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ReCAPTCHA from "react-google-recaptcha";
 
 export type RecaptchaFieldHandle = {
@@ -18,7 +19,12 @@ const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim() || "";
     const isEnabled = useMemo(() => isClientRecaptchaEnabled(), []);
     const recaptchaRef = useRef<ReCAPTCHA | null>(null);
+    const [mounted, setMounted] = useState(false);
     const shouldRender = isEnabled && Boolean(siteKey);
+
+    useEffect(() => {
+      setMounted(true);
+    }, []);
 
     useImperativeHandle(
       forwardedRef,
@@ -49,7 +55,11 @@ const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
       return null;
     }
 
-    return (
+    if (!mounted) {
+      return null;
+    }
+
+    return createPortal(
       <div className="pointer-events-none recaptcha-fixed-shell">
         <div className="pointer-events-auto recaptcha-inline-badge">
           <ReCAPTCHA
@@ -60,7 +70,8 @@ const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
             badge="inline"
           />
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   },
 );
