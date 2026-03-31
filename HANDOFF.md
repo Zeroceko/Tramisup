@@ -1,8 +1,9 @@
 # Tiramisup Handoff
 
-**Date:** 30 March 2026
+**Date:** 1 April 2026
 **Production:** `https://tiramisup.app`
 **Status:** Live and handoff-ready
+**Trusted production baseline commit:** `626543d9`
 
 ## What is live right now
 
@@ -11,6 +12,7 @@
 - The original fuller landing page is preserved on `/yayinda`.
 - Privacy and Terms are live.
 - Consent-aware Clarity and GA4 are live on the public site.
+- Production-only invisible reCAPTCHA is live on waitlist and auth flows.
 
 ### Waitlist
 - Waitlist email collection is live.
@@ -39,6 +41,8 @@
   - diagnosis-led, not generic
   - hidden for pre-launch products
   - guarded by measurement readiness
+- Dashboard `Ask Tiramisup` is currently the restored simple card version on the right side of Overview.
+- New launcher/blob experiments were intentionally reverted and should not be treated as the approved baseline.
 
 ## Production routes that matter most
 
@@ -114,6 +118,18 @@
 - `Metrics` can support tactic readiness, but should not become a channel-tip surface.
 - `Settings`, auth, and public landing should not become tactic surfaces.
 
+### 9. Do not ship from the dirty worktree by accident
+- This repo currently has local modified/untracked files that are not the trusted production baseline.
+- Especially watch:
+  - `app/[locale]/settings/page.tsx`
+  - `app/api/settings/route.ts`
+  - `components/SettingsForm.tsx`
+  - `components/SettingsWorkspace.tsx`
+  - untracked `app/[locale]/account/`
+  - untracked `components/AccountWorkspace.tsx`
+  - local smoke/spec scaffolding
+- Before release, compare staged/committed code against the deployed baseline instead of assuming local files are canonical.
+
 ## Files new teams should inspect first
 
 ### Product and routing
@@ -134,10 +150,14 @@
 - `app/api/auth/change-password/route.ts`
 - `lib/password-rules.ts`
 - `lib/password-reset.ts`
+- `lib/auth.ts`
+- `lib/signup-bypass.ts`
 
 ### Public analytics and waitlist
 - `components/analytics/`
 - `lib/analytics.ts`
+- `lib/recaptcha.ts`
+- `components/RecaptchaField.tsx`
 - `app/api/waitlist/join/route.ts`
 - `lib/resend-waitlist.ts`
 
@@ -184,6 +204,10 @@ These should exist and be correct in Vercel production:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+- `RECAPTCHA_ENABLED`
+- `NEXT_PUBLIC_RECAPTCHA_ENABLED`
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+- `RECAPTCHA_SECRET_KEY`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `STRIPE_CLIENT_ID`
@@ -206,6 +230,11 @@ Forgot-password and waitlist confirmation emails depend on Resend being healthy 
 ### Server-to-client serialization
 Do not pass functions from server components into client components in settings/dashboard composition. This caused a real runtime crash during the settings workspace refactor.
 
+### Dashboard design regression lesson
+- Several redesign passes were attempted on the `Ask Tiramisup` surface.
+- The approved fallback is the restored simple card.
+- Any future redesign should happen in preview first, not directly on the live dashboard.
+
 ### Local E2E caveat
 Local founder-flow tests depend on a working database connection. If Prisma cannot reach the local database, signup will fail with a server error before product-flow UX can be evaluated.
 
@@ -213,6 +242,7 @@ Local founder-flow tests depend on a working database connection. If Prisma cann
 - Some locale-routed app screens still contain Turkish-first hardcoded copy.
 - Signup currently asks for a product-type selection that is not sent to the backend.
 - Dashboard routing for launched products without metrics still needs careful review so Metrics ownership stays clear.
+- Local settings/account work is currently ahead of the trusted production baseline and must be reviewed before shipping.
 
 ## Safe next steps for a new team
 1. Validate the live `Growth` tactics layer with real founder flows before expanding tactics into other surfaces.
@@ -220,3 +250,4 @@ Local founder-flow tests depend on a working database connection. If Prisma cann
 3. Improve locale consistency so English stays the master language across app surfaces.
 4. Tighten dashboard and onboarding flow details while staying inside the playbooks.
 5. Add better event naming and funnel reporting in GA4.
+6. Clean the dirty worktree and separate local experiments from the committed release line.

@@ -9,6 +9,8 @@ This repo is already in production and should be treated as a live system, not a
 - Secondary locale: Turkish
 - Main public goal: waitlist conversion
 - Main app goal: staged launch-to-growth workflow
+- Trusted production baseline commit: `626543d9`
+- Last docs refresh: `1 April 2026`
 
 ## Non-obvious architecture choices
 
@@ -49,6 +51,7 @@ Current setup:
 - Clarity: integrated on public site, consent-aware
 - GA4: integrated on public site, consent-aware
 - event coverage includes CTA clicks, waitlist signup, and thank-you page
+- invisible reCAPTCHA is enabled in production on waitlist join, signup, and login
 
 Do not casually move analytics scripts into authenticated product pages without an explicit product/privacy decision.
 
@@ -72,6 +75,24 @@ Do not casually move analytics scripts into authenticated product pages without 
 - `Launch` should stay hidden in top nav for launched/growing products.
 - `Sources` should stay out of top nav and live under `Settings`.
 - Free-text onboarding understanding is now part of normalized product context and should remain aligned with the related eval and normalization docs.
+- Dashboard `Ask Tiramisup` should stay on the restored simple card baseline unless a new design is explicitly approved.
+
+## Current production baseline to preserve
+
+Canonical right now:
+- `/` and `/{locale}` remain waitlist-first
+- `/yayinda` remains the preserved fuller landing page
+- `Growth` and `Metrics` stay separate surfaces
+- `Launch` stays hidden in top nav for launched/growing products
+- `Ask Tiramisup` on Dashboard is the restored simple right-side card
+- public GA4 + Clarity remain consent-aware
+- invisible reCAPTCHA remains production-only
+
+Not canonical right now:
+- local uncommitted settings/account work
+- abandoned `Ask Tiramisup` launcher/blob experiments
+- editor-specific config files
+- temp CLI artifacts
 
 ## Current UI architecture notes
 
@@ -114,6 +135,7 @@ Do not casually move analytics scripts into authenticated product pages without 
 3. Submit waitlist email
 4. Confirm thank-you page load
 5. Check GA4 realtime if relevant
+6. Confirm invisible reCAPTCHA does not break real-user submit
 
 ### Auth
 1. Open `/en/forgot-password`
@@ -136,6 +158,12 @@ Do not casually move analytics scripts into authenticated product pages without 
 4. Confirm product creation succeeds
 5. Review dashboard, growth, and metrics surfaces in sequence
 
+### Dashboard regression guard
+1. Open `/en/dashboard`
+2. Confirm `Ask Tiramisup` appears as the simple right-side card, not an experimental launcher/blob
+3. Confirm launched products without metric setup still route toward metric setup via Growth/Metrics logic
+4. Confirm `Launch` is not shown in nav for launched/growing products
+
 ## If something breaks first
 
 Check in this order:
@@ -143,7 +171,8 @@ Check in this order:
 2. Resend domain / API key health
 3. OAuth provider whitelists and test-user settings
 4. GA4 and Clarity consent gating
-5. Only then app code
+5. reCAPTCHA envs and verify behavior
+6. Only then app code
 
 ## Current known product debt
 
@@ -151,3 +180,5 @@ Check in this order:
 - Local signup and founder-flow testing fail early if Prisma cannot reach the local database.
 - Signup still asks for a product-type selection that is not submitted to backend state.
 - Dashboard-to-Metrics ownership still needs careful review for launched products that have no metric setup yet.
+- The repo currently has local modified/untracked files around settings/account work and smoke scaffolding that are not part of the trusted production baseline.
+- New teams must separate committed release truth from local workstation state before shipping anything.

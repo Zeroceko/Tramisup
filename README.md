@@ -5,8 +5,9 @@ Tiramisup is a launch-to-growth workspace for startup teams. The current product
 **Production domain:** `https://tiramisup.app`
 **Default language:** English
 **Secondary language:** Turkish
-**Last updated:** 30 March 2026
+**Last updated:** 1 April 2026
 **Current status:** Production live
+**Trusted production baseline commit:** `626543d9` (`Restore original Ask Tiramisup card`)
 
 ## Live routes
 
@@ -41,6 +42,8 @@ Tiramisup is a launch-to-growth workspace for startup teams. The current product
 ### Auth and password rules
 - Signup requires an early-access code.
 - Current fallback access code: `TT31623SEN`
+- Production-only invisible reCAPTCHA protects waitlist join, signup, and login.
+- Keep reCAPTCHA disabled in local/test by default unless a specific verification task requires it.
 - Password rules are enforced in UI and backend:
   - minimum 8 characters
   - at least 1 number
@@ -90,6 +93,7 @@ These are important and should not be casually changed:
   - Tracking
   - Security
 - Only the active settings section is shown at a time.
+- Important: there is additional local `settings/account` work in the current worktree that is not part of the trusted production baseline. Do not treat uncommitted files as the product truth.
 
 ### Growth vs Metrics
 - `Growth` is now a decision and execution surface.
@@ -153,6 +157,11 @@ These are important and should not be casually changed:
 - Recommended source blocks inside `Metrics` are collapsible by default.
 - Provider logos are rendered with `BrandLogo`.
 
+### Dashboard coach card
+- `Ask Tiramisup` is currently the restored, simpler right-column card on Dashboard Overview.
+- Experimental launcher/blob treatments were intentionally rolled back.
+- Do not reintroduce those experiments without explicit design approval.
+
 ## Important production systems
 
 ### Analytics
@@ -163,6 +172,7 @@ These are important and should not be casually changed:
   - `waitlist_cta_click`
   - `waitlist_signup`
   - `thank_you_view`
+- Public analytics scripts should remain consent-gated.
 
 ### Email
 - Waitlist confirmation emails are sent via Resend.
@@ -193,6 +203,10 @@ These are important and should not be casually changed:
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - Clarity project ID is currently wired in code for the public site
 - Current GA4 production stream measurement ID: `G-GEK1MNJM94`
+- `RECAPTCHA_ENABLED`
+- `NEXT_PUBLIC_RECAPTCHA_ENABLED`
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+- `RECAPTCHA_SECRET_KEY`
 
 ### OAuth / integrations
 - `GOOGLE_CLIENT_ID`
@@ -216,6 +230,21 @@ Local founder-flow testing depends on a working database connection. If Prisma c
 - Some locale-routed product surfaces still contain Turkish-first hardcoded copy.
 - Local signup still asks for a product-type choice that is not currently submitted to backend state.
 - Dashboard primary routing for launched products without metrics should remain under review so it does not blur the Dashboard vs Metrics boundary.
+
+### Current worktree hygiene risk
+- The repository is not a perfectly clean working tree right now.
+- Local modified/untracked files currently exist around:
+  - settings/account work
+  - editor config
+  - prod smoke scaffolding
+  - temp Supabase CLI files
+- Before any release, verify what is actually committed and deployed instead of assuming local files are canonical.
+
+### Recent design regression that was intentionally reverted
+- Several `Ask Tiramisup` redesigns were tried after the simpler card.
+- They were rejected and rolled back.
+- The safe baseline is the restored simple right-side card on Dashboard Overview.
+- Future redesigns should happen in preview first, not directly on the live dashboard.
 
 ### Do not accidentally undo these routes
 - Keep `/` as the waitlist-first landing page.
