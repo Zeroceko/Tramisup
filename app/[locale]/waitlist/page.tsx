@@ -10,6 +10,7 @@ import AnalyticsScripts from "@/components/analytics/AnalyticsScripts";
 import RoutePageViewTracker from "@/components/analytics/RoutePageViewTracker";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import SectionViewTracker from "@/components/analytics/SectionViewTracker";
+import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
 const illusScattered = "/assets/illus-scattered-tasks.png";
@@ -301,22 +302,28 @@ function Hero({
   copy,
   locale,
   email,
+  recaptchaEnabled,
   loading,
   error,
   inputRef,
+  recaptchaResetNonce,
   onEmailChange,
   onEmailFocus,
+  onRecaptchaChange,
   onSubmitCtaClick,
   onSubmit,
 }: {
   copy: Copy;
   locale: "en" | "tr";
   email: string;
+  recaptchaEnabled: boolean;
   loading: boolean;
   error: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  recaptchaResetNonce: number;
   onEmailChange: (value: string) => void;
   onEmailFocus: () => void;
+  onRecaptchaChange: (token: string | null) => void;
   onSubmitCtaClick: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
@@ -350,30 +357,40 @@ function Hero({
             {copy.hero.subtitle}
           </p>
 
-          <form
-            id="hero-form"
-            onSubmit={onSubmit}
-            className="mx-auto mb-4 flex max-w-[520px] flex-col items-stretch gap-3 px-4 sm:flex-row sm:items-center sm:px-0"
-          >
-            <input
-              ref={inputRef}
-              type="email"
-              value={email}
-              onFocus={onEmailFocus}
-              onChange={(event) => onEmailChange(event.target.value)}
-              placeholder={copy.hero.emailPlaceholder}
-              className="min-w-0 flex-1 rounded-full border border-border bg-white px-5 py-4 text-base font-medium text-foreground shadow-sm outline-none transition-all placeholder:text-muted/50 focus:border-p600 focus:ring-2 focus:ring-p600/20 sm:px-6"
-              disabled={loading}
-              required
-            />
-            <button
-              type="submit"
-              onClick={onSubmitCtaClick}
-              disabled={loading || !email.trim()}
-              className="whitespace-nowrap rounded-full border-none bg-charcoal px-8 py-4 text-sm font-black text-primary-foreground shadow-t-md transition-all active:scale-[0.97] hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              {loading ? "..." : copy.hero.cta}
-            </button>
+          <form id="hero-form" onSubmit={onSubmit} className="mx-auto mb-4 max-w-[520px] px-4 sm:px-0">
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <input
+                ref={inputRef}
+                type="email"
+                value={email}
+                onFocus={onEmailFocus}
+                onChange={(event) => onEmailChange(event.target.value)}
+                placeholder={copy.hero.emailPlaceholder}
+                className="min-w-0 flex-1 rounded-full border border-border bg-white px-5 py-4 text-base font-medium text-foreground shadow-sm outline-none transition-all placeholder:text-muted/50 focus:border-p600 focus:ring-2 focus:ring-p600/20 sm:px-6"
+                disabled={loading}
+                required
+              />
+              <button
+                type="submit"
+                onClick={onSubmitCtaClick}
+                disabled={loading || !email.trim()}
+                className="whitespace-nowrap rounded-full border-none bg-charcoal px-8 py-4 text-sm font-black text-primary-foreground shadow-t-md transition-all active:scale-[0.97] hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {loading ? "..." : copy.hero.cta}
+              </button>
+            </div>
+
+            {recaptchaEnabled ? (
+              <div className="mt-3 flex justify-center">
+                <div className="w-full max-w-fit">
+                  <RecaptchaField
+                    locale={locale}
+                    onTokenChange={onRecaptchaChange}
+                    resetNonce={recaptchaResetNonce}
+                  />
+                </div>
+              </div>
+            ) : null}
           </form>
 
           {error ? (
@@ -512,12 +529,17 @@ export default function EarlyAccessPage() {
   const copy = EARLY_ACCESS_COPY[locale];
   const inputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasTrackedEmailFocus, setHasTrackedEmailFocus] = useState(false);
   const [hasTrackedEmailStarted, setHasTrackedEmailStarted] = useState(false);
   const [hasTrackedWaitlistView, setHasTrackedWaitlistView] = useState(false);
   const isRootWaitlistRoute = pathname === `/${locale}`;
+  const recaptchaEnabled =
+    isClientRecaptchaEnabled() &&
+    Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   useEffect(() => {
     if (hasTrackedWaitlistView) return;
@@ -564,6 +586,16 @@ export default function EarlyAccessPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    if (recaptchaEnabled && !captchaToken) {
+      setError(
+        locale === "en"
+          ? "Please complete the reCAPTCHA check."
+          : "Lütfen reCAPTCHA doğrulamasını tamamla.",
+      );
+      return;
+    }
+
     setLoading(true);
 
     trackAnalyticsEvent("waitlist_signup_attempt", {
@@ -579,6 +611,7 @@ export default function EarlyAccessPage() {
           email: email.trim(),
           source: "early-access-landing",
           locale,
+          captchaToken,
         }),
       });
 
@@ -590,6 +623,7 @@ export default function EarlyAccessPage() {
           error: data.error || "request_failed",
         });
         setError(data.error || copy.form.errorFallback);
+        setCaptchaResetNonce((current) => current + 1);
         return;
       }
 
@@ -605,6 +639,7 @@ export default function EarlyAccessPage() {
         error: "network_error",
       });
       setError(copy.form.errorFallback);
+      setCaptchaResetNonce((current) => current + 1);
     } finally {
       setLoading(false);
     }
@@ -626,11 +661,14 @@ export default function EarlyAccessPage() {
         copy={copy}
         locale={locale}
         email={email}
+        recaptchaEnabled={recaptchaEnabled}
         loading={loading}
         error={error}
         inputRef={inputRef}
+        recaptchaResetNonce={captchaResetNonce}
         onEmailChange={handleEmailChange}
         onEmailFocus={handleEmailFocus}
+        onRecaptchaChange={setCaptchaToken}
         onSubmitCtaClick={() =>
           trackAnalyticsEvent("waitlist_cta_click", {
             locale,

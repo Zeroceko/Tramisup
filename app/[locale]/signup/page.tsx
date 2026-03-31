@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isStrongPassword } from "@/lib/password-rules";
+import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
 
 const PRODUCT_TYPES = ["SaaS", "Mobile App", "E-commerce", "Other"] as const;
 
@@ -27,8 +28,11 @@ export default function SignupPage() {
   const [accessCode, setAccessCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const recaptchaEnabled = isClientRecaptchaEnabled() && Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   const handleStepOne = (event: React.FormEvent) => {
     event.preventDefault();
@@ -53,6 +57,12 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
+    if (recaptchaEnabled && !captchaToken) {
+      setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
+      setLoading(false);
+      return;
+    }
+
     if (!isStrongPassword(password)) {
       setError(t("passwordHint"));
       setLoading(false);
@@ -74,6 +84,8 @@ export default function SignupPage() {
           email,
           password,
           accessCode: accessCode.trim().toUpperCase(),
+          locale,
+          captchaToken,
         }),
       });
 
@@ -81,14 +93,22 @@ export default function SignupPage() {
 
       if (!response.ok) {
         setError(data.error || t("errors.createFailed"));
+        setCaptchaResetNonce((current) => current + 1);
         setLoading(false);
         return;
       }
 
-      const result = await signIn("credentials", { email, password, redirect: false });
+      const result = await signIn("credentials", {
+        email,
+        password,
+        captchaToken,
+        signupBypassToken: data.loginBypassToken,
+        redirect: false,
+      });
 
       if (result?.error) {
         setError(t("errors.loginAfterCreate"));
+        setCaptchaResetNonce((current) => current + 1);
       } else {
         router.push(`/${locale}/onboarding`);
         router.refresh();
@@ -273,6 +293,12 @@ export default function SignupPage() {
                     required
                   />
                 </div>
+
+                <RecaptchaField
+                  locale={locale}
+                  onTokenChange={setCaptchaToken}
+                  resetNonce={captchaResetNonce}
+                />
 
                 {error ? <p className={errorCls}>{error}</p> : null}
 

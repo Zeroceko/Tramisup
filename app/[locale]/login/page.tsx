@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
 
 const inputCls =
   "w-full rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-3 text-sm font-medium text-[#21231D] outline-none transition-all placeholder:text-[#21231D]/30 focus:border-[#C45D97] focus:ring-2 focus:ring-[#C45D97]/20";
@@ -20,23 +21,40 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const recaptchaEnabled = isClientRecaptchaEnabled() && Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError("");
 
+    if (recaptchaEnabled && !captchaToken) {
+      setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await signIn("credentials", {
         email,
         password,
+        captchaToken,
         redirect: false,
       });
 
       if (result?.error) {
-        setError(t("errors.wrongCredentials"));
+        if (result.error === "recaptcha_required") {
+          setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
+        } else if (result.error === "recaptcha_invalid" || result.error === "recaptcha_verify_failed") {
+          setError(locale === "en" ? "reCAPTCHA validation failed. Please try again." : "reCAPTCHA doğrulaması başarısız oldu. Lütfen tekrar dene.");
+        } else {
+          setError(t("errors.wrongCredentials"));
+        }
+        setCaptchaResetNonce((current) => current + 1);
       } else {
         router.push(callbackUrl || `/${locale}/dashboard`);
         router.refresh();
@@ -114,6 +132,12 @@ export default function LoginPage() {
                 required
               />
             </div>
+
+            <RecaptchaField
+              locale={locale}
+              onTokenChange={setCaptchaToken}
+              resetNonce={captchaResetNonce}
+            />
 
             {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 

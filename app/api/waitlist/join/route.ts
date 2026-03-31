@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendWaitlistConfirmationEmail, syncWaitlistLeadToResend } from "@/lib/resend-waitlist"
+import { getRequestIp, verifyRecaptchaToken } from "@/lib/recaptcha"
 
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -11,12 +12,49 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const { email, name, source = "landing", locale = "en" } = await request.json()
+    const { email, name, source = "landing", locale = "en", captchaToken } = await request.json()
+    const t =
+      locale === "tr"
+        ? {
+            emailRequired: "Email gerekli",
+            invalidEmail: "Geçersiz email formatı",
+            alreadyJoined: "Bu email zaten listede",
+            thankYou: "Listeye katıldığın için teşekkürler!",
+            failed: "Waitlist'e katılırken bir hata oluştu",
+            captchaRequired: "Lütfen reCAPTCHA doğrulamasını tamamla.",
+            captchaFailed: "reCAPTCHA doğrulaması başarısız oldu. Lütfen tekrar dene.",
+          }
+        : {
+            emailRequired: "Email is required",
+            invalidEmail: "Invalid email format",
+            alreadyJoined: "Email already in waitlist",
+            thankYou: "Thank you for joining the waitlist!",
+            failed: "Failed to join waitlist",
+            captchaRequired: "Please complete the reCAPTCHA check.",
+            captchaFailed: "reCAPTCHA verification failed. Please try again.",
+          }
+
+    const recaptchaResult = await verifyRecaptchaToken({
+      token: captchaToken,
+      remoteIp: getRequestIp(request),
+    })
+
+    if (!recaptchaResult.success) {
+      return NextResponse.json(
+        {
+          error:
+            recaptchaResult.error === "recaptcha_required"
+              ? t.captchaRequired
+              : t.captchaFailed,
+        },
+        { status: 400 }
+      )
+    }
 
     // Validate email
     if (!email || typeof email !== "string") {
       return NextResponse.json(
-        { error: "Email is required" },
+        { error: t.emailRequired },
         { status: 400 }
       )
     }
@@ -24,7 +62,7 @@ export async function POST(request: Request) {
     const cleanEmail = email.trim().toLowerCase()
     if (!isValidEmail(cleanEmail)) {
       return NextResponse.json(
-        { error: "Invalid email format" },
+        { error: t.invalidEmail },
         { status: 400 }
       )
     }
@@ -36,7 +74,7 @@ export async function POST(request: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { error: "Email already in waitlist" },
+        { error: t.alreadyJoined },
         { status: 409 }
       )
     }
@@ -69,7 +107,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "Thank you for joining the waitlist!",
+        message: t.thankYou,
         email: entry.email,
       },
       { status: 201 }

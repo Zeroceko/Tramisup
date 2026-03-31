@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { isStrongPassword } from "@/lib/password-rules";
+import { getRequestIp, verifyRecaptchaToken } from "@/lib/recaptcha";
+import { createSignupBypassToken } from "@/lib/signup-bypass";
 
 const EARLY_ACCESS_CODE = process.env.EARLY_ACCESS_CODE || "TT31623SEN";
 
@@ -30,28 +32,62 @@ async function withDbRetry<T>(operation: () => Promise<T>, attempts = 3): Promis
 }
 
 export async function POST(request: Request) {
+  let locale = "tr";
+
   try {
-    const { name, email, password, accessCode } = await request.json();
+    const { name, email, password, accessCode, locale: requestLocale = "tr", captchaToken } =
+      await request.json();
+    locale = requestLocale === "en" ? "en" : "tr";
+    const t = locale === "en"
+      ? {
+          required: "Email and password are required",
+          weakPassword:
+            "Password must be at least 8 characters and include at least 1 number and 1 special character",
+          accessCodeRequired: "Early access code is required",
+          invalidAccessCode: "Invalid early access code",
+          existingUser: "This email address is already registered",
+          created: "Account created",
+          serverError: "Server error, please try again",
+          captchaRequired: "Please complete the reCAPTCHA check.",
+          captchaFailed: "reCAPTCHA verification failed. Please try again.",
+        }
+      : {
+          required: "Email ve şifre zorunludur",
+          weakPassword:
+            "Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir",
+          accessCodeRequired: "Erken erişim kodu gereklidir",
+          invalidAccessCode: "Geçersiz erken erişim kodu",
+          existingUser: "Bu e-posta adresi zaten kayıtlı",
+          created: "Hesap oluşturuldu",
+          serverError: "Sunucu hatası, lütfen tekrar deneyin",
+          captchaRequired: "Lütfen reCAPTCHA doğrulamasını tamamla.",
+          captchaFailed: "reCAPTCHA doğrulaması başarısız oldu. Lütfen tekrar dene.",
+        };
+
+    const recaptchaResult = await verifyRecaptchaToken({
+      token: captchaToken,
+      remoteIp: getRequestIp(request),
+    });
+
+    if (!recaptchaResult.success) {
+      const error =
+        recaptchaResult.error === "recaptcha_required"
+          ? t.captchaRequired
+          : t.captchaFailed;
+
+      return NextResponse.json({ error }, { status: 400 });
+    }
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email ve şifre zorunludur" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: t.required }, { status: 400 });
     }
 
     if (!isStrongPassword(password)) {
-      return NextResponse.json(
-        { error: "Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: t.weakPassword }, { status: 400 });
     }
 
     if (!accessCode) {
-      return NextResponse.json(
-        { error: "Erken erişim kodu gereklidir" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: t.accessCodeRequired }, { status: 400 });
     }
 
     const normalizedCode = accessCode.toUpperCase();
@@ -72,20 +108,14 @@ export async function POST(request: Request) {
     }
 
     if (!inviteCodeEntry && !isValidFallbackCode) {
-      return NextResponse.json(
-        { error: "Geçersiz erken erişim kodu" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: t.invalidAccessCode }, { status: 400 });
     }
 
     const existingUser = await withDbRetry(() =>
       prisma.user.findUnique({ where: { email } })
     );
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Bu e-posta adresi zaten kayıtlı" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: t.existingUser }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -107,14 +137,23 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { message: "Hesap oluşturuldu", userId: user.id },
+      {
+        message: t.created,
+        userId: user.id,
+        loginBypassToken: createSignupBypassToken(email),
+      },
       { status: 201 }
     );
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(
-      { error: "Sunucu hatası, lütfen tekrar deneyin" },
-      { status: 500 }
+      {
+        error:
+          locale === "en"
+            ? "Server error, please try again"
+            : "Sunucu hatası, lütfen tekrar deneyin",
+      },
+      { status: 500 },
     );
   }
 }
