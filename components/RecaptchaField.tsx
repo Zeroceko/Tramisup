@@ -47,5 +47,5 @@ export default function RecaptchaField({
 }
 
 export function isClientRecaptchaEnabled() {
-  return process.env.NEXT_PUBLIC_RECAPTCHA_ENABLED === "true";
+  return process.env.NEXT_PUBLIC_RECAPTCHA_ENABLED?.trim() === "true";
 }

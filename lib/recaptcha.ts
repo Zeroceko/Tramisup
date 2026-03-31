@@ -1,11 +1,11 @@
 const VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 
 export function isRecaptchaEnabled() {
-  return process.env.RECAPTCHA_ENABLED === "true";
+  return process.env.RECAPTCHA_ENABLED?.trim() === "true";
 }
 
 export function getRecaptchaSiteKey() {
-  return process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+  return process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim() || "";
 }
 
 export function shouldRenderRecaptchaOnClient() {
@@ -23,7 +23,7 @@ export async function verifyRecaptchaToken({
     return { success: true, bypassed: true as const };
   }
 
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const secret = process.env.RECAPTCHA_SECRET_KEY?.trim();
   const siteKey = getRecaptchaSiteKey();
 
   if (!secret || !siteKey) {
