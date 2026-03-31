@@ -11,7 +11,6 @@ import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
-import TiramisupCoachLauncher from "@/components/TiramisupCoachLauncher";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
@@ -276,20 +275,6 @@ export default async function GrowthPage({
           isEn
             ? "This is the diagnosis, priority, and execution surface. Manage what you measure and how data arrives in Metrics; use Growth to see what is blocked and what to do next."
             : "Burası yorum, öncelik ve execution yüzeyi. Neyi ölçtüğünü ve veri akışını Metrics ekranında yönet; burada ise neyin sıkıştığını ve sıradaki hamleyi gör."
-        }
-        aside={
-          <TiramisupCoachLauncher
-            productId={product.id}
-            productName={product.name}
-            eventType="GROWTH_VIEW"
-            title={isEn ? "Tiramisup Suggestion" : "Tiramisup Önerisi"}
-            description={
-              isEn
-                ? "Open Tiramisup's current growth recommendation."
-                : "Tiramisup'ın güncel growth önerisini aç."
-            }
-            className="max-w-[640px]"
-          />
         }
       />
 
