@@ -28,14 +28,15 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
 
   return (
     <div
-      className={`relative z-20 ml-auto h-[148px] origin-right overflow-hidden rounded-[26px] border border-white/80 bg-white/80 shadow-[0_18px_54px_rgba(23,20,31,0.10)] backdrop-blur-[18px] transition-[width,transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        expanded ? "w-[560px] shadow-[0_26px_70px_rgba(23,20,31,0.14)]" : "w-[146px]"
+      className={`relative z-20 ml-auto h-[156px] max-w-[580px] origin-right overflow-hidden rounded-[28px] border border-white/80 bg-white/82 shadow-[0_18px_54px_rgba(23,20,31,0.10)] backdrop-blur-[18px] transition-[width,transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        expanded ? "w-full shadow-[0_26px_70px_rgba(23,20,31,0.14)]" : "w-[150px]"
       }`}
     >
       <div
         className={`absolute left-0 top-0 h-full overflow-hidden transition-[width,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          expanded ? "w-[412px] opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-8"
+          expanded ? "opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-8"
         }`}
+        style={expanded ? { width: "calc(100% - 150px)" } : undefined}
       >
         <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,250,252,0.88))] px-6 py-5">
           <div className="flex items-center justify-between gap-3">
@@ -69,7 +70,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
                 {isEn ? "Reading your board..." : "Board'un okunuyor..."}
               </div>
             ) : response ? (
-              <p className="line-clamp-4 whitespace-pre-wrap text-[14px] leading-6 text-[#3e312b]">
+              <p className="line-clamp-5 whitespace-pre-wrap text-[14px] leading-6 text-[#3e312b]">
                 {response}
               </p>
             ) : (
@@ -94,7 +95,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
         type="button"
         onClick={expanded ? undefined : handleAsk}
         className={`absolute right-0 top-0 h-full overflow-hidden rounded-[26px] bg-[radial-gradient(circle_at_top,_rgba(255,245,224,0.98),rgba(255,230,187,0.88)_38%,rgba(255,212,146,0.58)_78%,rgba(255,255,255,0.34)_100%)] transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          expanded ? "w-[148px] cursor-default" : "w-full"
+          expanded ? "w-[150px] cursor-default" : "w-full"
         }`}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,rgba(132,67,27,0.18),transparent_34%),radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.6),transparent_28%)]" />

@@ -420,28 +420,30 @@ export default async function DashboardPage({
   // ---- Render ----
   return (
     <div className="space-y-5">
-      {/* 1. Hero */}
-      <TodayHero
-        userName={session?.user?.name}
-        productName={product.name}
-        phase={product.status === ProductStatus.GROWING ? "growing" : phase}
-        statusLine={statusLine}
-        locale={uiLocale}
-        coachSlot={
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)] xl:items-start">
+        <TodayHero
+          userName={session?.user?.name}
+          productName={product.name}
+          phase={product.status === ProductStatus.GROWING ? "growing" : phase}
+          statusLine={statusLine}
+          locale={uiLocale}
+        />
+
+        <div className="flex xl:justify-end">
           <CoachInsight
             productId={product.id}
             stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
             locale={uiLocale}
           />
-        }
-      />
+        </div>
+      </section>
 
       {/* 2. Launch moment banner — shown once after launch */}
       {justLaunched && (
         <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
-      <section>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)] xl:items-stretch">
         <PrimaryAction
           title={primaryAction.title}
           description={primaryAction.description}
@@ -451,6 +453,33 @@ export default async function DashboardPage({
           accent={primaryAction.accent}
           progress={primaryAction.progress}
         />
+
+        <div className="space-y-4">
+          {isLaunched && selectedMetricCount > 0 ? (
+            <SourceHealth
+              connectedCount={connectedCount}
+              errorCount={errorCount}
+              totalMetrics={selectedMetricCount}
+              automatedMetrics={0}
+              enteredToday={enteredToday}
+              locale={uiLocale}
+            />
+          ) : (
+            <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
+              </p>
+              <h3 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
+              </h3>
+              <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
+                {uiLocale === "en"
+                  ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
+                  : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
+              </p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 4. Blockers — only if they exist */}
@@ -460,36 +489,7 @@ export default async function DashboardPage({
       <section className="space-y-4">
         <DecisionStrip indicators={indicators} />
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
-
-          <div className="space-y-4">
-            {isLaunched && selectedMetricCount > 0 ? (
-              <SourceHealth
-                connectedCount={connectedCount}
-                errorCount={errorCount}
-                totalMetrics={selectedMetricCount}
-                automatedMetrics={0}
-                enteredToday={enteredToday}
-                locale={uiLocale}
-              />
-            ) : (
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                  {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
-                </p>
-                <h3 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                  {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
-                </h3>
-                <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
-                  {uiLocale === "en"
-                    ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
-                    : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
       </section>
     </div>
   );
