@@ -45,11 +45,11 @@ export default function AnalyticsConsentBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-[1000] md:left-6 md:right-6">
-      <div className="mx-auto max-w-5xl rounded-[24px] border border-border bg-background/95 p-4 shadow-t-lg backdrop-blur-xl md:flex md:items-end md:justify-between md:gap-6 md:p-5">
-        <div className="max-w-3xl">
+    <div className="fixed bottom-24 right-4 z-[1000] w-[min(360px,calc(100vw-2rem))] md:bottom-24 md:right-6">
+      <div className="rounded-[24px] border border-border bg-background/95 p-4 shadow-t-lg backdrop-blur-xl">
+        <div>
           <p className="text-sm leading-6 text-foreground/80">{copy.text}</p>
-          <div className="mt-2 flex items-center gap-4 text-sm font-semibold">
+          <div className="mt-3 flex items-center gap-4 text-sm font-semibold">
             <Link href={`/${locale}/privacy`} className="text-foreground/70 underline underline-offset-4">
               {copy.privacy}
             </Link>
@@ -59,14 +59,14 @@ export default function AnalyticsConsentBanner() {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 md:mt-0">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => {
               persistConsent("denied");
               setVisible(false);
             }}
-            className="rounded-full border border-border bg-white px-5 py-3 text-sm font-bold text-foreground transition-all hover:-translate-y-0.5"
+            className="rounded-2xl border border-border bg-white px-4 py-3 text-sm font-bold text-foreground transition-all hover:-translate-y-0.5"
           >
             {copy.reject}
           </button>
@@ -77,7 +77,7 @@ export default function AnalyticsConsentBanner() {
               setVisible(false);
               window.location.reload();
             }}
-            className="rounded-full border-none bg-charcoal px-5 py-3 text-sm font-bold text-primary-foreground transition-all hover:-translate-y-0.5"
+            className="rounded-2xl border-none bg-charcoal px-4 py-3 text-sm font-bold text-primary-foreground transition-all hover:-translate-y-0.5"
           >
             {copy.accept}
           </button>
