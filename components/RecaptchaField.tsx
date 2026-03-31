@@ -50,7 +50,7 @@ const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
     }
 
     return (
-      <div className="pointer-events-none fixed bottom-4 right-4 z-[950]">
+      <div className="pointer-events-none recaptcha-fixed-shell">
         <div className="pointer-events-auto recaptcha-inline-badge">
           <ReCAPTCHA
             ref={recaptchaRef}
