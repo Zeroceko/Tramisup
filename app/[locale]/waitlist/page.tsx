@@ -10,7 +10,10 @@ import AnalyticsScripts from "@/components/analytics/AnalyticsScripts";
 import RoutePageViewTracker from "@/components/analytics/RoutePageViewTracker";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import SectionViewTracker from "@/components/analytics/SectionViewTracker";
-import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
+import RecaptchaField, {
+  isClientRecaptchaEnabled,
+  type RecaptchaFieldHandle,
+} from "@/components/RecaptchaField";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
 const illusScattered = "/assets/illus-scattered-tasks.png";
@@ -302,30 +305,28 @@ function Hero({
   copy,
   locale,
   email,
-  recaptchaEnabled,
   loading,
   error,
   inputRef,
   recaptchaResetNonce,
   onEmailChange,
   onEmailFocus,
-  onRecaptchaChange,
   onSubmitCtaClick,
   onSubmit,
+  recaptchaRef,
 }: {
   copy: Copy;
   locale: "en" | "tr";
   email: string;
-  recaptchaEnabled: boolean;
   loading: boolean;
   error: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   recaptchaResetNonce: number;
   onEmailChange: (value: string) => void;
   onEmailFocus: () => void;
-  onRecaptchaChange: (token: string | null) => void;
   onSubmitCtaClick: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  recaptchaRef: React.RefObject<RecaptchaFieldHandle | null>;
 }) {
   return (
     <section
@@ -380,17 +381,7 @@ function Hero({
               </button>
             </div>
 
-            {recaptchaEnabled ? (
-              <div className="mt-3 flex justify-center">
-                <div className="w-full max-w-fit">
-                  <RecaptchaField
-                    locale={locale}
-                    onTokenChange={onRecaptchaChange}
-                    resetNonce={recaptchaResetNonce}
-                  />
-                </div>
-              </div>
-            ) : null}
+            <RecaptchaField ref={recaptchaRef} locale={locale} resetNonce={recaptchaResetNonce} />
           </form>
 
           {error ? (
@@ -528,8 +519,8 @@ export default function EarlyAccessPage() {
   const locale = useLocale() === "tr" ? "tr" : "en";
   const copy = EARLY_ACCESS_COPY[locale];
   const inputRef = useRef<HTMLInputElement>(null);
+  const recaptchaRef = useRef<RecaptchaFieldHandle | null>(null);
   const [email, setEmail] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -587,15 +578,6 @@ export default function EarlyAccessPage() {
     event.preventDefault();
     setError("");
 
-    if (recaptchaEnabled && !captchaToken) {
-      setError(
-        locale === "en"
-          ? "Please complete the reCAPTCHA check."
-          : "Lütfen reCAPTCHA doğrulamasını tamamla.",
-      );
-      return;
-    }
-
     setLoading(true);
 
     trackAnalyticsEvent("waitlist_signup_attempt", {
@@ -604,6 +586,20 @@ export default function EarlyAccessPage() {
     });
 
     try {
+      let captchaToken: string | null = null;
+      if (recaptchaEnabled) {
+        captchaToken = await recaptchaRef.current?.executeAsync() ?? null;
+        if (!captchaToken) {
+          setError(
+            locale === "en"
+              ? "Please complete the reCAPTCHA check."
+              : "Lütfen reCAPTCHA doğrulamasını tamamla.",
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/waitlist/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -661,14 +657,12 @@ export default function EarlyAccessPage() {
         copy={copy}
         locale={locale}
         email={email}
-        recaptchaEnabled={recaptchaEnabled}
         loading={loading}
         error={error}
         inputRef={inputRef}
         recaptchaResetNonce={captchaResetNonce}
         onEmailChange={handleEmailChange}
         onEmailFocus={handleEmailFocus}
-        onRecaptchaChange={setCaptchaToken}
         onSubmitCtaClick={() =>
           trackAnalyticsEvent("waitlist_cta_click", {
             locale,
@@ -676,6 +670,7 @@ export default function EarlyAccessPage() {
           })
         }
         onSubmit={handleSubmit}
+        recaptchaRef={recaptchaRef}
       />
       <Problem copy={copy} />
       <HowItWorks copy={copy} onPrimaryClick={() => focusForm("how_it_works")} />

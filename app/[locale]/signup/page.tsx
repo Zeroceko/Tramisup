@@ -5,10 +5,13 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isStrongPassword } from "@/lib/password-rules";
-import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
+import RecaptchaField, {
+  isClientRecaptchaEnabled,
+  type RecaptchaFieldHandle,
+} from "@/components/RecaptchaField";
 
 const PRODUCT_TYPES = ["SaaS", "Mobile App", "E-commerce", "Other"] as const;
 
@@ -28,10 +31,10 @@ export default function SignupPage() {
   const [accessCode, setAccessCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef<RecaptchaFieldHandle | null>(null);
   const recaptchaEnabled = isClientRecaptchaEnabled() && Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   const handleStepOne = (event: React.FormEvent) => {
@@ -57,12 +60,6 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    if (recaptchaEnabled && !captchaToken) {
-      setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
-      setLoading(false);
-      return;
-    }
-
     if (!isStrongPassword(password)) {
       setError(t("passwordHint"));
       setLoading(false);
@@ -76,6 +73,16 @@ export default function SignupPage() {
     }
 
     try {
+      let captchaToken: string | null = null;
+      if (recaptchaEnabled) {
+        captchaToken = await recaptchaRef.current?.executeAsync() ?? null;
+        if (!captchaToken) {
+          setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -295,8 +302,8 @@ export default function SignupPage() {
                 </div>
 
                 <RecaptchaField
+                  ref={recaptchaRef}
                   locale={locale}
-                  onTokenChange={setCaptchaToken}
                   resetNonce={captchaResetNonce}
                 />
 

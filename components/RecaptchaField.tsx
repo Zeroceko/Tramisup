@@ -1,50 +1,67 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import ReCAPTCHA from "react-google-recaptcha";
+
+export type RecaptchaFieldHandle = {
+  executeAsync: () => Promise<string | null>;
+  reset: () => void;
+};
 
 type RecaptchaFieldProps = {
   locale: string;
-  onTokenChange: (token: string | null) => void;
   resetNonce?: number;
 };
 
-export default function RecaptchaField({
-  locale,
-  onTokenChange,
-  resetNonce = 0,
-}: RecaptchaFieldProps) {
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-  const isEnabled = useMemo(() => isClientRecaptchaEnabled(), []);
-  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
-  const shouldRender = isEnabled && Boolean(siteKey);
+const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
+  function RecaptchaField({ locale, resetNonce = 0 }, forwardedRef) {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim() || "";
+    const isEnabled = useMemo(() => isClientRecaptchaEnabled(), []);
+    const recaptchaRef = useRef<ReCAPTCHA | null>(null);
+    const shouldRender = isEnabled && Boolean(siteKey);
 
-  useEffect(() => {
-    if (!shouldRender || resetNonce === 0) {
-      return;
+    useImperativeHandle(
+      forwardedRef,
+      () => ({
+        async executeAsync() {
+          if (!shouldRender || !recaptchaRef.current) {
+            return null;
+          }
+
+          return recaptchaRef.current.executeAsync();
+        },
+        reset() {
+          recaptchaRef.current?.reset();
+        },
+      }),
+      [shouldRender],
+    );
+
+    useEffect(() => {
+      if (!shouldRender || resetNonce === 0) {
+        return;
+      }
+
+      recaptchaRef.current?.reset();
+    }, [resetNonce, shouldRender]);
+
+    if (!shouldRender) {
+      return null;
     }
 
-    recaptchaRef.current?.reset();
-    onTokenChange(null);
-  }, [onTokenChange, resetNonce, shouldRender]);
-
-  if (!shouldRender) {
-    return null;
-  }
-
-  return (
-    <div className="rounded-[16px] border border-[#ece7e2] bg-[#fffaf6] p-3">
+    return (
       <ReCAPTCHA
         ref={recaptchaRef}
         sitekey={siteKey}
         hl={locale}
-        onChange={onTokenChange}
-        onExpired={() => onTokenChange(null)}
-        onErrored={() => onTokenChange(null)}
+        size="invisible"
+        badge="bottomright"
       />
-    </div>
-  );
-}
+    );
+  },
+);
+
+export default RecaptchaField;
 
 export function isClientRecaptchaEnabled() {
   return process.env.NEXT_PUBLIC_RECAPTCHA_ENABLED?.trim() === "true";

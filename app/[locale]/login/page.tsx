@@ -5,8 +5,11 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
-import RecaptchaField, { isClientRecaptchaEnabled } from "@/components/RecaptchaField";
+import { useRef, useState } from "react";
+import RecaptchaField, {
+  isClientRecaptchaEnabled,
+  type RecaptchaFieldHandle,
+} from "@/components/RecaptchaField";
 
 const inputCls =
   "w-full rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-3 text-sm font-medium text-[#21231D] outline-none transition-all placeholder:text-[#21231D]/30 focus:border-[#C45D97] focus:ring-2 focus:ring-[#C45D97]/20";
@@ -21,10 +24,10 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef<RecaptchaFieldHandle | null>(null);
   const recaptchaEnabled = isClientRecaptchaEnabled() && Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -32,13 +35,17 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    if (recaptchaEnabled && !captchaToken) {
-      setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
-      setLoading(false);
-      return;
-    }
-
     try {
+      let captchaToken: string | null = null;
+      if (recaptchaEnabled) {
+        captchaToken = await recaptchaRef.current?.executeAsync() ?? null;
+        if (!captchaToken) {
+          setError(locale === "en" ? "Please complete the reCAPTCHA check." : "Lütfen reCAPTCHA doğrulamasını tamamla.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const result = await signIn("credentials", {
         email,
         password,
@@ -134,8 +141,8 @@ export default function LoginPage() {
             </div>
 
             <RecaptchaField
+              ref={recaptchaRef}
               locale={locale}
-              onTokenChange={setCaptchaToken}
               resetNonce={captchaResetNonce}
             />
 
