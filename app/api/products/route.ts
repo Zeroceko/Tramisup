@@ -92,6 +92,7 @@ export async function POST(request: Request) {
       growthGoal,
       goalKey,
       stageContext,
+      locale,
       seedData = false,
     } = body;
 
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
     const aiPlan = await generateAiPlan({
       name,
       description,
+      locale,
       category,
       targetAudience,
       businessModel,
@@ -143,6 +145,7 @@ export async function POST(request: Request) {
     const founderSummary = await buildFounderSummary({
       name,
       description,
+      locale,
       category,
       targetAudience,
       businessModel,

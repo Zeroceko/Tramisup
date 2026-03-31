@@ -5,6 +5,41 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
 
+function displayValue(locale: string, value: string | null | undefined) {
+  if (!value || locale !== "en") return value ?? "—";
+
+  const map: Record<string, string> = {
+    "Yayında": "Live",
+    "Büyüme aşamasında": "Growing",
+    "Yakında yayında": "Preparing for launch",
+    "Test kullanıcıları var": "I have test users",
+    "Geliştirme aşamasında": "Building",
+    "Fikir aşamasında": "Idea stage",
+    "Abonelik": "Subscription",
+    "Freemium": "Freemium",
+    "Tek seferlik ödeme": "One-time purchase",
+    "Kullanıma göre ödeme": "Usage-based",
+    "Kurumsal/özel teklif": "Enterprise / B2B",
+    "Marketplace komisyonu": "Marketplace commission",
+    "Reklam": "Ads",
+    "Henüz monetize etmedim": "No revenue yet",
+    "Startup ekipleri": "Startup teams",
+    "Tüketiciler": "Consumers",
+    "Freelancerlar": "Freelancers",
+    "Geliştiriciler": "Developers",
+    "KOBİ'ler": "SMBs",
+    "Kurumsal ekipler": "Enterprise teams",
+    "İç ekipler": "Internal teams / Operations",
+    "İçerik üreticileri": "Creators",
+    "Eğitim": "Education",
+  };
+
+  return value
+    .split(",")
+    .map((item) => map[item.trim()] ?? item.trim())
+    .join(", ");
+}
+
 export default async function ProductOverviewPage({
   params,
   searchParams,
@@ -13,6 +48,7 @@ export default async function ProductOverviewPage({
   searchParams?: Promise<{ onboarding?: string }>;
 }) {
   const { locale, id } = await params;
+  const isEn = locale === "en";
   const resolvedSearch = (await searchParams) ?? {};
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
@@ -47,11 +83,13 @@ export default async function ProductOverviewPage({
     : `/${locale}/pre-launch`;
 
   const nextLabel = isLaunched
-    ? "Growth setup'a git"
-    : "Launch hazırlığına git";
+    ? isEn ? "Go to Growth setup" : "Growth setup'a git"
+    : isEn ? "Go to Launch prep" : "Launch hazırlığına git";
   const showContinueOnboarding = resolvedSearch.onboarding === "continue";
   const preparedItems = isLaunched ? product._count.growthChecklists : product._count.launchChecklists;
-  const preparedLabel = isLaunched ? "Growth checklist maddesi" : "Launch hazırlık maddesi";
+  const preparedLabel = isLaunched
+    ? isEn ? "Growth checklist items" : "Growth checklist maddesi"
+    : isEn ? "Launch prep items" : "Launch hazırlık maddesi";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
@@ -63,7 +101,7 @@ export default async function ProductOverviewPage({
           </svg>
         </div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-          Ürün oluşturuldu
+          {isEn ? "Product created" : "Ürün oluşturuldu"}
         </p>
         <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
           {product.name}
@@ -79,26 +117,30 @@ export default async function ProductOverviewPage({
         {showContinueOnboarding && (
           <div className="rounded-[20px] border border-[#ffd7ef] bg-[#fff7fc] p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a55b83] mb-2">
-              Onboarding durumu
+              {isEn ? "Onboarding status" : "Onboarding durumu"}
             </p>
             <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-              Ürün oluşturmaya devam et
+              {isEn ? "Continue product setup" : "Ürün oluşturmaya devam et"}
             </h2>
             <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
-              Ürünün oluşturuldu. Şimdi kurduğumuz bağlama göre sonraki adımı tamamlayıp workspace&apos;i tam kullanıma hazır hale getirebilirsin.
+              {isEn
+                ? "Your product is ready. Now complete the next step based on the context we built so the workspace becomes fully usable."
+                : "Ürünün oluşturuldu. Şimdi kurduğumuz bağlama göre sonraki adımı tamamlayıp workspace'i tam kullanıma hazır hale getirebilirsin."}
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <Link
                 href={nextHref}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
               >
-                {isLaunched ? "Growth kurulumuna devam et" : "Launch hazırlığına devam et"}
+                {isLaunched
+                  ? isEn ? "Continue with Growth setup" : "Growth kurulumuna devam et"
+                  : isEn ? "Continue with Launch prep" : "Launch hazırlığına devam et"}
               </Link>
               <Link
                 href={`/${locale}/integrations`}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] bg-white px-5 text-[14px] font-medium text-[#5e6678] transition hover:bg-[#f6f6f6]"
               >
-                Kaynakları daha sonra bağla
+                {isEn ? "Connect sources later" : "Kaynakları daha sonra bağla"}
               </Link>
             </div>
           </div>
@@ -107,31 +149,31 @@ export default async function ProductOverviewPage({
         {/* Product details */}
         <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
-            Ürün özeti
+            {isEn ? "Product summary" : "Ürün özeti"}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {product.category && (
               <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                <p className="text-[11px] text-[#666d80]">Kategori</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{product.category}</p>
+                <p className="text-[11px] text-[#666d80]">{isEn ? "Category" : "Kategori"}</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{displayValue(locale, product.category)}</p>
               </div>
             )}
             {product.targetAudience && (
               <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                <p className="text-[11px] text-[#666d80]">Hedef kitle</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{product.targetAudience}</p>
+                <p className="text-[11px] text-[#666d80]">{isEn ? "Audience" : "Hedef kitle"}</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{displayValue(locale, product.targetAudience)}</p>
               </div>
             )}
             {product.businessModel && (
               <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-                <p className="text-[11px] text-[#666d80]">İş modeli</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{product.businessModel}</p>
+                <p className="text-[11px] text-[#666d80]">{isEn ? "Business model" : "İş modeli"}</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">{displayValue(locale, product.businessModel)}</p>
               </div>
             )}
             <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
-              <p className="text-[11px] text-[#666d80]">Aşama</p>
+              <p className="text-[11px] text-[#666d80]">{isEn ? "Stage" : "Aşama"}</p>
               <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                {product.launchStatus || (product.status ?? "—").replaceAll("_", " ")}
+                {displayValue(locale, product.launchStatus || (product.status ?? "—").replaceAll("_", " "))}
               </p>
             </div>
           </div>
@@ -140,7 +182,7 @@ export default async function ProductOverviewPage({
         {/* What Tiramisup prepared */}
         <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-4">
-            Tiramisup neler hazırladı?
+            {isEn ? "What Tiramisup prepared" : "Tiramisup neler hazırladı?"}
           </p>
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-[12px] bg-[#f8fbfb] px-4 py-3">
@@ -153,7 +195,7 @@ export default async function ProductOverviewPage({
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-[#e8e8e8] text-[14px] font-semibold text-[#0d0d12]">
                 {product._count.tasks}
               </div>
-              <p className="text-[14px] text-[#0d0d12]">Görev oluşturuldu</p>
+              <p className="text-[14px] text-[#0d0d12]">{isEn ? "Tasks created" : "Görev oluşturuldu"}</p>
             </div>
           </div>
         </div>
@@ -162,7 +204,7 @@ export default async function ProductOverviewPage({
         {founderSummary?.nextStep && (
           <div className="rounded-[20px] border border-[#0d0d12] bg-[#0d0d12] p-6 text-white">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2">
-              Şimdi ne yapmalısın?
+              {isEn ? "What should you do now?" : "Şimdi ne yapmalısın?"}
             </p>
             <p className="text-[16px] font-semibold leading-relaxed">
               {founderSummary.nextStep}

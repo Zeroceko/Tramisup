@@ -750,6 +750,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         body: JSON.stringify({
           name: data.name,
           description: data.description,
+          locale,
           website: data.website || undefined,
           category: joinSelections(data.categories, data.categoryOther),
           platforms: data.platforms ?? [],

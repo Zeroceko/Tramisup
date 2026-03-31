@@ -36,6 +36,7 @@ export type AiPlan = {
 export type WizardInput = {
   name: string;
   description: string;
+  locale?: string;
   category?: string;
   targetAudience?: string;
   businessModel?: string;

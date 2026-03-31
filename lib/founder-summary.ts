@@ -25,6 +25,10 @@ function toNaturalList(items: string[]) {
   return `${items.slice(0, -1).join(", ")} ve ${items[items.length - 1]}`;
 }
 
+function pick(locale: string | undefined, en: string, tr: string) {
+  return locale === "en" ? en : tr;
+}
+
 /**
  * Builds a founder summary enriched with real metric data from the database.
  * When called during product creation (no productId yet), it operates in
@@ -35,6 +39,7 @@ export async function buildFounderSummary(
   aiPlan: AiPlan | null,
   productId?: string
 ): Promise<FounderSummary> {
+  const locale = input.locale;
   const categories = splitList(input.category);
   const audiences = splitList(input.targetAudience);
   const platforms = input.mobilePlatforms ?? [];
@@ -59,19 +64,27 @@ export async function buildFounderSummary(
 
   // ── Strengths ────────────────────────────────────────────────────────────
   const strengths = [
-    categories.length ? `${input.name} şu anda ${toNaturalList(categories)} bağlamında konumlanıyor.` : null,
-    audiences.length ? `Ana hedef kitle ${toNaturalList(audiences)} olarak netleşmiş durumda.` : null,
-    platforms.length ? `Mobil dağıtım hedefi ${toNaturalList(platforms)} için ayrıca hazırlandı.` : null,
-    input.businessModel ? `Gelir modeli ${input.businessModel.toLowerCase()} tarafında tanımlı.` : null,
+    categories.length
+      ? pick(locale, `${input.name} is currently positioned in the ${toNaturalList(categories)} context.`, `${input.name} şu anda ${toNaturalList(categories)} bağlamında konumlanıyor.`)
+      : null,
+    audiences.length
+      ? pick(locale, `The primary audience is clearly defined as ${toNaturalList(audiences)}.`, `Ana hedef kitle ${toNaturalList(audiences)} olarak netleşmiş durumda.`)
+      : null,
+    platforms.length
+      ? pick(locale, `Mobile distribution is also prepared for ${toNaturalList(platforms)}.`, `Mobil dağıtım hedefi ${toNaturalList(platforms)} için ayrıca hazırlandı.`)
+      : null,
+    input.businessModel
+      ? pick(locale, `The revenue model is defined as ${input.businessModel.toLowerCase()}.`, `Gelir modeli ${input.businessModel.toLowerCase()} tarafında tanımlı.`)
+      : null,
     // Data-driven strengths
     metricSnapshot?.latestMrr != null
-      ? `Aylık tekrarlayan gelir (MRR) ${metricSnapshot.latestMrr.toLocaleString("tr-TR")}$ seviyesinde.`
+      ? pick(locale, `Monthly recurring revenue (MRR) is at ${metricSnapshot.latestMrr.toLocaleString(locale === "en" ? "en-US" : "tr-TR")}$`, `Aylık tekrarlayan gelir (MRR) ${metricSnapshot.latestMrr.toLocaleString("tr-TR")}$ seviyesinde.`)
       : null,
     metricSnapshot?.latestDau != null
-      ? `Günlük ${metricSnapshot.latestDau.toLocaleString("tr-TR")} aktif kullanıcı mevcut.`
+      ? pick(locale, `There are ${metricSnapshot.latestDau.toLocaleString(locale === "en" ? "en-US" : "tr-TR")} daily active users.`, `Günlük ${metricSnapshot.latestDau.toLocaleString("tr-TR")} aktif kullanıcı mevcut.`)
       : null,
     connectedIntegrations.length > 0
-      ? `${toNaturalList(connectedIntegrations)} entegrasyonu bağlı ve veri akışı aktif.`
+      ? pick(locale, `${toNaturalList(connectedIntegrations)} integration is connected and data is flowing.`, `${toNaturalList(connectedIntegrations)} entegrasyonu bağlı ve veri akışı aktif.`)
       : null,
   ].filter(Boolean) as string[];
 
@@ -83,16 +96,16 @@ export async function buildFounderSummary(
     const dataFocusAreas: string[] = [];
 
     if (metricSnapshot.mrrTrend === "down") {
-      dataFocusAreas.push("MRR düşüş trendinde — churn nedenlerini araştır ve iptalleri analiz et.");
+      dataFocusAreas.push(pick(locale, "MRR is trending down. Investigate churn causes and review cancellations.", "MRR düşüş trendinde — churn nedenlerini araştır ve iptalleri analiz et."));
     }
     if (metricSnapshot.dauTrend === "down") {
-      dataFocusAreas.push("DAU düşüyor — retention veya activation akışını incele.");
+      dataFocusAreas.push(pick(locale, "DAU is falling. Review retention and activation flow.", "DAU düşüyor — retention veya activation akışını incele."));
     }
     if (metricSnapshot.latestChurnedUsers != null && metricSnapshot.latestChurnedUsers > 0) {
-      dataFocusAreas.push(`Son dönemde ${metricSnapshot.latestChurnedUsers} kullanıcı iptal etmiş — neden analizi yap.`);
+      dataFocusAreas.push(pick(locale, `${metricSnapshot.latestChurnedUsers} users cancelled recently. Review the reasons behind churn.`, `Son dönemde ${metricSnapshot.latestChurnedUsers} kullanıcı iptal etmiş — neden analizi yap.`));
     }
     if (connectedIntegrations.length === 0) {
-      dataFocusAreas.push("Stripe veya GA4 bağlayarak metrik akışını otomatikleştir.");
+      dataFocusAreas.push(pick(locale, "Connect Stripe or GA4 to automate metric flow.", "Stripe veya GA4 bağlayarak metrik akışını otomatikleştir."));
     }
 
     // Fill remaining slots with growth items
@@ -104,22 +117,22 @@ export async function buildFounderSummary(
     focusAreas = dataFocusAreas.length > 0 ? dataFocusAreas : (growthItems.length
       ? growthItems
       : [
-        "İlk takip edeceğin acquisition ve activation metriklerini seç.",
-        "Metrik setup'tan sonra ilk günlük veri girişini başlat.",
+        pick(locale, "Choose the first acquisition and activation metrics you want to track.", "İlk takip edeceğin acquisition ve activation metriklerini seç."),
+        pick(locale, "Start the first daily metric entry after setup.", "Metrik setup'tan sonra ilk günlük veri girişini başlat."),
       ]);
   } else if (isLaunched) {
     focusAreas = growthItems.length
       ? growthItems
       : [
-        "İlk takip edeceğin acquisition ve activation metriklerini seç.",
-        "Metrik setup'tan sonra ilk günlük veri girişini başlat.",
+        pick(locale, "Choose the first acquisition and activation metrics you want to track.", "İlk takip edeceğin acquisition ve activation metriklerini seç."),
+        pick(locale, "Start the first daily metric entry after setup.", "Metrik setup'tan sonra ilk günlük veri girişini başlat."),
       ];
   } else {
     focusAreas = launchItems.length
       ? launchItems
       : [
-        "İlk launch hazırlık maddelerini kapat.",
-        "Bu haftaki en kritik işe odaklan.",
+        pick(locale, "Close the first launch-readiness items.", "İlk launch hazırlık maddelerini kapat."),
+        pick(locale, "Focus on the most critical job this week.", "Bu haftaki en kritik işe odaklan."),
       ];
   }
 
@@ -129,20 +142,20 @@ export async function buildFounderSummary(
   if (isLaunched && metricSnapshot) {
     // Data-driven next step
     if (metricSnapshot.mrrTrend === "down") {
-      nextStep = "Öncelikli görev: Churn nedenini tespit et. Stripe verilerinden iptal eden kullanıcıları incele.";
+      nextStep = pick(locale, "Priority task: identify why users churn. Review cancellations from Stripe data.", "Öncelikli görev: Churn nedenini tespit et. Stripe verilerinden iptal eden kullanıcıları incele.");
     } else if (metricSnapshot.dauTrend === "down") {
-      nextStep = "Kullanıcı aktivasyonu düşüyor. Onboarding akışını ve ilk-değer-anını gözden geçir.";
+      nextStep = pick(locale, "User activation is declining. Review onboarding and the first-value moment.", "Kullanıcı aktivasyonu düşüyor. Onboarding akışını ve ilk-değer-anını gözden geçir.");
     } else if (connectedIntegrations.length === 0) {
-      nextStep = "Entegrasyon sayfasından Stripe veya GA4 bağla — veriler otomatik aksın.";
+      nextStep = pick(locale, "Connect Stripe or GA4 from the integrations page so data can flow automatically.", "Entegrasyon sayfasından Stripe veya GA4 bağla — veriler otomatik aksın.");
     } else {
-      nextStep = "Metrikler stabil. Bir sonraki AARRR kategorisinde hedef belirle.";
+      nextStep = pick(locale, "Metrics look stable. Define a target in the next AARRR stage.", "Metrikler stabil. Bir sonraki AARRR kategorisinde hedef belirle.");
     }
   } else if (isLaunched) {
-    nextStep = "Growth setup ekranında her kategori için tek ana metrik seç.";
+    nextStep = pick(locale, "Choose one core metric for each category on the Growth setup screen.", "Growth setup ekranında her kategori için tek ana metrik seç.");
   } else if (platforms.length) {
-    nextStep = "Pre-launch ekranında App Store ve Google Play gereksinimlerini kritik maddelerle birlikte kapat.";
+    nextStep = pick(locale, "On the pre-launch screen, close the App Store and Google Play requirements with the critical checklist items.", "Pre-launch ekranında App Store ve Google Play gereksinimlerini kritik maddelerle birlikte kapat.");
   } else {
-    nextStep = "Pre-launch ekranında ilk kritik hazırlık maddelerine başla.";
+    nextStep = pick(locale, "Start with the first critical prep items on the pre-launch screen.", "Pre-launch ekranında ilk kritik hazırlık maddelerine başla.");
   }
 
   // ── Summary ──────────────────────────────────────────────────────────────
@@ -151,21 +164,29 @@ export async function buildFounderSummary(
   if (isLaunched && metricSnapshot) {
     const parts: string[] = [`${input.name} yayında ve veriler akıyor.`];
     if (metricSnapshot.latestMrr != null) {
-      parts.push(`MRR: ${metricSnapshot.latestMrr.toLocaleString("tr-TR")}$.`);
+      parts.push(`MRR: ${metricSnapshot.latestMrr.toLocaleString(locale === "en" ? "en-US" : "tr-TR")}$.`);
     }
     if (metricSnapshot.latestDau != null) {
-      parts.push(`DAU: ${metricSnapshot.latestDau.toLocaleString("tr-TR")}.`);
+      parts.push(`DAU: ${metricSnapshot.latestDau.toLocaleString(locale === "en" ? "en-US" : "tr-TR")}.`);
     }
-    parts.push("Tiramisup bu verilere bakarak sana veri odaklı büyüme tavsiyeleri sunacak.");
+    parts.push(pick(locale, "Tiramisup will use this data to suggest data-driven growth moves.", "Tiramisup bu verilere bakarak sana veri odaklı büyüme tavsiyeleri sunacak."));
     summary = parts.join(" ");
   } else if (isLaunched) {
-    summary = `${input.name}, yayındaki ürün yolculuğuna geçmiş durumda. Tiramisup önce neyi ölçeceğini netleştirip büyümeyi sakin ve veri odaklı bir sırayla kurmanı önerecek.`;
+    summary = pick(
+      locale,
+      `${input.name} is already live. Tiramisup will first clarify what to measure, then help you build growth in a calmer, data-led order.`,
+      `${input.name}, yayındaki ürün yolculuğuna geçmiş durumda. Tiramisup önce neyi ölçeceğini netleştirip büyümeyi sakin ve veri odaklı bir sırayla kurmanı önerecek.`
+    );
   } else {
-    summary = `${input.name}, henüz hazırlık tarafında. Tiramisup ilk çalışma sistemini ürün anlatımına göre kurup seni dağılmadan bir sonraki doğru adıma taşıyacak.`;
+    summary = pick(
+      locale,
+      `${input.name} is still in preparation mode. Tiramisup will shape the first working system from your product description and move you toward the next correct step without scattering your focus.`,
+      `${input.name}, henüz hazırlık tarafında. Tiramisup ilk çalışma sistemini ürün anlatımına göre kurup seni dağılmadan bir sonraki doğru adıma taşıyacak.`
+    );
   }
 
   return {
-    headline: `${input.name} için Tiramisup özeti`,
+    headline: pick(locale, `Tiramisup summary for ${input.name}`, `${input.name} için Tiramisup özeti`),
     summary,
     nextStep,
     strengths: strengths.slice(0, 4),
