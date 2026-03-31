@@ -11,6 +11,7 @@ This repo is already in production and should be treated as a live system, not a
 - Main app goal: staged launch-to-growth workflow
 - Trusted production baseline commit: `626543d9`
 - Last docs refresh: `1 April 2026`
+- Recommended new-team kickoff brief: `docs/team-handoff-prompt.md`
 
 ## Non-obvious architecture choices
 

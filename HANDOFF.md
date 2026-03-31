@@ -132,6 +132,8 @@
 
 ## Files new teams should inspect first
 
+Before starting, use `docs/team-handoff-prompt.md` as the default takeover brief for any new dev/product team.
+
 ### Product and routing
 - `app/[locale]/page.tsx`
 - `app/[locale]/waitlist/page.tsx`
