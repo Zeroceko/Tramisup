@@ -427,6 +427,13 @@ export default async function DashboardPage({
         phase={product.status === ProductStatus.GROWING ? "growing" : phase}
         statusLine={statusLine}
         locale={uiLocale}
+        coachSlot={
+          <CoachInsight
+            productId={product.id}
+            stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
+            locale={uiLocale}
+          />
+        }
       />
 
       {/* 2. Launch moment banner — shown once after launch */}
@@ -434,7 +441,7 @@ export default async function DashboardPage({
         <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+      <section>
         <PrimaryAction
           title={primaryAction.title}
           description={primaryAction.description}
@@ -443,12 +450,6 @@ export default async function DashboardPage({
           href={primaryAction.href}
           accent={primaryAction.accent}
           progress={primaryAction.progress}
-        />
-
-        <CoachInsight
-          productId={product.id}
-          stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
-          locale={uiLocale}
         />
       </section>
 
