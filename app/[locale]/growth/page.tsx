@@ -10,8 +10,8 @@ import GoalsSection from "@/components/GoalsSection";
 import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
-import AdvisorCard from "@/components/AdvisorCard";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
+import TiramisupCoachLauncher from "@/components/TiramisupCoachLauncher";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
@@ -277,6 +277,20 @@ export default async function GrowthPage({
             ? "This is the diagnosis, priority, and execution surface. Manage what you measure and how data arrives in Metrics; use Growth to see what is blocked and what to do next."
             : "Burası yorum, öncelik ve execution yüzeyi. Neyi ölçtüğünü ve veri akışını Metrics ekranında yönet; burada ise neyin sıkıştığını ve sıradaki hamleyi gör."
         }
+        aside={
+          <TiramisupCoachLauncher
+            productId={product.id}
+            productName={product.name}
+            eventType="GROWTH_VIEW"
+            title={isEn ? "Tiramisup Suggestion" : "Tiramisup Önerisi"}
+            description={
+              isEn
+                ? "Open Tiramisup's current growth recommendation."
+                : "Tiramisup'ın güncel growth önerisini aç."
+            }
+            className="max-w-[640px]"
+          />
+        }
       />
 
       <div className="space-y-4">
@@ -330,24 +344,18 @@ export default async function GrowthPage({
           </div>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-          <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{isEn ? "Today's growth focus" : "Bugünün growth odağı"}</p>
-            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{primaryGrowthTitle}</h2>
-            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-              {primaryGrowthDescription}
-            </p>
-            <a
-              href={primaryGrowthHref}
-              className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-            >
-              {primaryGrowthCta}
-            </a>
-          </div>
-
-          <div id="coach">
-            <AdvisorCard productId={product.id} productName={product.name} eventType="GROWTH_VIEW" />
-          </div>
+        <div id="coach" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{isEn ? "Today's growth focus" : "Bugünün growth odağı"}</p>
+          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{primaryGrowthTitle}</h2>
+          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+            {primaryGrowthDescription}
+          </p>
+          <a
+            href={primaryGrowthHref}
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+          >
+            {primaryGrowthCta}
+          </a>
         </div>
 
         <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />

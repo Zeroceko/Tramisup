@@ -11,6 +11,7 @@ import PageHeader from "@/components/PageHeader";
 import BlockerSummary from "@/components/BlockerSummary";
 import LaunchButton from "@/components/LaunchButton";
 import LaunchGateStatus, { GateState, ConfidenceIndicator } from "@/components/launch/LaunchGateStatus";
+import TiramisupCoachLauncher from "@/components/TiramisupCoachLauncher";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 import { prisma as prismaClient } from "@/lib/prisma";
 
@@ -221,6 +222,22 @@ export default async function PreLaunchPage({
       <PageHeader
         eyebrow={isEn ? "How ready is your product for launch?" : "Ürünün laucha ne kadar hazır?"}
         title="Launch Readiness"
+        aside={
+          product ? (
+            <TiramisupCoachLauncher
+              productId={product.id}
+              productName={product.name}
+              eventType="PRE_LAUNCH_VIEW"
+              title={isEn ? "Tiramisup Suggestion" : "Tiramisup Önerisi"}
+              description={
+                isEn
+                  ? "Open Tiramisup's current launch recommendation."
+                  : "Tiramisup'ın güncel launch önerisini aç."
+              }
+              className="max-w-[640px]"
+            />
+          ) : null
+        }
       />
 
       {/* Gate status hero */}

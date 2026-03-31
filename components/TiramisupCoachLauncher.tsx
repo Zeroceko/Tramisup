@@ -1,43 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import AdvisorCard from "@/components/AdvisorCard";
 
 type TiramisupCoachLauncherProps = {
   productId?: string;
   productName?: string;
+  eventType: string;
+  title: string;
+  description: string;
+  className?: string;
 };
 
 export default function TiramisupCoachLauncher({
   productId,
   productName,
+  eventType,
+  title,
+  description,
+  className = "",
 }: TiramisupCoachLauncherProps) {
-  const pathname = usePathname();
-  const locale = pathname?.split("/")[1] === "tr" ? "tr" : "en";
-  const isLaunchPage = pathname?.startsWith(`/${locale}/pre-launch`);
-  const isGrowthPage = pathname?.startsWith(`/${locale}/growth`);
-  const isVisible = Boolean(productId) && (isLaunchPage || isGrowthPage);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  const labels = locale === "en"
-    ? {
-        trigger: "Open Tiramisup suggestion",
-        panelTitle: isGrowthPage ? "Growth suggestion" : "Launch suggestion",
-        panelDescription: isGrowthPage
-          ? "Open Tiramisup's current recommendation without leaving the page."
-          : "Open Tiramisup's current launch recommendation without leaving the page.",
-        close: "Close suggestion panel",
-      }
-    : {
-        trigger: "Tiramisup önerisini aç",
-        panelTitle: isGrowthPage ? "Growth önerisi" : "Launch önerisi",
-        panelDescription: isGrowthPage
-          ? "Sayfadan ayrılmadan Tiramisup'ın güncel growth önerisini aç."
-          : "Sayfadan ayrılmadan Tiramisup'ın güncel launch önerisini aç.",
-        close: "Öneri panelini kapat",
-      };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -63,7 +47,7 @@ export default function TiramisupCoachLauncher({
     };
   }, [open]);
 
-  if (!isVisible || !productId) {
+  if (!productId) {
     return null;
   }
 
@@ -71,77 +55,77 @@ export default function TiramisupCoachLauncher({
     <div
       id="tiramisup-coach"
       ref={ref}
-      className="relative hidden h-11 items-center justify-end lg:flex"
+      className={`relative hidden min-h-[240px] w-full items-center justify-end lg:flex ${className}`}
     >
-      <div
-        className={`pointer-events-none absolute right-14 top-1/2 z-50 -translate-y-1/2 transition-all duration-300 ease-out ${
-          open ? "w-[min(86vw,420px)] opacity-100" : "w-0 opacity-0"
-        }`}
-      >
+      <div className="absolute right-0 top-1/2 flex w-full -translate-y-1/2 items-center justify-end">
         <div
-          className={`origin-right overflow-hidden transition-all duration-300 ease-out ${
-            open ? "translate-x-0 scale-100" : "translate-x-4 scale-95"
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            open ? "mr-[-28px] w-[390px] opacity-100" : "mr-0 w-0 opacity-0"
           }`}
         >
-          <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.74),rgba(255,250,246,0.62))] p-3 shadow-[0_24px_80px_rgba(25,27,39,0.14)] backdrop-blur-2xl">
-            <div className="pointer-events-none absolute inset-0 opacity-40">
-              <div className="absolute -left-10 top-4 h-24 w-32 rounded-full bg-[#ffd9ef] blur-3xl" />
-              <div className="absolute right-0 top-10 h-32 w-36 rounded-full bg-[#d9e8ff] blur-3xl" />
-              <div className="absolute bottom-0 left-24 h-20 w-28 rounded-full bg-[#ffe9cf] blur-2xl" />
-            </div>
-            <div className="relative mb-3 flex items-start justify-between gap-4 rounded-[22px] border border-white/60 bg-white/45 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b8f9c]">
+          <div className="rounded-[34px] rounded-r-[20px] border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,249,242,0.78))] px-6 py-5 shadow-[0_24px_80px_rgba(25,27,39,0.12)] backdrop-blur-2xl">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f7e8dc] text-[16px] text-[#a76643]">
+                  ✎
+                </div>
+                <p className="text-[16px] font-semibold uppercase tracking-[0.20em] text-[#b2744f]">
                   Tiramisup
-                </p>
-                <p className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#171717]">
-                  {labels.panelTitle}
-                </p>
-                <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
-                  {labels.panelDescription}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                title={labels.close}
-                aria-label={labels.close}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/70 text-[#666d80] transition hover:bg-white"
+                className="text-[18px] font-medium text-[#b2744f] transition hover:opacity-70"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
+                Close
               </button>
             </div>
+
             <AdvisorCard
               productId={productId}
               productName={productName ?? ""}
-              eventType={isGrowthPage ? "GROWTH_VIEW" : "PRE_LAUNCH_VIEW"}
+              eventType={eventType}
               variant="launcher"
             />
           </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        title={labels.trigger}
-        aria-label={labels.trigger}
-        aria-expanded={open}
-        className={`relative z-[60] inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/65 bg-white/88 shadow-[0_16px_40px_rgba(25,27,39,0.10)] backdrop-blur transition-all duration-300 ease-out hover:border-white hover:bg-white ${
-          open ? "h-[60px] w-[60px] rounded-[22px]" : "h-11 w-11 rounded-full"
-        }`}
-      >
-        <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,233,207,0.7),transparent_48%),radial-gradient(circle_at_72%_65%,rgba(255,217,239,0.72),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(255,250,246,0.72))]" />
-        <img
-          src="/assets/illus-tiramisu-slice.png"
-          alt="Tiramisup"
-          className={`relative object-contain transition-all duration-300 ease-out ${
-            open ? "h-11 w-11" : "h-8 w-8"
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          title={title}
+          aria-label={title}
+          aria-expanded={open}
+          className={`relative z-[10] flex shrink-0 items-center justify-center overflow-hidden border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(255,249,242,0.74))] shadow-[0_24px_80px_rgba(25,27,39,0.12)] backdrop-blur-2xl transition-all duration-300 ease-out ${
+            open ? "h-[232px] w-[232px] rounded-[30px]" : "h-[180px] w-[272px] rounded-[34px]"
           }`}
-        />
-      </button>
+        >
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_26%_22%,rgba(255,229,190,0.96),transparent_36%),radial-gradient(circle_at_76%_66%,rgba(255,220,210,0.64),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.22),rgba(255,248,240,0.12))]" />
+          <img
+            src="/assets/illus-tiramisu-slice.png"
+            alt="Tiramisup"
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-300 ease-out ${
+              open ? "scale-[1.18] blur-[5px] saturate-[1.15]" : "scale-[1.02] blur-0"
+            }`}
+          />
+          {open ? (
+            <div className="relative z-[2] px-6 text-center">
+              <p className="text-[20px] font-semibold uppercase tracking-[0.18em] text-[#5d3522]">
+                Tiramisup
+              </p>
+              <p className="mt-3 text-[24px] font-bold leading-tight tracking-[-0.04em] text-[#3f2418]">
+                {title}
+              </p>
+            </div>
+          ) : (
+            <span className="relative z-[2] text-[28px] text-[#8b5a47] drop-shadow-sm">✦</span>
+          )}
+          <span className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]" />
+        </button>
+      </div>
+      <div className="h-[240px] w-full max-w-[640px]" />
+      <p className="sr-only">{description}</p>
     </div>
   );
 }

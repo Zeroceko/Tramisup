@@ -84,7 +84,7 @@ export function getGrowthWorkspaceStep(
     description: isEn
       ? "The core setup is in place. Now choose the move most likely to shift today's metric."
       : "Temel setup ve execution yüzeyi oturdu. Sıradaki iş, hangi hamlenin bugünkü metriği oynatacağını seçmek.",
-    href: "#coach",
+    href: "#tiramisup-coach",
     cta: isEn ? "View coach insight" : "Koç önerisini gör",
   };
 }

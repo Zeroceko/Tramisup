@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { User } from "lucide-react";
 import ProductSelector from "@/components/ProductSelector";
-import TiramisupCoachLauncher from "@/components/TiramisupCoachLauncher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,11 +145,6 @@ export default function DashboardNav({
           <ProductSelector
             products={products.map(({ id, name }) => ({ id, name }))}
             activeProductId={activeProductId}
-          />
-
-          <TiramisupCoachLauncher
-            productId={activeProduct?.id}
-            productName={activeProduct?.name}
           />
 
           {!hasProducts && (
