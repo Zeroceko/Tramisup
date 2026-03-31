@@ -272,3 +272,31 @@
 /* ─── Scrollbar hide ─── */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+.recaptcha-inline-badge {
+  width: 256px;
+  max-width: calc(100vw - 2rem);
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.recaptcha-inline-badge .grecaptcha-badge {
+  position: static !important;
+  width: 256px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.recaptcha-inline-badge .grecaptcha-badge:hover {
+  transform: none !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+@media (max-width: 640px) {
+  .recaptcha-inline-badge,
+  .recaptcha-inline-badge .grecaptcha-badge {
+    width: 220px !important;
+  }
+}

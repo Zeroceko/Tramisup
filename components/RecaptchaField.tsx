@@ -50,13 +50,17 @@ const RecaptchaField = forwardRef<RecaptchaFieldHandle, RecaptchaFieldProps>(
     }
 
     return (
-      <ReCAPTCHA
-        ref={recaptchaRef}
-        sitekey={siteKey}
-        hl={locale}
-        size="invisible"
-        badge="bottomright"
-      />
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[950]">
+        <div className="pointer-events-auto recaptcha-inline-badge">
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            sitekey={siteKey}
+            hl={locale}
+            size="invisible"
+            badge="inline"
+          />
+        </div>
+      </div>
     );
   },
 );

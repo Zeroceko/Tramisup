@@ -45,7 +45,7 @@ export default function AnalyticsConsentBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-24 right-4 z-[1000] w-[min(360px,calc(100vw-2rem))] md:bottom-24 md:right-6">
+    <div className="fixed bottom-4 left-4 z-[1000] w-[min(360px,calc(100vw-2rem))] md:bottom-6 md:left-6">
       <div className="rounded-[24px] border border-border bg-background/95 p-4 shadow-t-lg backdrop-blur-xl">
         <div>
           <p className="text-sm leading-6 text-foreground/80">{copy.text}</p>
