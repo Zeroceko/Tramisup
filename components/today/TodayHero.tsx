@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 type PhaseBadgeStatus = "pre-launch" | "launched" | "growing";
 
 const PHASE_CONFIG: Record<
@@ -44,7 +42,6 @@ type TodayHeroProps = {
   phase: PhaseBadgeStatus;
   statusLine: string;
   locale: string;
-  coachSlot?: ReactNode;
 };
 
 export default function TodayHero({
@@ -53,20 +50,13 @@ export default function TodayHero({
   phase,
   statusLine,
   locale,
-  coachSlot,
 }: TodayHeroProps) {
   const greeting = getGreeting(locale);
   const phaseConfig = PHASE_CONFIG[phase];
   const phaseLabel = locale === "en" ? phaseConfig.labelEn : phaseConfig.label;
 
   return (
-    <div className="relative mb-7 rounded-[28px] border border-white/65 bg-white/76 px-6 py-6 shadow-[0_18px_60px_rgba(26,24,35,0.08)] backdrop-blur sm:px-7 sm:py-7 lg:pr-[220px] xl:pr-[600px]">
-      {coachSlot ? (
-        <div className="mb-5 flex justify-end lg:absolute lg:right-7 lg:top-7 lg:mb-0">
-          {coachSlot}
-        </div>
-      ) : null}
-
+    <div className="mb-7 rounded-[28px] border border-white/65 bg-white/76 px-6 py-6 shadow-[0_18px_60px_rgba(26,24,35,0.08)] backdrop-blur sm:px-7 sm:py-7">
       {/* Greeting */}
       <p className="text-[13px] font-medium text-[#6f7482]">
         {greeting}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useAdvisor } from "@/hooks/useAdvisor";
-import Image from "next/image";
 import { useState } from "react";
 
 type CoachInsightProps = {
@@ -26,101 +25,86 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
     askAdvisor(prompt);
   }
 
-  return (
-    <div
-      className={`relative z-20 ml-auto h-[156px] max-w-[580px] origin-right overflow-hidden rounded-[28px] border border-white/80 bg-white/82 shadow-[0_18px_54px_rgba(23,20,31,0.10)] backdrop-blur-[18px] transition-[width,transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        expanded ? "w-full shadow-[0_26px_70px_rgba(23,20,31,0.14)]" : "w-[150px]"
-      }`}
-    >
-      <div
-        className={`absolute left-0 top-0 h-full overflow-hidden transition-[width,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          expanded ? "opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-8"
-        }`}
-        style={expanded ? { width: "calc(100% - 150px)" } : undefined}
+  // Collapsed state — simple trigger button
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={handleAsk}
+        className="group w-full rounded-[26px] border border-dashed border-[#eadde6] bg-white/76 px-5 py-5 text-left shadow-[0_14px_44px_rgba(23,20,31,0.05)] backdrop-blur transition hover:border-[#c45d97]/40 hover:bg-[#fff8fb]"
       >
-        <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,250,252,0.88))] px-6 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6ebe2] text-[#b37250] shadow-[0_8px_18px_rgba(179,114,80,0.10)]">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 18l6-6-6-6" />
-                  <path d="M8 6l-6 6 6 6" />
-                </svg>
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b37250]">
-                Tiramisup
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              className="text-[11px] font-medium text-[#b08e7d] transition hover:text-[#8f6c5c]"
-            >
-              {isEn ? "Close" : "Kapat"}
-            </button>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdf2f8] text-[#c45d97] transition group-hover:bg-[#fce7f3]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-[14px] font-semibold text-[#0d0d12]">
+              {isEn ? "Ask Tiramisup" : "Tiramisup'a sor"}
+            </p>
+            <p className="text-[11px] text-[#94a3b8]">
+              {isEn
+                ? "Get a personalized recommendation for right now"
+                : "Şu an için kişiselleştirilmiş bir öneri al"}
+            </p>
           </div>
+        </div>
+      </button>
+    );
+  }
 
-          <div className="mt-4 flex-1 overflow-hidden">
-            {loading ? (
-              <div className="flex items-center gap-2 text-[13px] leading-6 text-[#6c5f58]">
-                <svg className="h-4 w-4 animate-spin text-[#aa6d4f]" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
-                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-                {isEn ? "Reading your board..." : "Board'un okunuyor..."}
-              </div>
-            ) : response ? (
-              <p className="line-clamp-5 whitespace-pre-wrap text-[14px] leading-6 text-[#3e312b]">
-                {response}
-              </p>
-            ) : (
-              <p className="text-[13px] leading-6 text-[#8a7d7a]">
-                {isEn ? "No recommendation available." : "Öneri alınamadı."}
-              </p>
-            )}
-          </div>
+  // Expanded state — loading or response
+  return (
+    <div className="rounded-[28px] border border-[#f3e8ef] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_transparent_26%),linear-gradient(135deg,#fefbfc_0%,#fdf7fa_55%,#fdf2f8_100%)] p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)]">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fce7f3] text-[#c45d97]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c45d97]">
+            Tiramisup
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="text-[11px] text-[#94a3b8] transition hover:text-[#666d80]"
+        >
+          {isEn ? "Close" : "Kapat"}
+        </button>
+      </div>
 
+      {loading ? (
+        <div className="flex items-center gap-2.5 text-[13px] text-[#666d80]">
+          <svg className="h-4 w-4 animate-spin text-[#c45d97]" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          {isEn
+            ? "Analyzing your data..."
+            : "Verilerini analiz ediyor..."}
+        </div>
+      ) : response ? (
+        <div>
+          <p className="whitespace-pre-wrap text-[14px] leading-7 text-[#0d0d12]">
+            {response}
+          </p>
           <button
             type="button"
             onClick={handleAsk}
-            className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#b37250] transition hover:text-[#8f5a3a]"
+            className="mt-3 text-[12px] font-medium text-[#c45d97] transition hover:text-[#a14a7e]"
           >
-            {isEn ? "Ask again" : "Tekrar sor"}
-            <span aria-hidden="true">→</span>
+            {isEn ? "Ask again" : "Tekrar sor"} →
           </button>
         </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={expanded ? undefined : handleAsk}
-        className={`absolute right-0 top-0 h-full overflow-hidden rounded-[26px] bg-[radial-gradient(circle_at_top,_rgba(255,245,224,0.98),rgba(255,230,187,0.88)_38%,rgba(255,212,146,0.58)_78%,rgba(255,255,255,0.34)_100%)] transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          expanded ? "w-[150px] cursor-default" : "w-full"
-        }`}
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,rgba(132,67,27,0.18),transparent_34%),radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.6),transparent_28%)]" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Image
-            src="/assets/illus-tiramisu-slice.png"
-            alt={isEn ? "Open Tiramisup suggestion" : "Tiramisup önerisini aç"}
-            width={136}
-            height={136}
-            className={`h-auto w-[126px] drop-shadow-[0_18px_28px_rgba(117,63,25,0.15)] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              expanded ? "scale-105" : "scale-100 hover:scale-[1.04]"
-            }`}
-            priority
-          />
-        </div>
-        {expanded && (
-          <div className="relative z-10 flex h-full items-center justify-center px-3 text-center">
-            <h3 className="text-[17px] font-semibold leading-[1.02] tracking-[-0.04em] text-[#4a2d22]">
-              Tiramisup
-              <br />
-              {isEn ? "Suggestion" : "Önerisi"}
-            </h3>
-          </div>
-        )}
-      </button>
+      ) : (
+        <p className="text-[13px] text-[#94a3b8]">
+          {isEn ? "No recommendation available." : "Öneri alınamadı."}
+        </p>
+      )}
     </div>
   );
 }
