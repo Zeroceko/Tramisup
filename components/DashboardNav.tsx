@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Settings, User } from "lucide-react";
+import { User } from "lucide-react";
 import ProductSelector from "@/components/ProductSelector";
+import TiramisupCoachLauncher from "@/components/TiramisupCoachLauncher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,49 +54,45 @@ export default function DashboardNav({
     ? {
         overview: "Overview",
         launch: "Launch",
-        tasks: "Tasks",
-        metrics: "Metrics",
         growth: "Growth",
         newProduct: "+ Add product",
         settings: "Settings",
         account: "Account",
+        accountSettings: "Account settings",
         signOut: "Sign out",
       }
     : {
         overview: "Genel Bakış",
         launch: "Launch",
-        tasks: "Görevler",
-        metrics: "Metrikler",
         growth: "Büyüme",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
         account: "Hesap",
+        accountSettings: "Hesap ayarları",
         signOut: "Çıkış yap",
       };
 
   const navItems = hasProducts
-    ? isLaunchedProduct
-      ? [
-          { href: "/dashboard", label: labels.overview },
-          { href: "/tasks", label: labels.tasks },
-          { href: "/metrics", label: labels.metrics },
-          { href: "/growth", label: labels.growth },
-        ]
-      : [
-          { href: "/dashboard", label: labels.overview },
-          { href: "/pre-launch", label: labels.launch },
-          { href: "/tasks", label: labels.tasks },
-          { href: "/growth", label: labels.growth, preview: true },
-        ]
-    : [{ href: "/dashboard", label: labels.overview }];
+    ? [
+        { href: "/dashboard", label: labels.overview, match: ["/dashboard"] },
+        isLaunchedProduct
+          ? { href: "/growth", label: labels.growth, match: ["/growth", "/metrics", "/tasks"] }
+          : { href: "/pre-launch", label: labels.launch, match: ["/pre-launch", "/tasks"] },
+        { href: "/settings", label: labels.settings, match: ["/settings"] },
+      ]
+    : [{ href: "/dashboard", label: labels.overview, match: ["/dashboard"] }];
 
   const withLocale = (href: string) => `/${locale}${href}`;
 
-  const isActive = (href: string) => {
+  const isActive = (href: string, match?: string[]) => {
+    if (match?.length) {
+      return match.some((part) => {
+        const full = withLocale(part);
+        return part === "/dashboard" ? pathname === full : pathname?.startsWith(full);
+      });
+    }
     const full = withLocale(href);
-    return href === "/dashboard"
-      ? pathname === full
-      : pathname?.startsWith(full);
+    return href === "/dashboard" ? pathname === full : pathname?.startsWith(full);
   };
 
   return (
@@ -126,7 +123,7 @@ export default function DashboardNav({
           {/* Pill nav */}
           <nav className="hidden items-center gap-1 rounded-full border border-white/70 bg-white/88 p-1.5 shadow-[0_10px_30px_rgba(25,27,39,0.06)] backdrop-blur lg:flex">
             {navItems.map((item) => {
-              const active = isActive(item.href);
+              const active = isActive(item.href, item.match);
               return (
                 <Link
                   key={item.href}
@@ -134,32 +131,13 @@ export default function DashboardNav({
                   className={`flex h-[36px] items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors ${
                     active
                       ? "bg-[#ffd9ef] text-[#0d0d12] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)]"
-                      : item.preview
-                        ? "border border-dashed border-[#e8e8e8] text-[#8a8fa0] hover:border-[#d9d9d9] hover:bg-[#fafafa] hover:text-[#0d0d12]"
-                        : "text-[#666d80] hover:bg-[#f6f7fb] hover:text-[#0d0d12]"
+                      : "text-[#666d80] hover:bg-[#f6f7fb] hover:text-[#0d0d12]"
                   }`}
                 >
                   {item.label}
                 </Link>
               );
             })}
-
-            {/* Settings icon in pill */}
-            <Link
-              href={withLocale("/settings")}
-              className={`flex h-[36px] w-[36px] items-center justify-center rounded-full transition-colors ${
-                pathname?.startsWith(withLocale("/settings"))
-                  ? "bg-[#ffd9ef] text-[#0d0d12]"
-                  : "text-[#666d80] hover:bg-[#f6f7fb] hover:text-[#0d0d12]"
-              }`}
-              aria-label={labels.settings}
-              title={labels.settings}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </Link>
           </nav>
         </div>
 
@@ -170,16 +148,10 @@ export default function DashboardNav({
             activeProductId={activeProductId}
           />
 
-          <Link
-            href={withLocale("/settings")}
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/88 text-[#666d80] shadow-[0_10px_30px_rgba(25,27,39,0.06)] backdrop-blur transition hover:border-white hover:text-[#0d0d12] lg:hidden ${
-              pathname?.startsWith(withLocale("/settings")) ? "bg-[#fff1f8] text-[#0d0d12]" : ""
-            }`}
-            aria-label={labels.settings}
-            title={labels.settings}
-          >
-            <Settings className="h-4 w-4" />
-          </Link>
+          <TiramisupCoachLauncher
+            productId={activeProduct?.id}
+            productName={activeProduct?.name}
+          />
 
           {!hasProducts && (
             <Link
@@ -205,9 +177,9 @@ export default function DashboardNav({
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-[#ececec]" />
               <DropdownMenuItem asChild className="rounded-[12px] px-3 py-2.5 text-[13px] font-medium text-[#0d0d12] focus:bg-[#f6f6f6]">
-                <Link href={withLocale("/settings")}>
+                <Link href={withLocale("/account")}>
                   <User className="mr-2 h-4 w-4 text-[#666d80]" />
-                  {labels.settings}
+                  {labels.accountSettings}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -230,7 +202,7 @@ export default function DashboardNav({
       <div className="px-4 pb-2 lg:hidden">
         <nav className="flex gap-1 overflow-x-auto pt-2">
           {navItems.map((item) => {
-            const active = isActive(item.href);
+            const active = isActive(item.href, item.match);
             return (
               <Link
                 key={item.href}
@@ -238,9 +210,7 @@ export default function DashboardNav({
                 className={`flex h-[34px] items-center whitespace-nowrap rounded-full border px-4 text-[12px] font-medium shadow-[0_8px_24px_rgba(25,27,39,0.05)] backdrop-blur transition-colors ${
                   active
                     ? "border-white/70 bg-[#ffd7ef] text-[#0d0d12]"
-                    : item.preview
-                      ? "border-dashed border-[#e8e8e8] bg-white/88 text-[#8a8fa0]"
-                      : "border-white/70 bg-white/88 text-[#666d80]"
+                    : "border-white/70 bg-white/88 text-[#666d80]"
                 }`}
               >
                 {item.label}

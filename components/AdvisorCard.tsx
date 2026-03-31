@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 
 type Recommendation = {
   title: string;
@@ -29,13 +30,21 @@ interface AdvisorCardProps {
   eventType?: string;
 }
 
-function parseSuggestionError(err: unknown): string {
+function parseSuggestionError(err: unknown, locale: "en" | "tr"): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (msg.includes('API key') || msg.includes('LoadAPIKeyError')) return 'AI servisi şu an yapılandırılmamış.';
-  if (msg.includes('quota') || msg.includes('429')) return 'AI servisinin kullanım limiti doldu. Biraz sonra tekrar dene.';
-  if (msg.includes('timeout') || msg.includes('408')) return 'İstek zaman aşımına uğradı.';
-  if (msg.includes('500') || msg.includes('Internal')) return 'Sunucu hatası oluştu.';
-  return 'Öneri şu an alınamadı.';
+  if (locale === "en") {
+    if (msg.includes("API key") || msg.includes("LoadAPIKeyError")) return "The AI service is not configured right now.";
+    if (msg.includes("quota") || msg.includes("429")) return "The AI service quota is exhausted. Try again shortly.";
+    if (msg.includes("timeout") || msg.includes("408")) return "The request timed out.";
+    if (msg.includes("500") || msg.includes("Internal")) return "A server error occurred.";
+    return "The suggestion could not be loaded right now.";
+  }
+
+  if (msg.includes("API key") || msg.includes("LoadAPIKeyError")) return "AI servisi şu an yapılandırılmamış.";
+  if (msg.includes("quota") || msg.includes("429")) return "AI servisinin kullanım limiti doldu. Biraz sonra tekrar dene.";
+  if (msg.includes("timeout") || msg.includes("408")) return "İstek zaman aşımına uğradı.";
+  if (msg.includes("500") || msg.includes("Internal")) return "Sunucu hatası oluştu.";
+  return "Öneri şu an alınamadı.";
 }
 
 const PRIORITY_DOT: Record<string, string> = {
@@ -51,6 +60,8 @@ const CONFIDENCE_LABEL: Record<string, string> = {
 };
 
 export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }: AdvisorCardProps) {
+  const locale = useLocale() === "tr" ? "tr" : "en";
+  const isEn = locale === "en";
   const [suggestion, setSuggestion] = useState<CoachRecommendationOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
@@ -76,7 +87,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setSuggestionError(parseSuggestionError(err));
+          setSuggestionError(parseSuggestionError(err, locale));
           setLoading(false);
         }
       });
@@ -86,7 +97,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
   useEffect(() => {
     return loadSuggestion();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventType, productId]);
+  }, [eventType, locale, productId]);
 
   async function askCoach() {
     const trimmed = question.trim();
@@ -105,7 +116,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
       const data = (await res.json()) as CoachRecommendationOutput;
       setAnswer(data);
     } catch (err: unknown) {
-      setError(parseSuggestionError(err));
+      setError(parseSuggestionError(err, locale));
     } finally {
       setAsking(false);
     }
@@ -146,18 +157,18 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6l1.59-1.59A2.5 2.5 0 1 0 8.5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Tekrar dene
+            {isEn ? "Try again" : "Tekrar dene"}
           </button>
         </div>
       ) : suggestionPrimary ? (
         <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
-              Bir sonraki öneri
+              {isEn ? "Tiramisup suggestion" : "Bir sonraki öneri"}
             </p>
             <button
               onClick={loadSuggestion}
-              title="Yenile"
+              title={isEn ? "Refresh" : "Yenile"}
               className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white/30 transition hover:bg-white/10 hover:text-white/60"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -175,13 +186,15 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
         </div>
       ) : (
         <div className="mb-5 rounded-[14px] border border-white/10 bg-white/5 p-4">
-          <p className="text-[13px] text-white/50">Şu an için bir öneri yok. Aşağıdan soru sorabilirsin.</p>
+          <p className="text-[13px] text-white/50">
+            {isEn ? "No suggestion is available right now. You can still ask a question below." : "Şu an için bir öneri yok. Aşağıdan soru sorabilirsin."}
+          </p>
         </div>
       )}
 
       <div className="mb-4">
         <label className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
-          Ürününle ilgili sor
+          {isEn ? "Ask about this product" : "Ürününle ilgili sor"}
         </label>
         <div className="flex gap-2">
           <input
@@ -190,7 +203,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             onKeyDown={(e) => {
               if (e.key === "Enter") void askCoach();
             }}
-            placeholder="Örn: Şimdi hangi metriği tanımlamalıyım?"
+            placeholder={isEn ? "For example: Which metric should I define next?" : "Örn: Şimdi hangi metriği tanımlamalıyım?"}
             className="h-11 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-[13px] text-white placeholder:text-white/35 outline-none transition focus:border-white/25"
           />
           <button
@@ -198,7 +211,7 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
             disabled={asking || !question.trim()}
             className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {asking ? "Soruluyor…" : "Sor"}
+            {asking ? (isEn ? "Thinking…" : "Soruluyor…") : isEn ? "Ask" : "Sor"}
           </button>
         </div>
         {error && <p className="mt-2 text-[12px] text-[#ffd7ef]">{error}</p>}
@@ -244,7 +257,9 @@ export default function AdvisorCard({ productId, eventType = "DASHBOARD_VIEW" }:
           {/* Missing information */}
           {(answer.missing_information_for_better_guidance ?? []).length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">Daha iyi öneriler için</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
+                {isEn ? "To sharpen the recommendation" : "Daha iyi öneriler için"}
+              </p>
               <ul className="mt-2 space-y-1 text-[12px] text-white/55">
                 {answer.missing_information_for_better_guidance.map((item, i) => (
                   <li key={`${item}-${i}`}>• {item}</li>
