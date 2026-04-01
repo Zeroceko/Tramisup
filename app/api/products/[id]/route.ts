@@ -1,7 +1,43 @@
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const product = await prisma.product.findFirst({
+      where: { id, userId: session.user.id },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await prisma.product.delete({ where: { id } });
+
+    const response = NextResponse.json({ success: true });
+
+    // Clear active product cookie if it matched the deleted product
+    const activeCookie = request.cookies.get("active_product_id")?.value;
+    if (activeCookie === id) {
+      response.cookies.set("active_product_id", "", { maxAge: 0, path: "/" });
+    }
+
+    return response;
+  } catch (error) {
+    console.error("Failed to delete product:", error);
+    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   request: Request,

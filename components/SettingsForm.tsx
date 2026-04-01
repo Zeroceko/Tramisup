@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isStrongPassword } from "@/lib/password-rules";
+import DeleteProductModal from "@/components/DeleteProductModal";
 
 interface User {
   id: string;
@@ -68,6 +69,7 @@ export default function SettingsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
@@ -140,6 +142,9 @@ export default function SettingsForm({
           LIVE: "Live",
           GROWING: "Growing",
         },
+        dangerZone: "Danger zone",
+        deleteProduct: "Delete product",
+        deleteProductDesc: "Permanently delete this product and all of its data. This cannot be undone.",
       }
     : {
         errorGeneric: "Bir hata oluştu.",
@@ -202,6 +207,9 @@ export default function SettingsForm({
           LIVE: "Yayında",
           GROWING: "Büyüme aşamasında",
         },
+        dangerZone: "Tehlikeli bölge",
+        deleteProduct: "Ürünü sil",
+        deleteProductDesc: "Bu ürünü ve tüm verilerini kalıcı olarak sil. Bu işlem geri alınamaz.",
       };
 
   const parsedLaunchGoals = (() => {
@@ -603,6 +611,38 @@ export default function SettingsForm({
         </form>
       </div>
       ) : null}
+
+      {/* Danger zone — only on product tab */}
+      {activeSection === "product" && user?.product && (
+        <div className="rounded-[20px] border border-red-100 bg-red-50/40 px-5 py-5 sm:px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-400">
+            {copy.dangerZone}
+          </p>
+          <h3 className="mt-2 text-[16px] font-semibold text-[#0d0d12]">
+            {copy.deleteProduct}
+          </h3>
+          <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+            {copy.deleteProductDesc}
+          </p>
+          <button
+            type="button"
+            onClick={() => setDeleteModalOpen(true)}
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-red-200 bg-white px-5 text-[13px] font-semibold text-red-500 transition hover:bg-red-50"
+          >
+            {copy.deleteProduct}
+          </button>
+        </div>
+      )}
+
+      {user?.product && (
+        <DeleteProductModal
+          open={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          productId={user.product.id}
+          productName={user.product.name}
+          locale={locale}
+        />
+      )}
     </div>
   );
 }
