@@ -257,74 +257,54 @@ export default function ChecklistSection({
         </div>
 
         {/* Items */}
-        <div className="divide-y divide-[#f6f6f6]">
+        <div className="flex flex-col gap-2 p-3">
           {activeItems.map((item) => {
-            const pri = PRIORITY_CONFIG[item.priority] ?? PRIORITY_CONFIG.LOW;
             const isExpanded = expandedDesc === item.id;
             const isHigh = item.priority === "HIGH";
 
             return (
               <div
                 key={item.id}
-                className={`transition ${
+                className={`rounded-[14px] border transition ${
                   loading === item.id ? "opacity-50" : ""
                 } ${
                   item.completed
-                    ? "bg-[#fff0f6]"
-                    : isHigh && !item.completed
-                      ? "bg-[#fff8f8]"
-                      : "hover:bg-[#fafafa]"
+                    ? "border-[#f0dce8] bg-[#fdf4f8]"
+                    : isHigh
+                      ? "border-[#e8e8e8] bg-white hover:border-[#fecaca]"
+                      : "border-[#e8e8e8] bg-white hover:border-[#d8d8d8]"
                 }`}
               >
-                <div className="flex items-center gap-4 px-6 py-4">
+                <div className="flex items-center gap-3 px-4 py-3.5">
                   {/* Checkbox */}
                   <button
                     onClick={() => handleToggle(item.id, item.completed)}
                     disabled={loading === item.id}
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition ${
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border-2 transition ${
                       item.completed
                         ? "border-[#2d0e1f] bg-[#2d0e1f]"
-                        : isHigh
-                          ? "border-[#ef4444] hover:bg-[#fee2e2]"
-                          : "border-[#d9d9d9] hover:border-[#95dbda]"
+                        : "border-[#d0d0d8] bg-white hover:border-[#95dbda]"
                     }`}
                   >
                     {item.completed && (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path
-                          d="M1 4L3.5 6.5L9 1"
-                          stroke="white"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                        <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     )}
                   </button>
 
-                  {/* Content */}
+                  {/* Title */}
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-[14px] leading-snug ${
-                        item.completed
-                          ? "text-[#9ca3af]"
-                          : "text-[#0d0d12]"
-                      }`}
-                    >
+                    <p className={`text-[14px] font-medium leading-snug ${item.completed ? "text-[#9ca3af]" : "text-[#0d0d12]"}`}>
                       {item.title}
                     </p>
-
-                    {/* Description — expandable */}
                     {item.description && !item.completed && (
                       <button
                         type="button"
                         onClick={() => setExpandedDesc(isExpanded ? null : item.id)}
-                        className="mt-1 text-[11px] font-medium text-[#94a3b8] hover:text-[#666d80] transition"
+                        className="mt-0.5 text-[11px] text-[#94a3b8] hover:text-[#666d80] transition"
                       >
-                        {isExpanded
-                          ? (isEn ? "Hide detail" : "Detayı gizle")
-                          : (isEn ? "Why this matters" : "Neden önemli")}{" "}
-                        {isExpanded ? "↑" : "↓"}
+                        {isExpanded ? (isEn ? "Hide ↑" : "Gizle ↑") : (isEn ? "Why this matters ↓" : "Neden önemli ↓")}
                       </button>
                     )}
                     {isExpanded && item.description && (
@@ -334,8 +314,8 @@ export default function ChecklistSection({
                     )}
                   </div>
 
-                  {/* Right side actions */}
-                  <div className="flex shrink-0 items-center gap-2">
+                  {/* Right: actions + arrow */}
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {!item.completed && !item.linkedTaskId && (
                       <button
                         onClick={() => handleCreateTask(item.id)}
@@ -349,7 +329,7 @@ export default function ChecklistSection({
                       <button
                         onClick={() => handleIgnore(item.id, true)}
                         disabled={loading === item.id}
-                        className="hidden h-7 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#94a3b8] transition hover:border-[#d5d9e2] hover:text-[#666d80] sm:flex"
+                        className="hidden h-7 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#94a3b8] transition hover:text-[#666d80] sm:flex"
                       >
                         {isEn ? "Ignore" : "Yoksay"}
                       </button>
@@ -359,13 +339,11 @@ export default function ChecklistSection({
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        {isEn ? "Task added" : "Görev eklendi"}
                       </span>
                     )}
-                    {/* Arrow icon */}
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition cursor-pointer text-[#94a3b8]">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full text-[#3b4a9e] hover:bg-[#f0f1fb] transition cursor-pointer">
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                        <path d="M2 11L11 2M11 2H4.5M11 2V8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 11L11 2M11 2H4.5M11 2V8.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </span>
                   </div>
