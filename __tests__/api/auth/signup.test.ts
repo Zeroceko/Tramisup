@@ -77,14 +77,14 @@ describe('POST /api/auth/signup', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Şifre en az 8 karakter olmalıdır')
+    expect(data.error).toBe('Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir')
   })
 
   it('should return 400 if access code is missing', async () => {
     const request = createRequest({
       name: 'Test',
       email: 'test@example.com',
-      password: 'password123',
+      password: 'Password1!',
     })
     const response = await POST(request)
     const data = await response.json()
@@ -97,7 +97,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       name: 'Test',
       email: 'test@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: 'WRONGCODE',
     })
     const response = await POST(request)
@@ -122,7 +122,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       name: 'Case Test',
       email: 'case@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: 'tt31623sen',
     })
     const response = await POST(request)
@@ -143,7 +143,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       name: 'Test',
       email: 'existing@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
@@ -168,7 +168,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       name: 'New User',
       email: 'new@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
@@ -178,7 +178,7 @@ describe('POST /api/auth/signup', () => {
     expect(data.message).toBe('Hesap oluşturuldu')
     expect(data.userId).toBe('new-user-123')
 
-    expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 10)
+    expect(mockBcrypt.hash).toHaveBeenCalledWith('Password1!', 10)
 
     expect(mockPrismaUser.create).toHaveBeenCalledWith({
       data: {
@@ -203,7 +203,7 @@ describe('POST /api/auth/signup', () => {
 
     const request = createRequest({
       email: 'noname@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
@@ -224,7 +224,7 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       name: 'Test',
       email: 'test@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
@@ -239,7 +239,7 @@ describe('POST /api/auth/signup', () => {
 
     const request = createRequest({
       email: 'test@example.com',
-      password: 'password123',
+      password: 'Password1!',
       accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)

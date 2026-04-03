@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFounderCoachContext } from "@/lib/founder-coach-context";
-import { getFounderCoachAnswer, getFounderCoachSuggestion } from "@/lib/founder-coach";
+import {
+  getFounderCoachAnswer,
+  getFounderCoachSuggestion,
+  type PreviousCoachAnswer,
+} from "@/lib/founder-coach";
 
 export async function GET(
   request: Request,
@@ -54,8 +58,25 @@ export async function POST(
     }
 
     const eventType = body?.recentEvent?.type ? String(body.recentEvent.type) : undefined;
+    const previousAnswer: PreviousCoachAnswer | null =
+      body?.previousAnswer && typeof body.previousAnswer === "object"
+        ? {
+            title:
+              typeof body.previousAnswer.title === "string"
+                ? body.previousAnswer.title
+                : undefined,
+            why_now:
+              typeof body.previousAnswer.why_now === "string"
+                ? body.previousAnswer.why_now
+                : undefined,
+            user_action:
+              typeof body.previousAnswer.user_action === "string"
+                ? body.previousAnswer.user_action
+                : undefined,
+          }
+        : null;
     const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined);
-    const answer = await getFounderCoachAnswer(context, message);
+    const answer = await getFounderCoachAnswer(context, message, previousAnswer);
 
     return NextResponse.json(answer);
   } catch (error) {

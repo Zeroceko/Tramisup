@@ -7,6 +7,7 @@ import { buildEvidenceMap, type EvidenceMap } from "@/lib/build-evidence-map";
 export type FounderCoachContext = {
   product: {
     id: string;
+    userId: string;
     name: string;
     description: string | null;
     category: string | null;
@@ -84,6 +85,7 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
       where: { id: productId },
       select: {
         id: true,
+        userId: true,
         name: true,
         description: true,
         category: true,

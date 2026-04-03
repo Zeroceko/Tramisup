@@ -3,15 +3,32 @@ import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
+import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { getMetricSetup } from "@/lib/metric-setup";
+import { listAIConnectionsForUser } from "@/lib/ai-connections";
+import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
 import PageHeader from "@/components/PageHeader";
 import SettingsWorkspace from "@/components/SettingsWorkspace";
+import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
+
+function parseConfig(value: string | null) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
 
 export default async function SettingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ section?: string; success?: string; error?: string }>;
 }) {
   const { locale } = await params;
+  const { section, success, error } = await searchParams;
   const session = await getServerSession(authOptions);
   const t = await getTranslations("settings");
   const activeProductId = await getActiveProductId();
@@ -34,13 +51,66 @@ export default async function SettingsPage({
   const activeProduct = user?.product;
   const isEn = locale === "en";
 
-  const integrations = activeProduct
+  const existingIntegrations = activeProduct
     ? await prisma.integration.findMany({
         where: { productId: activeProduct.id },
-        select: { provider: true, status: true, lastSyncAt: true },
         orderBy: { updatedAt: "desc" },
       })
     : [];
+  const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
+    const config = parseConfig(integration.config);
+    return {
+      id: integration.id,
+      provider: integration.provider,
+      status: integration.status,
+      lastSyncAt: integration.lastSyncAt?.toISOString() ?? null,
+      selectedPropertyId:
+        typeof config?.propertyId === "string" ? config.propertyId : null,
+      selectedPropertyDisplayName:
+        typeof config?.propertyDisplayName === "string"
+          ? config.propertyDisplayName
+          : null,
+      accountDisplayName:
+        typeof config?.accountDisplayName === "string"
+          ? config.accountDisplayName
+          : null,
+    };
+  });
+  const manualEntryCount = activeProduct
+    ? await prisma.metricEntry.count({ where: { productId: activeProduct.id } })
+    : 0;
+
+  const connectedProviders = integrations
+    .filter((i) => i.status === "CONNECTED")
+    .map((i) => i.provider);
+
+  const metricPlan = activeProduct
+    ? getGrowthMetricRecommendations({
+        name: activeProduct.name,
+        status: activeProduct.status,
+        category: activeProduct.category ?? undefined,
+        description: activeProduct.description ?? undefined,
+        targetAudience: activeProduct.targetAudience ?? undefined,
+        businessModel: activeProduct.businessModel ?? undefined,
+        website: activeProduct.website ?? undefined,
+        locale,
+      })
+    : null;
+
+  const savedMetricSetup = activeProduct ? await getMetricSetup(activeProduct.id) : null;
+  const aiConnections = session?.user?.id
+    ? await listAIConnectionsForUser(session.user.id)
+    : [];
+  const productAISettings = activeProduct
+    ? await prisma.productAISettings.findUnique({
+        where: { productId: activeProduct.id },
+        select: {
+          mode: true,
+          selectedConnectionId: true,
+        },
+      })
+    : null;
+  const connectedAIConnectionCount = aiConnections.filter((item) => item.status === "CONNECTED").length;
 
   const connectedCount = integrations.filter((i) => i.status === "CONNECTED").length;
   const latestSync = integrations
@@ -77,8 +147,9 @@ export default async function SettingsPage({
         growthCta: "Open growth tracking",
         navProfile: "Profile",
         navProduct: "Product",
+        navAI: "AI Connections",
         navSources: "Sources",
-        navTracking: "Tracking",
+        navTracking: "Tracking Metrics",
         navSecurity: "Security",
       }
     : {
@@ -109,8 +180,9 @@ export default async function SettingsPage({
         growthCta: "Büyüme takibini aç",
         navProfile: "Profil",
         navProduct: "Ürün",
+        navAI: "AI Bağlantıları",
         navSources: "Kaynaklar",
-        navTracking: "Takip sistemi",
+        navTracking: "Takip Metrikleri",
         navSecurity: "Güvenlik",
       };
 
@@ -178,6 +250,24 @@ export default async function SettingsPage({
               {copy.latestSync}: {latestSyncLabel}
             </p>
           </div>
+
+          <div className="rounded-[18px] border border-white/70 bg-white/85 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b93a6]">
+              {copy.navAI}
+            </p>
+            <p className="mt-2 text-[17px] font-semibold text-[#0d0d12]">
+              {connectedAIConnectionCount}
+            </p>
+            <p className="mt-1 text-[13px] text-[#666d80]">
+              {productAISettings?.mode === "CONNECTED_MODEL"
+                ? isEn
+                  ? "Connected model active"
+                  : "Bağlı model aktif"
+                : isEn
+                  ? "Tiramisup AI active"
+                  : "Tiramisup AI aktif"}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -189,6 +279,27 @@ export default async function SettingsPage({
         connectedCount={connectedCount}
         copy={copy}
         isEn={isEn}
+        metricPlan={metricPlan}
+        savedMetricSetup={savedMetricSetup}
+        connectedProviders={connectedProviders}
+        aiConnections={aiConnections}
+        productAISettings={productAISettings}
+        availableIntegrations={AVAILABLE_INTEGRATIONS as IntegrationDef[]}
+        sourceIntegrations={integrations}
+        manualEntryCount={manualEntryCount}
+        aiSuccess={success}
+        aiError={error}
+        sourceSuccess={success}
+        sourceError={error}
+        initialSection={
+          section === "tracking"
+            ? "tracking"
+            : section === "ai"
+              ? "ai"
+              : section === "sources"
+                ? "sources"
+              : undefined
+        }
       />
     </div>
   );

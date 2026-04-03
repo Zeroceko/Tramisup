@@ -1,12 +1,18 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { verifyRecaptchaToken } from "./recaptcha";
 import { verifySignupBypassToken } from "./signup-bypass";
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -74,7 +80,46 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google") {
+        return Boolean(profile?.email);
+      }
+
+      return true;
+    },
+    async jwt({ token, user, account, profile }) {
+      if (account?.provider === "google" && profile?.email) {
+        const email = String(profile.email).toLowerCase();
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        const dbUser =
+          existingUser ||
+          (await prisma.user.create({
+            data: {
+              email,
+              name:
+                typeof profile.name === "string" && profile.name.trim().length > 0
+                  ? profile.name
+                  : email.split("@")[0],
+              passwordHash: await bcrypt.hash(randomUUID(), 10),
+            },
+          }));
+
+        if (!dbUser.name && typeof profile.name === "string" && profile.name.trim().length > 0) {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { name: profile.name },
+          });
+          token.name = profile.name;
+        }
+
+        token.id = dbUser.id;
+        token.email = dbUser.email;
+        token.preferredLocale = dbUser.preferredLocale;
+      }
+
       if (user) {
         token.id = user.id;
         token.preferredLocale = (user as { preferredLocale?: string }).preferredLocale;

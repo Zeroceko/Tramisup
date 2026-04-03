@@ -11,15 +11,16 @@ First, read these files in order:
 1. README.md
 2. HANDOFF.md
 3. docs/handoff.md
-4. docs/team-handoff-prompt.md
-5. docs/ai-agent-system-playbook.md
-6. docs/product-intake-question-playbook.md
-7. docs/internal-growth-rules.md
-8. docs/free-text-understanding-plan.md
-9. docs/free-text-eval-rubric.md
-10. docs/free-text-dataset-schema.md
-11. docs/free-text-normalize-pipeline.md
-12. docs/growth-tactics-layer.md
+4. docs/tiramisup-manifesto.md
+5. docs/team-handoff-prompt.md
+6. docs/ai-agent-system-playbook.md
+7. docs/product-intake-question-playbook.md
+8. docs/internal-growth-rules.md
+9. docs/free-text-understanding-plan.md
+10. docs/free-text-eval-rubric.md
+11. docs/free-text-dataset-schema.md
+12. docs/free-text-normalize-pipeline.md
+13. docs/growth-tactics-layer.md
 
 Then inspect these implementation areas first:
 - app/[locale]/dashboard/page.tsx
@@ -48,6 +49,15 @@ These production constraints are mandatory:
 - Do not break Clarity, GA4, Resend, invisible reCAPTCHA, password reset, or OAuth flows
 - Do not move product logic outside the boundaries defined in the playbooks
 - Do not introduce generic AI features that are not grounded in the playbooks
+
+These manifesto constraints are also mandatory:
+- Tiramisup is an AI-native execution workspace, not a dashboard with chat added on top
+- The primary product value is reducing the distance from user intent to structured action
+- AI features must stay grounded in product context, stage, evidence, and current execution state
+- AI output should become operational whenever possible: task, checklist item, routine, decision, or next step
+- Navigation remains a support layer; it must not become the only path to action again
+- Do not ship AI surfaces that end at generic text when they could end in execution
+- Do not turn Tiramisup into a thin wrapper around a general-purpose model
 
 Current product structure to preserve:
 - Dashboard = “What is the next correct step right now?”
@@ -97,6 +107,9 @@ When reviewing or changing the product, preserve these decision rules:
 - Dashboard must remain calm and stage-aware
 - Free-text understanding must remain a first-class product input, not decorative copy
 - Product recommendations must remain evidence-aware and stage-appropriate
+- New AI surfaces should be intent-first and action-oriented
+- Prefer question -> grounded answer -> selectable action over question -> long text only
+- Preserve classic surfaces as review and control layers even as intent-first entry points expand
 
 Before any risky release, run or verify these smoke paths:
 - /en -> accept cookies -> waitlist signup -> thank-you page

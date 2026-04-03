@@ -4,6 +4,22 @@ import { getAppBaseUrl } from "@/lib/app-urls";
 
 export const dynamic = 'force-dynamic';
 
+function buildReturnUrl(args: {
+  locale: string;
+  returnTo?: string;
+  success?: string;
+  error?: string;
+}) {
+  const page =
+    args.returnTo === "settings"
+      ? `/${args.locale}/settings?section=sources`
+      : `/${args.locale}/integrations`;
+  const url = new URL(page, getAppBaseUrl());
+  if (args.success) url.searchParams.set("success", args.success);
+  if (args.error) url.searchParams.set("error", args.error);
+  return url.toString();
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -16,21 +32,22 @@ export async function GET(req: NextRequest) {
 
     if (error || !code || !state) {
       console.error("Stripe Callback Denied:", error_description);
-      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=stripe_denied`);
+      return NextResponse.redirect(buildReturnUrl({ locale: "tr", error: "stripe_denied" }));
     }
 
-    const { productId, userId } = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
+    const { productId, userId, locale, returnTo } = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
+    const resolvedLocale = locale === "en" ? "en" : "tr";
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product || product.userId !== userId) {
-      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=unauthorized_product`);
+      return NextResponse.redirect(buildReturnUrl({ locale: resolvedLocale, returnTo, error: "unauthorized_product" }));
     }
 
     // Typically STRIPE_SECRET_KEY is the standard platform key
     const secretKey = process.env.STRIPE_SECRET_KEY; 
 
     if (!secretKey) {
-      return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=missing_stripe_secret`);
+      return NextResponse.redirect(buildReturnUrl({ locale: resolvedLocale, returnTo, error: "missing_stripe_secret" }));
     }
 
     const tokenRes = await fetch("https://connect.stripe.com/oauth/token", {
@@ -47,7 +64,7 @@ export async function GET(req: NextRequest) {
 
     if (tokenData.error) {
        console.error("Stripe Token Exch error:", tokenData);
-       return NextResponse.redirect(`${appBaseUrl}/tr/integrations?error=exchange_failed`);
+       return NextResponse.redirect(buildReturnUrl({ locale: resolvedLocale, returnTo, error: "exchange_failed" }));
     }
 
     // Upsert integration with Stripe specific credentials
@@ -78,11 +95,10 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    return NextResponse.redirect(`${appBaseUrl}/tr/integrations?success=stripe_connected`);
+    return NextResponse.redirect(buildReturnUrl({ locale: resolvedLocale, returnTo, success: "stripe_connected" }));
 
   } catch(e) {
     console.error("Stripe callback crash", e);
-    const fallback = getAppBaseUrl();
-    return NextResponse.redirect(`${fallback}/tr/integrations?error=oauth_crash`);
+    return NextResponse.redirect(buildReturnUrl({ locale: "tr", error: "oauth_crash" }));
   }
 }

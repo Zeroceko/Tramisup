@@ -25,7 +25,7 @@ const mockBcrypt = vi.mocked(bcrypt)
 
 // Extract the authorize function from credentials provider
 function getAuthorize() {
-  const credentialsProvider = authOptions.providers[0] as any
+  const credentialsProvider = authOptions.providers.find((p) => p.id === 'credentials') as any
   return credentialsProvider.options.authorize as (
     credentials: { email: string; password: string } | undefined
   ) => Promise<{ id: string; email: string; name: string | null } | null>
@@ -38,8 +38,9 @@ describe('Auth Module - authOptions', () => {
 
   describe('Provider configuration', () => {
     it('should use credentials provider', () => {
-      expect(authOptions.providers).toHaveLength(1)
-      expect(authOptions.providers[0].id).toBe('credentials')
+      const credentialsProvider = authOptions.providers.find((p) => p.id === 'credentials')
+      expect(credentialsProvider).toBeDefined()
+      expect(credentialsProvider?.id).toBe('credentials')
     })
 
     it('should use JWT session strategy', () => {

@@ -40,6 +40,7 @@ export function getSourceState(
 ): SourceState {
   if (!existing || existing.status === "DISCONNECTED") return "DISCONNECTED";
   if (existing.status === "ERROR") return "ERROR";
+  if (provider === "GOOGLE_PLAY" || provider === "APP_STORE_CONNECT") return "SYNCED";
   // CONNECTED:
   if (provider === "GA4" && !existing.selectedPropertyId) return "NEEDS_SETUP";
   if (!existing.lastSyncAt) return "NEEDS_SETUP";
@@ -97,18 +98,36 @@ const SOURCE_VALUE: Record<
     withIt:
       "Gelir, churn ve abonelik değişimleri otomatik hesaplanır. Finansal koç yorumları gerçek veriye dayanır.",
   },
+  GOOGLE_PLAY: {
+    metrics: "Store listing · Release track · Review operasyonu",
+    without:
+      "Android store tarafı Tiramisup içinde görünmez. Launch ve growth önerileri Play tarafındaki operasyonel blokajları kaçırabilir.",
+    withIt:
+      "Google Play hesabı hazır olduğunda release, listing ve store operasyonu tek yerden yönetilmeye hazırlanır.",
+  },
+  APP_STORE_CONNECT: {
+    metrics: "App Store listing · Review account · Release hazırlığı",
+    without:
+      "iOS store hazırlığı ayrı araçlarda kalır. Tiramisup launch risklerini App Store tarafında göremez.",
+    withIt:
+      "App Store Connect hazır olduğunda iOS store operasyonu da ürün bağlamına dahil olur.",
+  },
 };
 
 export default function IntegrationCard({
   integration,
   existingIntegration,
   productId,
+  locale = "tr",
+  returnTo = "integrations",
   manualEntryCount,
   autoOpenPropertySelector = false,
 }: {
   integration: IntegrationDef;
   existingIntegration?: ExistingIntegration;
   productId: string;
+  locale?: string;
+  returnTo?: "integrations" | "settings";
   manualEntryCount?: number;
   autoOpenPropertySelector?: boolean;
 }) {
@@ -196,7 +215,12 @@ export default function IntegrationCard({
 
   const handleConnect = () => {
     if (integration.comingSoon || loading) return;
-    if (integration.provider === "GA4" || integration.provider === "STRIPE") {
+    if (
+      integration.provider === "GA4" ||
+      integration.provider === "STRIPE" ||
+      integration.provider === "GOOGLE_PLAY" ||
+      integration.provider === "APP_STORE_CONNECT"
+    ) {
       setWizardOpen(true);
     } else {
       toast.message("Bu kaynak henüz desteklenmiyor.");
@@ -351,17 +375,32 @@ export default function IntegrationCard({
                 </Button>
               )}
 
-              <Button
-                type="button"
-                onClick={handleSync}
-                disabled={loading || integration.comingSoon}
-                className="h-10 w-full rounded-full border-0 bg-[#95dbda]/20 text-[13px] font-semibold text-[#0d0d12] shadow-none hover:bg-[#95dbda]/40 disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={cn("h-4 w-4", loading ? "animate-spin" : "")}
-                />
-                {loading ? "Senkronize ediliyor…" : "Senkronize et"}
-              </Button>
+              {(integration.provider === "GA4" || integration.provider === "STRIPE") && (
+                <Button
+                  type="button"
+                  onClick={handleSync}
+                  disabled={loading || integration.comingSoon}
+                  className="h-10 w-full rounded-full border-0 bg-[#95dbda]/20 text-[13px] font-semibold text-[#0d0d12] shadow-none hover:bg-[#95dbda]/40 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={cn("h-4 w-4", loading ? "animate-spin" : "")}
+                  />
+                  {loading ? "Senkronize ediliyor…" : "Senkronize et"}
+                </Button>
+              )}
+
+              {(integration.provider === "GOOGLE_PLAY" || integration.provider === "APP_STORE_CONNECT") && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setWizardOpen(true)}
+                  disabled={loading}
+                  className="h-10 w-full rounded-full border-[#e8e8e8] bg-white text-[13px] text-[#0d0d12] hover:bg-[#f6f6f6]"
+                >
+                  <Settings2 className="h-4 w-4" />
+                  Bağlantıyı yönet
+                </Button>
+              )}
 
               <Button
                 type="button"
@@ -399,8 +438,10 @@ export default function IntegrationCard({
       {/* Source Setup Wizard */}
       {wizardOpen && (
         <SourceSetupWizard
-          provider={integration.provider as "GA4" | "STRIPE"}
+          provider={integration.provider as "GA4" | "STRIPE" | "GOOGLE_PLAY" | "APP_STORE_CONNECT"}
           productId={productId}
+          locale={locale}
+          returnTo={returnTo}
           integrationId={existingIntegration?.id ?? null}
           isConnected={isConnected}
           selectedPropertyId={existingIntegration?.selectedPropertyId}

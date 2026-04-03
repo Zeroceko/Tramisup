@@ -12,6 +12,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import PageHeader from "@/components/PageHeader";
 
 type IntegrationsWorkspaceProps = {
+  locale?: string;
+  embedded?: boolean;
   productName: string;
   integrations: ExistingIntegration[];
   availableIntegrations: IntegrationDef[];
@@ -38,6 +40,16 @@ const feedbackCopy: Record<
     tone: "success",
     title: "Stripe bağlandı",
     body: "Gelir ve churn verileri artık sync akışına hazır. İlk sync'i başlatarak veriyi içeri al.",
+  },
+  google_play_connected: {
+    tone: "success",
+    title: "Google Play bağlandı",
+    body: "Google Play hesabı hazır. Store sync ve release sinyalleri bu bağlantının üstüne gelecek.",
+  },
+  google_play_denied: {
+    tone: "error",
+    title: "Google Play izni tamamlanmadı",
+    body: "Google Play OAuth akışı yarıda kaldı. İstersen tekrar deneyebiliriz.",
   },
   stripe_denied: {
     tone: "error",
@@ -115,6 +127,8 @@ const TRUST_CONFIG: Record<
 };
 
 export default function IntegrationsWorkspace({
+  locale = "tr",
+  embedded = false,
   productName,
   integrations,
   availableIntegrations,
@@ -165,12 +179,16 @@ export default function IntegrationsWorkspace({
 
   // Auto-open wizard when returning from OAuth callback
   const requestedProvider =
-    connect === "GA4" || connect === "STRIPE" ? connect : null;
-  const autoOpenProvider: "GA4" | "STRIPE" | null =
+    connect === "GA4" || connect === "STRIPE" || connect === "GOOGLE_PLAY"
+      ? connect
+      : null;
+  const autoOpenProvider: "GA4" | "STRIPE" | "GOOGLE_PLAY" | null =
     success === "ga4_connected"
       ? "GA4"
       : success === "stripe_connected"
       ? "STRIPE"
+      : success === "google_play_connected"
+      ? "GOOGLE_PLAY"
       : requestedProvider;
   const autoOpenIntegration = autoOpenProvider
     ? integrationMap.get(autoOpenProvider)
@@ -179,11 +197,13 @@ export default function IntegrationsWorkspace({
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        eyebrow="Veri güvenilirliği"
-        title="Kaynaklar"
-        description={`${productName} · Metriklerini besleyen veri kaynakları burada yönetilir.`}
-      />
+      {!embedded && (
+        <PageHeader
+          eyebrow="Veri güvenilirliği"
+          title="Kaynaklar"
+          description={`${productName} · Metriklerini besleyen veri kaynakları burada yönetilir.`}
+        />
+      )}
 
       {/* OAuth feedback banner */}
       {feedback && (
@@ -264,6 +284,8 @@ export default function IntegrationsWorkspace({
               integration={integration}
               existingIntegration={integrationMap.get(integration.provider)}
               productId={productId}
+              locale={locale}
+              returnTo={embedded ? "settings" : "integrations"}
               manualEntryCount={manualEntryCount}
               autoOpenPropertySelector={
                 success === "ga4_connected" &&
@@ -317,6 +339,8 @@ export default function IntegrationsWorkspace({
         <SourceSetupWizard
           provider={autoOpenProvider}
           productId={productId}
+          locale={locale}
+          returnTo={embedded ? "settings" : "integrations"}
           integrationId={autoOpenIntegration?.id ?? null}
           isConnected={autoOpenIntegration?.status === "CONNECTED"}
           selectedPropertyId={autoOpenIntegration?.selectedPropertyId}

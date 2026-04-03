@@ -367,10 +367,10 @@ export default async function GrowthPage({
                   : "Growth tarafında yorum ve öncelik var. Hangi metriği seçtiğin, veri girişi ve kaynak bağlantıları ise Metrics ekranında yönetilir."}
               </p>
               <a
-                href={`/${locale}/metrics`}
+                href={`/${locale}/settings?section=tracking`}
                 className="mt-4 inline-flex h-10 items-center rounded-full border border-[#0d0d12] bg-white px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#0d0d12] hover:text-white"
               >
-                {isEn ? "Go to Metrics" : "Metrics ekranına git"}
+                {isEn ? "Go to Tracking Metrics" : "Takip Metriklerine git"}
               </a>
             </div>
             <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />

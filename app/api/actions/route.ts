@@ -3,25 +3,99 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type CreateTaskInput = {
+  productId: string;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  priority: "LOW" | "MEDIUM" | "HIGH";
+};
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { productId, title, dueDate, priority } = await request.json();
+    const body = (await request.json()) as
+      | { tasks?: unknown[] }
+      | Record<string, unknown>
+      | null;
+    const items: unknown[] = Array.isArray(body?.tasks)
+      ? body.tasks
+      : body
+        ? [body]
+        : [];
 
-    const task = await prisma.task.create({
-      data: {
-        productId,
-        title,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        priority,
+    if (items.length === 0) {
+      return NextResponse.json({ error: "No tasks provided" }, { status: 400 });
+    }
+
+    const normalizedItems = items
+      .map((rawItem) => {
+        const item = (rawItem ?? {}) as Record<string, unknown>;
+        const description =
+          item?.description == null ? null : String(item.description).trim();
+
+        return {
+          productId: String(item?.productId ?? "").trim(),
+          title: String(item?.title ?? "").trim(),
+          description: description || null,
+          dueDate: item?.dueDate == null ? null : String(item.dueDate),
+          priority:
+            item?.priority === "LOW" || item?.priority === "HIGH"
+              ? item.priority
+              : "MEDIUM",
+        };
+      })
+      .filter((item): item is CreateTaskInput => Boolean(item.productId && item.title));
+
+    if (normalizedItems.length === 0) {
+      return NextResponse.json({ error: "Valid tasks are required" }, { status: 400 });
+    }
+
+    const productIds: string[] = Array.from(
+      new Set(normalizedItems.map((item: CreateTaskInput) => item.productId))
+    );
+    const ownedProducts = await prisma.product.findMany({
+      where: {
+        userId: session.user.id,
+        id: { in: productIds },
       },
+      select: { id: true },
     });
+    const ownedProductIds = new Set(ownedProducts.map((product) => product.id));
 
-    return NextResponse.json(task, { status: 201 });
+    if (ownedProductIds.size !== productIds.length) {
+      return NextResponse.json({ error: "Unauthorized product access" }, { status: 403 });
+    }
+
+    const createOperations = normalizedItems.map((item: CreateTaskInput) =>
+      prisma.task.create({
+        data: {
+          productId: item.productId,
+          title: item.title,
+          description: item.description,
+          dueDate: item.dueDate ? new Date(item.dueDate) : null,
+          priority: item.priority,
+        },
+      })
+    );
+
+    const createdTasks = await prisma.$transaction(createOperations);
+
+    if (createdTasks.length === 1) {
+      return NextResponse.json(createdTasks[0], { status: 201 });
+    }
+
+    return NextResponse.json(
+      {
+        count: createdTasks.length,
+        tasks: createdTasks,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating task:", error);
     return NextResponse.json(

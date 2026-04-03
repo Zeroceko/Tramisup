@@ -1,15 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import SettingsForm from "@/components/SettingsForm";
-import { BrandLogo } from "@/components/BrandLogo";
+import AISettingsPanel from "@/components/AISettingsPanel";
+import IntegrationsWorkspace from "@/components/IntegrationsWorkspace";
+import MetricSetupSelector from "@/components/MetricSetupSelector";
+import type { GrowthMetricPlan } from "@/lib/growth-metric-recommendations";
+import type { SavedMetricSetup } from "@/lib/metric-setup";
+import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
 
-type IntegrationItem = {
-  provider: string;
-  status: string;
-  lastSyncAt: Date | string | null;
-};
+type IntegrationItem = ExistingIntegration;
 
 type UserShape = {
   id: string;
@@ -40,11 +40,12 @@ type CopyShape = {
   growthDesc: string;
   growthCta: string;
   navProduct: string;
+  navAI: string;
   navSources: string;
   navTracking: string;
 };
 
-type WorkspaceSectionKey = "product" | "sources" | "tracking";
+type WorkspaceSectionKey = "product" | "ai" | "sources" | "tracking";
 
 export default function SettingsWorkspace({
   locale,
@@ -54,6 +55,19 @@ export default function SettingsWorkspace({
   connectedCount,
   copy,
   isEn,
+  metricPlan,
+  savedMetricSetup,
+  connectedProviders,
+  availableIntegrations,
+  sourceIntegrations,
+  manualEntryCount,
+  aiConnections,
+  productAISettings,
+  aiSuccess,
+  aiError,
+  sourceSuccess,
+  sourceError,
+  initialSection,
 }: {
   locale: string;
   user: UserShape;
@@ -62,17 +76,39 @@ export default function SettingsWorkspace({
   connectedCount: number;
   copy: CopyShape;
   isEn: boolean;
+  metricPlan: GrowthMetricPlan | null;
+  savedMetricSetup: SavedMetricSetup | null;
+  connectedProviders: string[];
+  availableIntegrations: IntegrationDef[];
+  sourceIntegrations: ExistingIntegration[];
+  manualEntryCount: number;
+  aiConnections: Array<{
+    id: string;
+    provider: "GOOGLE_AI" | "OPENAI" | "ANTHROPIC";
+    authType: string;
+    status: string;
+    label: string | null;
+    remoteAccountEmail: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  productAISettings: {
+    mode: "PLATFORM_DEFAULT" | "CONNECTED_MODEL";
+    selectedConnectionId: string | null;
+  } | null;
+  aiSuccess?: string;
+  aiError?: string;
+  sourceSuccess?: string;
+  sourceError?: string;
+  initialSection?: WorkspaceSectionKey;
 }) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>("product");
-  const sourcesSummary =
-    connectedCount > 0
-      ? `${connectedCount} ${copy.sourcesWithCountLabel}`
-      : copy.sourcesEmpty;
+  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(initialSection ?? "product");
 
   const navItems = useMemo(
     () =>
       [
         { key: "product", label: copy.navProduct },
+        { key: "ai", label: copy.navAI },
         { key: "sources", label: copy.navSources },
         { key: "tracking", label: copy.navTracking },
       ] satisfies Array<{ key: WorkspaceSectionKey; label: string }>,
@@ -112,108 +148,40 @@ export default function SettingsWorkspace({
           />
         ) : null}
 
-        {activeSection === "sources" && activeProduct ? (
-          <section className="rounded-[20px] border border-[#e8e8e8] bg-white p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                  {copy.sourcesLabel}
-                </p>
-                <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                  {copy.sourcesTitle}
-                </h2>
-                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-                  {sourcesSummary}
-                </p>
-              </div>
-              {connectedCount > 0 && (
-                <span className="mt-1 flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-[#f0fffe] px-3 text-[13px] font-bold text-[#0d9488]">
-                  {connectedCount}
-                </span>
-              )}
-            </div>
-
-            {integrations.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {integrations.map((integration) => {
-                  const isConnected = integration.status === "CONNECTED";
-                  const lastSync = integration.lastSyncAt
-                    ? new Intl.DateTimeFormat(isEn ? "en-US" : "tr-TR", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(new Date(integration.lastSyncAt))
-                    : null;
-
-                  return (
-                    <div
-                      key={integration.provider}
-                      className="flex items-center justify-between gap-3 rounded-[14px] bg-[#fafafa] px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#ececec] bg-white">
-                          <BrandLogo provider={integration.provider} className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-[13px] font-semibold text-[#0d0d12]">
-                            {integration.provider}
-                          </p>
-                          {lastSync && (
-                            <p className="text-[11px] text-[#8b93a6]">
-                              {copy.lastSync}: {lastSync}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                          isConnected
-                            ? "bg-[#f0fffe] text-[#0d9488]"
-                            : integration.status === "ERROR"
-                              ? "bg-[#fee2e2] text-[#ef4444]"
-                              : "bg-[#f5f5f5] text-[#8b93a6]"
-                        }`}
-                      >
-                        {isConnected
-                          ? copy.connected
-                          : integration.status === "ERROR"
-                            ? copy.error
-                            : copy.disconnected}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <Link
-              href={`/${locale}/integrations`}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
-            >
-              {connectedCount > 0 ? copy.manageSources : copy.connectSource}
-            </Link>
-          </section>
+        {activeSection === "ai" ? (
+          <AISettingsPanel
+            locale={locale}
+            activeProductId={activeProduct?.id ?? null}
+            activeProductName={activeProduct?.name ?? null}
+            connections={aiConnections}
+            settings={productAISettings}
+            success={aiSuccess}
+            error={aiError}
+          />
         ) : null}
 
-        {activeSection === "tracking" && activeProduct ? (
-          <section className="rounded-[20px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffdfd_0%,_#fff7fa_100%)] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
-              {copy.growthLabel}
-            </p>
-            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-              {copy.growthTitle}
-            </h2>
-            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-              {copy.growthDesc}
-            </p>
-            <Link
-              href={`/${locale}/metrics#tracking-metrics`}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#111014] px-5 text-[13px] font-semibold text-white transition hover:bg-[#28232a]"
-            >
-              {copy.growthCta}
-            </Link>
-          </section>
+        {activeSection === "sources" && activeProduct ? (
+          <IntegrationsWorkspace
+            locale={locale}
+            embedded
+            productName={activeProduct.name}
+            integrations={sourceIntegrations}
+            availableIntegrations={availableIntegrations}
+            productId={activeProduct.id}
+            manualEntryCount={manualEntryCount}
+            success={sourceSuccess}
+            error={sourceError}
+          />
+        ) : null}
+
+        {activeSection === "tracking" && activeProduct && metricPlan ? (
+          <MetricSetupSelector
+            productId={activeProduct.id}
+            plan={metricPlan}
+            initialSetup={savedMetricSetup}
+            locale={locale}
+            connectedProviders={connectedProviders}
+          />
         ) : null}
       </div>
     </section>

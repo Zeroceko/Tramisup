@@ -14,6 +14,8 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("productId");
+    const locale = searchParams.get("locale") || "tr";
+    const returnTo = searchParams.get("returnTo") || "integrations";
 
     if (!productId) {
       return NextResponse.json({ error: "Product ID required" }, { status: 400 });
@@ -28,7 +30,7 @@ export async function GET(req: Request) {
     const redirectUri = `${oauthBaseUrl}/api/integrations/google/callback`;
 
     // Encode contextual data to be retrieved after user grants permissions
-    const state = Buffer.from(JSON.stringify({ productId, userId: session.user.id })).toString('base64');
+    const state = Buffer.from(JSON.stringify({ productId, userId: session.user.id, locale, returnTo })).toString('base64');
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +

@@ -27,8 +27,21 @@ export default function LoginPage() {
   const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const recaptchaRef = useRef<RecaptchaFieldHandle | null>(null);
   const recaptchaEnabled = isClientRecaptchaEnabled() && Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signIn("google", {
+        callbackUrl: callbackUrl || `/${locale}/dashboard`,
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -102,6 +115,27 @@ export default function LoginPage() {
         <div className="rounded-2xl border border-[#E8DED7]/70 bg-white/80 p-8 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl">
           <h1 className="mb-1 text-2xl font-black text-[#21231D]">{t("title")}</h1>
           <p className="mb-6 text-sm text-[#21231D]/50">{t("subtitle")}</p>
+
+          <button
+            type="button"
+            onClick={() => void handleGoogleLogin()}
+            disabled={googleLoading || loading}
+            className="mb-4 inline-flex w-full items-center justify-center gap-3 rounded-xl border border-[#E8DED7] bg-white py-3.5 text-sm font-bold text-[#21231D] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,35,29,0.10)] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.9-5.5 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.2.8 3.9 1.5l2.7-2.6C16.8 3.2 14.6 2.3 12 2.3A9.7 9.7 0 0 0 2.3 12 9.7 9.7 0 0 0 12 21.7c5.6 0 9.3-3.9 9.3-9.4 0-.6-.1-1.1-.2-1.5H12Z"/>
+              <path fill="#34A853" d="M3.4 7.4l3.2 2.3C7.5 7.8 9.6 6 12 6c1.9 0 3.2.8 3.9 1.5l2.7-2.6C16.8 3.2 14.6 2.3 12 2.3c-3.8 0-7.1 2.2-8.6 5.1Z"/>
+              <path fill="#FBBC05" d="M2.3 12c0 1.6.4 3 1.1 4.3l3.5-2.7c-.2-.5-.3-1-.3-1.6s.1-1.1.3-1.6L3.4 7.4A9.6 9.6 0 0 0 2.3 12Z"/>
+              <path fill="#4285F4" d="M12 21.7c2.6 0 4.8-.9 6.4-2.4l-3.1-2.4c-.8.6-1.9 1.1-3.3 1.1-2.4 0-4.5-1.8-5.3-4.1l-3.5 2.7c1.5 2.9 4.8 5.1 8.8 5.1Z"/>
+            </svg>
+            {googleLoading ? t("googleLoading") : t("googleButton")}
+          </button>
+
+          <div className="mb-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#21231D]/35">
+            <span className="h-px flex-1 bg-[#E8DED7]" />
+            <span>{t("orDivider")}</span>
+            <span className="h-px flex-1 bg-[#E8DED7]" />
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {resetStatus === "success" ? (

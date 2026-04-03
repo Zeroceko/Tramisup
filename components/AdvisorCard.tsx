@@ -24,6 +24,12 @@ type CoachRecommendationOutput = {
   critic_status: string;
 };
 
+type PreviousCoachAnswer = {
+  title?: string;
+  why_now?: string;
+  user_action?: string;
+};
+
 interface AdvisorCardProps {
   productId: string;
   productName: string;
@@ -75,6 +81,7 @@ export default function AdvisorCard({
   const [answer, setAnswer] = useState<CoachRecommendationOutput | null>(null);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previousAnswer, setPreviousAnswer] = useState<PreviousCoachAnswer | null>(null);
 
   const loadSuggestion = () => {
     let cancelled = false;
@@ -115,12 +122,21 @@ export default function AdvisorCard({
       const res = await fetch(`/api/products/${productId}/advice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, recentEvent: { type: "MANUAL_QUESTION" } }),
+        body: JSON.stringify({
+          message: trimmed,
+          recentEvent: { type: "MANUAL_QUESTION" },
+          previousAnswer,
+        }),
       });
 
       if (!res.ok) throw new Error("request failed");
       const data = (await res.json()) as CoachRecommendationOutput;
       setAnswer(data);
+      setPreviousAnswer({
+        title: data.primary_recommendation.title,
+        why_now: data.primary_recommendation.why_now,
+        user_action: data.primary_recommendation.user_action,
+      });
     } catch (err: unknown) {
       setError(parseSuggestionError(err, locale));
     } finally {

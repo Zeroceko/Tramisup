@@ -3,28 +3,34 @@ import { google } from '@ai-sdk/google';
 import OpenAI from "openai";
 
 const qwenApiKey = process.env.QWEN_API_KEY;
+const geminiApiKey =
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY ?? null;
 
 if (!qwenApiKey) {
   console.warn("WARNING: QWEN_API_KEY is not set in the environment variables.");
 }
 
 // 1. Qwen via Raw OpenAI SDK (more stable for Alibaba MaaS compat mode)
-export const qwenRaw = new OpenAI({
-  apiKey: qwenApiKey,
-  baseURL: 'https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1',
-});
+export const qwenRaw = qwenApiKey
+  ? new OpenAI({
+      apiKey: qwenApiKey,
+      baseURL: 'https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1',
+    })
+  : null;
 
 // 2. Vercel AI SDK wrappers (kept for other use cases or Gemini)
-export const qwenSdk = createOpenAI({
-  apiKey: qwenApiKey,
-  baseURL: 'https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1',
-});
+export const qwenSdk = qwenApiKey
+  ? createOpenAI({
+      apiKey: qwenApiKey,
+      baseURL: 'https://ws-bhoahnrg31wqikdh.eu-central-1.maas.aliyuncs.com/compatible-mode/v1',
+    })
+  : null;
 
 // Primary model: Gemini 1.5 Flash
-export const defaultModel = google('gemini-1.5-flash');
+export const defaultModel = geminiApiKey ? google('gemini-1.5-flash') : null;
 
 // Backup model: qwen-plus via AI SDK wrapper
-export const qwenModel = qwenSdk('qwen-plus');
+export const qwenModel = qwenSdk ? qwenSdk('qwen-plus') : null;
 
 /**
  * Execute an AI function with fallback logic.
@@ -35,31 +41,31 @@ export async function withFallback<T>(
   context: string = 'AI Call'
 ): Promise<T> {
   // 1. Try Gemini
-  try {
-    console.log(`[${context}] Trying Gemini...`);
-    return await primaryFn(defaultModel);
-  } catch (err) {
-    console.warn(`[${context}] Gemini failed, trying Qwen (AI SDK)...`, err);
-    
-    // 2. Try Qwen via AI SDK
+  if (defaultModel) {
+    try {
+      console.log(`[${context}] Trying Gemini...`);
+      return await primaryFn(defaultModel);
+    } catch (err) {
+      console.warn(`[${context}] Gemini failed, trying Qwen (AI SDK)...`, err);
+    }
+  }
+
+  if (qwenModel) {
     try {
       return await primaryFn(qwenModel);
     } catch (qwenErr) {
       console.warn(`[${context}] Qwen (AI SDK) failed, trying Raw Qwen fallback...`, qwenErr);
-      
-      // 3. Final raw fallback for TEXT generation (if T is handleable as string)
-      // This is mainly for orchestrator/agents that use generateText
+
       try {
-        // We can't easily turn primaryFn into a raw call if it's bound to AI SDK models,
-        // so we only do this if we can detect it's a simple text request or through specific logic.
-        // For now, let's just throw so the caller handles it, OR implement a raw text generator.
-        throw qwenErr; 
+        throw qwenErr;
       } catch (finalErr) {
         console.error(`[${context}] ALL models failed:`, finalErr);
         throw finalErr;
       }
     }
   }
+
+  throw new Error(`[${context}] No AI provider is configured.`);
 }
 
 /**
@@ -71,18 +77,21 @@ export async function generateTextFallback(
   context: string = 'Text AI Call'
 ): Promise<string> {
   // 1. Try Gemini
-  try {
-    const { generateText } = await import("ai");
-    const result = await generateText({
-      model: defaultModel,
-      system: systemPrompt,
-      prompt: userPrompt,
-    });
-    return result.text;
-  } catch (err) {
-    console.warn(`[${context}] Gemini text failed, trying Raw Qwen...`, err);
-    
-    // 2. Try Raw Qwen
+  if (defaultModel) {
+    try {
+      const { generateText } = await import("ai");
+      const result = await generateText({
+        model: defaultModel,
+        system: systemPrompt,
+        prompt: userPrompt,
+      });
+      return result.text;
+    } catch (err) {
+      console.warn(`[${context}] Gemini text failed, trying Raw Qwen...`, err);
+    }
+  }
+
+  if (qwenRaw) {
     try {
       const response = await qwenRaw.chat.completions.create({
         model: "qwen-plus",
@@ -97,6 +106,8 @@ export async function generateTextFallback(
       throw fallbackErr;
     }
   }
+
+  throw new Error(`[${context}] No AI provider is configured.`);
 }
 
 /**
@@ -109,19 +120,22 @@ export async function generateStructuredFallback<T>(
   context: string = 'Structured AI Call'
 ): Promise<T> {
   // 1. Try Primary (Gemini via AI SDK)
-  try {
-    const { generateObject } = await import("ai");
-    const { object } = await generateObject({
-      model: defaultModel,
-      schema: schema,
-      prompt: prompt,
-      temperature: 0.7,
-    });
-    return object as T;
-  } catch (err) {
-    console.warn(`[${context}] Gemini structured call failed, trying Raw Qwen...`, err);
-    
-    // 2. Try Fallback (Raw Qwen - very stable for JSON)
+  if (defaultModel) {
+    try {
+      const { generateObject } = await import("ai");
+      const { object } = await generateObject({
+        model: defaultModel,
+        schema: schema,
+        prompt: prompt,
+        temperature: 0.7,
+      });
+      return object as T;
+    } catch (err) {
+      console.warn(`[${context}] Gemini structured call failed, trying Raw Qwen...`, err);
+    }
+  }
+
+  if (qwenRaw) {
     try {
       const response = await qwenRaw.chat.completions.create({
         model: "qwen-plus",
@@ -140,5 +154,6 @@ export async function generateStructuredFallback<T>(
       throw fallbackErr;
     }
   }
-}
 
+  throw new Error(`[${context}] No AI provider is configured.`);
+}

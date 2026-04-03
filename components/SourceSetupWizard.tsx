@@ -45,10 +45,17 @@ type ValidationResult = {
 };
 
 type SetupStep = "connect" | "property" | "validate" | "sync" | "done";
+type SupportedWizardProvider =
+  | "GA4"
+  | "STRIPE"
+  | "GOOGLE_PLAY"
+  | "APP_STORE_CONNECT";
 
 type WizardProps = {
-  provider: "GA4" | "STRIPE";
+  provider: SupportedWizardProvider;
   productId: string;
+  locale?: string;
+  returnTo?: "integrations" | "settings";
   integrationId?: string | null;
   isConnected: boolean;
   selectedPropertyId?: string | null;
@@ -65,18 +72,20 @@ const GA4_HISTORY_OPTIONS = [
 
 // ─── Step definitions ────────────────────────────────────────────────────────
 
-function getSteps(provider: "GA4" | "STRIPE"): SetupStep[] {
+function getSteps(provider: SupportedWizardProvider): SetupStep[] {
   if (provider === "GA4") return ["connect", "property", "validate", "sync", "done"];
-  return ["connect", "validate", "sync", "done"];
+  if (provider === "STRIPE") return ["connect", "validate", "sync", "done"];
+  return ["connect", "done"];
 }
 
 function getInitialStep(
-  provider: "GA4" | "STRIPE",
+  provider: SupportedWizardProvider,
   isConnected: boolean,
   selectedPropertyId?: string | null
 ): SetupStep {
   if (!isConnected) return "connect";
   if (provider === "GA4" && !selectedPropertyId) return "property";
+  if (provider === "GOOGLE_PLAY" || provider === "APP_STORE_CONNECT") return "done";
   return "validate";
 }
 
@@ -117,6 +126,40 @@ const PROVIDER_META = {
     metrics: ["MRR (aylık yinelenen gelir)", "Aktif abonelikler", "Churn (iptal edilen)", "Ödeme hacmi"],
     trustExplain: "Stripe verisi güvenilir olarak işaretlendi. Koç artık finansal sinyallere dayalı öneriler verebilir.",
   },
+  GOOGLE_PLAY: {
+    name: "Google Play",
+    shortName: "Google Play",
+    connectTitle: "Google Play hesabını bağla",
+    connectDesc: "Google hesabınla bağlan ve Android Publisher erişimini ver. İlk sürümde bağlantı hesabı hazırlarız; sync katmanı hemen ardından gelecek.",
+    connectCta: "Google Play ile bağlan",
+    propertyTitle: "",
+    propertyDesc: "",
+    validateTitle: "",
+    validateDesc: "",
+    syncTitle: "",
+    syncDesc: "",
+    doneTitle: "Google Play hazır",
+    doneDesc: "OAuth bağlantısı kuruldu. Bu ürün artık Google Play hesabınla eşlenebilir durumda.",
+    metrics: ["Release operasyonu", "Store listing hazırlığı", "Review ve metadata akışı"],
+    trustExplain: "Bağlantı hazır. Google Play sync ve store sinyalleri bir sonraki dilimde bu hesabı kullanacak.",
+  },
+  APP_STORE_CONNECT: {
+    name: "App Store Connect",
+    shortName: "App Store",
+    connectTitle: "App Store Connect anahtarını ekle",
+    connectDesc: "Apple tarafında resmi API akışı OAuth değil, key tabanlıdır. Issuer ID, Key ID ve private key ile iOS store erişimini hazırlarız.",
+    connectCta: "Anahtarı kaydet",
+    propertyTitle: "",
+    propertyDesc: "",
+    validateTitle: "",
+    validateDesc: "",
+    syncTitle: "",
+    syncDesc: "",
+    doneTitle: "App Store Connect hazır",
+    doneDesc: "Anahtar kaydedildi. Bu ürün artık iOS store tarafı için hazır bir bağlantıya sahip.",
+    metrics: ["Listing hazırlığı", "Release checklist", "Review account operasyonu"],
+    trustExplain: "Apple credentials hazır. Sync ve App Store sinyalleri bir sonraki dilimde bu bağlantıyı kullanacak.",
+  },
 };
 
 const ERROR_GUIDANCE: Record<string, { title: string; action: string }> = {
@@ -151,6 +194,8 @@ const ERROR_GUIDANCE: Record<string, { title: string; action: string }> = {
 export default function SourceSetupWizard({
   provider,
   productId,
+  locale = "tr",
+  returnTo = "integrations",
   integrationId,
   isConnected,
   selectedPropertyId: initialPropertyId,
@@ -170,6 +215,10 @@ export default function SourceSetupWizard({
   const [selectedProperty, setSelectedProperty] = useState<string>(initialPropertyId ?? "");
   const [syncResult, setSyncResult] = useState<{ recordsSynced: number } | null>(null);
   const [ga4HistoryDays, setGa4HistoryDays] = useState<number>(365);
+  const [appStoreIssuerId, setAppStoreIssuerId] = useState("");
+  const [appStoreKeyId, setAppStoreKeyId] = useState("");
+  const [appStorePrivateKey, setAppStorePrivateKey] = useState("");
+  const [appStoreAppIdentifier, setAppStoreAppIdentifier] = useState("");
 
   const stepIndex = steps.indexOf(currentStep);
   const progress = ((stepIndex + 1) / steps.length) * 100;
@@ -178,10 +227,47 @@ export default function SourceSetupWizard({
 
   const handleConnect = () => {
     setLoading(true);
+    const params = new URLSearchParams({
+      productId,
+      locale,
+      returnTo,
+    });
     if (provider === "GA4") {
-      window.location.href = `/api/integrations/google/link?productId=${productId}`;
-    } else {
-      window.location.href = `/api/integrations/stripe/link?productId=${productId}`;
+      window.location.href = `/api/integrations/google/link?${params.toString()}`;
+      return;
+    }
+    if (provider === "STRIPE") {
+      window.location.href = `/api/integrations/stripe/link?${params.toString()}`;
+      return;
+    }
+    if (provider === "GOOGLE_PLAY") {
+      window.location.href = `/api/integrations/google-play/link?${params.toString()}`;
+      return;
+    }
+  };
+
+  const saveAppStoreCredentials = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/integrations/app-store-connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          issuerId: appStoreIssuerId,
+          keyId: appStoreKeyId,
+          privateKey: appStorePrivateKey,
+          appIdentifier: appStoreAppIdentifier,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "App Store Connect kaydedilemedi");
+      toast.success("App Store Connect anahtarı kaydedildi.");
+      setCurrentStep("done");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "App Store Connect kaydedilemedi");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -290,6 +376,70 @@ export default function SourceSetupWizard({
   // ── Step renderers ─────────────────────────────────────────────────────────
 
   function renderConnect() {
+    if (provider === "APP_STORE_CONNECT") {
+      return (
+        <div className="space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#f6f6f6]">
+            <BrandLogo provider={provider} className="h-7 w-7" />
+          </div>
+
+          <div>
+            <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+              {meta.connectTitle}
+            </h2>
+            <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
+              {meta.connectDesc}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <input
+              value={appStoreIssuerId}
+              onChange={(event) => setAppStoreIssuerId(event.target.value)}
+              placeholder="Issuer ID"
+              className="w-full rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
+            />
+            <input
+              value={appStoreKeyId}
+              onChange={(event) => setAppStoreKeyId(event.target.value)}
+              placeholder="Key ID"
+              className="w-full rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
+            />
+            <input
+              value={appStoreAppIdentifier}
+              onChange={(event) => setAppStoreAppIdentifier(event.target.value)}
+              placeholder="App ID veya bundle id (opsiyonel)"
+              className="w-full rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
+            />
+            <textarea
+              value={appStorePrivateKey}
+              onChange={(event) => setAppStorePrivateKey(event.target.value)}
+              rows={6}
+              placeholder="-----BEGIN PRIVATE KEY-----"
+              className="w-full resize-none rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] leading-6 text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
+            />
+          </div>
+
+          <div className="flex items-start gap-2 rounded-[12px] border border-[#e8e8e8] bg-white p-3">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-[#95dbda]" />
+            <p className="text-[12px] leading-5 text-[#666d80]">
+              Apple tarafında OAuth yerine resmi API key modeli kullanılır. İlk sürümde bu anahtarı saklayıp store erişimini hazırlarız.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void saveAppStoreCredentials()}
+            disabled={loading || !appStoreIssuerId.trim() || !appStoreKeyId.trim() || !appStorePrivateKey.trim()}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandLogo provider={provider} className="h-4 w-4" />}
+            {loading ? "Kaydediliyor…" : meta.connectCta}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-5">
         <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#f6f6f6]">
@@ -748,6 +898,14 @@ export default function SourceSetupWizard({
             {meta.trustExplain}
           </p>
         </div>
+
+        {(provider === "GOOGLE_PLAY" || provider === "APP_STORE_CONNECT") && (
+          <div className="rounded-[14px] border border-[#dbeafe] bg-[#eff6ff] p-4 text-left">
+            <p className="text-[12px] leading-5 text-[#1d4ed8]">
+              İlk dilimde bağlantı temelini kurduk. Store sync, review import ve listing sinyalleri bu bağlantının üstüne gelecek.
+            </p>
+          </div>
+        )}
 
         <button
           type="button"

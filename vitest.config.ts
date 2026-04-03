@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    env: {
+      GEMINI_API_KEY: 'dummy-gemini-key',
+    },
     include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     exclude: ['node_modules', 'dist', 'tests/e2e/**', 'Landing Page/**'],
     coverage: {

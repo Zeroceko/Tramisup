@@ -71,6 +71,7 @@ export default async function IntegrationsPage({
 
   return (
     <IntegrationsWorkspace
+      locale={locale}
       productName={product.name}
       integrations={integrations}
       availableIntegrations={AVAILABLE_INTEGRATIONS as IntegrationDef[]}

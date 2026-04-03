@@ -6,6 +6,7 @@ import { buildFounderCoachDecision } from "@/lib/founder-coach-agent";
 import { getMetricSetup, type FunnelStageKey } from "@/lib/metric-setup";
 import type { NormalizedProductContext } from "@/lib/normalize-product-context";
 import type { EvidenceMap } from "@/lib/build-evidence-map";
+import { generateConnectedAITextForProduct } from "@/lib/connected-ai-runtime";
 
 // ─── Recommendation output contract (AI Agent System Playbook §13) ──────────
 
@@ -51,6 +52,12 @@ export interface CoachRecommendationOutput {
   supporting_recommendations: Recommendation[];
   missing_information_for_better_guidance: string[];
   critic_status: CriticStatus;
+}
+
+export interface PreviousCoachAnswer {
+  title?: string;
+  why_now?: string;
+  user_action?: string;
 }
 
 
@@ -170,7 +177,11 @@ function stageDirective(stage: string): string {
   }
 }
 
-async function buildReactivePrompt(context: FounderCoachContext, message: string) {
+async function buildReactivePrompt(
+  context: FounderCoachContext,
+  message: string,
+  previousAnswer?: PreviousCoachAnswer | null
+) {
   const nCtx = context.normalizedContext;
   const evidence = context.evidenceMap;
 
@@ -208,6 +219,11 @@ ${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 USER QUESTION:
 ${message}
 
+${previousAnswer
+  ? `PREVIOUS ANSWER TO AVOID REPEATING:
+${JSON.stringify(previousAnswer, null, 2)}`
+  : ""}
+
 Return valid JSON only in this shape:
 {
   "primary_recommendation": {
@@ -241,6 +257,8 @@ Rules:
 - if missing_fields exist, list them in missing_information_for_better_guidance
 - if advisory skill knowledge is loaded, use it deliberately
 - supporting_evidence must reference actual facts from the evidence map, not invented ones
+- if PREVIOUS ANSWER TO AVOID REPEATING is present, do not repeat the same title, the same user_action, or the same recommendation framing
+- choose the next best actionable recommendation instead of rephrasing the previous one
 `;
 }
 
@@ -315,7 +333,24 @@ function parseJson<T>(text: string): T {
   return JSON.parse(cleaned) as T;
 }
 
-async function callGemini<T>(prompt: string): Promise<T | null> {
+async function callCoachModel<T>(
+  prompt: string,
+  context: FounderCoachContext
+): Promise<T | null> {
+  const connectedModelText = await generateConnectedAITextForProduct({
+    productId: context.product.id,
+    userId: context.product.userId,
+    prompt,
+  });
+
+  if (connectedModelText) {
+    try {
+      return parseJson<T>(connectedModelText);
+    } catch (error) {
+      console.warn("[founder-coach] Connected model returned invalid JSON, falling back:", error);
+    }
+  }
+
   try {
     const result = await withFallback(
       (model) =>
@@ -580,6 +615,162 @@ function sanitizeRecommendationOutput(data: unknown): CoachRecommendationOutput 
   };
 }
 
+function normalizeText(value: string | undefined) {
+  return (value ?? "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function similarityByContainment(a: string, b: string) {
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+function isTooSimilarToPrevious(
+  rec: Recommendation,
+  previousAnswer?: PreviousCoachAnswer | null
+) {
+  if (!previousAnswer) return false;
+
+  const prevTitle = normalizeText(previousAnswer.title);
+  const prevAction = normalizeText(previousAnswer.user_action);
+  const nextTitle = normalizeText(rec.title);
+  const nextAction = normalizeText(rec.user_action);
+
+  return (
+    similarityByContainment(nextTitle, prevTitle) ||
+    similarityByContainment(nextAction, prevAction)
+  );
+}
+
+function avoidRepeatWithPrevious(
+  output: CoachRecommendationOutput,
+  previousAnswer?: PreviousCoachAnswer | null,
+  context?: FounderCoachContext
+): CoachRecommendationOutput {
+  if (!previousAnswer || !isTooSimilarToPrevious(output.primary_recommendation, previousAnswer)) {
+    return output;
+  }
+
+  const alternative = output.supporting_recommendations.find(
+    (rec) => !isTooSimilarToPrevious(rec, previousAnswer)
+  );
+
+  if (!alternative) {
+    if (!context) {
+      return output;
+    }
+
+    const fallback = buildStageFallback(context);
+    if (!isTooSimilarToPrevious(fallback.primary_recommendation, previousAnswer)) {
+      return {
+        ...fallback,
+        critic_status: "fallback",
+      };
+    }
+
+    const deterministicAlternative = buildDeterministicAlternative(context);
+    if (deterministicAlternative && !isTooSimilarToPrevious(deterministicAlternative, previousAnswer)) {
+      return {
+        primary_recommendation: deterministicAlternative,
+        supporting_recommendations: output.supporting_recommendations.filter(
+          (rec) => !isTooSimilarToPrevious(rec, previousAnswer)
+        ).slice(0, 3),
+        missing_information_for_better_guidance:
+          output.missing_information_for_better_guidance,
+        critic_status: "fallback",
+      };
+    }
+
+    return output;
+  }
+
+  return {
+    ...output,
+    primary_recommendation: alternative,
+    supporting_recommendations: [
+      output.primary_recommendation,
+      ...output.supporting_recommendations.filter((rec) => rec.title !== alternative.title),
+    ].slice(0, 3),
+    critic_status: output.critic_status === "fallback" ? "fallback" : "revised",
+  };
+}
+
+function buildDeterministicAlternative(
+  context: FounderCoachContext
+): Recommendation | null {
+  const stage = context.normalizedContext.stage;
+  const missing = context.normalizedContext.missing_fields;
+  const evidence = context.evidenceMap;
+
+  if (stage === "idea" || stage === "development" || stage === "testing" || stage === "launch_prep") {
+    return {
+      title: "Eksik ürün bağlamını netleştir",
+      type: "readiness_next_step",
+      priority: "medium",
+      impact_area: "launch",
+      why_now:
+        missing.length > 0
+          ? `Daha iyi yönlendirme için hâlâ eksik bağlam var: ${missing.slice(0, 3).join(", ")}.`
+          : "Launch öncesinde net ürün bağlamı sonraki önerilerin kalitesini yükseltir.",
+      supporting_evidence: evidence.known_facts.filter((fact) => fact.includes("Stage")).slice(0, 2),
+      assumptions: [],
+      missing_data: missing,
+      confidence: missing.length > 0 ? "high" : "medium",
+      expected_outcome: "Sonraki AI önerileri daha somut ve ürününe özel hale gelir.",
+      user_action: "Settings > Product altında eksik ürün bilgilerini tamamla.",
+    };
+  }
+
+  if (stage === "live") {
+    if (!evidence.metric_state.has_setup) {
+      return {
+        title: "İlk veri kaynağını bağla",
+        type: "source_setup",
+        priority: "medium",
+        impact_area: "measurement",
+        why_now: "Metrik setup'tan hemen sonra otomatik veri akışı kurmak karar kalitesini artırır.",
+        supporting_evidence: ["No connected sources"],
+        assumptions: [],
+        missing_data: ["connected_source"],
+        confidence: "medium",
+        expected_outcome: "Metrik akışı manuel girişe daha az bağımlı olur.",
+        user_action: "Sources altında GA4, Stripe veya uygun store kaynağını bağla.",
+      };
+    }
+
+    return {
+      title: "İlk haftalık hedefini yaz",
+      type: "weekly_focus",
+      priority: "medium",
+      impact_area: "activation",
+      why_now: "Tekrarlayan öneri yerine haftalık odak belirlemek execution'ı netleştirir.",
+      supporting_evidence: evidence.known_facts.filter((fact) => fact.includes("Metric")).slice(0, 2),
+      assumptions: [],
+      missing_data: [],
+      confidence: "medium",
+      expected_outcome: "Bu hafta hangi metriği ileri taşıyacağını netleştirirsin.",
+      user_action: "Goals veya Tasks tarafında bu haftanın tek growth hedefini yaz.",
+    };
+  }
+
+  return {
+    title: "Bir veri kaynağı bağla",
+    type: "source_setup",
+    priority: "medium",
+    impact_area: "measurement",
+    why_now: "Tekrar eden öneri yerine veri akışını güçlendirmek sonraki kararları keskinleştirir.",
+    supporting_evidence: evidence.source_state.connected_providers.length === 0 ? ["No connected sources"] : evidence.known_facts.slice(0, 2),
+    assumptions: [],
+    missing_data: evidence.source_state.connected_providers.length === 0 ? ["connected_source"] : [],
+    confidence: "medium",
+    expected_outcome: "AI ve growth yüzeyleri daha güncel verilere dayanır.",
+    user_action: "Settings > Sources altında bir veri kaynağı bağla.",
+  };
+}
+
 // ─── Rule-based critic pass (Playbook §12) ─────────────────────────────────
 
 /** Types that are only valid in pre-launch stages */
@@ -664,18 +855,22 @@ function applyCriticPass(
 
 // ─── Exported functions ─────────────────────────────────────────────────────
 
-export async function getFounderCoachAnswer(context: FounderCoachContext, userMessage: string): Promise<CoachRecommendationOutput> {
+export async function getFounderCoachAnswer(
+  context: FounderCoachContext,
+  userMessage: string,
+  previousAnswer?: PreviousCoachAnswer | null
+): Promise<CoachRecommendationOutput> {
   // Evidence-readiness gate
   if (shouldReturnDataCollectionFallback(context)) {
     return makeDataCollectionFallback(context);
   }
 
-  const prompt = await buildReactivePrompt(context, userMessage);
-  const raw = await callGemini<unknown>(prompt);
+  const prompt = await buildReactivePrompt(context, userMessage, previousAnswer);
+  const raw = await callCoachModel<unknown>(prompt, context);
   const sanitized = sanitizeRecommendationOutput(raw);
   if (sanitized) {
     const critiqued = applyCriticPass(sanitized, context);
-    if (critiqued) return critiqued;
+    if (critiqued) return avoidRepeatWithPrevious(critiqued, previousAnswer, context);
   }
   return buildStageFallback(context);
 }
@@ -687,7 +882,7 @@ export async function getFounderCoachSuggestion(context: FounderCoachContext): P
   }
 
   const prompt = await buildProactivePrompt(context);
-  const raw = await callGemini<unknown>(prompt);
+  const raw = await callCoachModel<unknown>(prompt, context);
   const sanitized = sanitizeRecommendationOutput(raw);
   if (sanitized) {
     const critiqued = applyCriticPass(sanitized, context);
