@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
+import AgentLayoutShell from "@/components/AgentLayoutShell";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function DashboardLayout({
@@ -20,14 +21,19 @@ export default async function DashboardLayout({
   }
 
   const products = await getShellProducts(session.user.id);
-
   const activeId = await getActiveProductId();
   const effectiveActiveId =
     products.find((p) => p.id === activeId)?.id ?? products[0]?.id;
 
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
-      {children}
+      {effectiveActiveId ? (
+        <AgentLayoutShell agentType="overview" productId={effectiveActiveId}>
+          {children}
+        </AgentLayoutShell>
+      ) : (
+        children
+      )}
     </AppShell>
   );
 }

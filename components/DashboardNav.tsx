@@ -74,10 +74,8 @@ export default function DashboardNav({
   const navItems = hasProducts
     ? [
         { href: "/dashboard", label: labels.overview, match: ["/dashboard"] },
-        isLaunchedProduct
-          ? { href: "/growth", label: labels.growth, match: ["/growth", "/metrics", "/tasks"] }
-          : { href: "/pre-launch", label: labels.launch, match: ["/pre-launch", "/tasks"] },
-        { href: "/settings", label: labels.settings, match: ["/settings"] },
+        { href: "/pre-launch", label: labels.launch, match: ["/pre-launch"] },
+        { href: isLaunchedProduct ? "/growth" : "/growth", label: labels.growth, match: ["/growth", "/metrics"] },
       ]
     : [{ href: "/dashboard", label: labels.overview, match: ["/dashboard"] }];
 
@@ -142,6 +140,18 @@ export default function DashboardNav({
 
         {/* Right: Board + Product selector + Avatar */}
         <div className="flex items-center gap-2">
+          {hasProducts && (
+            <Link
+              href={withLocale("/tasks")}
+              className={`hidden h-[36px] items-center rounded-full px-4 text-[13px] font-semibold transition-colors lg:flex border ${
+                isActive("/tasks", ["/tasks"])
+                  ? "bg-[#ffd9ef] text-[#0d0d12] border-white/70"
+                  : "bg-white/88 text-[#0d0d12] border-white/70 shadow-[0_10px_30px_rgba(25,27,39,0.06)] hover:bg-white"
+              }`}
+            >
+              Board
+            </Link>
+          )}
           <ProductSelector
             products={products.map(({ id, name }) => ({ id, name }))}
             activeProductId={activeProductId}

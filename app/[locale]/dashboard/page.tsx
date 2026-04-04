@@ -14,7 +14,6 @@ import TodayTasks from "@/components/today/TodayTasks";
 import SourceHealth from "@/components/today/SourceHealth";
 import CoachInsight from "@/components/today/CoachInsight";
 import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
-import AgentChatPanel from "@/components/AgentChatPanel";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -435,25 +434,15 @@ export default async function DashboardPage({
         <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-        <PrimaryAction
-          title={primaryAction.title}
-          description={primaryAction.description}
-          why={primaryAction.why}
-          cta={primaryAction.cta}
-          href={primaryAction.href}
-          accent={primaryAction.accent}
-          progress={primaryAction.progress}
-        />
-
-        <div className="flex flex-col rounded-2xl border border-[#e8e8e8] bg-white overflow-hidden" style={{ minHeight: 360 }}>
-          <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[#e8e8e8] shrink-0">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold bg-[#95dbda] text-[#0d0d12]">OA</div>
-            <span className="text-[13px] font-semibold text-[#0d0d12]">Overview Agent</span>
-          </div>
-          <AgentChatPanel agentType="overview" productId={product.id} />
-        </div>
-      </section>
+      <PrimaryAction
+        title={primaryAction.title}
+        description={primaryAction.description}
+        why={primaryAction.why}
+        cta={primaryAction.cta}
+        href={primaryAction.href}
+        accent={primaryAction.accent}
+        progress={primaryAction.progress}
+      />
 
       {/* 4. Blockers — only if they exist */}
       <BlockerAlert blockers={blockers} locale={uiLocale} />
