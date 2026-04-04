@@ -13,6 +13,7 @@ import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
+import AgentChatPanel from "@/components/AgentChatPanel";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
 import { getMetricSetup } from "@/lib/metric-setup";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
@@ -375,6 +376,15 @@ export default async function GrowthPage({
             </div>
             <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
           </div>
+        </div>
+
+        {/* Growth Agent */}
+        <div className="flex flex-col rounded-[20px] border border-[#e8e8e8] bg-white overflow-hidden" style={{ minHeight: 360 }}>
+          <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[#e8e8e8] shrink-0">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold bg-[#75fc96] text-[#0d0d12]">GA</div>
+            <span className="text-[13px] font-semibold text-[#0d0d12]">Growth Agent</span>
+          </div>
+          <AgentChatPanel agentType="growth" productId={product.id} />
         </div>
       </div>
     </div>

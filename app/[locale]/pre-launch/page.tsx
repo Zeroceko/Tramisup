@@ -13,6 +13,7 @@ import LaunchButton from "@/components/LaunchButton";
 import LaunchGateStatus, { GateState, ConfidenceIndicator } from "@/components/launch/LaunchGateStatus";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 import { prisma as prismaClient } from "@/lib/prisma";
+import AgentChatPanel from "@/components/AgentChatPanel";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(itemId: string) {
@@ -279,6 +280,17 @@ export default async function PreLaunchPage({
               nonCriticalRemaining={nonCriticalRemaining}
             />
           </div>
+        </div>
+      )}
+
+      {/* Launch Agent */}
+      {product && (
+        <div className="flex flex-col rounded-[20px] border border-[#e8e8e8] bg-white overflow-hidden" style={{ minHeight: 360 }}>
+          <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[#e8e8e8] shrink-0">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold bg-[#ffd7ef] text-[#0d0d12]">LA</div>
+            <span className="text-[13px] font-semibold text-[#0d0d12]">Launch Agent</span>
+          </div>
+          <AgentChatPanel agentType="launch" productId={product.id} />
         </div>
       )}
     </div>

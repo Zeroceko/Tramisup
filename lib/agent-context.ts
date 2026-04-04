@@ -6,10 +6,11 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import type { AgentType } from "@/lib/agent-types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type AgentType = "overview" | "launch" | "growth";
+export type { AgentType } from "@/lib/agent-types";
 
 export interface AgentContext {
   agentType: AgentType;

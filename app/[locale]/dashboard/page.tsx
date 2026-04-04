@@ -14,6 +14,7 @@ import TodayTasks from "@/components/today/TodayTasks";
 import SourceHealth from "@/components/today/SourceHealth";
 import CoachInsight from "@/components/today/CoachInsight";
 import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
+import AgentChatPanel from "@/components/AgentChatPanel";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -445,11 +446,13 @@ export default async function DashboardPage({
           progress={primaryAction.progress}
         />
 
-        <CoachInsight
-          productId={product.id}
-          stage={product.launchStatus || product.status?.replace("_", " ") || "PRE_LAUNCH"}
-          locale={uiLocale}
-        />
+        <div className="flex flex-col rounded-2xl border border-[#e8e8e8] bg-white overflow-hidden" style={{ minHeight: 360 }}>
+          <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[#e8e8e8] shrink-0">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold bg-[#95dbda] text-[#0d0d12]">OA</div>
+            <span className="text-[13px] font-semibold text-[#0d0d12]">Overview Agent</span>
+          </div>
+          <AgentChatPanel agentType="overview" productId={product.id} />
+        </div>
       </section>
 
       {/* 4. Blockers — only if they exist */}
