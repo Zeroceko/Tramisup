@@ -28,9 +28,19 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get("state");
     const error = searchParams.get("error");
 
-    const appBaseUrl = getAppBaseUrl();
+    // Try to extract locale from state before failing, default to master locale "en"
+    let earlyLocale = "en";
+    if (state) {
+      try {
+        const parsed = JSON.parse(Buffer.from(state, "base64").toString("utf8")) as { locale?: string };
+        earlyLocale = parsed.locale === "tr" ? "tr" : "en";
+      } catch {
+        // state unreadable — use default
+      }
+    }
+
     if (error || !code || !state) {
-      return NextResponse.redirect(buildReturnUrl({ locale: "tr", error: "google_play_denied" }));
+      return NextResponse.redirect(buildReturnUrl({ locale: earlyLocale, error: "google_play_denied" }));
     }
 
     const { productId, userId, locale, returnTo } = JSON.parse(Buffer.from(state, "base64").toString("utf8")) as {
@@ -120,6 +130,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(buildReturnUrl({ locale: resolvedLocale, returnTo, success: "google_play_connected" }));
   } catch (error) {
     console.error("Google Play callback failed:", error);
-    return NextResponse.redirect(buildReturnUrl({ locale: "tr", error: "oauth_crash" }));
+    return NextResponse.redirect(buildReturnUrl({ locale: "en", error: "oauth_crash" }));
   }
 }

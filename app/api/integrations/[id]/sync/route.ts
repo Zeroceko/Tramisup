@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { syncStripe } from "@/BrandLib/sync/stripe";
 import { syncGa4 } from "@/BrandLib/sync/ga4";
+import { syncAppStoreConnect } from "@/BrandLib/sync/app-store-connect";
+import { syncGooglePlay } from "@/BrandLib/sync/google-play";
 import type { MetricSyncMode } from "@/lib/sync-to-metric-entry";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -62,8 +64,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         recordsSynced = await syncStripe(integration.productId, integration.config);
       } else if (integration.provider === "GA4") {
         recordsSynced = await syncGa4(integration.productId, integration.config, syncMode, historyDays);
+      } else if (integration.provider === "APP_STORE_CONNECT") {
+        recordsSynced = await syncAppStoreConnect(integration.productId, integration.config);
+      } else if (integration.provider === "GOOGLE_PLAY") {
+        recordsSynced = await syncGooglePlay(integration.productId, integration.config);
       } else {
-        throw new Error("Provider sync algorithm not implemented");
+        throw new Error(`Provider sync not implemented for: ${integration.provider}`);
       }
 
       await prisma.syncJob.update({

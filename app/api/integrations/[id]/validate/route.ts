@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { validateGa4, validateStripe } from "@/lib/source-validation";
+import { validateGa4, validateStripe, validateAppStoreConnect, validateGooglePlay } from "@/lib/source-validation";
 
 export async function POST(
   request: Request,
@@ -37,6 +37,10 @@ export async function POST(
       result = await validateGa4(id);
     } else if (integration.provider === "STRIPE") {
       result = await validateStripe(id);
+    } else if (integration.provider === "APP_STORE_CONNECT") {
+      result = await validateAppStoreConnect(id);
+    } else if (integration.provider === "GOOGLE_PLAY") {
+      result = await validateGooglePlay(id);
     } else {
       return NextResponse.json(
         { error: "Validation not supported for this provider" },

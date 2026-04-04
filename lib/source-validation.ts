@@ -3,6 +3,9 @@ import { listGa4Properties, type Ga4PropertyOption } from "@/lib/ga4-admin";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { OAuth2Client } from "google-auth-library";
 import Stripe from "stripe";
+import { decryptSecret } from "@/lib/crypto";
+import { generateAppStoreConnectJWT } from "@/BrandLib/sync/app-store-connect";
+import { refreshGooglePlayToken } from "@/BrandLib/sync/google-play";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,7 +56,34 @@ export type StripeValidationResult = {
   };
 };
 
-export type ValidationResult = Ga4ValidationResult | StripeValidationResult;
+export type AppStoreConnectValidationResult = {
+  provider: "APP_STORE_CONNECT";
+  status: ValidationStatus;
+  checks: ValidationCheck[];
+  errorCode?: ValidationErrorCode;
+  preview?: {
+    appCount: number;
+    matchedApp: boolean;
+    accountDisplayName: string;
+  };
+};
+
+export type GooglePlayValidationResult = {
+  provider: "GOOGLE_PLAY";
+  status: ValidationStatus;
+  checks: ValidationCheck[];
+  errorCode?: ValidationErrorCode;
+  preview?: {
+    accountDisplayName: string;
+    tokenRefreshed: boolean;
+  };
+};
+
+export type ValidationResult =
+  | Ga4ValidationResult
+  | StripeValidationResult
+  | AppStoreConnectValidationResult
+  | GooglePlayValidationResult;
 
 // ─── GA4 Validation ──────────────────────────────────────────────────────────
 
@@ -326,6 +356,192 @@ export async function validateStripe(
       mrr: Math.round(mrr),
       currency: currency.toUpperCase(),
       recentCharges,
+    },
+  };
+}
+
+// ─── App Store Connect Validation ────────────────────────────────────────────
+
+export async function validateAppStoreConnect(
+  integrationId: string
+): Promise<AppStoreConnectValidationResult> {
+  const checks: ValidationCheck[] = [];
+
+  const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
+
+  if (!integration?.config) {
+    return {
+      provider: "APP_STORE_CONNECT",
+      status: "UNTRUSTED",
+      checks: [{ key: "config", label: "Bağlantı bilgileri", passed: false, detail: "App Store Connect yapılandırması bulunamadı." }],
+      errorCode: "MISSING_CONFIG",
+    };
+  }
+
+  const config = JSON.parse(integration.config) as {
+    issuerId?: string;
+    keyId?: string;
+    encryptedPrivateKey?: string;
+    appIdentifier?: string | null;
+    accountDisplayName?: string | null;
+  };
+
+  if (!config.issuerId || !config.keyId || !config.encryptedPrivateKey) {
+    checks.push({ key: "credentials", label: "API kimlik bilgileri", passed: false, detail: "issuerId, keyId veya private key eksik." });
+    return { provider: "APP_STORE_CONNECT", status: "UNTRUSTED", checks, errorCode: "MISSING_CONFIG" };
+  }
+
+  checks.push({ key: "credentials", label: "API kimlik bilgileri", passed: true, detail: "Issuer ID ve Key ID mevcut." });
+
+  // Check 2: JWT generation
+  let jwt: string;
+  try {
+    const privateKey = decryptSecret(config.encryptedPrivateKey);
+    jwt = generateAppStoreConnectJWT(config.issuerId, config.keyId, privateKey);
+    checks.push({ key: "jwt", label: "JWT oluşturma", passed: true });
+  } catch (err) {
+    checks.push({ key: "jwt", label: "JWT oluşturma", passed: false, detail: "Private key çözülemedi veya JWT üretilemedi." });
+    return { provider: "APP_STORE_CONNECT", status: "UNTRUSTED", checks, errorCode: "AUTH_EXPIRED" };
+  }
+
+  // Check 3: API reachability
+  let appCount = 0;
+  try {
+    const res = await fetch("https://api.appstoreconnect.apple.com/v1/apps?limit=5", {
+      headers: { Authorization: `Bearer ${jwt}` },
+      cache: "no-store",
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      checks.push({ key: "api_access", label: "API erişimi", passed: false, detail: "Apple API yetkilendirme hatası. Anahtar geçersiz veya süresi dolmuş olabilir." });
+      return { provider: "APP_STORE_CONNECT", status: "UNTRUSTED", checks, errorCode: "AUTH_EXPIRED" };
+    }
+
+    if (!res.ok) {
+      checks.push({ key: "api_access", label: "API erişimi", passed: false, detail: `Apple API ${res.status} döndürdü.` });
+      return { provider: "APP_STORE_CONNECT", status: "UNTRUSTED", checks, errorCode: "NETWORK" };
+    }
+
+    const data = await res.json() as { data?: unknown[] };
+    appCount = Array.isArray(data.data) ? data.data.length : 0;
+    checks.push({ key: "api_access", label: "API erişimi", passed: true, detail: `${appCount} uygulama görünüyor.` });
+  } catch {
+    checks.push({ key: "api_access", label: "API erişimi", passed: false, detail: "Apple API'ye ulaşılamadı." });
+    return { provider: "APP_STORE_CONNECT", status: "UNTRUSTED", checks, errorCode: "NETWORK" };
+  }
+
+  // Check 4: App identifier match (optional)
+  let matchedApp = false;
+  if (config.appIdentifier) {
+    try {
+      const res = await fetch(
+        `https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${encodeURIComponent(config.appIdentifier)}&limit=1`,
+        { headers: { Authorization: `Bearer ${jwt}` }, cache: "no-store" }
+      );
+      const data = await res.json() as { data?: unknown[] };
+      matchedApp = Array.isArray(data.data) && data.data.length > 0;
+      checks.push({
+        key: "app_match",
+        label: "Uygulama eşleştirme",
+        passed: matchedApp,
+        detail: matchedApp
+          ? `"${config.appIdentifier}" bu hesapta bulundu.`
+          : `"${config.appIdentifier}" bu hesapta bulunamadı. Bundle ID'yi kontrol et.`,
+      });
+    } catch {
+      checks.push({ key: "app_match", label: "Uygulama eşleştirme", passed: false, detail: "Bundle ID doğrulaması başarısız." });
+    }
+  }
+
+  return {
+    provider: "APP_STORE_CONNECT",
+    status: "TRUSTED",
+    checks,
+    preview: {
+      appCount,
+      matchedApp,
+      accountDisplayName: config.accountDisplayName ?? config.appIdentifier ?? "App Store Connect",
+    },
+  };
+}
+
+// ─── Google Play Validation ───────────────────────────────────────────────────
+
+export async function validateGooglePlay(
+  integrationId: string
+): Promise<GooglePlayValidationResult> {
+  const checks: ValidationCheck[] = [];
+
+  const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
+
+  if (!integration?.config) {
+    return {
+      provider: "GOOGLE_PLAY",
+      status: "UNTRUSTED",
+      checks: [{ key: "config", label: "Bağlantı bilgileri", passed: false, detail: "Google Play yapılandırması bulunamadı." }],
+      errorCode: "MISSING_CONFIG",
+    };
+  }
+
+  const config = JSON.parse(integration.config) as {
+    encryptedRefreshToken?: string | null;
+    encryptedAccessToken?: string;
+    accountDisplayName?: string;
+  };
+
+  if (!config.encryptedRefreshToken) {
+    checks.push({ key: "credentials", label: "OAuth kimlik bilgileri", passed: false, detail: "Refresh token eksik. Yeniden yetkilendirme gerekiyor." });
+    return { provider: "GOOGLE_PLAY", status: "UNTRUSTED", checks, errorCode: "AUTH_EXPIRED" };
+  }
+
+  checks.push({ key: "credentials", label: "OAuth kimlik bilgileri", passed: true, detail: "Refresh token mevcut." });
+
+  // Check 2: Token refresh
+  let accessToken: string;
+  try {
+    accessToken = await refreshGooglePlayToken({
+      encryptedRefreshToken: config.encryptedRefreshToken,
+      encryptedAccessToken: config.encryptedAccessToken ?? "",
+    });
+    checks.push({ key: "token_refresh", label: "Token yenileme", passed: true, detail: "Google OAuth token başarıyla yenilendi." });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "Token yenilenemedi.";
+    checks.push({ key: "token_refresh", label: "Token yenileme", passed: false, detail });
+    return { provider: "GOOGLE_PLAY", status: "UNTRUSTED", checks, errorCode: "AUTH_EXPIRED" };
+  }
+
+  // Check 3: Android Publisher API reachability (scope check)
+  try {
+    const res = await fetch(
+      "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/invalid-placeholder-bundle/details",
+      { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
+    );
+
+    // 404 = API accessible but app not found (expected) — token has androidpublisher scope
+    // 403 = Forbidden — token doesn't have androidpublisher scope
+    if (res.status === 403) {
+      checks.push({ key: "api_scope", label: "Android Publisher erişimi", passed: false, detail: "androidpublisher kapsamı yok. Hesabın Android Developer olması ve Google Play Console erişimi olması gerekiyor." });
+      return { provider: "GOOGLE_PLAY", status: "UNTRUSTED", checks, errorCode: "PERMISSION_DENIED" };
+    }
+
+    checks.push({
+      key: "api_scope",
+      label: "Android Publisher API erişimi",
+      passed: true,
+      detail: "API erişimi onaylandı. Paket adı yapılandırıldığında sync başlatılabilir.",
+    });
+  } catch {
+    checks.push({ key: "api_scope", label: "Android Publisher API erişimi", passed: false, detail: "Google Play API'ye ulaşılamadı." });
+    return { provider: "GOOGLE_PLAY", status: "UNTRUSTED", checks, errorCode: "NETWORK" };
+  }
+
+  return {
+    provider: "GOOGLE_PLAY",
+    status: "TRUSTED",
+    checks,
+    preview: {
+      accountDisplayName: config.accountDisplayName ?? "Google Play account",
+      tokenRefreshed: true,
     },
   };
 }
