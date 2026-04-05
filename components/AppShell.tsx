@@ -19,9 +19,10 @@ export default function AppShell({
   userName?: string;
 }) {
   return (
-    <div className="h-screen flex flex-col bg-[radial-gradient(circle_at_top_left,_rgba(255,220,232,0.95),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(255,244,232,0.92),_transparent_24%),radial-gradient(circle_at_center,_rgba(213,229,255,0.72),_transparent_34%),linear-gradient(180deg,_#fffaf8_0%,_#f7f8fb_48%,_#f8fbff_100%)] text-[#0d0d12]">
+    <div className="h-screen flex flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,215,239,0.7),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(255,235,105,0.25),_transparent_40%),linear-gradient(180deg,_#fdf9f6_0%,_#f8f5f0_100%)] text-[#0d0d12]">
       <DashboardNav products={products} activeProductId={activeProductId} userName={userName} />
-      <main className="flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-3 pb-3 sm:px-4 xl:px-5">
+      {/* overflow-hidden so AgentLayoutShell can use h-full; non-agent pages must provide their own scroll wrapper */}
+      <main className="flex-1 min-h-0 overflow-hidden">
         {children}
       </main>
     </div>

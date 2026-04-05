@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
+import PlainPageShell from "@/components/PlainPageShell";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function AccountLayout({
@@ -24,7 +25,7 @@ export default async function AccountLayout({
 
   return (
     <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>
-      {children}
+      <PlainPageShell>{children}</PlainPageShell>
     </AppShell>
   );
 }

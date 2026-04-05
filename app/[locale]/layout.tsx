@@ -28,7 +28,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={`${manrope.variable} ${outfit.variable}`}>
-      <body className="font-manrope bg-[#f6f6f6] text-[#0d0d12] antialiased">
+      <body className="font-manrope bg-[#f8f5f1] text-[#0d0d12] antialiased overflow-hidden">
         <NextIntlClientProvider messages={messages}>
           {children}
           <Toaster />

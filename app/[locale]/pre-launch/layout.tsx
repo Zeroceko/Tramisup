@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
 import AgentLayoutShell from "@/components/AgentLayoutShell";
+import PlainPageShell from "@/components/PlainPageShell";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function PreLaunchLayout({
@@ -32,7 +33,7 @@ export default async function PreLaunchLayout({
           {children}
         </AgentLayoutShell>
       ) : (
-        children
+        <PlainPageShell>{children}</PlainPageShell>
       )}
     </AppShell>
   );

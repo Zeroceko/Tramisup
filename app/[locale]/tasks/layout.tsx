@@ -20,8 +20,16 @@ export default async function TasksLayout({
   }
 
   const products = await getShellProducts(session.user.id);
-
   const activeProductId = await getActiveProductId();
 
-  return <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>{children}</AppShell>;
+  return (
+    <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>
+      {/* Tasks/Board fills full height */}
+      <div className="h-full overflow-hidden p-3">
+        <div className="h-full rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+          {children}
+        </div>
+      </div>
+    </AppShell>
+  );
 }

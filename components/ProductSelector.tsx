@@ -61,12 +61,12 @@ export default function ProductSelector({ products, activeProductId }: ProductSe
     <div className="relative hidden items-center sm:flex" ref={ref}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex h-11 items-center gap-2 rounded-full border border-white/65 bg-white/88 px-4 text-[14px] font-medium text-[#171717] shadow-[0_10px_30px_rgba(25,27,39,0.06)] transition hover:border-white hover:bg-white"
+        className="inline-flex h-[34px] items-center gap-2 rounded-full bg-white border border-[#e0ddd6] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f9f7f3]"
       >
-        <span className="h-2.5 w-2.5 rounded-full bg-[#95dbda] shadow-[0_0_0_4px_rgba(149,219,218,0.18)] shrink-0" />
-        <span className="max-w-[148px] truncate">{activeProduct?.name ?? labels.empty}</span>
+        <span className="h-2 w-2 rounded-full bg-[#95dbda] shrink-0" />
+        <span className="max-w-[130px] truncate">{activeProduct?.name ?? labels.empty}</span>
         <svg
-          className={`h-4 w-4 text-[#666d80] transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`h-3.5 w-3.5 text-[#8a8fa0] transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -74,7 +74,7 @@ export default function ProductSelector({ products, activeProductId }: ProductSe
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-3 w-60 overflow-hidden rounded-[22px] border border-white/70 bg-white/96 shadow-[0_24px_80px_rgba(20,18,28,0.14)] backdrop-blur">
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-[18px] border border-[#e8e4de] bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
           <div className="p-2">
             {products.length === 0 ? (
               <p className="px-3 py-2 text-[12px] text-[#666d80]">{labels.none}</p>
