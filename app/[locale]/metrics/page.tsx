@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import MetricsTrendChart from "@/components/MetricsTrendChart";
-import PageHeader from "@/components/PageHeader";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
 import GrowthIntegrationRecommendations from "@/components/GrowthIntegrationRecommendations";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
@@ -171,64 +170,56 @@ export default async function MetricsPage({
       ? isEn ? "Measurement system is taking shape" : "Ölçüm sistemi kuruluyor"
       : isEn ? "Measurement system" : "Ölçüm sistemi";
 
-  const headerDescription =
-    dataState === "no_setup"
-      ? isEn
-        ? "This is where you define what Tiramisup should read. Metrics, source fit, and data flow are managed in this workspace."
-        : "Tiramisup'un neyi okuyacağını burada tanımlarsın. Takip edeceğin metrikler, kaynak uyumu ve veri akışı bu çalışma alanında yönetilir."
-      : dataState === "first_entry"
-      ? isEn
-        ? `${selectedMetrics.length} metrics selected. Enter the first real values to create your baseline.`
-        : `${selectedMetrics.length} metrik seçili. İlk gerçek değerleri girerek baz çizgini oluştur.`
-      : dataState === "building"
-      ? isEn
-        ? `${entryCount} entries are in. Trend and rhythm insights become more reliable as data arrives regularly.`
-        : `${entryCount} giriş var. Trend ve ritim yorumları düzenli veri geldikçe daha güvenilir olacak.`
-      : isEn
-        ? `${selectedMetrics.length} metrics are selected for ${product.name}. Data flow, recent entries, and trends are managed here.`
-        : `${product.name} için ${selectedMetrics.length} metrik seçili. Veri akışı, son girişler ve trendler burada yönetiliyor.`;
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        eyebrow={isEn ? "Measurement system" : "Ölçüm sistemi"}
-        title={headerTitle}
-        description={headerDescription}
-      />
+      {/* 1. Compact header */}
+      <div>
+        <p className="text-[13px] font-medium text-[#6f7482]">
+          {isEn ? "Measurement system" : "Ölçüm sistemi"}
+        </p>
+        <h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+          {headerTitle}
+        </h1>
+      </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Tracked signal" : "Takip edilen sinyal"}</p>
-          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {selectedMetrics.length > 0
-              ? isEn ? `${selectedMetrics.length} metrics selected` : `${selectedMetrics.length} metrik seçili`
-              : isEn ? "No selection yet" : "Henüz seçim yok"}
+      {/* 2. Stat cards — numbers first */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Metrics" : "Metrikler"}
           </p>
-          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            {isEn ? "This is where you define which numbers matter across AARRR." : "AARRR boyunca hangi sayıları izleyeceğini burada düzenlersin."}
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
+            {selectedMetrics.length}
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`h-1 w-6 rounded-full ${selectedMetrics.length > 0 ? "bg-[#95dbda]" : "bg-[#d1d5db]"}`} />
+            <p className="text-[11px] text-[#98a0ae]">{isEn ? "tracked" : "takipte"}</p>
+          </div>
         </div>
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Source status" : "Kaynak durumu"}</p>
-          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {connectedSourceCount > 0
-              ? isEn ? `${connectedSourceCount} sources connected` : `${connectedSourceCount} kaynak bağlı`
-              : isEn ? "No connected source" : "Kaynak bağlı değil"}
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Sources" : "Kaynaklar"}
           </p>
-          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            {isEn ? "This is where automated flow and manual input balance is shaped." : "Otomatik veri akışı ve manuel giriş dengesi burada şekillenir."}
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
+            {connectedSourceCount}
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`h-1 w-6 rounded-full ${connectedSourceCount > 0 ? "bg-[#34d399]" : "bg-[#d1d5db]"}`} />
+            <p className="text-[11px] text-[#98a0ae]">{isEn ? "connected" : "bağlı"}</p>
+          </div>
         </div>
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Data rhythm" : "Veri ritmi"}</p>
-          <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-            {entryCount > 0
-              ? isEn ? `${entryCount} entries recorded` : `${entryCount} giriş kaydedildi`
-              : isEn ? "No data yet" : "Henüz veri yok"}
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Entries" : "Giriş"}
           </p>
-          <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-            {isEn ? "Growth insights become more reliable as this rhythm settles." : "Growth yorumları bu ritim oturdukça daha güvenilir hale gelir."}
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
+            {entryCount}
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`h-1 w-6 rounded-full ${entryCount > 0 ? "bg-[#fbbf24]" : "bg-[#d1d5db]"}`} />
+            <p className="text-[11px] text-[#98a0ae]">{isEn ? "recorded" : "kaydedildi"}</p>
+          </div>
         </div>
       </div>
 
@@ -250,68 +241,47 @@ export default async function MetricsPage({
 
       {/* no_setup state */}
       {dataState === "no_setup" && (
-        <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-white p-8">
-          <p className="text-[15px] font-semibold text-[#0d0d12]">{isEn ? "First job: define your measurement setup" : "İlk iş: ölçüm yapısını netleştir"}</p>
-          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
+        <div className="rounded-[18px] border border-dashed border-[#e8e4de] bg-white p-6">
+          <p className="text-[14px] font-semibold text-[#0d0d12]">{isEn ? "Select metrics to start tracking" : "Takip etmek için metrik seç"}</p>
+          <p className="mt-1 text-[13px] text-[#666d80]">
             {isEn
-              ? "Growth gives you interpretation and prioritization. But for those recommendations to be trustworthy, you first need to define what you measure here."
-              : "Growth ekranında yorum ve öncelik görürsün. Ama o yorumun güvenilir olması için önce burada neyi ölçtüğünü seçmen gerekir."}
+              ? "Choose one key metric per AARRR stage above."
+              : "Yukarıdan her AARRR aşaması için 1 ana metrik seç."}
           </p>
         </div>
       )}
 
-      {/* first_entry state: prominent form + explainer */}
+      {/* first_entry state: form + compact hint */}
       {dataState === "first_entry" && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
           <MetricEntryForm
             productId={product.id}
             selectedMetrics={selectedMetrics}
             latestEntry={latestEntry}
             locale={locale}
           />
-          <div className="rounded-[16px] border border-[#e8e8e8] bg-[#fafafa] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-              {isEn ? "What appears after you fill this in?" : "Bunu doldurursan ne göreceksin?"}
-            </p>
-            <div className="mt-4 space-y-3">
-              {selectedMetrics.map((metric) => (
-                <div key={metric.stage} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#e8e8e8] bg-white text-[10px] font-bold text-[#666d80]">
-                    {metric.stage[0]}
-                  </span>
-                  <div>
-                    <p className="text-[13px] font-semibold text-[#0d0d12]">{metric.metricName}</p>
-                    <p className="text-[11px] text-[#8a8fa0]">{metric.stage} · {isEn ? "Baseline will be created" : "Baz çizgisi kurulacak"}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 rounded-[12px] bg-white p-4">
+          <div className="space-y-3">
+            <div className="rounded-[18px] border border-[#e8e4de] bg-white p-4">
               <p className="text-[12px] font-semibold text-[#0d0d12]">{isEn ? "After 5 entries" : "5 giriş sonra"}</p>
               <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
-                {isEn ? "Trend chart, weak-link detection, and growth rhythm become visible." : "Trend grafiği, zayıf halka tespiti ve büyüme ritmi görünür hale gelir."}
+                {isEn ? "Trend chart and weak-link detection become visible." : "Trend grafiği ve zayıf halka tespiti görünür olur."}
               </p>
             </div>
-            <div className="mt-3 rounded-[12px] border border-[#d7efef] bg-[#f4fbfb] p-4">
-              <p className="text-[12px] font-semibold text-[#0d0d12]">
-                {isEn ? "You can speed this up by connecting sources" : "Kaynak bağlayarak bunu hızlandırabilirsin"}
-              </p>
-              <p className="mt-1 text-[11px] leading-5 text-[#6a7283]">
-                {connectedSourceCount > 0
-                  ? isEn
-                    ? "With connected sources, data flow becomes more consistent. You can add more sources from Integrations to reduce manual input."
-                    : "Bağlı kaynakların oldukça veri akışı daha düzenli olur. İstersen integrations ekranından yeni kaynak ekleyip manuel giriş yükünü azaltabilirsin."
-                  : isEn
-                    ? "When sources like GA4 or Stripe are connected, data flows faster and more accurately. That makes it easier to act on signals instead of manually typing numbers."
-                    : "GA4 veya Stripe gibi kaynaklar bağlandığında veriler daha hızlı ve daha doğru akar. Böylece sadece sayı girmek yerine sinyallere göre aksiyon alman kolaylaşır."}
-              </p>
+            {connectedSourceCount === 0 && (
               <a
                 href={`/${locale}/integrations`}
-                className="mt-3 inline-flex h-9 items-center justify-center rounded-full border border-[#0d0d12] bg-white px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#0d0d12] hover:text-white"
+                className="flex items-center gap-2 rounded-[18px] border border-[#d7efef] bg-[#f4fbfb] p-4 transition hover:bg-[#eaf7f7]"
               >
-                {isEn ? "Open integrations" : "Entegrasyonlara git"}
+                <div>
+                  <p className="text-[12px] font-semibold text-[#0d0d12]">
+                    {isEn ? "Connect a source" : "Kaynak bağla"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#6a7283]">
+                    {isEn ? "GA4, Stripe — automate data flow" : "GA4, Stripe — veri akışını otomatikleştir"}
+                  </p>
+                </div>
               </a>
-            </div>
+            )}
           </div>
         </div>
       )}

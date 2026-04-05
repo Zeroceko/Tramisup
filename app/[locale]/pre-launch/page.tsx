@@ -6,8 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
 import { getActiveProductId } from "@/lib/activeProduct";
 import ChecklistSection from "@/components/ChecklistSection";
-import ActionsSection from "@/components/ActionsSection";
-import PageHeader from "@/components/PageHeader";
 import BlockerSummary from "@/components/BlockerSummary";
 import LaunchButton from "@/components/LaunchButton";
 import LaunchGateStatus, { GateState, ConfidenceIndicator } from "@/components/launch/LaunchGateStatus";
@@ -216,14 +214,83 @@ export default async function PreLaunchPage({
     TECH: activeChecklists.filter((c) => c.category === "TECH"),
   };
 
+  // Category progress for stat cards
+  const catProgress = (["PRODUCT", "TECH", "LEGAL", "MARKETING"] as const).map((cat) => {
+    const items = activeChecklists.filter((c) => c.category === cat);
+    const done = items.filter((i) => i.completed).length;
+    return { cat, done, total: items.length };
+  }).filter((c) => c.total > 0);
+
+  const totalItems = activeChecklists.length;
+  const completedItems = activeChecklists.filter((i) => i.completed).length;
+
   return (
     <div className="space-y-4">
-      <PageHeader
-        eyebrow={isEn ? "How ready is your product for launch?" : "Ürünün laucha ne kadar hazır?"}
-        title="Launch Readiness"
-      />
+      {/* 1. Compact header */}
+      <div>
+        <p className="text-[13px] font-medium text-[#6f7482]">
+          {isEn ? "How ready is your product?" : "Ürünün ne kadar hazır?"}
+        </p>
+        <h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+          Launch Readiness
+        </h1>
+      </div>
 
-      {/* Gate status hero */}
+      {/* 2. Stat cards — prominent numbers */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Readiness" : "Hazırlık"}
+          </p>
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
+            %{weightedScore}
+          </p>
+          <div className="mt-2 h-1.5 rounded-full bg-[#e8e8e8]">
+            <div
+              className="h-1.5 rounded-full bg-[#95dbda] transition-all"
+              style={{ width: `${weightedScore}%` }}
+            />
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Completed" : "Tamamlanan"}
+          </p>
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#065f46]">
+            {completedItems}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-1 w-6 rounded-full bg-[#34d399]" />
+            <p className="text-[11px] text-[#98a0ae]">/ {totalItems} {isEn ? "items" : "madde"}</p>
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Blockers" : "Blokajlar"}
+          </p>
+          <p className={`mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none ${blockers.length > 0 ? "text-[#991b1b]" : "text-[#065f46]"}`}>
+            {blockers.length}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`h-1 w-6 rounded-full ${blockers.length > 0 ? "bg-[#f87171]" : "bg-[#34d399]"}`} />
+            <p className="text-[11px] text-[#98a0ae]">{blockers.length > 0 ? (isEn ? "need resolution" : "çözülmeli") : (isEn ? "all clear" : "sorun yok")}</p>
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
+            {isEn ? "Pending Tasks" : "Bekleyen Görev"}
+          </p>
+          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
+            {tasks.length}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-1 w-6 rounded-full bg-[#fbbf24]" />
+            <p className="text-[11px] text-[#98a0ae]">{isEn ? "open tasks" : "açık görev"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Gate status — compact */}
       <LaunchGateStatus
         gateState={gateState}
         weightedScore={weightedScore}
@@ -234,7 +301,7 @@ export default async function PreLaunchPage({
         locale={locale}
       />
 
-      {/* Blockers — only shown when there are active or ignored blockers */}
+      {/* 4. Blockers — only shown when there are active or ignored blockers */}
       {(blockers.length > 0 || ignoredBlockers.length > 0) && (
         <BlockerSummary
           blockers={blockers}
@@ -245,7 +312,7 @@ export default async function PreLaunchPage({
         />
       )}
 
-      {/* Checklist by category */}
+      {/* 5. Checklist by category */}
       <ChecklistSection
         checklistsByCategory={checklistsByCategory}
         productId={product?.id || ""}
@@ -254,14 +321,9 @@ export default async function PreLaunchPage({
         locale={locale}
       />
 
-      {/* Pending tasks linked to this product */}
-      {tasks.length > 0 && (
-        <ActionsSection tasks={tasks} productId={product?.id || ""} />
-      )}
-
-      {/* Launch button — only for PRE_LAUNCH products */}
+      {/* 6. Launch button — only for PRE_LAUNCH products */}
       {product && product.status === ProductStatus.PRE_LAUNCH && (
-        <div className="rounded-[20px] border border-[#e8e8e8] bg-white p-8 text-center">
+        <div className="rounded-[18px] border border-[#e8e4de] bg-white p-6 text-center">
           <p className="text-[14px] font-semibold text-[#0d0d12]">
             {isEn ? "Ready to go live?" : "Ürününü yayınladın mı?"}
           </p>
@@ -281,7 +343,6 @@ export default async function PreLaunchPage({
           </div>
         </div>
       )}
-
     </div>
   );
 }
