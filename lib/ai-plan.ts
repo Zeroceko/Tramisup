@@ -228,6 +228,12 @@ STAGE KURALI:
 - Bu iki aşamada görevler launch hazırlığına değil growth, measurement, activation, retention veya revenue odağına hizmet etmeli.
 - Eğer mevcut aşama launch öncesiyse growth ölçekleme görevi yazma.
 
+ÖNCELİK KURALI (KRİTİK):
+Priority atamasında çok seçici ol. Çoğu madde MEDIUM veya LOW olmalı.
+- HIGH = Sadece bu yapılmazsa ürün yayına ÇIKAMAZ veya ciddi hukuki/güvenlik riski var. Örnek: KVKK/GDPR zorunlulukları, kritik güvenlik açıkları, app store reject nedenleri. Maksimum 2-3 madde HIGH olabilir.
+- MEDIUM = Önemli ama ürün bunlar olmadan da yayına çıkabilir. Çoğu checklist maddesi bu seviyede olmalı. Örnek: UX iyileştirmeleri, performans optimizasyonları, eksik edge-case handling.
+- LOW = İyileştirme, polish, nice-to-have. Örnek: dashboard görsel iyileştirmeleri, ek entegrasyonlar, bonus özellikler.
+
 ÖZEL KURAL: Asla ezber veya jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere atıf yap.
 DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
 
