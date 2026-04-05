@@ -6,13 +6,10 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
-import TodayHero from "@/components/today/TodayHero";
 import PrimaryAction from "@/components/today/PrimaryAction";
-import DecisionStrip from "@/components/today/DecisionStrip";
 import BlockerAlert from "@/components/today/BlockerAlert";
 import TodayTasks from "@/components/today/TodayTasks";
 import SourceHealth from "@/components/today/SourceHealth";
-import CoachInsight from "@/components/today/CoachInsight";
 import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
 
 // ---------------------------------------------------------------------------
@@ -268,13 +265,14 @@ export default async function DashboardPage({
   if (!product) {
     return (
       <div>
-        <TodayHero
-          userName={session?.user?.name}
-          productName={isEn ? "Welcome" : "Hoş geldin"}
-          phase="pre-launch"
-          statusLine={isEn ? "Create your first product to get started." : "Başlamak için ilk ürününü oluştur."}
-          locale={uiLocale}
-        />
+        <div className="mb-6">
+          <h1 className="text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+            {isEn ? "Welcome" : "Hoş geldin"}{session?.user?.name ? `, ${session.user.name}` : ""}
+          </h1>
+          <p className="mt-1.5 text-[13px] text-[#6f7482]">
+            {isEn ? "Create your first product to get started." : "Başlamak için ilk ürününü oluştur."}
+          </p>
+        </div>
         <FirstRunOnboarding locale={uiLocale} userName={session?.user?.name} userEmail={session?.user?.email} />
       </div>
     );
@@ -336,6 +334,8 @@ export default async function DashboardPage({
 
   const pendingTasks = taskCountsRaw.find((t) => t.status === "TODO")?._count?.status ?? 0;
   const inProgressTasks = taskCountsRaw.find((t) => t.status === "IN_PROGRESS")?._count?.status ?? 0;
+  const doneTasks = taskCountsRaw.find((t) => t.status === "DONE")?._count?.status ?? 0;
+  const totalTasks = taskCountsRaw.reduce((sum, t) => sum + (t._count?.status ?? 0), 0);
   const totalPending = pendingTasks + inProgressTasks;
 
   const selections = (savedMetricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
@@ -417,71 +417,127 @@ export default async function DashboardPage({
     dueDate: t.dueDate?.toISOString() ?? null,
   }));
 
+  // ---- Render helpers ----
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (isEn) return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    return hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+  })();
+
+  const phaseLabel = isEn
+    ? (phase === "launched" ? "Launched" : "Pre-launch")
+    : (phase === "launched" ? "Yayında" : "Launch hazırlığı");
+  const phaseDot = phase === "launched" ? "bg-[#34d399]" : "bg-[#f6c342]";
+  const phaseBg = phase === "launched" ? "bg-[#e8faf4]" : "bg-[#fff8e1]";
+
   // ---- Render ----
   return (
     <div className="space-y-5">
-      {/* 1. Hero */}
-      <TodayHero
-        userName={session?.user?.name}
-        productName={product.name}
-        phase={product.status === ProductStatus.GROWING ? "growing" : phase}
-        statusLine={statusLine}
-        locale={uiLocale}
-      />
+      {/* 1. Compact hero — inline greeting + product name + badge */}
+      <div>
+        <p className="text-[13px] font-medium text-[#6f7482]">
+          {greeting}{session?.user?.name ? `, ${session.user.name}` : ""}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <h1 className="text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+            {product.name}
+          </h1>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${phaseBg}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${phaseDot}`} />
+            {phaseLabel}
+          </span>
+        </div>
+        <p className="mt-1.5 text-[13px] text-[#6f7482] max-w-xl">{statusLine}</p>
+      </div>
 
-      {/* 2. Launch moment banner — shown once after launch */}
+      {/* 2. Launch moment banner */}
       {justLaunched && (
         <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
-      <PrimaryAction
-        title={primaryAction.title}
-        description={primaryAction.description}
-        why={primaryAction.why}
-        cta={primaryAction.cta}
-        href={primaryAction.href}
-        accent={primaryAction.accent}
-        progress={primaryAction.progress}
-      />
+      {/* 3. Stat cards — prominent numbers first */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label={isEn ? "Total Tasks" : "Toplam Görev"}
+          value={String(totalTasks)}
+          hint={`${doneTasks} ${isEn ? "completed" : "tamamlandı"}`}
+          color="blue"
+        />
+        <StatCard
+          label={isEn ? "Pending" : "Bekleyen"}
+          value={String(totalPending)}
+          hint={`${inProgressTasks} ${isEn ? "in progress" : "devam ediyor"}`}
+          color={totalPending > 0 ? "amber" : "green"}
+        />
+        <StatCard
+          label={isEn ? "Completed" : "Tamamlanan"}
+          value={String(doneTasks)}
+          hint={totalTasks > 0 ? `%${Math.round((doneTasks / totalTasks) * 100)}` : "—"}
+          color="green"
+        />
+        <StatCard
+          label={isEn ? "Blockers" : "Blokajlar"}
+          value={String(blockers.length)}
+          hint={blockers.length > 0 ? (isEn ? "need attention" : "dikkat bekliyor") : (isEn ? "all clear" : "sorun yok")}
+          color={blockers.length > 0 ? "red" : "green"}
+        />
+      </div>
 
-      {/* 4. Blockers — only if they exist */}
+      {/* 4. Two-column: Primary Action + Decision Strip */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_1fr]">
+        {/* Primary action — compact */}
+        <PrimaryAction
+          title={primaryAction.title}
+          description={primaryAction.description}
+          why={primaryAction.why}
+          cta={primaryAction.cta}
+          href={primaryAction.href}
+          accent={primaryAction.accent}
+          progress={primaryAction.progress}
+        />
+
+        {/* Quick indicators */}
+        <div className="grid grid-cols-2 gap-3">
+          {indicators.map((ind) => (
+            <DecisionCard key={ind.label} indicator={ind} />
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Blockers — only if they exist */}
       <BlockerAlert blockers={blockers} locale={uiLocale} />
 
-      {/* 5. Board layout — KPI strip + work surfaces */}
-      <section className="space-y-4">
-        <DecisionStrip indicators={indicators} />
+      {/* 6. Board layout — tasks + workspace pulse */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
-
-          <div className="space-y-4">
-            {isLaunched && selectedMetricCount > 0 ? (
-              <SourceHealth
-                connectedCount={connectedCount}
-                errorCount={errorCount}
-                totalMetrics={selectedMetricCount}
-                automatedMetrics={0}
-                enteredToday={enteredToday}
-                locale={uiLocale}
-              />
-            ) : (
-              <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                  {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
-                </p>
-                <h3 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                  {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
-                </h3>
-                <p className="mt-2 text-[14px] leading-7 text-[#5e6678]">
-                  {uiLocale === "en"
-                    ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
-                    : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
-                </p>
-              </div>
-            )}
-          </div>
+        <div className="space-y-4">
+          {isLaunched && selectedMetricCount > 0 ? (
+            <SourceHealth
+              connectedCount={connectedCount}
+              errorCount={errorCount}
+              totalMetrics={selectedMetricCount}
+              automatedMetrics={0}
+              enteredToday={enteredToday}
+              locale={uiLocale}
+            />
+          ) : (
+            <div className="rounded-[20px] border border-[#e8e4de] bg-white p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
+              </p>
+              <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
+              </h3>
+              <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
+                {uiLocale === "en"
+                  ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
+                  : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
+              </p>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }
@@ -594,4 +650,95 @@ function buildIndicators(
   }
 
   return indicators;
+}
+
+// ---------------------------------------------------------------------------
+// Stat Card — big number with label
+// ---------------------------------------------------------------------------
+
+function StatCard({
+  label,
+  value,
+  hint,
+  color,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  color: "blue" | "amber" | "green" | "red";
+}) {
+  const colorMap = {
+    blue: { value: "text-[#0d0d12]", bar: "bg-[#95dbda]" },
+    amber: { value: "text-[#92400e]", bar: "bg-[#fbbf24]" },
+    green: { value: "text-[#065f46]", bar: "bg-[#34d399]" },
+    red: { value: "text-[#991b1b]", bar: "bg-[#f87171]" },
+  };
+  const c = colorMap[color];
+
+  return (
+    <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
+      <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">{label}</p>
+      <p className={`mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none ${c.value}`}>
+        {value}
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <div className={`h-1 w-6 rounded-full ${c.bar}`} />
+        <p className="text-[11px] text-[#98a0ae]">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Decision Card — small indicator card for the grid
+// ---------------------------------------------------------------------------
+
+function DecisionCard({
+  indicator,
+}: {
+  indicator: {
+    label: string;
+    value: string;
+    status: "healthy" | "warning" | "neutral" | "empty";
+    hint?: string;
+    href?: string;
+  };
+}) {
+  const statusDot: Record<string, string> = {
+    healthy: "bg-[#34d399]",
+    warning: "bg-[#f59e0b]",
+    neutral: "bg-[#94a3b8]",
+    empty: "bg-[#d1d5db]",
+  };
+  const statusColor: Record<string, string> = {
+    healthy: "text-[#0d0d12]",
+    warning: "text-[#92400e]",
+    neutral: "text-[#0d0d12]",
+    empty: "text-[#94a3b8]",
+  };
+
+  const content = (
+    <>
+      <div className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 rounded-full ${statusDot[indicator.status]}`} />
+        <span className="text-[11px] font-medium text-[#737988]">{indicator.label}</span>
+        {indicator.href && <span className="ml-auto text-[10px] text-[#c8ccd6]">&#8599;</span>}
+      </div>
+      <p className={`mt-1.5 text-[22px] font-bold tracking-[-0.02em] leading-tight ${statusColor[indicator.status]}`}>
+        {indicator.value}
+      </p>
+      {indicator.hint && <p className="mt-1 text-[10px] text-[#98a0ae]">{indicator.hint}</p>}
+    </>
+  );
+
+  const cls = "rounded-[16px] border border-[#e8e4de] bg-white px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-md";
+
+  if (indicator.href) {
+    return (
+      <a href={indicator.href} className={`${cls} block`}>
+        {content}
+      </a>
+    );
+  }
+  return <div className={cls}>{content}</div>;
 }
