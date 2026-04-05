@@ -28,7 +28,7 @@ export default async function GrowthLayout({
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
       {effectiveActiveId ? (
-        <AgentLayoutShell agentType="growth" productId={effectiveActiveId}>
+        <AgentLayoutShell agentType="growth" productId={effectiveActiveId} locale={locale}>
           {children}
         </AgentLayoutShell>
       ) : (

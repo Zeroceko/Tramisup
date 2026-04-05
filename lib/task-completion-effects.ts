@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import {
+  normalizeLaunchChecklistPriority,
+  normalizeStoredLaunchChecklistPriorities,
+} from "@/lib/launch-checklist-priority";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +31,8 @@ export async function computeCompletionEffects(
   productId: string,
   checklist: LinkedChecklist | null
 ): Promise<CompletionEffects> {
+  await normalizeStoredLaunchChecklistPriorities(productId);
+
   const effects: CompletionEffects = {
     checklistCompleted: null,
     blockersRemaining: 0,
@@ -63,7 +69,8 @@ export async function computeCompletionEffects(
   //    Only trigger blocker milestone if THIS completion cleared a HIGH item
   if (
     effects.checklistCompleted &&
-    checklist?.priority === "HIGH" &&
+    checklist &&
+    normalizeLaunchChecklistPriority(checklist) === "HIGH" &&
     highBlockers === 0
   ) {
     effects.milestones.push("ALL_HIGH_BLOCKERS_CLEARED");

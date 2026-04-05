@@ -11,6 +11,10 @@ import LaunchButton from "@/components/LaunchButton";
 import LaunchGateStatus, { GateState, ConfidenceIndicator } from "@/components/launch/LaunchGateStatus";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 import { prisma as prismaClient } from "@/lib/prisma";
+import {
+  normalizeLaunchChecklistPriority,
+  normalizeStoredLaunchChecklistPriorities,
+} from "@/lib/launch-checklist-priority";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(itemId: string) {
@@ -37,7 +41,7 @@ async function createTaskFromChecklistItem(itemId: string) {
         productId: checklistItem.productId,
         title: checklistItem.title,
         description: `From launch checklist: ${checklistItem.title}`,
-        priority: checklistItem.priority,
+        priority: normalizeLaunchChecklistPriority(checklistItem),
         status: "TODO",
       },
     });
@@ -118,6 +122,10 @@ export default async function PreLaunchPage({
     },
   });
 
+  if (product?.id) {
+    await normalizeStoredLaunchChecklistPriorities(product.id);
+  }
+
   const checklists = await prisma.launchChecklist.findMany({
     where: { productId: product?.id },
     orderBy: [{ category: "asc" }, { order: "asc" }],
@@ -144,7 +152,7 @@ export default async function PreLaunchPage({
 
   // --- Blockers ---
   const blockers = activeChecklists
-    .filter((item) => item.priority === "HIGH" && !item.completed)
+    .filter((item) => normalizeLaunchChecklistPriority(item) === "HIGH" && !item.completed)
     .map((item) => ({
       id: item.id,
       title: item.title,
@@ -154,7 +162,7 @@ export default async function PreLaunchPage({
     }));
 
   const ignoredBlockers = ignoredChecklistItems
-    .filter((item) => item.priority === "HIGH" && !item.completed)
+    .filter((item) => normalizeLaunchChecklistPriority(item) === "HIGH" && !item.completed)
     .map((item) => ({
       id: item.id,
       title: item.title,
@@ -165,7 +173,7 @@ export default async function PreLaunchPage({
 
   // Non-critical remaining = incomplete items that are not HIGH priority blockers
   const nonCriticalRemaining = activeChecklists.filter(
-    (item) => !item.completed && item.priority !== "HIGH"
+    (item) => !item.completed && normalizeLaunchChecklistPriority(item) !== "HIGH"
   ).length;
 
   // --- Gate state ---
@@ -193,7 +201,7 @@ export default async function PreLaunchPage({
       .filter((i) => i.completed)
       .reduce((s, i) => s + getWeight(i.priority), 0);
     const score = catTotal > 0 ? Math.round((catDone / catTotal) * 100) : 0;
-    const hasBlocker = items.some((i) => i.priority === "HIGH" && !i.completed);
+    const hasBlocker = items.some((i) => normalizeLaunchChecklistPriority(i) === "HIGH" && !i.completed);
     const status = hasBlocker ? "BLOCKED" : score === 100 ? "CLEAR" : "PARTIAL";
     return { label, score, status };
   }

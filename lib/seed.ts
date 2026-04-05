@@ -6,6 +6,7 @@ import type {
   MetricSource,
 } from "@prisma/client";
 import type { AiPlan } from "@/lib/ai-plan";
+import { normalizeLaunchChecklistPriority } from "@/lib/launch-checklist-priority";
 
 // Seed AI-generated plan (launch checklist, growth checklist, tasks)
 export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: any) {
@@ -19,7 +20,7 @@ export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: an
         category: item.category,
         title: item.title,
         description: item.description,
-        priority: item.priority,
+        priority: normalizeLaunchChecklistPriority(item),
         order: item.order,
         completed: false,
       },

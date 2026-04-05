@@ -21,10 +21,20 @@ export interface AgentAction {
   };
 }
 
+export interface AgentSuggestion {
+  label: string;
+  intent?: "ask" | "create_task";
+  payload?: {
+    title: string;
+    description?: string;
+    priority?: "HIGH" | "MEDIUM" | "LOW";
+  };
+}
+
 export interface AgentResponse {
   message: string;
   actions: AgentAction[];
-  suggestions: string[];
+  suggestions: AgentSuggestion[];
 }
 
 // ─── System prompts ──────────────────────────────────────────────────────────
@@ -49,13 +59,22 @@ Response rules:
 - Reference actual numbers from the data when possible
 - Never speculate beyond what the data shows
 - If data is missing, say so and suggest what to track
+- Suggestions must be clickable next actions, not follow-up questions
+- Suggestion chips should be task-worthy action statements
 - Respond in the same language as the user (Turkish or English)
 
 You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
-  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+  "suggestions": [
+    { "label": "follow-up question", "intent": "ask" },
+    {
+      "label": "task-worthy next step",
+      "intent": "create_task",
+      "payload": { "title": "...", "description": "...", "priority": "MEDIUM" }
+    }
+  ]
 }
 
 Actions shape (only include when creating a task):
@@ -83,13 +102,22 @@ Response rules:
 - When explaining how to do something, give step-by-step guidance
 - Reference the actual checklist state (completed/remaining) in your responses
 - If user says "board'a ekle" or "add to board" or similar, create a task action
+- Suggestions must be clickable next actions, not follow-up questions
+- Suggestion chips should be task-worthy action statements
 - Respond in the same language as the user (Turkish or English)
 
 You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
-  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+  "suggestions": [
+    { "label": "follow-up question", "intent": "ask" },
+    {
+      "label": "task-worthy next step",
+      "intent": "create_task",
+      "payload": { "title": "...", "description": "...", "priority": "MEDIUM" }
+    }
+  ]
 }
 
 Actions shape (only include when creating a task):
@@ -117,13 +145,22 @@ Response rules:
 - If metrics are missing, explain why tracking that metric matters first
 - When recommending experiments, estimate expected impact based on stage
 - Be honest about uncertainty — if data is insufficient, say so
+- Suggestions must be clickable next actions, not follow-up questions
+- Suggestion chips should be task-worthy action statements
 - Respond in the same language as the user (Turkish or English)
 
 You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
-  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+  "suggestions": [
+    { "label": "follow-up question", "intent": "ask" },
+    {
+      "label": "task-worthy next step",
+      "intent": "create_task",
+      "payload": { "title": "...", "description": "...", "priority": "MEDIUM" }
+    }
+  ]
 }
 
 Actions shape (only include when creating a task):

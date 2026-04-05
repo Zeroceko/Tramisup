@@ -7,6 +7,10 @@
 
 import { prisma } from "@/lib/prisma";
 import type { AgentType } from "@/lib/agent-types";
+import {
+  normalizeLaunchChecklistPriority,
+  normalizeStoredLaunchChecklistPriorities,
+} from "@/lib/launch-checklist-priority";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +52,7 @@ async function buildOverviewContext(productId: string): Promise<string> {
   const totalChecklist = checklist.length;
   const doneChecklist = checklist.filter((c) => c.completed).length;
   const highBlockers = checklist.filter(
-    (c) => c.priority === "HIGH" && !c.completed
+    (c) => normalizeLaunchChecklistPriority(c) === "HIGH" && !c.completed
   ).length;
 
   return JSON.stringify({
@@ -100,12 +104,12 @@ async function buildLaunchContext(productId: string): Promise<string> {
     byCategory[cat].items.push({
       title: item.title,
       completed: item.completed,
-      priority: item.priority,
+      priority: normalizeLaunchChecklistPriority(item),
     });
   }
 
   const highBlockers = checklist
-    .filter((c) => c.priority === "HIGH" && !c.completed)
+    .filter((c) => normalizeLaunchChecklistPriority(c) === "HIGH" && !c.completed)
     .map((c) => c.title);
 
   return JSON.stringify({
@@ -188,6 +192,7 @@ export async function buildAgentContext(
   });
 
   if (!product) throw new Error(`Product ${productId} not found`);
+  await normalizeStoredLaunchChecklistPriorities(productId);
 
   let contextSummary: string;
   switch (agentType) {

@@ -3,6 +3,7 @@ import { getGrowthWorkspaceStep, type GrowthWorkspaceStepKey } from "@/lib/growt
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import { normalizeProductContext, type NormalizedProductContext } from "@/lib/normalize-product-context";
 import { buildEvidenceMap, type EvidenceMap } from "@/lib/build-evidence-map";
+import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 
 export type FounderCoachContext = {
   product: {
@@ -107,6 +108,8 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
   ]);
 
   if (!product) throw new Error("Product not found");
+  await normalizeStoredLaunchChecklistPriorities(productId);
+
   const selections = (metricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
   const ignoredLaunchChecklistIds = metricSetup?.ignoredChecklistIds ?? [];
   const selectedMetricCount = selections.reduce(

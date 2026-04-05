@@ -10,10 +10,55 @@ import {
   type AgentMessage,
   type AgentResponse,
   type AgentAction,
+  type AgentSuggestion,
 } from "@/lib/agent-prompts";
 import { generateTextFallback } from "@/BrandLib/ai-client";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
+
+function normalizeSuggestions(rawSuggestions: unknown): AgentSuggestion[] {
+  if (!Array.isArray(rawSuggestions)) return [];
+
+  return rawSuggestions.flatMap<AgentSuggestion>((item) => {
+    if (typeof item === "string") {
+      return [{
+        label: item,
+        intent: "create_task" as const,
+        payload: {
+          title: item,
+          priority: "MEDIUM",
+        },
+      }];
+    }
+
+    if (!item || typeof item !== "object") return [];
+    const suggestion = item as Record<string, unknown>;
+    const label = typeof suggestion.label === "string" ? suggestion.label.trim() : "";
+    if (!label) return [];
+
+    const intent = suggestion.intent === "ask" ? "ask" : "create_task";
+    const payload =
+      suggestion.payload && typeof suggestion.payload === "object"
+        ? suggestion.payload as Record<string, unknown>
+        : null;
+
+    return [{
+      label,
+      intent,
+      payload: payload
+        ? {
+            title: typeof payload.title === "string" ? payload.title : label,
+            description:
+              typeof payload.description === "string" ? payload.description : undefined,
+            priority:
+              payload.priority === "HIGH" || payload.priority === "LOW"
+                ? payload.priority
+                : "MEDIUM",
+          }
+        : undefined,
+    }];
+  }).slice(0, 4);
+}
 
 function parseAgentResponse(raw: string): AgentResponse | null {
   try {
@@ -31,7 +76,7 @@ function parseAgentResponse(raw: string): AgentResponse | null {
     return {
       message: parsed.message,
       actions: Array.isArray(parsed.actions) ? parsed.actions : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      suggestions: normalizeSuggestions(parsed.suggestions),
     };
   } catch {
     return null;

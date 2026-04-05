@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PrimaryAction from "@/components/today/PrimaryAction";
 import BlockerAlert from "@/components/today/BlockerAlert";
@@ -277,6 +278,8 @@ export default async function DashboardPage({
       </div>
     );
   }
+
+  await normalizeStoredLaunchChecklistPriorities(product.id);
 
   // ---- Data fetching (parallel) ----
   const today = new Date();

@@ -10,21 +10,24 @@ const AGENT_COLORS: Record<AgentType, { bg: string; text: string; initials: stri
   growth:   { bg: "#95dbda", text: "#0d0d12", initials: "GA" },
 };
 
-const AGENT_LABELS: Record<AgentType, string> = {
-  overview: "Overview Agent",
-  launch:   "Launch Agent",
-  growth:   "Growth Agent",
-};
-
 interface Props {
   agentType: AgentType;
   productId: string;
+  locale: string;
   children: React.ReactNode;
 }
 
-export default function AgentLayoutShell({ agentType, productId, children }: Props) {
+function getAgentLabel(agentType: AgentType, locale: string) {
+  const isEn = locale === "en";
+  if (agentType === "growth") return isEn ? "Growth Recommendations" : "Growth Önerileri";
+  if (agentType === "launch") return isEn ? "Launch Recommendations" : "Launch Önerileri";
+  return isEn ? "Tiramisup Recommendations" : "Tiramisup Önerileri";
+}
+
+export default function AgentLayoutShell({ agentType, productId, locale, children }: Props) {
   const [open, setOpen] = useState(true);
-  const { bg, text, initials } = AGENT_COLORS[agentType];
+  const { bg } = AGENT_COLORS[agentType];
+  const label = getAgentLabel(agentType, locale);
 
   return (
     <div className="flex gap-3 h-full p-3">
@@ -48,7 +51,7 @@ export default function AgentLayoutShell({ agentType, productId, children }: Pro
                 />
               </div>
               <span className="text-[13px] font-semibold text-[#0d0d12]">
-                {AGENT_LABELS[agentType]}
+                {label}
               </span>
             </div>
             <button
@@ -66,7 +69,7 @@ export default function AgentLayoutShell({ agentType, productId, children }: Pro
 
           {/* Chat */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <AgentChatPanel agentType={agentType} productId={productId} />
+            <AgentChatPanel agentType={agentType} productId={productId} locale={locale} />
           </div>
         </div>
       ) : (
@@ -74,7 +77,7 @@ export default function AgentLayoutShell({ agentType, productId, children }: Pro
         <button
           onClick={() => setOpen(true)}
           className="shrink-0 w-9 h-9 mt-1 rounded-xl border border-[#e8e4de] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform shadow-sm"
-          title={AGENT_LABELS[agentType]}
+          title={label}
           style={{ backgroundColor: bg }}
         >
           <img src="/assets/illus-tiramisu-slice.png" alt="" className="w-6 h-6 object-contain" />

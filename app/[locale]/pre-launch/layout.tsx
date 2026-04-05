@@ -29,7 +29,7 @@ export default async function PreLaunchLayout({
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
       {effectiveActiveId ? (
-        <AgentLayoutShell agentType="launch" productId={effectiveActiveId}>
+        <AgentLayoutShell agentType="launch" productId={effectiveActiveId} locale={locale}>
           {children}
         </AgentLayoutShell>
       ) : (

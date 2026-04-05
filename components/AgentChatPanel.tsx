@@ -4,8 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { AgentType } from "@/lib/agent-types";
 export type { AgentType };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -17,54 +15,103 @@ interface AgentAction {
   payload: { title: string; description?: string; priority?: string };
 }
 
+interface AgentSuggestion {
+  label: string;
+  intent?: "ask" | "create_task";
+  payload?: { title: string; description?: string; priority?: string };
+}
+
 interface AgentApiResponse {
   message: string;
   actions: AgentAction[];
   executedActions: string[];
-  suggestions: string[];
+  suggestions: AgentSuggestion[];
 }
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-const AGENT_CONFIG: Record<
-  AgentType,
-  { label: string; greeting: string; suggestions: string[] }
-> = {
-  overview: {
-    label: "Overview Agent",
-    greeting:
-      "Ürününün genel durumuna bakıyorum. Soru sor veya aksiyon al.",
-    suggestions: [
-      "Genel durumu özetle",
-      "Öncelikli aksiyonlar neler?",
-      "Bu hafta ne yapmalıyım?",
-    ],
-  },
-  launch: {
-    label: "Launch Agent",
-    greeting:
-      "Launch Agent hazır. Checklist'ini inceleyeyim — hangi konuda yardım istiyorsun?",
-    suggestions: [
-      "Launch için öncelikli adımlar",
-      "ASO nasıl yapılır?",
-      "Privacy policy şablonu ver",
-      "Bu maddeyi task olarak ekle",
-    ],
-  },
-  growth: {
-    label: "Growth Agent",
-    greeting:
-      "Growth Agent aktif. Metriklerini ve büyüme stratejini konuşalım.",
-    suggestions: [
-      "Metriklerimi analiz et",
-      "Retention nasıl artırılır?",
-      "Acquisition kanalları öner",
-      "A/B test stratejisi",
-    ],
-  },
+type Copy = {
+  panelTitle: string;
+  recommendationsTitle: string;
+  recommendationsHint: string;
+  chatTitle: string;
+  chatPlaceholder: string;
+  sendLabel: string;
+  taskAdded: (title: string) => string;
+  taskFailed: string;
+  genericError: string;
+  initialSuggestions: AgentSuggestion[];
+  greeting: string;
 };
 
-// ─── Agent Avatar SVG ────────────────────────────────────────────────────────
+function getCopy(agentType: AgentType, locale: string): Copy {
+  const isEn = locale === "en";
+
+  const shared = {
+    chatTitle: isEn ? "Ask for detail" : "Detay sor",
+    chatPlaceholder: isEn ? "Ask a specific question..." : "Belirli bir soru sor...",
+    sendLabel: isEn ? "Send" : "Gönder",
+    taskAdded: (title: string) => (isEn ? `Task added: ${title}` : `Görev eklendi: ${title}`),
+    taskFailed: isEn ? "There was a problem while creating the task." : "Görev oluşturulurken bir sorun oluştu.",
+    genericError: isEn ? "Something went wrong. Try again?" : "Bir sorun oluştu, tekrar dener misin?",
+  };
+
+  if (agentType === "growth") {
+    return {
+      ...shared,
+      panelTitle: isEn ? "Growth Recommendations" : "Growth Önerileri",
+      recommendationsTitle: isEn ? "Recommended next actions" : "Önerilen sonraki adımlar",
+      recommendationsHint: isEn
+        ? "These cards are task-first actions for the Growth surface."
+        : "Bu kartlar Growth ekranı için görev odaklı aksiyonlardır.",
+      chatTitle: isEn ? "Ask Growth Agent" : "Growth Agent'a sor",
+      greeting: isEn
+        ? "Growth recommendations are separated from chat now. Use the cards for actions, use chat for deeper questions."
+        : "Growth önerileri artık chat'ten ayrıldı. Aksiyon için kartları, derinleşmek için chat'i kullan.",
+      initialSuggestions: [
+        { label: isEn ? "Make the first live dashboard work within 48 hours" : "Metrikleri takip eden ilk dashboard'ı 48 saat içinde çalışır hale getir", intent: "create_task", payload: { title: isEn ? "Make the first live dashboard work within 48 hours" : "Metrikleri takip eden ilk dashboard'ı 48 saat içinde çalışır hale getir", priority: "MEDIUM" } },
+        { label: isEn ? "Analyze first-session drop-off after 7 days of data" : "İlk 7 günlük veriyi topladıktan sonra ilk oturum drop-off'unu analiz et", intent: "create_task", payload: { title: isEn ? "Analyze first-session drop-off after 7 days of data" : "İlk 7 günlük veriyi topladıktan sonra ilk oturum drop-off'unu analiz et", priority: "MEDIUM" } },
+        { label: isEn ? "Measure chat-to-meeting conversion" : "Chat başlatma oranıyla çay buluşması talebi sayısını karşılaştır", intent: "create_task", payload: { title: isEn ? "Measure chat-to-meeting conversion" : "Chat başlatma oranıyla çay buluşması talebi sayısını karşılaştır", priority: "MEDIUM" } },
+      ],
+    };
+  }
+
+  if (agentType === "launch") {
+    return {
+      ...shared,
+      panelTitle: isEn ? "Launch Recommendations" : "Launch Önerileri",
+      recommendationsTitle: isEn ? "Recommended launch actions" : "Önerilen launch aksiyonları",
+      recommendationsHint: isEn
+        ? "These cards are task-first actions for launch readiness."
+        : "Bu kartlar launch hazırlığı için görev odaklı aksiyonlardır.",
+      chatTitle: isEn ? "Ask Launch Agent" : "Launch Agent'a sor",
+      greeting: isEn
+        ? "Launch recommendations are separated from chat now. Use the cards to create actions, use chat for questions."
+        : "Launch önerileri artık chat'ten ayrıldı. Aksiyon için kartları, soru için chat'i kullan.",
+      initialSuggestions: [
+        { label: isEn ? "Close the top launch blocker" : "En kritik launch blocker'ını kapat", intent: "create_task", payload: { title: isEn ? "Close the top launch blocker" : "En kritik launch blocker'ını kapat", priority: "HIGH" } },
+        { label: isEn ? "Prepare store submission evidence" : "Store submission için gerekli kanıtları hazırla", intent: "create_task", payload: { title: isEn ? "Prepare store submission evidence" : "Store submission için gerekli kanıtları hazırla", priority: "MEDIUM" } },
+        { label: isEn ? "Review compliance requirements before launch" : "Launch öncesi compliance gerekliliklerini gözden geçir", intent: "create_task", payload: { title: isEn ? "Review compliance requirements before launch" : "Launch öncesi compliance gerekliliklerini gözden geçir", priority: "HIGH" } },
+      ],
+    };
+  }
+
+  return {
+    ...shared,
+    panelTitle: isEn ? "Tiramisup Recommendations" : "Tiramisup Önerileri",
+    recommendationsTitle: isEn ? "Recommended next actions" : "Önerilen sonraki adımlar",
+    recommendationsHint: isEn
+      ? "These cards summarize the most useful next moves across the product."
+      : "Bu kartlar ürün genelinde şu an en faydalı sonraki hamleleri özetler.",
+    chatTitle: isEn ? "Ask Tiramisup" : "Tiramisup'a sor",
+    greeting: isEn
+      ? "General recommendations are now separate from chat. Use the cards to act, use chat to explore."
+      : "Genel öneriler artık chat'ten ayrı. Aksiyon için kartları, keşif için chat'i kullan.",
+    initialSuggestions: [
+      { label: isEn ? "Clarify the single most important next step" : "Şu anki tek en önemli sonraki adımı netleştir", intent: "create_task", payload: { title: isEn ? "Clarify the single most important next step" : "Şu anki tek en önemli sonraki adımı netleştir", priority: "MEDIUM" } },
+      { label: isEn ? "Turn this week's priority into one task" : "Bu haftanın önceliğini tek göreve çevir", intent: "create_task", payload: { title: isEn ? "Turn this week's priority into one task" : "Bu haftanın önceliğini tek göreve çevir", priority: "MEDIUM" } },
+      { label: isEn ? "Review what is blocking progress today" : "Bugün ilerlemeyi neyin blokladığını gözden geçir", intent: "create_task", payload: { title: isEn ? "Review what is blocking progress today" : "Bugün ilerlemeyi neyin blokladığını gözden geçir", priority: "MEDIUM" } },
+    ],
+  };
+}
 
 function AgentAvatar({ agentType }: { agentType: AgentType }) {
   const colors: Record<AgentType, { bg: string; fg: string }> = {
@@ -88,8 +135,6 @@ function AgentAvatar({ agentType }: { agentType: AgentType }) {
   );
 }
 
-// ─── Spinner ──────────────────────────────────────────────────────────────────
-
 function Spinner() {
   return (
     <div className="flex gap-1 items-center px-3 py-2">
@@ -104,37 +149,35 @@ function Spinner() {
   );
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 interface AgentChatPanelProps {
   agentType: AgentType;
   productId: string;
-  /** Called when agent creates tasks, so parent can refresh task list */
+  locale: string;
   onTasksCreated?: (titles: string[]) => void;
 }
 
 export default function AgentChatPanel({
   agentType,
   productId,
+  locale,
   onTasksCreated,
 }: AgentChatPanelProps) {
-  const config = AGENT_CONFIG[agentType];
+  const copy = getCopy(agentType, locale);
   const [messages, setMessages] = useState<Message[]>([
-    { id: "greeting", role: "assistant", content: config.greeting },
+    { id: "greeting", role: "assistant", content: copy.greeting },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(config.suggestions);
+  const [suggestions, setSuggestions] = useState<AgentSuggestion[]>(copy.initialSuggestions);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset when agent type changes
   useEffect(() => {
-    const cfg = AGENT_CONFIG[agentType];
-    setMessages([{ id: "greeting", role: "assistant", content: cfg.greeting }]);
-    setSuggestions(cfg.suggestions);
+    const nextCopy = getCopy(agentType, locale);
+    setMessages([{ id: "greeting", role: "assistant", content: nextCopy.greeting }]);
+    setSuggestions(nextCopy.initialSuggestions);
     setInput("");
-  }, [agentType]);
+  }, [agentType, locale]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -151,7 +194,6 @@ export default function AgentChatPanel({
       };
       setMessages((prev) => [...prev, userMsg]);
       setInput("");
-      setSuggestions([]);
       setLoading(true);
 
       try {
@@ -173,18 +215,19 @@ export default function AgentChatPanel({
 
         const data: AgentApiResponse = await res.json();
 
-        const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: data.message,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: data.message,
+          },
+        ]);
 
         if (data.suggestions?.length > 0) {
           setSuggestions(data.suggestions.slice(0, 4));
         }
 
-        // Notify parent if tasks were created
         if (data.executedActions?.length > 0 && onTasksCreated) {
           const taskTitles = data.executedActions
             .filter((a) => a.startsWith("task_created:"))
@@ -197,7 +240,7 @@ export default function AgentChatPanel({
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: "Bir sorun oluştu, tekrar dener misin?",
+            content: copy.genericError,
           },
         ]);
       } finally {
@@ -205,28 +248,106 @@ export default function AgentChatPanel({
         inputRef.current?.focus();
       }
     },
-    [agentType, productId, messages, loading, onTasksCreated]
+    [agentType, copy.genericError, loading, messages, onTasksCreated, productId]
   );
+
+  async function createTaskFromSuggestion(suggestion: AgentSuggestion) {
+    const title = suggestion.payload?.title?.trim() || suggestion.label.trim();
+    if (!title || loading) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          title,
+          description: suggestion.payload?.description ?? copy.recommendationsHint,
+          priority:
+            suggestion.payload?.priority === "HIGH" || suggestion.payload?.priority === "LOW"
+              ? suggestion.payload.priority
+              : "MEDIUM",
+        }),
+      });
+
+      if (!res.ok) throw new Error("create task failed");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          role: "assistant",
+          content: copy.taskAdded(title),
+        },
+      ]);
+      setSuggestions((prev) => prev.filter((item) => item.label !== suggestion.label));
+      onTasksCreated?.([title]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          role: "assistant",
+          content: copy.taskFailed,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      void sendMessage(input);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages */}
+    <div className="flex h-full flex-col">
+      <div className="border-b border-[#f0ede8] px-4 py-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+          {copy.panelTitle}
+        </p>
+        <p className="mt-1 text-[12px] leading-5 text-[#5e6678]">
+          {copy.recommendationsHint}
+        </p>
+
+        {suggestions.length > 0 && !loading && (
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9aa1af]">
+              {copy.recommendationsTitle}
+            </p>
+            {suggestions.map((suggestion) => (
+              <button
+                key={`${suggestion.intent ?? "create_task"}-${suggestion.label}`}
+                onClick={() =>
+                  suggestion.intent === "ask"
+                    ? void sendMessage(suggestion.label)
+                    : void createTaskFromSuggestion(suggestion)
+                }
+                className="w-full rounded-[14px] border border-[#ece7e2] bg-[#faf8f5] px-3 py-3 text-left text-[12px] font-medium leading-5 text-[#3d4658] transition hover:border-[#d8d1ca] hover:bg-white"
+              >
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9aa1af]">
+          {copy.chatTitle}
+        </p>
+
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}
           >
-            {msg.role === "assistant" && (
-              <AgentAvatar agentType={agentType} />
-            )}
+            {msg.role === "assistant" && <AgentAvatar agentType={agentType} />}
             <div
               className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
                 msg.role === "user"
@@ -251,37 +372,22 @@ export default function AgentChatPanel({
         <div ref={endRef} />
       </div>
 
-      {/* Suggestions */}
-      {suggestions.length > 0 && !loading && (
-        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => sendMessage(s)}
-              className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#f0f0f0] text-[#5e6678] hover:bg-[#e8e8e8] transition-colors border-0 cursor-pointer"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="px-3 py-3 border-t border-[#e8e8e8]">
-        <div className="flex items-center gap-2 bg-[#f6f6f6] rounded-xl px-3 py-2">
+      <div className="border-t border-[#e8e8e8] px-3 py-3">
+        <div className="flex items-center gap-2 rounded-xl bg-[#f6f6f6] px-3 py-2">
           <input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Bir şey sor..."
+            placeholder={copy.chatPlaceholder}
             disabled={loading}
             className="flex-1 bg-transparent border-0 outline-none text-[13px] text-[#0d0d12] placeholder:text-[#8a8fa0] disabled:opacity-50"
           />
           <button
-            onClick={() => sendMessage(input)}
+            onClick={() => void sendMessage(input)}
             disabled={!input.trim() || loading}
-            className="p-1.5 rounded-lg bg-[#0d0d12] text-white disabled:opacity-30 hover:opacity-80 transition-opacity border-0 cursor-pointer"
+            className="rounded-lg bg-[#0d0d12] p-1.5 text-white transition-opacity hover:opacity-80 disabled:opacity-30 border-0 cursor-pointer"
+            aria-label={copy.sendLabel}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13" />
@@ -293,3 +399,4 @@ export default function AgentChatPanel({
     </div>
   );
 }
+
