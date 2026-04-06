@@ -1,9 +1,27 @@
 # Tiramisup Handoff
 
-**Date:** 1 April 2026
+**Date:** 5 April 2026
 **Production:** `https://tiramisup.app`
 **Status:** Live and handoff-ready
 **Trusted production baseline commit:** `626543d9`
+
+## Latest release snapshot
+
+- Current live/main release line: `4b75a35b`
+- Release summary:
+  - launch blocker priority normalization now applies across all products
+  - generic UX/polish checklist items should no longer remain `HIGH`
+  - agent-side recommendations are now separated from chat in the authenticated side panel
+  - page-specific naming is now the intended model:
+    - `Overview` → `Tiramisup Recommendations`
+    - `Growth` → `Growth Recommendations`
+    - `Launch` → `Launch Recommendations`
+- Verified after push:
+  - public/auth smoke routes on `tiramisup.app` returned healthy responses
+  - protected routes still redirect to login when unauthenticated
+- Still needs signed-in manual verify on live:
+  - recommendation cards appear above chat
+  - clicking a recommendation creates a task instead of sending that same text into chat
 
 ## What is live right now
 
@@ -41,8 +59,8 @@
   - diagnosis-led, not generic
   - hidden for pre-launch products
   - guarded by measurement readiness
-- Dashboard `Ask Tiramisup` is currently the restored simple card version on the right side of Overview.
-- New launcher/blob experiments were intentionally reverted and should not be treated as the approved baseline.
+- Recommendation and chat are now separate concepts inside the authenticated side panel.
+- New launcher/blob experiments should still not be treated as the approved baseline.
 
 ## Production routes that matter most
 
@@ -119,16 +137,23 @@
 - `Settings`, auth, and public landing should not become tactic surfaces.
 
 ### 9. Do not ship from the dirty worktree by accident
-- This repo currently has local modified/untracked files that are not the trusted production baseline.
-- Especially watch:
-  - `app/[locale]/settings/page.tsx`
-  - `app/api/settings/route.ts`
-  - `components/SettingsForm.tsx`
-  - `components/SettingsWorkspace.tsx`
-  - untracked `app/[locale]/account/`
-  - untracked `components/AccountWorkspace.tsx`
-  - local smoke/spec scaffolding
-- Before release, compare staged/committed code against the deployed baseline instead of assuming local files are canonical.
+- Always separate committed release truth from local workstation state.
+- As of 5 April 2026, the only visible local drift during handoff prep was:
+  - handoff-doc updates in `HANDOFF.md`, `docs/handoff.md`, and `docs/team-handoff-prompt.md`
+  - a nested repo change under `external/streamlined-solutions`
+- Do not confuse nested repo drift with the main app release line.
+- Before release, compare staged/committed code against the deployed baseline instead of assuming any local file is canonical.
+
+### 10. Launch blocker priority is stricter now
+- `HIGH` should mean a true launch blocker only.
+- Preserve `HIGH` for real compliance, security, or store-review rejection risks.
+- Most other checklist work should resolve to `MEDIUM`.
+- This rule now matters for both new and existing products because blocker counts influence launch/dashboard/agent logic.
+
+### 11. Recommendations are not chat prompts
+- If a card looks like an action, it should behave like an action.
+- Recommendation cards should not masquerade as user chat messages.
+- Chat remains useful for follow-up questions and deeper explanation, but not as the default click path for actionable recommendations.
 
 ## Files new teams should inspect first
 
@@ -180,6 +205,8 @@ Before starting, use `docs/team-handoff-prompt.md` as the default takeover brief
 - `components/GrowthTacticsPanel.tsx`
 - `components/GrowthIntegrationRecommendations.tsx`
 - `components/MetricEntryForm.tsx`
+- `components/AgentLayoutShell.tsx`
+- `components/AgentChatPanel.tsx`
 - `lib/growth-tactics.ts`
 - `docs/growth-tactics-layer.md`
 
@@ -234,8 +261,9 @@ Do not pass functions from server components into client components in settings/
 
 ### Dashboard design regression lesson
 - Several redesign passes were attempted on the `Ask Tiramisup` surface.
-- The approved fallback is the restored simple card.
-- Any future redesign should happen in preview first, not directly on the live dashboard.
+- The old simple-card baseline is historical context, not the latest authenticated panel model.
+- The current direction is page-scoped recommendations with chat separated underneath.
+- Any future redesign should still happen in preview first, not directly on the live dashboard.
 
 ### Local E2E caveat
 Local founder-flow tests depend on a working database connection. If Prisma cannot reach the local database, signup will fail with a server error before product-flow UX can be evaluated.
@@ -244,12 +272,12 @@ Local founder-flow tests depend on a working database connection. If Prisma cann
 - Some locale-routed app screens still contain Turkish-first hardcoded copy.
 - Signup currently asks for a product-type selection that is not sent to the backend.
 - Dashboard routing for launched products without metrics still needs careful review so Metrics ownership stays clear.
-- Local settings/account work is currently ahead of the trusted production baseline and must be reviewed before shipping.
+- The new recommendation-card behavior on live authenticated pages still needs signed-in manual QA.
 
 ## Safe next steps for a new team
 1. Validate the live `Growth` tactics layer with real founder flows before expanding tactics into other surfaces.
-2. Refine settings polish and tab interaction without re-expanding all sections at once.
-3. Improve locale consistency so English stays the master language across app surfaces.
-4. Tighten dashboard and onboarding flow details while staying inside the playbooks.
-5. Add better event naming and funnel reporting in GA4.
-6. Clean the dirty worktree and separate local experiments from the committed release line.
+2. Complete signed-in QA for recommendation cards on Overview/Growth/Launch and confirm they create tasks instead of echoing into chat.
+3. Refine settings polish and tab interaction without re-expanding all sections at once.
+4. Improve locale consistency so English stays the master language across app surfaces.
+5. Tighten dashboard and onboarding flow details while staying inside the playbooks.
+6. Add better event naming and funnel reporting in GA4.
