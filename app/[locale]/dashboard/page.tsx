@@ -12,6 +12,9 @@ import BlockerAlert from "@/components/today/BlockerAlert";
 import TodayTasks from "@/components/today/TodayTasks";
 import SourceHealth from "@/components/today/SourceHealth";
 import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
+import TaskProgressChart, { type TaskChartDay } from "@/components/today/TaskProgressChart";
+import MetricSparklinePanel from "@/components/today/MetricSparklinePanel";
+import ReadinessPanel from "@/components/today/ReadinessPanel";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -284,6 +287,12 @@ export default async function DashboardPage({
   // ---- Data fetching (parallel) ----
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  const fourteenDaysAgo = new Date(today);
+  fourteenDaysAgo.setDate(today.getDate() - 13);
+
+  const isLaunchedProduct = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
 
   const [
     completedLaunchChecklists,
@@ -295,6 +304,8 @@ export default async function DashboardPage({
     todayMetricEntry,
     goalCount,
     savedMetricSetup,
+    recentTasksRaw,
+    recentMetricEntriesRaw,
   ] = await Promise.all([
     prisma.launchChecklist.count({ where: { productId: product.id, completed: true } }),
     prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
@@ -324,6 +335,23 @@ export default async function DashboardPage({
     }),
     prisma.goal.count({ where: { productId: product.id, completed: false } }),
     getMetricSetup(product.id),
+    prisma.task.findMany({
+      where: {
+        productId: product.id,
+        OR: [
+          { createdAt: { gte: sevenDaysAgo } },
+          { status: "DONE", updatedAt: { gte: sevenDaysAgo } },
+        ],
+      },
+      select: { createdAt: true, updatedAt: true, status: true },
+    }),
+    isLaunchedProduct
+      ? prisma.metricEntry.findMany({
+          where: { productId: product.id, date: { gte: fourteenDaysAgo } },
+          orderBy: { date: "asc" },
+          select: { date: true, values: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   // ---- Derived values ----
@@ -349,6 +377,41 @@ export default async function DashboardPage({
   const errorCount = errorIntegrations.length;
 
   const founderSummary = savedMetricSetup?.founderSummary as { headline?: string; summary?: string; nextStep?: string } | null;
+
+  // ---- Chart data ----
+  const taskChartData: TaskChartDay[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+    taskChartData.push({
+      date: d.toISOString().slice(0, 10),
+      label: d.toLocaleDateString(isEn ? "en-US" : "tr-TR", { weekday: "short" }),
+      created: recentTasksRaw.filter((t) => t.createdAt >= dayStart && t.createdAt <= dayEnd).length,
+      completed: recentTasksRaw.filter((t) => t.status === "DONE" && t.updatedAt >= dayStart && t.updatedAt <= dayEnd).length,
+    });
+  }
+  const chartTotalCreated = taskChartData.reduce((s, d) => s + d.created, 0);
+  const chartTotalCompleted = taskChartData.reduce((s, d) => s + d.completed, 0);
+
+  type SparkEntry = { date: string; value: number };
+  let metricSparkData: SparkEntry[] = [];
+  let metricSparkLabel = "";
+  if (isLaunched && recentMetricEntriesRaw.length >= 2 && selections.length > 0) {
+    const primaryKey = selections[0]?.selectedMetricKeys?.[0] ?? null;
+    if (primaryKey) {
+      metricSparkData = (recentMetricEntriesRaw as Array<{ date: Date; values: unknown }>)
+        .map((e) => ({
+          date: e.date.toISOString().slice(0, 10),
+          value: ((e.values as Record<string, number>)[primaryKey]) ?? 0,
+        }))
+        .filter((e) => e.value > 0);
+      metricSparkLabel = primaryKey;
+    }
+  }
 
   // Days until launch (if launchDate is set and in future)
   let daysUntilLaunch: number | null = null;
@@ -486,7 +549,32 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* 4. Two-column: Primary Action + Decision Strip */}
+      {/* 4. Chart row — task progress + metric/readiness panel */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <TaskProgressChart
+          data={taskChartData}
+          locale={uiLocale}
+          totalCreated={chartTotalCreated}
+          totalCompleted={chartTotalCompleted}
+        />
+        {metricSparkData.length >= 2 ? (
+          <MetricSparklinePanel
+            data={metricSparkData}
+            label={metricSparkLabel}
+            locale={uiLocale}
+            href={`/${uiLocale}/metrics`}
+          />
+        ) : (
+          <ReadinessPanel
+            phase={phase}
+            readinessScore={readinessScore}
+            daysUntilLaunch={daysUntilLaunch}
+            locale={uiLocale}
+          />
+        )}
+      </div>
+
+      {/* 5. Two-column: Primary Action + Decision Strip */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_1fr]">
         {/* Primary action — compact */}
         <PrimaryAction
@@ -507,10 +595,10 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {/* 5. Blockers — only if they exist */}
+      {/* 6. Blockers — only if they exist */}
       <BlockerAlert blockers={blockers} locale={uiLocale} />
 
-      {/* 6. Board layout — tasks + workspace pulse */}
+      {/* 7. Board layout — tasks + workspace pulse */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
 
