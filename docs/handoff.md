@@ -17,9 +17,27 @@ This repo is already in production and should be treated as a live system, not a
 ## Latest release note — 6 April 2026
 
 Latest committed release line:
-- `main` advanced to `eecbf6a9` (`Refresh page content after agent task creation`)
+- `main` advanced to `217d5dcb` (`Overview: task progress chart, metric sparkline, calm PrimaryAction`)
 
 What changed since the previous handoff snapshot:
+
+### Tasks page redesign (6 April 2026)
+- Stat cards added: Total, In Progress, Completed, Blockers (matching dashboard style).
+- Category filter strip added: All, Product, Tech, Legal, Marketing, Other buttons.
+- Filter toggles category scope: activeTasks/doneTasks filtered by launchChecklistItem.category.
+- Completion bar stays global (unfiltered).
+- Scroll fix: layout overflow-y-auto instead of overflow-hidden.
+- StatCard component reused from dashboard (not inline JSX).
+
+### Dashboard redesign (6 April 2026)
+- Chart row added between stat cards and PrimaryAction.
+  - **Left**: TaskProgressChart (recharts BarChart) — last 7 days, created (teal) vs completed (green) bars.
+  - **Right**: MetricSparklinePanel (area chart, primary metric trend) OR ReadinessPanel (launch readiness % or metrics CTA).
+- New Prisma queries: 7-day recent tasks, 14-day metric entries (launched products only).
+- Data computed server-side: taskChartData[], metricSparkData[], daysUntilLaunch.
+- PrimaryAction gradient removed: flat white card, accent-colored border, smaller title (20px semibold).
+- ReadinessPanel: pre-launch shows %, launched shows metrics CTA.
+- MetricSparklinePanel: only renders if data.length >= 2, shows delta %, links to /metrics.
 
 ### UI / Layout architecture (April 2026)
 - Full viewport split-panel layout shipped: left agent chat panel (360px, fixed) + right scrollable content area.
@@ -223,19 +241,31 @@ All three main pages (Dashboard, Launch, Metrics) now open with prominent stat c
 5. Verify no `invalid_client` error on token exchange
 
 ### Local founder flow
-1. Confirm local database is reachable before testing signup
-2. Create a new account from `/en/signup`
-3. Complete onboarding with a realistic free-text description
-4. Confirm product creation succeeds
-5. Review dashboard, launch, and metrics surfaces in sequence
+1. Confirm local database reachable.
+2. Create account from `/en/signup`.
+3. Complete onboarding with free-text description.
+4. Confirm product creation succeeds.
+5. Review dashboard, launch, metrics surfaces.
+6. Test `/en/tasks` — stat cards, category filter, chart visibility.
+
+### Tasks page smoke test
+1. Open `/en/tasks`.
+2. Confirm 4 stat cards (Total, In Progress, Completed, Blockers).
+3. Confirm category filter buttons (All, Product, Tech, Legal, Marketing, Other).
+4. Click category button — section refreshes.
+5. Completion bar stays global (unfiltred).
+6. Page scrolls (no overflow-hidden cutoff).
 
 ### Dashboard regression guard
 1. Open `/en/dashboard`
 2. Confirm 4 stat cards appear at top (Total Tasks, Pending, Completed, Blockers)
-3. Confirm left panel shows recommendation cards separate from chat
-4. Confirm clicking a recommendation card creates a task (does not echo into chat)
-5. Confirm launched products without metric setup route toward Growth/Metrics
-6. Confirm `Launch` is not shown in nav for launched/growing products
+3. Confirm TaskProgressChart shows last 7 days (created + completed bars)
+4. Confirm MetricSparklinePanel or ReadinessPanel appears on right (depends on metric entries)
+5. Confirm PrimaryAction is flat white card, not gradient
+6. Confirm left panel shows recommendation cards separate from chat
+7. Confirm clicking recommendation card creates task (not chat echo)
+8. Confirm launched products without metrics route toward Growth/Metrics
+9. Confirm `Launch` not shown in nav for launched/growing products
 
 ### Agent locale guard
 1. Switch user language to Turkish in Settings
