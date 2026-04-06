@@ -10,14 +10,14 @@ This repo is already in production and should be treated as a live system, not a
 - Main public goal: waitlist conversion
 - Main app goal: staged launch-to-growth workflow
 - Trusted production baseline commit: `626543d9`
-- Current live/main release line: `5f746b64`
+- Current live/main release line: `eecbf6a9`
 - Last docs refresh: `6 April 2026`
 - Recommended new-team kickoff brief: `docs/team-handoff-prompt.md`
 
 ## Latest release note — 6 April 2026
 
 Latest committed release line:
-- `main` advanced to `5f746b64` (`Fix AI plan priority inflation: add strict rules for HIGH/MEDIUM/LOW assignment`)
+- `main` advanced to `eecbf6a9` (`Refresh page content after agent task creation`)
 
 What changed since the previous handoff snapshot:
 
@@ -55,6 +55,12 @@ What changed since the previous handoff snapshot:
 - `buildFallbackResponse()` accepts a second `locale` parameter.
 - `AgentChatPanel` passes `locale` in the fetch body to `/api/agent/chat`.
 - Rule: AI internal instructions = always English. User-facing AI output = user's configured language.
+
+### Agent task creation — instant page refresh
+- `AgentLayoutShell` now passes `onTasksCreated` to `AgentChatPanel`.
+- When a recommendation card is clicked and a task is created, `router.refresh()` is called immediately.
+- The right-panel content (task list, stat cards) updates without a full page reload.
+- This applies to all three agent surfaces: Overview, Launch, Growth.
 
 ## Non-obvious architecture choices
 

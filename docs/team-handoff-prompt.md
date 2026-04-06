@@ -44,7 +44,7 @@ Then inspect these implementation areas first:
 These production constraints are mandatory:
 - Production is live at https://tiramisup.app
 - Trusted production baseline commit: 626543d9
-- Current release line: 5f746b64
+- Current release line: eecbf6a9
 - English is the master language and default locale
 - Turkish is secondary
 - Keep / as the simplified waitlist-first landing page
