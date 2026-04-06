@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import AgentChatPanel from "@/components/AgentChatPanel";
 import type { AgentType } from "@/lib/agent-types";
 
@@ -28,6 +29,10 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
   const [open, setOpen] = useState(true);
   const { bg } = AGENT_COLORS[agentType];
   const label = getAgentLabel(agentType, locale);
+  const router = useRouter();
+  const handleTasksCreated = useCallback((_titles: string[]) => {
+    router.refresh();
+  }, [router]);
 
   return (
     <div className="flex gap-3 h-full p-3">
@@ -69,7 +74,7 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
 
           {/* Chat */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <AgentChatPanel agentType={agentType} productId={productId} locale={locale} />
+            <AgentChatPanel agentType={agentType} productId={productId} locale={locale} onTasksCreated={handleTasksCreated} />
           </div>
         </div>
       ) : (
