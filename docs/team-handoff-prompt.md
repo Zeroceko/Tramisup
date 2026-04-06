@@ -5,43 +5,46 @@ Use the following prompt as the default kickoff brief for any new development an
 ```text
 You are taking over the Tiramisup codebase and product.
 
-Treat this as a live production system, not a prototype.
+Treat this as a live production system, not a prototype sandbox.
 
 First, read these files in order:
-1. README.md
-2. HANDOFF.md
-3. docs/handoff.md
-4. docs/tiramisup-manifesto.md
-5. docs/team-handoff-prompt.md
-6. docs/ai-agent-system-playbook.md
-7. docs/product-intake-question-playbook.md
-8. docs/internal-growth-rules.md
-9. docs/free-text-understanding-plan.md
-10. docs/free-text-eval-rubric.md
-11. docs/free-text-dataset-schema.md
-12. docs/free-text-normalize-pipeline.md
-13. docs/growth-tactics-layer.md
+1. CLAUDE.md
+2. docs/handoff.md
+3. docs/tiramisup-manifesto.md
+4. docs/ai-agent-system-playbook.md
+5. docs/product-intake-question-playbook.md
+6. docs/internal-growth-rules.md
+7. docs/free-text-understanding-plan.md
+8. docs/free-text-eval-rubric.md
+9. docs/free-text-dataset-schema.md
+10. docs/free-text-normalize-pipeline.md
+11. docs/growth-tactics-layer.md
 
 Then inspect these implementation areas first:
-- app/[locale]/dashboard/page.tsx
-- app/[locale]/pre-launch/page.tsx
-- app/[locale]/growth/page.tsx
-- app/[locale]/metrics/page.tsx
-- app/[locale]/settings/page.tsx
-- components/DashboardNav.tsx
-- components/OnboardingWizard.tsx
-- components/today/CoachInsight.tsx
-- lib/ai-plan.ts
+- components/AppShell.tsx                    ← top-level layout wrapper
+- components/AgentLayoutShell.tsx            ← split-panel: agent left, content right
+- components/PlainPageShell.tsx              ← non-agent pages wrapper
+- components/DashboardNav.tsx                ← nav: pill group, section-aware colors
+- components/AgentChatPanel.tsx              ← agent panel: recommendations + chat
+- app/[locale]/dashboard/page.tsx            ← Overview: stat cards, primary action
+- app/[locale]/pre-launch/page.tsx           ← Launch: stat cards, checklist
+- app/[locale]/metrics/page.tsx              ← Metrics: stat cards, entry, trend
+- app/[locale]/settings/page.tsx             ← Settings: tab-based
+- components/OnboardingWizard.tsx            ← product creation wizard
+- lib/agent-prompts.ts                       ← agent system prompts (English only)
+- lib/agent-context.ts                       ← agent context builder (includes locale)
+- app/api/agent/chat/route.ts                ← agent chat API endpoint
+- lib/ai-plan.ts                             ← AI-generated launch/growth plan
 - lib/normalize-product-context.ts
 - lib/build-evidence-map.ts
 - lib/founder-coach.ts
-- lib/growth-tactics.ts
-- lib/analytics.ts
-- lib/recaptcha.ts
+- lib/launch-checklist-priority.ts           ← runtime priority normalization
+- lib/app-urls.ts                            ← public vs OAuth callback URL helpers
 
 These production constraints are mandatory:
 - Production is live at https://tiramisup.app
-- Trusted production baseline commit is 626543d9
+- Trusted production baseline commit: 626543d9
+- Current release line: 5f746b64
 - English is the master language and default locale
 - Turkish is secondary
 - Keep / as the simplified waitlist-first landing page
@@ -60,13 +63,35 @@ These manifesto constraints are also mandatory:
 - Do not turn Tiramisup into a thin wrapper around a general-purpose model
 
 Current product structure to preserve:
-- Dashboard = “What is the next correct step right now?”
-- Growth = “Where is the weak link and what should we do next?”
-- Metrics = “What do we measure, how does data arrive, and what changed?”
+- Dashboard (Overview) = "What is the next correct step for this product right now?"
+- Launch (pre-launch) = "What is blocking launch and what must be done first?"
+- Growth = "Where is the weak link and what should we focus on next?"
+- Metrics = "What do we measure, how does data arrive, and what changed?"
 - Settings = product, source, tracking, and security management
 - Sources must not return to top nav
 - Launch must not appear in top nav for launched/growing products
-- Ask Tiramisup on Dashboard is currently the restored simple right-side card; launcher/blob experiments were rejected and rolled back
+
+Layout rules that must not regress:
+- Full viewport split-panel layout: left agent panel (360px fixed) + right scrollable content
+- AgentLayoutShell wraps Overview, Launch, Growth page layouts
+- PlainPageShell wraps Settings, Account, Integrations, Metrics page layouts
+- AppShell provides gradient background + DashboardNav + overflow-hidden main
+- All main pages (Dashboard, Launch, Metrics) open with prominent stat cards before any text
+- Agent panel: recommendation cards above chat, never mixed into one interaction pattern
+
+Agent language rules that must not regress:
+- All agent system prompts (lib/agent-prompts.ts) are written in English
+- The AI model receives English instructions — always
+- User-visible AI output (message, suggestion labels) is written in the user's configured locale
+- locale is passed from AgentChatPanel → POST /api/agent/chat → buildAgentContext → system prompt
+- Never hardcode a language name in a system prompt — derive from ctx.locale
+
+AI plan priority rules that must not regress:
+- HIGH checklist priority = only true launch blockers (legal, compliance, security, store rejection)
+- Maximum 2–3 HIGH items per generated plan
+- MEDIUM = important but product can launch without it
+- LOW = nice-to-have, polish, future improvement
+- Runtime normalization in lib/launch-checklist-priority.ts corrects existing products
 
 Important production behaviors already in place:
 - Waitlist-first homepage is live
@@ -74,21 +99,23 @@ Important production behaviors already in place:
 - Public analytics are consent-aware
 - Public funnel events include waitlist_cta_click, waitlist_signup, thank_you_view
 - Invisible reCAPTCHA is production-only on waitlist join, signup, and login
-- Forgot password and reset password are live
+- Forgot password and reset password are live (stateless, no reset-token table)
 - Onboarding supports multi-select for category, audience, and business model
 - Selecting Other opens clarification
-- Onboarding asks current top priority after stage selection
-- Free-text onboarding description feeds normalized product context
+- Free-text onboarding description feeds normalized product context and AI plan
 - Growth includes a deterministic, diagnosis-led tactics layer
-- Metrics manual entry allows integers by default, with decimals only for revenue-style metrics such as mrr and arpu
+- Metrics manual entry allows integers by default, decimals only for revenue metrics (mrr, arpu)
 - Recommended source suggestions in Metrics are collapsible by default
+- Google OAuth requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CALLBACK_BASE_URL in Vercel env — no trailing newlines
+- Callback URL registered in Google Cloud Console: https://tiramisup.app/api/integrations/google/callback
 
 Critical warnings before you touch anything:
 - The repo may contain local modified/untracked files that are not the trusted production baseline
 - Do not assume local worktree state is canonical just because files exist
 - Compare proposed changes against the trusted production baseline and current production behavior
 - Do not ship from a dirty worktree without explicitly separating release truth from local experiments
-- Any Dashboard/Ask Tiramisup redesign must happen in preview first, not directly in production
+- Any Dashboard redesign must happen in preview first, not directly in production
+- When adding Vercel env vars via copy-paste, confirm there are no trailing newlines — these silently break OAuth
 
 Your first task is not to redesign. Your first task is to stabilize understanding.
 
@@ -110,18 +137,20 @@ When reviewing or changing the product, preserve these decision rules:
 - New AI surfaces should be intent-first and action-oriented
 - Prefer question -> grounded answer -> selectable action over question -> long text only
 - Preserve classic surfaces as review and control layers even as intent-first entry points expand
+- Agent prompts stay in English; user-facing output respects user locale
 
 Before any risky release, run or verify these smoke paths:
 - /en -> accept cookies -> waitlist signup -> thank-you page
 - /en/signup
 - /en/login
 - /en/forgot-password
-- /en/dashboard
-- /en/pre-launch
-- /en/growth
-- /en/metrics
+- /en/dashboard — confirm stat cards, agent panel separated from chat
+- /en/pre-launch — confirm stat cards, checklist, no PageHeader
+- /en/metrics — confirm stat cards, no PageHeader
 - /en/settings
 - one launched product flow with missing metrics setup
+- GA4 OAuth connect flow (confirm no invalid_client error)
+- agent response in English when locale=en, Turkish when locale=tr
 
 Success means:
 - no regression on live routes
@@ -130,6 +159,8 @@ Success means:
 - no accidental reintroduction of rejected Ask Tiramisup experiments
 - no blurring of Dashboard, Growth, Metrics, and Settings roles
 - no shipping from local, unreviewed worktree drift
+- agent prompts remain in English; user-facing output in correct user locale
+- HIGH checklist priority reserved for true launch blockers only
 
 When in doubt, bias toward preserving the current production baseline and documenting the tradeoff before changing it.
 ```

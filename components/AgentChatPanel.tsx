@@ -209,6 +209,7 @@ export default function AgentChatPanel({
             agentType,
             message: text,
             productId,
+            locale,
             conversationHistory: history,
           }),
         });

@@ -22,6 +22,7 @@ export interface AgentContext {
   productDescription: string;
   productStage: string;
   contextSummary: string; // serialized for the system prompt
+  locale: string; // user's preferred language: "en" | "tr"
 }
 
 // ─── Overview Agent ──────────────────────────────────────────────────────────
@@ -184,7 +185,8 @@ async function buildGrowthContext(productId: string): Promise<string> {
 
 export async function buildAgentContext(
   agentType: AgentType,
-  productId: string
+  productId: string,
+  locale = "en"
 ): Promise<AgentContext> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -213,5 +215,6 @@ export async function buildAgentContext(
     productDescription: product.description ?? "",
     productStage: product.status,
     contextSummary,
+    locale,
   };
 }

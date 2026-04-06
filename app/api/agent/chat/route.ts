@@ -125,6 +125,7 @@ export async function POST(request: Request) {
     const agentType = typeof body?.agentType === "string" ? body.agentType.toLowerCase() : "";
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     const productId = typeof body?.productId === "string" ? body.productId : "";
+    const locale = typeof body?.locale === "string" && body.locale === "tr" ? "tr" : "en";
     const history: AgentMessage[] = Array.isArray(body?.conversationHistory)
       ? body.conversationHistory
       : [];
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
     }
 
     // Build context and prompts
-    const agentContext = await buildAgentContext(agentType as AgentType, productId);
+    const agentContext = await buildAgentContext(agentType as AgentType, productId, locale);
     const systemPrompt = buildAgentSystemPrompt(agentContext);
     const userPrompt = buildAgentUserPrompt(history, message);
 
@@ -164,10 +165,10 @@ export async function POST(request: Request) {
     try {
       const raw = await generateTextFallback(systemPrompt, userPrompt, `agent:${agentType}`);
       const parsed = parseAgentResponse(raw);
-      agentResponse = parsed ?? buildFallbackResponse(agentType);
+      agentResponse = parsed ?? buildFallbackResponse(agentType, locale);
     } catch (err) {
       console.error("[agent/chat] AI call failed:", err);
-      agentResponse = buildFallbackResponse(agentType);
+      agentResponse = buildFallbackResponse(agentType, locale);
     }
 
     // Execute any actions (e.g. create_task)
