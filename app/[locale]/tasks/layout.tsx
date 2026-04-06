@@ -26,7 +26,7 @@ export default async function TasksLayout({
     <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>
       {/* Tasks/Board fills full height */}
       <div className="h-full overflow-hidden p-3">
-        <div className="h-full rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="h-full rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-y-auto">
           {children}
         </div>
       </div>

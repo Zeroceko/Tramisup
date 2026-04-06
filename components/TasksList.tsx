@@ -52,11 +52,14 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   const router = useRouter();
   const isEn = locale === "en";
 
+  type CategoryFilter = "PRODUCT" | "TECH" | "LEGAL" | "MARKETING" | "NONE" | null;
+
   const [loading, setLoading] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showBacklog, setShowBacklog] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>(null);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -78,9 +81,23 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
     return dd >= todayStart && dd < tomorrowStart;
   }
 
+  // Category filter application
+  const filteredTasks = activeCategory === null
+    ? tasks
+    : activeCategory === "NONE"
+    ? tasks.filter((t) => !t.launchChecklistItem)
+    : tasks.filter((t) => t.launchChecklistItem?.category === activeCategory);
+
+  // Categories that have at least one task
+  const KNOWN_CATEGORIES = ["PRODUCT", "TECH", "LEGAL", "MARKETING"] as const;
+  const presentCategories = KNOWN_CATEGORIES.filter((cat) =>
+    tasks.some((t) => t.launchChecklistItem?.category === cat)
+  );
+  const hasUnlinked = tasks.some((t) => !t.launchChecklistItem);
+
   // Section assignment
-  const activeTasks = tasks.filter((t) => t.status !== "DONE");
-  const doneTasks = tasks.filter((t) => t.status === "DONE");
+  const activeTasks = filteredTasks.filter((t) => t.status !== "DONE");
+  const doneTasks = filteredTasks.filter((t) => t.status === "DONE");
 
   // FOCUS: in_progress OR (HIGH + overdue/today)
   const focusTasks = activeTasks.filter(
@@ -103,8 +120,9 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
     (t) => !focusIds.has(t.id) && t.status === "TODO" && t.priority === "LOW"
   );
 
+  const allDone = tasks.filter((t) => t.status === "DONE").length;
   const completionRate =
-    tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
+    tasks.length > 0 ? Math.round((allDone / tasks.length) * 100) : 0;
 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setLoading(taskId);
@@ -503,7 +521,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
                 />
               </div>
               <span className="text-[12px] text-[#8a8fa0]">
-                {doneTasks.length}/{tasks.length}{" "}
+                {allDone}/{tasks.length}{" "}
                 {isEn ? "done" : "tamamlandı"}
               </span>
             </div>
@@ -531,6 +549,61 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
           )}
         </button>
       </div>
+
+      {/* Category filter strip */}
+      {(presentCategories.length > 0 || hasUnlinked) && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveCategory(null)}
+            className={`h-7 rounded-full border px-3 text-[12px] font-medium transition ${
+              activeCategory === null
+                ? "border-[#95dbda] bg-[#95dbda]/15 text-[#0d0d12]"
+                : "border-[#e8e8e8] text-[#666d80] hover:bg-[#f6f6f6]"
+            }`}
+          >
+            {isEn ? "All" : "Tümü"}
+            <span className="ml-1 text-[11px] text-[#8a8fa0]">{tasks.length}</span>
+          </button>
+          {presentCategories.map((cat) => {
+            const cfg = CATEGORY_CONFIG[cat];
+            const count = tasks.filter(
+              (t) => t.launchChecklistItem?.category === cat
+            ).length;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                className={`h-7 rounded-full border px-3 text-[12px] font-medium transition ${
+                  activeCategory === cat
+                    ? "border-[#95dbda] bg-[#95dbda]/15 text-[#0d0d12]"
+                    : "border-[#e8e8e8] text-[#666d80] hover:bg-[#f6f6f6]"
+                }`}
+              >
+                {isEn ? cfg.labelEn : cfg.label}
+                <span className="ml-1 text-[11px] text-[#8a8fa0]">{count}</span>
+              </button>
+            );
+          })}
+          {hasUnlinked && (
+            <button
+              type="button"
+              onClick={() => setActiveCategory(activeCategory === "NONE" ? null : "NONE")}
+              className={`h-7 rounded-full border px-3 text-[12px] font-medium transition ${
+                activeCategory === "NONE"
+                  ? "border-[#95dbda] bg-[#95dbda]/15 text-[#0d0d12]"
+                  : "border-[#e8e8e8] text-[#666d80] hover:bg-[#f6f6f6]"
+              }`}
+            >
+              {isEn ? "Other" : "Diğer"}
+              <span className="ml-1 text-[11px] text-[#8a8fa0]">
+                {tasks.filter((t) => !t.launchChecklistItem).length}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Add task form */}
       {showAdd && (
