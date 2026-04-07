@@ -195,47 +195,74 @@ async function loadLaunchAndAnalyticsGuidance(input: WizardInput) {
   return parts.join("\n\n---\n\n");
 }
 
-const PROMPT = (input: WizardInput, normalizedCtx?: NormalizedProductContext) => `Sen Tiramisup içindeki Founder Coach ve Planlama Ajanısın. Bir kurucunun ürün bağlamını okuyup onun için tamamen o ürüne ÖZEL ilk çalışma sistemini, checklistini ve görevlerini yaratıyorsun.
+const PROMPT = (input: WizardInput, normalizedCtx?: NormalizedProductContext) => {
+  const outputLocale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+  const langRule =
+    outputLocale === "tr"
+      ? `OUTPUT LANGUAGE: All visible content (titles, descriptions) MUST be in Turkish. Use perfect Turkish characters (ç, ş, ğ, ı, ö, ü). Never produce broken or transliterated Turkish (e.g. write "İlk" not "Ilk", "değer" not "deger"). Never mix English words into the output.`
+      : `OUTPUT LANGUAGE: All visible content (titles, descriptions) MUST be in English. Never produce Turkish words or phrases inside the output, even when the product name or website is Turkish.`;
 
-ÜRÜN BİLGİLERİ:
-- Ad: ${input.name}
-- Açıklama: ${input.description}
-- Kategori: ${input.category || "SaaS"}
-- Hedef kitle: ${input.targetAudience || "belirtilmemiş"}
-- İş modeli: ${input.businessModel || "belirtilmemiş"}
-- Mevcut aşama: ${input.launchStatus || "belirtilmemiş"}
-${input.stageContext ? `- Aşama detayları: ${input.stageContext}` : ""}
-${normalizedCtx ? `\nNORMALİZE BAĞLAM (yapılandırılmış):
-- Aşama: ${normalizedCtx.stage}
-- Birincil hedef: ${normalizedCtx.primary_goal}
-- Platformlar: ${normalizedCtx.platforms.join(", ") || "belirtilmemiş"}
-- Problem özeti: ${normalizedCtx.description_understanding.problem_summary || "belirtilmemiş"}
-- Açıklamadan çıkarılan kullanıcı sinyalleri: ${normalizedCtx.description_understanding.user_segments.join(", ") || "belirtilmemiş"}
-- Açıklamadan çıkarılan kullanım sinyalleri: ${normalizedCtx.description_understanding.use_cases.join(", ") || "belirtilmemiş"}
-- Bağlam güvenilirliği: ${normalizedCtx.context_confidence}
-${normalizedCtx.missing_fields.length > 0 ? `- Eksik bilgiler: ${normalizedCtx.missing_fields.join(", ")}` : ""}
-${normalizedCtx.ambiguity_flags.length > 0 ? `- Belirsizlik bayrakları: ${normalizedCtx.ambiguity_flags.join("; ")}` : ""}` : ""}
-${input.storeGuidance ? `\nSTORE-GUIDANCE:\n${input.storeGuidance}\n` : ""}
-${input.websiteContent ? `\n🔥 CRITICAL - FOUNDER'S WEBSITE CONTENT:\n${input.websiteContent}\n(IMPORTANT: Analyze this text. Read what problem the product actually solves and its features. Formulate all task and checklist items STRICTLY by referring to this content, the product's features, and promises!)\n` : ""}
+  return `You are the Founder Coach and Planning Agent inside Tiramisup. You read a founder's product context and generate a working system, checklist, and tasks that are specifically tailored to that product — never generic.
 
-GÖREVİN:
-Bu ürün için kurucunun ilk gerçek çalışma sistemini kur:
-- Launch öncesi ise: Kurucunun kritik launch checklistlerini ve bu haftaki teknik görevlerini oluştur.
-- Launch olduysa veya büyüme aşamasındaysa: Growth hazırlığını kur, AARRR hunisindeki her metrik ölçülebilir olsun.
+PRODUCT INFO:
+- Name: ${input.name}
+- Description: ${input.description}
+- Category: ${input.category || "SaaS"}
+- Target audience: ${input.targetAudience || "unspecified"}
+- Business model: ${input.businessModel || "unspecified"}
+- Current stage: ${input.launchStatus || "unspecified"}
+${input.stageContext ? `- Stage details: ${input.stageContext}` : ""}
+${normalizedCtx ? `\nNORMALIZED CONTEXT (structured):
+- Stage: ${normalizedCtx.stage}
+- Primary goal: ${normalizedCtx.primary_goal}
+- Platforms: ${normalizedCtx.platforms.join(", ") || "unspecified"}
+- Problem summary: ${normalizedCtx.description_understanding.problem_summary || "unspecified"}
+- User signals from description: ${normalizedCtx.description_understanding.user_segments.join(", ") || "unspecified"}
+- Use-case signals from description: ${normalizedCtx.description_understanding.use_cases.join(", ") || "unspecified"}
+- Context confidence: ${normalizedCtx.context_confidence}
+${normalizedCtx.missing_fields.length > 0 ? `- Missing fields: ${normalizedCtx.missing_fields.join(", ")}` : ""}
+${normalizedCtx.ambiguity_flags.length > 0 ? `- Ambiguity flags: ${normalizedCtx.ambiguity_flags.join("; ")}` : ""}` : ""}
+${input.storeGuidance ? `\nSTORE GUIDANCE:\n${input.storeGuidance}\n` : ""}
+${input.websiteContent ? `\nCRITICAL — FOUNDER'S WEBSITE CONTENT:\n${input.websiteContent}\n(IMPORTANT: Read the founder's actual website. Reference real features and promises in your output. Do not invent generic items.)\n` : ""}
 
-STAGE KURALI:
-- Eğer mevcut aşama "Yayında" veya "Büyüme aşamasında" ise launch checklist yazma.
-- Bu iki aşamada görevler launch hazırlığına değil growth, measurement, activation, retention veya revenue odağına hizmet etmeli.
-- Eğer mevcut aşama launch öncesiyse growth ölçekleme görevi yazma.
+YOUR JOB:
+Build the founder's first real operating system for this product.
+- Pre-launch: produce the critical launch checklist and this week's technical tasks.
+- Launched / growing: skip launch checklist; focus on growth, measurement, activation, retention, revenue.
 
-ÖNCELİK KURALI (KRİTİK):
-Priority atamasında çok seçici ol. Çoğu madde MEDIUM veya LOW olmalı.
-- HIGH = Sadece bu yapılmazsa ürün yayına ÇIKAMAZ veya ciddi hukuki/güvenlik riski var. Örnek: KVKK/GDPR zorunlulukları, kritik güvenlik açıkları, app store reject nedenleri. Maksimum 2-3 madde HIGH olabilir.
-- MEDIUM = Önemli ama ürün bunlar olmadan da yayına çıkabilir. Çoğu checklist maddesi bu seviyede olmalı. Örnek: UX iyileştirmeleri, performans optimizasyonları, eksik edge-case handling.
-- LOW = İyileştirme, polish, nice-to-have. Örnek: dashboard görsel iyileştirmeleri, ek entegrasyonlar, bonus özellikler.
+STAGE RULE:
+- If the current stage is "launched" or "growing", DO NOT produce launch checklist items.
+- In those stages, tasks must serve growth, measurement, activation, retention, or revenue — not launch prep.
+- If the stage is pre-launch, DO NOT produce growth scaling tasks.
 
-ÖZEL KURAL: Asla ezber veya jenerik (her projeye uyan) maddeler yazma. Mutlaka web sitedeki özelliklere atıf yap.
-DİL KURALI (ÖNEMLİ): Çıktıyı SADECE TÜRKÇE ver. Ancak kusursuz ve profesyonel Türkçe karakterler (ç, ş, ğ, ı, ö, ü) kullan. Asla bozuk (İngilizce karakterli) Türkçe kullanma. "${input.name}" adını sıkça geçir.`;
+PRIORITY RULE (CRITICAL):
+Be very selective with HIGH. Most items must be MEDIUM or LOW.
+- HIGH = the product CANNOT ship or there is a serious legal/security risk. Examples: GDPR/KVKK obligations, critical security holes, app store reject reasons. Max 2-3 HIGH items per plan.
+- MEDIUM = important, but the product can still launch without it. Most checklist items belong here. Examples: UX improvements, performance, edge-case handling.
+- LOW = polish or nice-to-have. Examples: dashboard refinements, extra integrations, bonus features.
+
+CATEGORY RULE (CRITICAL):
+- Every launch item MUST be assigned a category from the strict enum: PRODUCT, MARKETING, LEGAL, TECH.
+- Every growth item MUST be assigned a category from: ACQUISITION, ACTIVATION, RETENTION, REVENUE.
+- Pick the single category that best matches the actual outcome the item drives. Do not default to PRODUCT for everything. Categories are how the founder navigates work.
+
+DESCRIPTION FORMAT (CRITICAL — applies to every checklist item AND every task):
+The description field MUST be structured as exactly three short labeled lines, in this order, separated by newlines:
+Why: <one sentence: why this matters for THIS specific product, referencing its real features or audience>
+Done when: <one sentence: the concrete observable state when this item is finished>
+Next action: <one sentence: the very first action the founder should take to start>
+
+Do not use bullets, do not add markdown, do not omit any of the three lines, and never write "TODO" or placeholder text. Each line must be a real, product-specific sentence written in the OUTPUT LANGUAGE defined below.
+
+DEDUPE RULE:
+Two items must never describe the same outcome with different phrasings. If you find yourself writing two items that share an objective, merge them into one.
+
+ANTI-GENERIC RULE: Never write rote or generic items that could apply to any product. Always reference actual features or audience pulled from the website content or normalized context.
+
+${langRule}
+
+Use the product name "${input.name}" frequently inside titles and descriptions.`;
+};
 
 export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
   const hasKey = !!(process.env.QWEN_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);

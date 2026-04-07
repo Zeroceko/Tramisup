@@ -12,14 +12,21 @@ export default function GrowthTacticsPanel({
 
   return (
     <section className="rounded-[18px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffefe_0%,_#fff7fa_100%)] p-6">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
-        Growth tactics
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
+          {isEn ? "Strategy · Why this lever" : "Strateji · Bu kaldıraç neden"}
+        </p>
+      </div>
       <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
         {plan.title}
       </h2>
       <p className="mt-2 max-w-3xl text-[13px] leading-6 text-[#666d80]">
         {plan.diagnosis}
+      </p>
+      <p className="mt-2 text-[11px] italic text-[#a06080]">
+        {isEn
+          ? "Tactics are not tasks — they explain which lever to pull. Convert one into work on the Tasks screen."
+          : "Tactics task değildir — hangi kaldıraca basacağını anlatır. İşe dönüştürmek için Tasks ekranına git."}
       </p>
       {plan.readinessNote ? (
         <div className="mt-4 rounded-[14px] border border-[#f1e5eb] bg-white/85 px-4 py-3 text-[13px] leading-6 text-[#5e6678]">

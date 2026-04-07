@@ -295,6 +295,44 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     return text;
   }
 
+  // Parse a structured task description shaped like:
+  //   Why: ...
+  //   Done when: ...
+  //   Next action: ...
+  // into discrete fields. Falls back gracefully when the description is plain text.
+  function parseStructuredDescription(raw?: string | null): {
+    why: string | null;
+    doneWhen: string | null;
+    nextAction: string | null;
+    leftover: string | null;
+  } {
+    if (!raw) return { why: null, doneWhen: null, nextAction: null, leftover: null };
+    const text = raw.replace(/\r\n/g, "\n");
+    const patterns: Array<{ key: "why" | "doneWhen" | "nextAction"; regex: RegExp }> = [
+      { key: "why",        regex: /^\s*(?:why|neden)\s*[:：-]\s*(.+)$/im },
+      { key: "doneWhen",   regex: /^\s*(?:done\s*when|biten\s*hali|biten\s*durum|tamamland[ıi]\s*say[ıi]l[ıi]r)\s*[:：-]\s*(.+)$/im },
+      { key: "nextAction", regex: /^\s*(?:next\s*action|sonraki\s*ad[ıi]m|ilk\s*ad[ıi]m)\s*[:：-]\s*(.+)$/im },
+    ];
+    const fields: { why: string | null; doneWhen: string | null; nextAction: string | null } = {
+      why: null,
+      doneWhen: null,
+      nextAction: null,
+    };
+    let leftover = text;
+    for (const { key, regex } of patterns) {
+      const match = text.match(regex);
+      if (match) {
+        fields[key] = match[1].trim();
+        leftover = leftover.replace(match[0], "").trim();
+      }
+    }
+    const matched = fields.why || fields.doneWhen || fields.nextAction;
+    return {
+      ...fields,
+      leftover: matched ? (leftover.length > 0 ? leftover : null) : text,
+    };
+  }
+
   function getTaskTips(task: Task): string[] {
     if (isEn) {
       if (task.launchChecklistItem?.category === "LEGAL") {
@@ -1029,36 +1067,129 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
             </div>
 
             <div className="px-6 py-5">
-              <h3 className="text-[34px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+              <h3 className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-[#0d0d12]">
                 {normalizeTurkishText(detailTask.title)}
               </h3>
-              <p className="mt-3 text-[16px] leading-7 text-[#5e6678]">
-                {normalizeTurkishText(
-                  detailTask.description ??
-                    (isEn
-                      ? "This task secures launch quality and reduces execution risk."
-                      : "Bu görev launch kalitesini güvenceye alır ve icra riskini azaltır."),
-                )}
-              </p>
 
-              <div className="mt-6 rounded-[18px] bg-[#f7f7f8] p-5">
-                <p className="text-[20px] font-semibold text-[#0d0d12]">
-                  {isEn ? "Tips" : "İpuçları"}
-                </p>
-                <div className="mt-4 space-y-3">
-                  {getTaskTips(detailTask).map((tip) => (
-                    <div key={tip} className="flex items-start gap-2.5">
-                      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md bg-[#e6f7f4] text-[#2a7c7a]">
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </span>
-                      <p className="text-[15px] text-[#5e6678]">
-                        {tip}
-                      </p>
+              {(() => {
+                const parsed = parseStructuredDescription(detailTask.description);
+                const hasStructured = !!(parsed.why || parsed.doneWhen || parsed.nextAction);
+
+                // Structured path: render Why / Done when / Next action as discrete sections.
+                if (hasStructured) {
+                  const sections: Array<{ label: string; value: string | null; accent: string }> = [
+                    {
+                      label: isEn ? "Why it matters" : "Neden önemli",
+                      value: parsed.why,
+                      accent: "border-l-[#ffd7ef]",
+                    },
+                    {
+                      label: isEn ? "Done when" : "Biten hali",
+                      value: parsed.doneWhen,
+                      accent: "border-l-[#75fc96]",
+                    },
+                    {
+                      label: isEn ? "Next action" : "Sonraki adım",
+                      value: parsed.nextAction,
+                      accent: "border-l-[#95dbda]",
+                    },
+                  ];
+                  return (
+                    <div className="mt-5 space-y-3">
+                      {sections.map((section) =>
+                        section.value ? (
+                          <div
+                            key={section.label}
+                            className={`rounded-r-[14px] border-l-[3px] bg-[#fafafa] px-4 py-3 ${section.accent}`}
+                          >
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                              {section.label}
+                            </p>
+                            <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+                              {normalizeTurkishText(section.value)}
+                            </p>
+                          </div>
+                        ) : null,
+                      )}
+                      {parsed.leftover && (
+                        <p className="text-[13px] leading-6 text-[#5e6678]">
+                          {normalizeTurkishText(parsed.leftover)}
+                        </p>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                }
+
+                // Legacy path: plain description + heuristic tips.
+                return (
+                  <>
+                    <p className="mt-4 text-[15px] leading-7 text-[#5e6678]">
+                      {normalizeTurkishText(
+                        detailTask.description ??
+                          (isEn
+                            ? "This task secures launch quality and reduces execution risk."
+                            : "Bu görev launch kalitesini güvenceye alır ve icra riskini azaltır."),
+                      )}
+                    </p>
+                    <div className="mt-5 rounded-[16px] bg-[#f7f7f8] p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                        {isEn ? "How to approach this" : "Bu işe nasıl yaklaş"}
+                      </p>
+                      <div className="mt-3 space-y-2.5">
+                        {getTaskTips(detailTask).map((tip) => (
+                          <div key={tip} className="flex items-start gap-2.5">
+                            <span className="mt-1 inline-flex h-4 w-4 items-center justify-center rounded-md bg-[#e6f7f4] text-[#2a7c7a]">
+                              <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                                <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </span>
+                            <p className="text-[13px] leading-6 text-[#5e6678]">{tip}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* Action row — primary actions visible directly in the modal */}
+              <div className="mt-6 flex flex-wrap items-center gap-2">
+                {detailTask.status === "TODO" && (
+                  <button
+                    type="button"
+                    disabled={loading === detailTask.id}
+                    onClick={() => updateStatus(detailTask.id, "IN_PROGRESS")}
+                    className="inline-flex h-9 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
+                  >
+                    {isEn ? "Start" : "Başla"}
+                  </button>
+                )}
+                {detailTask.status !== "DONE" && (
+                  <button
+                    type="button"
+                    disabled={loading === detailTask.id}
+                    onClick={() => {
+                      updateStatus(detailTask.id, "DONE");
+                      setDetailTaskId(null);
+                    }}
+                    className="inline-flex h-9 items-center justify-center rounded-full bg-[#75fc96]/30 px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#75fc96]/50 disabled:opacity-50"
+                  >
+                    {isEn ? "Mark done" : "Bitti"}
+                  </button>
+                )}
+                {detailTask.status === "DONE" && (
+                  <button
+                    type="button"
+                    disabled={loading === detailTask.id}
+                    onClick={() => {
+                      updateStatus(detailTask.id, "TODO");
+                      setDetailTaskId(null);
+                    }}
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-semibold text-[#5e6678] transition hover:bg-[#f6f6f6] disabled:opacity-50"
+                  >
+                    {isEn ? "Reopen" : "Yeniden aç"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
