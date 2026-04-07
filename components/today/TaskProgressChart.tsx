@@ -36,7 +36,7 @@ export default function TaskProgressChart({ data, locale, totalCreated, totalCom
             {isEn ? "Task Progress" : "Görev İlerlemesi"}
           </p>
           <p className="mt-0.5 text-[12px] text-[#b0b7c3]">
-            {isEn ? "Last 7 days" : "Son 7 gün"}
+            {isEn ? "Last 8 weeks" : "Son 8 hafta"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -58,7 +58,7 @@ export default function TaskProgressChart({ data, locale, totalCreated, totalCom
       {isEmpty ? (
         <div className="flex h-[160px] items-center justify-center">
           <p className="text-[13px] text-[#b0b7c3]">
-            {isEn ? "No task activity in the last 7 days" : "Son 7 günde görev hareketi yok"}
+            {isEn ? "No task activity in the last 8 weeks" : "Son 8 haftada görev hareketi yok"}
           </p>
         </div>
       ) : (

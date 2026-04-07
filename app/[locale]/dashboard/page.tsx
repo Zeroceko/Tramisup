@@ -334,8 +334,8 @@ export default async function DashboardPage({
   // ---- Data fetching (parallel) ----
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 6);
+  const eightWeeksAgo = new Date(today);
+  eightWeeksAgo.setDate(today.getDate() - 55);
   const fourteenDaysAgo = new Date(today);
   fourteenDaysAgo.setDate(today.getDate() - 13);
 
@@ -386,8 +386,8 @@ export default async function DashboardPage({
       where: {
         productId: product.id,
         OR: [
-          { createdAt: { gte: sevenDaysAgo } },
-          { status: "DONE", updatedAt: { gte: sevenDaysAgo } },
+          { createdAt: { gte: eightWeeksAgo } },
+          { status: "DONE", updatedAt: { gte: eightWeeksAgo } },
         ],
       },
       select: { createdAt: true, updatedAt: true, status: true },
@@ -427,18 +427,26 @@ export default async function DashboardPage({
 
   // ---- Chart data ----
   const taskChartData: TaskChartDay[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const dayStart = new Date(d);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(d);
-    dayEnd.setHours(23, 59, 59, 999);
+  // Weekly buckets (last 8 weeks) to avoid noisy/empty day-level chart for new products.
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(today);
+    const day = weekStart.getDay(); // 0: Sun, 1: Mon, ... 6: Sat
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    weekStart.setDate(weekStart.getDate() + mondayOffset - i * 7);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
     taskChartData.push({
-      date: d.toISOString().slice(0, 10),
-      label: d.toLocaleDateString(isEn ? "en-US" : "tr-TR", { weekday: "short" }),
-      created: recentTasksRaw.filter((t) => t.createdAt >= dayStart && t.createdAt <= dayEnd).length,
-      completed: recentTasksRaw.filter((t) => t.status === "DONE" && t.updatedAt >= dayStart && t.updatedAt <= dayEnd).length,
+      date: weekStart.toISOString().slice(0, 10),
+      label: weekStart.toLocaleDateString(isEn ? "en-US" : "tr-TR", {
+        month: "short",
+        day: "numeric",
+      }),
+      created: recentTasksRaw.filter((t) => t.createdAt >= weekStart && t.createdAt <= weekEnd).length,
+      completed: recentTasksRaw.filter((t) => t.status === "DONE" && t.updatedAt >= weekStart && t.updatedAt <= weekEnd).length,
     });
   }
   const chartTotalCreated = taskChartData.reduce((s, d) => s + d.created, 0);

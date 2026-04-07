@@ -547,13 +547,22 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
 
           <div className="min-w-0 flex-1">
             {/* Title */}
-            <p
-              className={`text-[14px] font-semibold leading-snug ${
-                done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
-              }`}
-            >
-              {normalizeTurkishText(task.title)}
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p
+                className={`text-[14px] font-semibold leading-snug ${
+                  done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
+                }`}
+              >
+                {normalizeTurkishText(task.title)}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDetailTaskId(task.id)}
+                className="shrink-0 rounded-full border border-[#d7dbe3] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+              >
+                {isEn ? "View details" : "Detay Gör"}
+              </button>
+            </div>
 
             {/* Description — click to expand */}
             {task.description && (
@@ -625,13 +634,6 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                     {isEn ? "Start" : "Başla"}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setDetailTaskId(task.id)}
-                  className="rounded-full border border-[#e8e8e8] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
-                >
-                  {isEn ? "Details" : "Detay Gör"}
-                </button>
               </div>
             )}
           </div>
