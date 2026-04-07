@@ -11,6 +11,7 @@ import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
@@ -343,7 +344,9 @@ export default async function GrowthPage({
           </a>
         </div>
 
-        <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
+        <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
+          <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
+        </CollapsibleSection>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
@@ -373,7 +376,9 @@ export default async function GrowthPage({
                 {isEn ? "Go to Tracking Metrics" : "Takip Metriklerine git"}
               </a>
             </div>
-            <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
+            <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
+              <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
+            </CollapsibleSection>
           </div>
         </div>
 

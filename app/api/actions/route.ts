@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkLimit } from "@/lib/plan-limits";
 
 type CreateTaskInput = {
   productId: string;
@@ -53,6 +54,20 @@ export async function POST(request: Request) {
 
     if (normalizedItems.length === 0) {
       return NextResponse.json({ error: "Valid tasks are required" }, { status: 400 });
+    }
+
+    const taskLimit = await checkLimit(session.user.id, "tasks", normalizedItems.length);
+    if (!taskLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: `Task limit reached (${taskLimit.used}/${taskLimit.limit}). Upgrade to add more tasks.`,
+          code: "TASK_LIMIT_REACHED",
+          resource: "tasks",
+          used: taskLimit.used,
+          limit: taskLimit.limit,
+        },
+        { status: 403 }
+      );
     }
 
     const productIds: string[] = Array.from(

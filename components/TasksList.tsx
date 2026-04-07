@@ -30,6 +30,12 @@ interface TasksListProps {
   tasks: Task[];
   productId: string;
   locale?: string;
+  taskLimit?: {
+    used: number;
+    limit: number;
+    isNearLimit: boolean;
+    isAtLimit: boolean;
+  };
 }
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; labelEn: string; dot: string; textColor: string }> = {
@@ -48,7 +54,7 @@ const CATEGORY_CONFIG: Record<string, { label: string; labelEn: string; cls: str
 const inputCls =
   "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition bg-white";
 
-export default function TasksList({ tasks, productId, locale }: TasksListProps) {
+export default function TasksList({ tasks, productId, locale, taskLimit }: TasksListProps) {
   const router = useRouter();
   const isEn = locale === "en";
 
@@ -59,13 +65,17 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   const [showBacklog, setShowBacklog] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     dueDate: "",
     priority: "MEDIUM" as Priority,
   });
+  const taskLimitReached = Boolean(taskLimit?.isAtLimit);
+  const showTaskWarning = Boolean(taskLimit && (taskLimit.isNearLimit || taskLimit.isAtLimit));
 
   // Date helpers
   const now = new Date();
@@ -98,6 +108,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
   // Section assignment
   const activeTasks = filteredTasks.filter((t) => t.status !== "DONE");
   const doneTasks = filteredTasks.filter((t) => t.status === "DONE");
+  const detailTask = detailTaskId ? tasks.find((task) => task.id === detailTaskId) ?? null : null;
 
   // FOCUS: in_progress OR (HIGH + overdue/today)
   const focusTasks = activeTasks.filter(
@@ -172,9 +183,10 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     setLoading("new");
     try {
-      await fetch("/api/actions", {
+      const res = await fetch("/api/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -185,12 +197,121 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
           priority: newTask.priority,
         }),
       });
+      const payload = await res.json().catch(() => null) as { error?: string } | null;
+      if (!res.ok) {
+        setFormError(
+          payload?.error ??
+            (isEn ? "The task could not be added right now." : "Görev şu anda eklenemedi.")
+        );
+        return;
+      }
       setNewTask({ title: "", description: "", dueDate: "", priority: "MEDIUM" });
       setShowAdd(false);
       router.refresh();
     } finally {
       setLoading(null);
     }
+  }
+
+  function normalizeTurkishText(input?: string | null) {
+    if (!input) return "";
+    if (isEn) return input;
+
+    const replacements: Array<[RegExp, string]> = [
+      [/\bIlk\b/g, "İlk"],
+      [/\bilk\b/g, "ilk"],
+      [/\bkaynagini\b/g, "kaynağını"],
+      [/\bnetlestir\b/g, "netleştir"],
+      [/\bkullanicilarin\b/g, "kullanıcıların"],
+      [/\bgeldigi\b/g, "geldiği"],
+      [/\bayirmadan\b/g, "ayırmadan"],
+      [/\bkarari\b/g, "kararı"],
+      [/\bbulunir\b/g, "bulunur"],
+      [/\bgunu\b/g, "günü"],
+      [/\bdagitim\b/g, "dağıtım"],
+      [/\bsoylenecegi\b/g, "söyleneceği"],
+      [/\bolmali\b/g, "olmalı"],
+      [/\bdeger\b/g, "değer"],
+      [/\blaunch oncesi\b/g, "launch öncesi"],
+      [/\bygina\b/g, "yayına"],
+      [/\bciktiginda\b/g, "çıktığında"],
+      [/\bgelistiriciler\b/g, "geliştiriciler"],
+      [/\bgordugunu\b/g, "gördüğünü"],
+      [/\banlamali\b/g, "anlamalı"],
+      [/\bGeri donen\b/g, "Geri dönen"],
+      [/\bdonen\b/g, "dönen"],
+      [/\bolc\b/g, "ölç"],
+      [/\bkaliciligini\b/g, "kalıcılığını"],
+      [/\bgosterir\b/g, "gösterir"],
+      [/\baksiyonunu\b/g, "aksiyonunu"],
+      [/\baha moment\b/g, "aha moment"],
+      [/\bnoktasini\b/g, "noktasını"],
+      [/\bizle\b/g, "izle"],
+    ];
+
+    let text = input;
+    for (const [pattern, replacement] of replacements) {
+      text = text.replace(pattern, replacement);
+    }
+    return text;
+  }
+
+  function getTaskTips(task: Task): string[] {
+    if (isEn) {
+      if (task.launchChecklistItem?.category === "LEGAL") {
+        return [
+          "Define the exact legal deliverable first.",
+          "Use one owner and one deadline.",
+          "Collect links or files in one place.",
+        ];
+      }
+      if (task.launchChecklistItem?.category === "MARKETING") {
+        return [
+          "Write one clear message before channel planning.",
+          "Keep launch day distribution simple.",
+          "Track one conversion metric from day one.",
+        ];
+      }
+      if (task.launchChecklistItem?.category === "TECH") {
+        return [
+          "Define done criteria before implementation.",
+          "Test with one realistic scenario.",
+          "Write down rollback or fallback action.",
+        ];
+      }
+      return [
+        "Clarify expected output in one sentence.",
+        "Set one concrete owner and due date.",
+        "Close the task only after real-world execution.",
+      ];
+    }
+
+    if (task.launchChecklistItem?.category === "LEGAL") {
+      return [
+        "Önce net hukuki çıktıyı tanımla.",
+        "Tek sorumlu ve tek son tarih belirle.",
+        "Link ve dosyaları tek yerde topla.",
+      ];
+    }
+    if (task.launchChecklistItem?.category === "MARKETING") {
+      return [
+        "Kanal planından önce tek net mesajı yaz.",
+        "Launch günü dağıtım planını sade tut.",
+        "İlk günden tek dönüşüm metriğini izle.",
+      ];
+    }
+    if (task.launchChecklistItem?.category === "TECH") {
+      return [
+        "Geliştirmeden önce done kriterini yaz.",
+        "En az bir gerçek senaryoda test et.",
+        "Geri alma/fallback adımını netleştir.",
+      ];
+    }
+    return [
+      "Beklenen çıktıyı tek cümlede netleştir.",
+      "Tek sorumlu ve gerçekçi tarih belirle.",
+      "Gerçekte tamamlamadan işi kapatma.",
+    ];
   }
 
 
@@ -312,7 +433,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
 
             {/* Title */}
             <h3 className="text-[16px] font-semibold leading-snug text-[#0d0d12]">
-              {task.title}
+              {normalizeTurkishText(task.title)}
             </h3>
 
             {/* Description — click to expand */}
@@ -330,7 +451,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
                   expandedDescs.has(task.id) ? "" : "line-clamp-2"
                 }`}
               >
-                {task.description}
+                {normalizeTurkishText(task.description)}
               </p>
             )}
 
@@ -356,6 +477,13 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
 
           {/* CTA */}
           <div className="shrink-0">
+            <button
+              type="button"
+              onClick={() => setDetailTaskId(task.id)}
+              className="mb-2 inline-flex h-8 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[12px] font-medium text-[#5e6678] transition hover:bg-[#f6f6f6]"
+            >
+              {isEn ? "View details" : "Detay Gör"}
+            </button>
             {task.status === "TODO" && (
               <button
                 type="button"
@@ -424,7 +552,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
                 done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
               }`}
             >
-              {task.title}
+              {normalizeTurkishText(task.title)}
             </p>
 
             {/* Description — click to expand */}
@@ -442,7 +570,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
                   done ? "text-[#b0b7c3]" : "text-[#666d80]"
                 } ${expandedDescs.has(task.id) ? "" : "line-clamp-2"}`}
               >
-                {task.description}
+                {normalizeTurkishText(task.description)}
               </p>
             )}
 
@@ -497,6 +625,13 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
                     {isEn ? "Start" : "Başla"}
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setDetailTaskId(task.id)}
+                  className="rounded-full border border-[#e8e8e8] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6]"
+                >
+                  {isEn ? "Details" : "Detay Gör"}
+                </button>
               </div>
             )}
           </div>
@@ -509,6 +644,48 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
 
   return (
     <div className="space-y-4">
+      {showTaskWarning && taskLimit && (
+        <div
+          className={`rounded-[16px] border px-4 py-4 ${
+            taskLimitReached
+              ? "border-[#ffd7ef] bg-[#fff7fc]"
+              : "border-[#f7dfb0] bg-[#fffaf0]"
+          }`}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8fa0]">
+                {isEn ? "Plan usage" : "Plan kullanımı"}
+              </p>
+              <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
+                {taskLimitReached
+                  ? isEn
+                    ? "You reached the Free task limit."
+                    : "Ücretsiz plan görev limitine ulaştın."
+                  : isEn
+                  ? `You are close to the task limit: ${taskLimit.used}/${taskLimit.limit}.`
+                  : `Görev limitine yaklaştın: ${taskLimit.used}/${taskLimit.limit}.`}
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#5e6678]">
+                {taskLimitReached
+                  ? isEn
+                    ? "Upgrade to keep adding tasks across your products."
+                    : "Ürünlerin genelinde yeni görev eklemeye devam etmek için planını yükselt."
+                  : isEn
+                  ? "Starter removes the 50-task cap before your queue gets blocked."
+                  : "Görev kuyruğu bloklanmadan önce Starter planına geçerek 50 görev sınırını kaldırabilirsin."}
+              </p>
+            </div>
+            <a
+              href={`/${locale ?? "en"}/pricing`}
+              className="inline-flex h-9 items-center justify-center rounded-full bg-[#0d0d12] px-4 text-[12px] font-semibold text-white transition hover:bg-[#1a1a24]"
+            >
+              {isEn ? "See plans" : "Planları gör"}
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Momentum bar + add button */}
       <div className="flex items-center justify-between">
         <div>
@@ -530,7 +707,8 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
         <button
           type="button"
           onClick={() => setShowAdd((v) => !v)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e8e8e8] px-3 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
+          disabled={taskLimitReached}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e8e8e8] px-3 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {showAdd ? (
             isEn ? "Cancel" : "İptal"
@@ -655,7 +833,7 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
           </div>
           <button
             type="submit"
-            disabled={loading === "new"}
+            disabled={loading === "new" || taskLimitReached}
             className="w-full h-9 rounded-full bg-[#ffd7ef] text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
           >
             {loading === "new"
@@ -666,6 +844,9 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
               ? "Add"
               : "Ekle"}
           </button>
+          {formError && (
+            <p className="text-[12px] text-red-600">{formError}</p>
+          )}
         </form>
       )}
 
@@ -683,7 +864,8 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
           <button
             type="button"
             onClick={() => setShowAdd(true)}
-            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+            disabled={taskLimitReached}
+            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isEn ? "Add first task" : "İlk görevi ekle"}
           </button>
@@ -769,6 +951,71 @@ export default function TasksList({ tasks, productId, locale }: TasksListProps) 
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Task detail modal */}
+      {detailTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <button
+            type="button"
+            aria-label={isEn ? "Close detail" : "Detayı kapat"}
+            className="absolute inset-0"
+            onClick={() => setDetailTaskId(null)}
+          />
+          <div className="relative w-full max-w-2xl rounded-[22px] border border-[#e8e8e8] bg-white shadow-[0_24px_72px_rgba(13,13,18,0.2)]">
+            <div className="flex items-center justify-between border-b border-[#f0f0f0] px-6 py-4">
+              <p className="text-[13px] text-[#8a8fa0]">
+                {isEn
+                  ? "Launch Agent / Task detail"
+                  : "Launch Agent / Görev detayı"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDetailTaskId(null)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e8e8] text-[#5e6678] transition hover:bg-[#f6f6f6]"
+                aria-label={isEn ? "Close" : "Kapat"}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <h3 className="text-[34px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+                {normalizeTurkishText(detailTask.title)}
+              </h3>
+              <p className="mt-3 text-[16px] leading-7 text-[#5e6678]">
+                {normalizeTurkishText(
+                  detailTask.description ??
+                    (isEn
+                      ? "This task secures launch quality and reduces execution risk."
+                      : "Bu görev launch kalitesini güvenceye alır ve icra riskini azaltır."),
+                )}
+              </p>
+
+              <div className="mt-6 rounded-[18px] bg-[#f7f7f8] p-5">
+                <p className="text-[20px] font-semibold text-[#0d0d12]">
+                  {isEn ? "Tips" : "İpuçları"}
+                </p>
+                <div className="mt-4 space-y-3">
+                  {getTaskTips(detailTask).map((tip) => (
+                    <div key={tip} className="flex items-start gap-2.5">
+                      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md bg-[#e6f7f4] text-[#2a7c7a]">
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                      <p className="text-[15px] text-[#5e6678]">
+                        {tip}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

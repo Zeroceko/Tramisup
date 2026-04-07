@@ -5,9 +5,12 @@ import SettingsForm from "@/components/SettingsForm";
 import AISettingsPanel from "@/components/AISettingsPanel";
 import IntegrationsWorkspace from "@/components/IntegrationsWorkspace";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
+import BillingUsage from "@/components/BillingUsage";
 import type { GrowthMetricPlan } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
+import type { PlanTier, LimitKey } from "@/lib/plan-limits";
+import type { BillingInterval, SubStatus } from "@prisma/client";
 
 type IntegrationItem = ExistingIntegration;
 
@@ -43,9 +46,18 @@ type CopyShape = {
   navAI: string;
   navSources: string;
   navTracking: string;
+  navBilling: string;
 };
 
-type WorkspaceSectionKey = "product" | "ai" | "sources" | "tracking";
+type BillingData = {
+  plan: PlanTier;
+  interval: BillingInterval;
+  status: SubStatus;
+  currentPeriodEnd: Date | null;
+  usage: Array<{ key: LimitKey; label: string; used: number; limit: number }>;
+};
+
+type WorkspaceSectionKey = "product" | "ai" | "sources" | "tracking" | "billing";
 
 export default function SettingsWorkspace({
   locale,
@@ -68,6 +80,7 @@ export default function SettingsWorkspace({
   sourceSuccess,
   sourceError,
   initialSection,
+  billingData,
 }: {
   locale: string;
   user: UserShape;
@@ -101,6 +114,7 @@ export default function SettingsWorkspace({
   sourceSuccess?: string;
   sourceError?: string;
   initialSection?: WorkspaceSectionKey;
+  billingData?: BillingData;
 }) {
   const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(initialSection ?? "product");
 
@@ -111,6 +125,7 @@ export default function SettingsWorkspace({
         { key: "ai", label: copy.navAI },
         { key: "sources", label: copy.navSources },
         { key: "tracking", label: copy.navTracking },
+        { key: "billing", label: copy.navBilling },
       ] satisfies Array<{ key: WorkspaceSectionKey; label: string }>,
     [copy]
   );
@@ -181,6 +196,17 @@ export default function SettingsWorkspace({
             initialSetup={savedMetricSetup}
             locale={locale}
             connectedProviders={connectedProviders}
+          />
+        ) : null}
+
+        {activeSection === "billing" && billingData ? (
+          <BillingUsage
+            plan={billingData.plan}
+            interval={billingData.interval}
+            status={billingData.status}
+            currentPeriodEnd={billingData.currentPeriodEnd}
+            usage={billingData.usage}
+            locale={locale}
           />
         ) : null}
       </div>

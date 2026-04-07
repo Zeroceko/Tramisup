@@ -18,6 +18,34 @@ model User {
   updatedAt    DateTime  @updatedAt
   products     Product[]
   aiConnections AIConnection[]
+  subscription Subscription?
+  usageEvents   UsageEvent[]
+}
+
+model Subscription {
+  id               String          @id @default(cuid())
+  userId           String          @unique
+  plan             PlanTier        @default(FREE)
+  interval         BillingInterval @default(MONTHLY)
+  status           SubStatus       @default(ACTIVE)
+  stripeSubId      String?
+  stripeCustomerId String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UsageEvent {
+  id        String        @id @default(cuid())
+  userId    String
+  resource  UsageResource
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, resource, createdAt])
 }
 
 model Waitlist {
@@ -397,6 +425,28 @@ enum SyncStatus {
   RUNNING
   SUCCESS
   FAILED
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+enum UsageResource {
+  AI_MESSAGE
+  AI_SUGGESTION
 }
 
 // --- MetricSetup / MetricEntry ---

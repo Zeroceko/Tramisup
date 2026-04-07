@@ -55,7 +55,7 @@ type WizardProps = {
   provider: SupportedWizardProvider;
   productId: string;
   locale?: string;
-  returnTo?: "integrations" | "settings";
+  returnTo?: "integrations" | "settings" | "onboarding_overview";
   integrationId?: string | null;
   isConnected: boolean;
   selectedPropertyId?: string | null;

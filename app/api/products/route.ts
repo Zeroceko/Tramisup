@@ -1,11 +1,15 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateAiPlan } from "@/lib/ai-plan";
 import { buildFounderSummary } from "@/lib/founder-summary";
+import { checkLimit } from "@/lib/plan-limits";
 import { seedAiPlan, seedMetricsData } from "@/lib/seed";
 import { scrapeUrl } from "@/lib/url-scraper";
+import { Prisma } from "@prisma/client";
 
 function deriveProductStatus(launchStatus?: string) {
   if (launchStatus === "Büyüme aşamasında") return "GROWING" as const;
@@ -41,6 +45,125 @@ async function scrapeProductLinks(links: string[]) {
   return parts.filter(Boolean).join("\n\n---\n\n") || null;
 }
 
+async function resolveProductOwner(sessionUser: {
+  id?: string | null;
+  email?: string | null;
+  name?: string | null;
+}) {
+  if (!sessionUser.id) return null;
+
+  const byId = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: { id: true },
+  });
+  if (byId) return byId;
+
+  const normalizedEmail = typeof sessionUser.email === "string" ? sessionUser.email.toLowerCase() : null;
+  if (normalizedEmail) {
+    const byEmail = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+    if (byEmail) return byEmail;
+  }
+
+  if (!normalizedEmail) return null;
+
+  // Session may reference an id from a different DB snapshot.
+  // Recreate a compatible local row so product creation does not fail on FK.
+  return prisma.user.create({
+    data: {
+      id: sessionUser.id,
+      email: normalizedEmail,
+      name: sessionUser.name || normalizedEmail.split("@")[0],
+      passwordHash: await bcrypt.hash(randomUUID(), 10),
+    },
+    select: { id: true },
+  });
+}
+
+async function ensureProductOwnerInTx(
+  tx: Prisma.TransactionClient,
+  sessionUser: { id?: string | null; email?: string | null; name?: string | null },
+) {
+  if (!sessionUser.id) return null;
+
+  const byId = await tx.user.findUnique({
+    where: { id: sessionUser.id },
+    select: { id: true },
+  });
+  if (byId) return byId;
+
+  const normalizedEmail =
+    typeof sessionUser.email === "string" ? sessionUser.email.toLowerCase() : null;
+  if (normalizedEmail) {
+    const byEmail = await tx.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+    if (byEmail) return byEmail;
+  }
+
+  const fallbackEmail = normalizedEmail ?? `session-${sessionUser.id}@local.tiramisup`;
+  const fallbackName =
+    (typeof sessionUser.name === "string" && sessionUser.name.trim().length > 0
+      ? sessionUser.name
+      : fallbackEmail.split("@")[0]);
+
+  try {
+    return await tx.user.create({
+      data: {
+        id: sessionUser.id,
+        email: fallbackEmail,
+        name: fallbackName,
+        passwordHash: await bcrypt.hash(randomUUID(), 10),
+      },
+      select: { id: true },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      normalizedEmail
+    ) {
+      const byEmailRetry = await tx.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+      if (byEmailRetry) return byEmailRetry;
+    }
+    throw error;
+  }
+}
+
+async function forceEnsureOwner(
+  sessionUser: { id?: string | null; email?: string | null; name?: string | null },
+) {
+  if (!sessionUser.id) return null;
+  const normalizedEmail =
+    typeof sessionUser.email === "string" ? sessionUser.email.toLowerCase() : null;
+  const fallbackEmail = normalizedEmail ?? `session-${sessionUser.id}@local.tiramisup`;
+  const fallbackName =
+    (typeof sessionUser.name === "string" && sessionUser.name.trim().length > 0
+      ? sessionUser.name
+      : fallbackEmail.split("@")[0]);
+
+  return prisma.user.upsert({
+    where: { id: sessionUser.id },
+    create: {
+      id: sessionUser.id,
+      email: fallbackEmail,
+      name: fallbackName,
+      passwordHash: await bcrypt.hash(randomUUID(), 10),
+    },
+    update: {
+      email: fallbackEmail,
+      name: fallbackName,
+    },
+    select: { id: true },
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -48,8 +171,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await resolveProductOwner({
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+    });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Session user not found. Please sign out and sign in again.", code: "USER_NOT_FOUND" },
+        { status: 401 },
+      );
+    }
+
     const products = await prisma.product.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       select: {
         id: true,
         name: true,
@@ -77,6 +212,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await resolveProductOwner({
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+    });
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Session user not found. Please sign out and sign in again.",
+          code: "USER_NOT_FOUND",
+        },
+        { status: 401 },
+      );
+    }
+
     const body = await request.json();
     const {
       name,
@@ -100,6 +250,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Required fields missing" },
         { status: 400 }
+      );
+    }
+
+    const productLimit = await checkLimit(user.id, "products", 1);
+    if (!productLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: `Product limit reached (${productLimit.used}/${productLimit.limit}). Upgrade to create another product.`,
+          code: "PRODUCT_LIMIT_REACHED",
+          resource: "products",
+          used: productLimit.used,
+          limit: productLimit.limit,
+          upgradeUrl: `/${locale === "tr" ? "tr" : "en"}/pricing`,
+        },
+        { status: 403 }
       );
     }
 
@@ -159,55 +324,85 @@ export async function POST(request: Request) {
     // 2. Create product + seed data in a transaction
     // If AI plan failed, product still gets created (AI enrichment is non-blocking)
     console.log("[api/products] Starting DB transaction...");
-    const product = await prisma.$transaction(async (tx) => {
-      const productStatus = deriveProductStatus(launchStatus);
+    const createProductTx = async () =>
+      prisma.$transaction(async (tx) => {
+        const owner = await ensureProductOwnerInTx(tx, {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+        });
+        if (!owner) {
+          throw new Error("SESSION_OWNER_MISSING");
+        }
 
-      console.log("[api/products] Creating Product record...");
-      const newProduct = await tx.product.create({
-        data: {
-          userId: session.user.id,
-          name,
-          status: productStatus,
-          launchStatus,
-          category,
-          description,
-          targetAudience,
-          businessModel,
-          website,
-          launchGoals: goalKey ? JSON.stringify({ goalKey, growthGoal }) : undefined,
-          launchDate: (() => {
-            if (!launchDate) return undefined;
-            const d = new Date(launchDate);
-            if (isNaN(d.getTime())) {
-              console.warn(`[api/products] Invalid launchDate provided: ${launchDate}. Skipping date field.`);
-              return undefined;
-            }
-            return d;
-          })(),
-        },
+        const productStatus = deriveProductStatus(launchStatus);
+
+        console.log("[api/products] Creating Product record...");
+        const newProduct = await tx.product.create({
+          data: {
+            userId: owner.id,
+            name,
+            status: productStatus,
+            launchStatus,
+            category,
+            description,
+            targetAudience,
+            businessModel,
+            website,
+            launchGoals: goalKey ? JSON.stringify({ goalKey, growthGoal }) : undefined,
+            launchDate: (() => {
+              if (!launchDate) return undefined;
+              const d = new Date(launchDate);
+              if (isNaN(d.getTime())) {
+                console.warn(`[api/products] Invalid launchDate provided: ${launchDate}. Skipping date field.`);
+                return undefined;
+              }
+              return d;
+            })(),
+          },
+        });
+
+        // Create MetricSetup record with platforms and founderSummary
+        await tx.metricSetup.create({
+          data: {
+            productId: newProduct.id,
+            selections: [],
+            platforms: normalizedPlatforms,
+            founderSummary,
+          },
+        });
+
+        if (aiPlan) {
+          await seedAiPlan(newProduct.id, aiPlan, tx);
+        }
+
+        // Seed demo metrics only if user opted in
+        if (seedData) {
+          await seedMetricsData(newProduct.id, tx);
+        }
+
+        return newProduct;
       });
 
-      // Create MetricSetup record with platforms and founderSummary
-      await tx.metricSetup.create({
-        data: {
-          productId: newProduct.id,
-          selections: [],
-          platforms: normalizedPlatforms,
-          founderSummary,
-        },
-      });
-
-      if (aiPlan) {
-        await seedAiPlan(newProduct.id, aiPlan, tx);
+    let product;
+    try {
+      product = await createProductTx();
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2003"
+      ) {
+        console.warn("[api/products] FK mismatch detected. Attempting owner self-heal + retry.");
+        await forceEnsureOwner({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+        });
+        product = await createProductTx();
+      } else {
+        throw error;
       }
-
-      // Seed demo metrics only if user opted in
-      if (seedData) {
-        await seedMetricsData(newProduct.id, tx);
-      }
-
-      return newProduct;
-    });
+    }
 
     const response = NextResponse.json(product, { status: 201 });
     response.cookies.set("activeProductId", product.id, {
@@ -219,6 +414,19 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("❌ [api/products] CRITICAL FAILURE:", error);
     if (error.stack) console.error(error.stack);
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        {
+          error: "User session and database user record are out of sync. Please sign out and sign in again.",
+          code: "USER_DB_SYNC_REQUIRED",
+        },
+        { status: 409 },
+      );
+    }
     
     return NextResponse.json(
       { error: `Failed to create product: ${error.message || "Unknown error"}` },

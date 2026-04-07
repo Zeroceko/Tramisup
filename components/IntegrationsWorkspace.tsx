@@ -182,18 +182,20 @@ export default function IntegrationsWorkspace({
     connect === "GA4" || connect === "STRIPE" || connect === "GOOGLE_PLAY"
       ? connect
       : null;
-  const autoOpenProvider: "GA4" | "STRIPE" | "GOOGLE_PLAY" | null =
-    success === "ga4_connected"
-      ? "GA4"
-      : success === "stripe_connected"
-      ? "STRIPE"
-      : success === "google_play_connected"
-      ? "GOOGLE_PLAY"
-      : requestedProvider;
+  const autoOpenProvider: "GA4" | "STRIPE" | "GOOGLE_PLAY" | null = embedded
+    ? requestedProvider
+    : success === "ga4_connected"
+    ? "GA4"
+    : success === "stripe_connected"
+    ? "STRIPE"
+    : success === "google_play_connected"
+    ? "GOOGLE_PLAY"
+    : requestedProvider;
   const autoOpenIntegration = autoOpenProvider
     ? integrationMap.get(autoOpenProvider)
     : null;
   const [wizardAutoOpen, setWizardAutoOpen] = useState(!!autoOpenProvider);
+  const callbackReturnTo = onboarding === "1" ? "onboarding_overview" : embedded ? "settings" : "integrations";
 
   return (
     <div className="space-y-4">
@@ -285,7 +287,7 @@ export default function IntegrationsWorkspace({
               existingIntegration={integrationMap.get(integration.provider)}
               productId={productId}
               locale={locale}
-              returnTo={embedded ? "settings" : "integrations"}
+              returnTo={callbackReturnTo}
               manualEntryCount={manualEntryCount}
               autoOpenPropertySelector={
                 success === "ga4_connected" &&
@@ -340,7 +342,7 @@ export default function IntegrationsWorkspace({
           provider={autoOpenProvider}
           productId={productId}
           locale={locale}
-          returnTo={embedded ? "settings" : "integrations"}
+          returnTo={callbackReturnTo}
           integrationId={autoOpenIntegration?.id ?? null}
           isConnected={autoOpenIntegration?.status === "CONNECTED"}
           selectedPropertyId={autoOpenIntegration?.selectedPropertyId}

@@ -7,6 +7,7 @@ import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
+import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
 import PrimaryAction from "@/components/today/PrimaryAction";
 import BlockerAlert from "@/components/today/BlockerAlert";
 import TodayTasks from "@/components/today/TodayTasks";
@@ -25,6 +26,50 @@ type PhaseKey = "pre-launch" | "launched";
 function derivePhase(status: string): PhaseKey {
   if (status === ProductStatus.LAUNCHED || status === ProductStatus.GROWING) return "launched";
   return "pre-launch";
+}
+
+async function ensureHighPriorityBlockersAreTasks(productId: string) {
+  const unlinked = await prisma.launchChecklist.findMany({
+    where: {
+      productId,
+      completed: false,
+      priority: "HIGH",
+      linkedTaskId: null,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      priority: true,
+    },
+  });
+
+  for (const item of unlinked) {
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.launchChecklist.findUnique({
+        where: { id: item.id },
+        select: { id: true, linkedTaskId: true },
+      });
+      if (!fresh || fresh.linkedTaskId) return;
+
+      const task = await tx.task.create({
+        data: {
+          productId,
+          title: item.title,
+          description: item.description
+            ? `From launch blocker: ${item.description}`
+            : `From launch blocker: ${item.title}`,
+          priority: "HIGH",
+          status: "TODO",
+        },
+      });
+
+      await tx.launchChecklist.update({
+        where: { id: item.id },
+        data: { linkedTaskId: task.id },
+      });
+    });
+  }
 }
 
 /** Build a human-readable status line based on product state. */
@@ -277,12 +322,14 @@ export default async function DashboardPage({
             {isEn ? "Create your first product to get started." : "Başlamak için ilk ürününü oluştur."}
           </p>
         </div>
-        <FirstRunOnboarding locale={uiLocale} userName={session?.user?.name} userEmail={session?.user?.email} />
+        <FirstRunOnboarding locale={uiLocale} />
+        <PendingOnboardingRetryCard locale={uiLocale} />
       </div>
     );
   }
 
   await normalizeStoredLaunchChecklistPriorities(product.id);
+  await ensureHighPriorityBlockersAreTasks(product.id);
 
   // ---- Data fetching (parallel) ----
   const today = new Date();
@@ -311,7 +358,7 @@ export default async function DashboardPage({
     prisma.growthChecklist.count({ where: { productId: product.id, completed: true } }),
     prisma.launchChecklist.findMany({
       where: { productId: product.id, completed: false, priority: "HIGH" },
-      select: { id: true, title: true, category: true },
+      select: { id: true, title: true, category: true, linkedTaskId: true },
       orderBy: { order: "asc" },
       take: 5,
     }),
@@ -425,7 +472,8 @@ export default async function DashboardPage({
     ...highPriorityBlockers.map((b) => ({
       id: b.id,
       title: b.title,
-      href: `/${locale}/pre-launch`,
+      href: b.linkedTaskId ? `/${locale}/tasks` : `/${locale}/pre-launch`,
+      taskId: b.linkedTaskId ?? undefined,
       source: isEn ? `Launch · ${b.category}` : `Launch · ${b.category}`,
     })),
     ...errorIntegrations.map((e) => ({
@@ -596,7 +644,7 @@ export default async function DashboardPage({
       </div>
 
       {/* 6. Blockers — only if they exist */}
-      <BlockerAlert blockers={blockers} locale={uiLocale} />
+      <BlockerAlert blockers={blockers} locale={uiLocale} productId={product.id} />
 
       {/* 7. Board layout — tasks + workspace pulse */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">

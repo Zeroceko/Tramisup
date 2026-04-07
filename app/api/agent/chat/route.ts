@@ -13,6 +13,7 @@ import {
   type AgentSuggestion,
 } from "@/lib/agent-prompts";
 import { generateTextFallback } from "@/BrandLib/ai-client";
+import { checkLimit, recordUsageEvent } from "@/lib/plan-limits";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
@@ -85,9 +86,18 @@ function parseAgentResponse(raw: string): AgentResponse | null {
 
 async function executeActions(
   actions: AgentAction[],
-  productId: string
+  productId: string,
+  userId: string,
 ): Promise<{ executedActions: string[] }> {
   const executedActions: string[] = [];
+  const taskActions = actions.filter((action) => action.type === "create_task");
+
+  if (taskActions.length > 0) {
+    const taskLimit = await checkLimit(userId, "tasks", taskActions.length);
+    if (!taskLimit.allowed) {
+      return { executedActions };
+    }
+  }
 
   for (const action of actions) {
     if (action.type === "create_task") {
@@ -155,6 +165,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
+    const messageLimit = await checkLimit(session.user.id, "aiMessages", 1);
+    if (!messageLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: `Agent chat limit reached (${messageLimit.used}/${messageLimit.limit}). Upgrade to continue chatting.`,
+          code: "AI_MESSAGE_LIMIT_REACHED",
+          resource: "aiMessages",
+          used: messageLimit.used,
+          limit: messageLimit.limit,
+          upgradeUrl: `/${locale}/pricing`,
+        },
+        { status: 403 }
+      );
+    }
+
     // Build context and prompts
     const agentContext = await buildAgentContext(agentType as AgentType, productId, locale);
     const systemPrompt = buildAgentSystemPrompt(agentContext);
@@ -174,8 +199,11 @@ export async function POST(request: Request) {
     // Execute any actions (e.g. create_task)
     const { executedActions } = await executeActions(
       agentResponse.actions,
-      productId
+      productId,
+      session.user.id
     );
+
+    await recordUsageEvent(session.user.id, "aiMessages");
 
     return NextResponse.json({
       message: agentResponse.message,

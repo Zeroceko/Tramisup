@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { AgentType } from "@/lib/agent-types";
+import UsageLimitModal from "@/components/UsageLimitModal";
 export type { AgentType };
 
 interface Message {
@@ -27,6 +28,12 @@ interface AgentApiResponse {
   executedActions: string[];
   suggestions: AgentSuggestion[];
 }
+
+type LimitErrorPayload = {
+  error?: string;
+  code?: string;
+  upgradeUrl?: string;
+};
 
 type Copy = {
   panelTitle: string;
@@ -163,12 +170,18 @@ export default function AgentChatPanel({
   onTasksCreated,
 }: AgentChatPanelProps) {
   const copy = getCopy(agentType, locale);
+  const isEn = locale === "en";
   const [messages, setMessages] = useState<Message[]>([
     { id: "greeting", role: "assistant", content: copy.greeting },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<AgentSuggestion[]>(copy.initialSuggestions);
+  const [limitModal, setLimitModal] = useState<{
+    title: string;
+    description: string;
+    upgradeHref: string;
+  } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -214,7 +227,32 @@ export default function AgentChatPanel({
           }),
         });
 
-        const data: AgentApiResponse = await res.json();
+        const data = await res.json().catch(() => null) as AgentApiResponse & LimitErrorPayload;
+
+        if (!res.ok) {
+          if (data?.code === "AI_MESSAGE_LIMIT_REACHED") {
+            setLimitModal({
+              title: isEn ? "Agent chat limit reached" : "Agent chat limiti doldu",
+              description: isEn
+                ? "Your current plan has no chat messages left for this month. Upgrade to keep using the agent."
+                : "Mevcut planındaki aylık agent chat mesaj hakkı doldu. Agent'ı kullanmaya devam etmek için planını yükselt.",
+              upgradeHref: data.upgradeUrl ?? `/${locale}/pricing`,
+            });
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: (Date.now() + 1).toString(),
+                role: "assistant",
+                content: isEn
+                  ? "You reached the chat limit for this plan. Open pricing to continue."
+                  : "Bu planın chat limitine ulaştın. Devam etmek için fiyatlandırmayı aç.",
+              },
+            ]);
+            return;
+          }
+
+          throw new Error(data?.error ?? "chat failed");
+        }
 
         setMessages((prev) => [
           ...prev,
@@ -249,7 +287,7 @@ export default function AgentChatPanel({
         inputRef.current?.focus();
       }
     },
-    [agentType, copy.genericError, loading, messages, onTasksCreated, productId]
+    [agentType, copy.genericError, isEn, loading, locale, messages, onTasksCreated, productId]
   );
 
   async function createTaskFromSuggestion(suggestion: AgentSuggestion) {
@@ -272,7 +310,10 @@ export default function AgentChatPanel({
         }),
       });
 
-      if (!res.ok) throw new Error("create task failed");
+      const data = await res.json().catch(() => null) as LimitErrorPayload;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "create task failed");
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -284,13 +325,13 @@ export default function AgentChatPanel({
       ]);
       setSuggestions((prev) => prev.filter((item) => item.label !== suggestion.label));
       onTasksCreated?.([title]);
-    } catch {
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now()}`,
           role: "assistant",
-          content: copy.taskFailed,
+          content: err instanceof Error ? err.message : copy.taskFailed,
         },
       ]);
     } finally {
@@ -307,8 +348,18 @@ export default function AgentChatPanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-[#f0ede8] px-4 py-4">
+    <>
+      <UsageLimitModal
+        open={Boolean(limitModal)}
+        locale={locale}
+        title={limitModal?.title ?? ""}
+        description={limitModal?.description ?? ""}
+        upgradeHref={limitModal?.upgradeHref ?? `/${locale}/pricing`}
+        onClose={() => setLimitModal(null)}
+      />
+
+      <div className="flex h-full flex-col">
+        <div className="border-b border-[#f0ede8] px-4 py-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
           {copy.panelTitle}
         </p>
@@ -336,9 +387,9 @@ export default function AgentChatPanel({
             ))}
           </div>
         )}
-      </div>
+        </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9aa1af]">
           {copy.chatTitle}
         </p>
@@ -371,10 +422,10 @@ export default function AgentChatPanel({
         )}
 
         <div ref={endRef} />
-      </div>
+        </div>
 
-      <div className="border-t border-[#e8e8e8] px-3 py-3">
-        <div className="flex items-center gap-2 rounded-xl bg-[#f6f6f6] px-3 py-2">
+        <div className="border-t border-[#e8e8e8] px-3 py-3">
+          <div className="flex items-center gap-2 rounded-xl bg-[#f6f6f6] px-3 py-2">
           <input
             ref={inputRef}
             value={input}
@@ -397,7 +448,7 @@ export default function AgentChatPanel({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
-

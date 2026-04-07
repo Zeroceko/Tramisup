@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
+import { checkLimit } from "@/lib/plan-limits";
 import StatCard from "@/components/StatCard";
 import TasksList from "@/components/TasksList";
 
@@ -54,6 +55,7 @@ export default async function TasksPage({
     (t) => t.priority === "HIGH" && t.status !== "DONE"
   ).length;
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+  const taskLimit = await checkLimit(session.user.id, "tasks", 0);
 
   return (
     <div>
@@ -84,7 +86,17 @@ export default async function TasksPage({
       </div>
 
       <div className="px-5 pb-5">
-        <TasksList tasks={tasks} productId={product.id} locale={locale} />
+        <TasksList
+          tasks={tasks}
+          productId={product.id}
+          locale={locale}
+          taskLimit={{
+            used: taskLimit.used,
+            limit: taskLimit.limit,
+            isNearLimit: taskLimit.isNearLimit,
+            isAtLimit: taskLimit.limit !== Infinity && taskLimit.used >= taskLimit.limit,
+          }}
+        />
       </div>
     </div>
   );

@@ -127,7 +127,7 @@ export default function IntegrationCard({
   existingIntegration?: ExistingIntegration;
   productId: string;
   locale?: string;
-  returnTo?: "integrations" | "settings";
+  returnTo?: "integrations" | "settings" | "onboarding_overview";
   manualEntryCount?: number;
   autoOpenPropertySelector?: boolean;
 }) {

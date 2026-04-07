@@ -10,14 +10,105 @@ This repo is already in production and should be treated as a live system, not a
 - Main public goal: waitlist conversion
 - Main app goal: staged launch-to-growth workflow
 - Trusted production baseline commit: `626543d9`
-- Current live/main release line: `eecbf6a9`
+- Current live/main release line: `6be98945` (last committed; local has uncommitted Sprint 1+2+3 work)
 - Last docs refresh: `6 April 2026`
 - Recommended new-team kickoff brief: `docs/team-handoff-prompt.md`
+
+## In-progress work — not yet committed (6 April 2026)
+
+### Sprint 1 — UX friction reduction (complete, uncommitted)
+
+#### S1-1: OnboardingWizard visual weight reduction
+- `components/OnboardingWizard.tsx`
+- `OptionCard`: sub text removed, only label shown
+- Phase pills: `h-7 px-3 text-[10px]` (was h-8 px-4 text-[11px])
+- `StepWrapper` title: `text-[22px] sm:text-[26px]`; subtitle: `text-[13px]`
+- Sources skip button: now a full pill button (was underline text link)
+- All 11 onboarding questions preserved — only visual weight reduced
+
+#### S1-2: FirstRunOnboarding simplified
+- `components/FirstRunOnboarding.tsx`
+- Rewritten: single card, title + 2-line description + CTA
+- Removed: gradient hero, principles grid, profile card, journey steps
+- `userName`/`userEmail` props removed — dashboard call site updated
+
+#### S1-3: Growth page collapse defaults
+- `components/CollapsibleSection.tsx` — new `"use client"` toggle wrapper
+- `app/[locale]/growth/page.tsx` — GrowthTacticsPanel and TimelineFeed both wrapped with `<CollapsibleSection defaultCollapsed>`
+
+#### S1-4: BlockerAlert session dismiss
+- `components/today/BlockerAlert.tsx` — converted to `"use client"`
+- Added `productId` prop; dismiss stored in `sessionStorage` key `blocker_dismissed_${productId}`
+- Dismiss `×` button added to alert header
+- Dashboard caller updated: `<BlockerAlert productId={product.id} ...>`
+
+---
+
+### Sprint 2 — Pricing infrastructure (partial, uncommitted)
+
+#### Prisma schema
+- `prisma/schema.prisma` — `Subscription` + `UsageEvent` models
+- Enums: `PlanTier` / `BillingInterval` / `SubStatus` / `UsageResource`
+- Plan limits are now centralized (see `lib/plan-config.ts`)
+- Migration added: `prisma/migrations/20260406143000_add_subscription_and_usage_events`
+- `prisma generate` done locally
+
+Current plan packaging (single source of truth: `lib/plan-config.ts`):
+- `FREE`: 1 product, 20 tasks, 12 agent chat msgs/mo, 8 AI suggestions/mo, 6 metrics tracked
+- `STARTER`: 3 products, 150 tasks, 90 agent chat msgs/mo, 30 AI suggestions/mo, 20 metrics tracked
+- `PRO`: 10 products, 600 tasks, 300 agent chat msgs/mo, 100 AI suggestions/mo, 60 metrics tracked
+
+Local note:
+- If local Postgres is not running: `docker compose up -d postgres`
+- If you see `Product_userId_fkey` on product create, your auth user is in a different DB than the app is pointing at.
+  - As of local changes, product create now returns a clearer `401 USER_NOT_FOUND` error if the session user row is missing (instead of a raw FK 500).
+
+#### New files
+- `lib/plan-config.ts` — single source of truth for plan packaging (limits, prices, feature flags)
+- `lib/plan-limits.ts` — runtime limit checks + usage accounting (reads limits/prices from `plan-config`)
+- `components/PricingCard.tsx` — reusable pricing card with feature list
+- `components/BillingUsage.tsx` — plan status + per-resource usage bars + upgrade CTA
+- `app/[locale]/pricing/page.tsx` — monthly/yearly toggle, 3-card layout
+- `app/[locale]/pricing/layout.tsx` — wraps in PlainPageShell
+- `app/api/billing/checkout/route.ts` — GET → Stripe Checkout, 7-day trial
+- `app/api/billing/portal/route.ts` — GET → Stripe Customer Portal
+- `app/api/billing/webhook/route.ts` — POST → subscription lifecycle events
+
+#### Updated files
+- `components/SettingsWorkspace.tsx` — `"billing"` section added, `BillingUsage` rendered, `navBilling` in copy
+- `app/[locale]/settings/page.tsx` — fetches subscription + usage, passes `billingData` to workspace; `section=billing` handled
+
+#### Required new env vars (Stripe Dashboard → Products → Prices)
+```
+STRIPE_PRICE_STARTER_MONTHLY
+STRIPE_PRICE_STARTER_YEARLY
+STRIPE_PRICE_PRO_MONTHLY
+STRIPE_PRICE_PRO_YEARLY
+```
+
+#### ⚠️ Remaining before Sprint 2 ships
+1. Apply DB migration in the target environment (production/staging)
+2. Add 4 Stripe price ID env vars above
+3. Add `STRIPE_WEBHOOK_SECRET` env var
+4. Register webhook at `https://tiramisup.app/api/billing/webhook` in Stripe dashboard
+5. If payments are not ready to launch: keep pricing page but disable/soft-block checkout CTAs so users do not hit a broken flow
+   - Current local behavior: paid plan CTAs on `/[locale]/pricing` are disabled ("Coming soon") and do not redirect to Stripe
+
+#### Sprint 3 — Limit enforcement UI (implemented, uncommitted)
+- Soft warning banner when tasks approach limit + hard block at limit
+- Agent chat message limit enforced server-side; upgrade modal shown in UI
+- Product creation blocked + upgrade CTA at product limit (OnboardingWizard)
+- Usage accounting added via `UsageEvent` (monthly window; used for agent chat)
+
+---
 
 ## Latest release note — 6 April 2026
 
 Latest committed release line:
-- `main` advanced to `217d5dcb` (`Overview: task progress chart, metric sparkline, calm PrimaryAction`)
+- `main` advanced to `6be98945` (`Handoff docs: Tasks redesign + Dashboard chart row`)
+
+Local-only (uncommitted) fixes worth calling out:
+- Landing scroll regression fixed by changing locale layout body overflow from `overflow-hidden` → `overflow-x-hidden` (`app/[locale]/layout.tsx`)
 
 What changed since the previous handoff snapshot:
 

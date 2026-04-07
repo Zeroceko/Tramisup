@@ -218,7 +218,8 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
         }),
       });
 
-      if (!res.ok) throw new Error(String(res.status));
+      const payload = await res.json().catch(() => null) as { error?: string } | null;
+      if (!res.ok) throw new Error(payload?.error ?? String(res.status));
 
       setLastAddedTitles(selectedTasks.map((task) => task.title));
       setHiddenTaskIds((current) => [...current, ...selectedTasks.map((task) => task.id)]);

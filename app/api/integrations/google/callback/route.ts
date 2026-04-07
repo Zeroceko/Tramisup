@@ -30,6 +30,8 @@ function buildReturnUrl(args: {
   const page =
     args.returnTo === "settings"
       ? `/${args.locale}/settings?section=sources`
+      : args.returnTo === "onboarding_overview"
+      ? `/${args.locale}/dashboard`
       : `/${args.locale}/integrations`;
   const url = new URL(page, getAppBaseUrl());
   if (args.success) url.searchParams.set("success", args.success);

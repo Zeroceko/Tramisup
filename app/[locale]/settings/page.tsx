@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getMetricSetup } from "@/lib/metric-setup";
+import { checkLimit, getUserPlan, PLAN_LIMITS } from "@/lib/plan-limits";
+import { PlanTier, BillingInterval, SubStatus } from "@prisma/client";
 import { listAIConnectionsForUser } from "@/lib/ai-connections";
 import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
 import PageHeader from "@/components/PageHeader";
@@ -151,6 +153,7 @@ export default async function SettingsPage({
         navSources: "Sources",
         navTracking: "Tracking Metrics",
         navSecurity: "Security",
+        navBilling: "Billing",
       }
     : {
         overviewLabel: "Ürün ayarları",
@@ -184,6 +187,7 @@ export default async function SettingsPage({
         navSources: "Kaynaklar",
         navTracking: "Takip Metrikleri",
         navSecurity: "Güvenlik",
+        navBilling: "Faturalama",
       };
 
   const latestSyncLabel = latestSync
@@ -194,6 +198,36 @@ export default async function SettingsPage({
         minute: "2-digit",
       }).format(new Date(latestSync))
     : copy.noSyncYet;
+
+  // Billing data
+  const userId = session?.user?.id ?? "";
+  const [currentPlan, subscription] = await Promise.all([
+    getUserPlan(userId),
+    prisma.subscription.findUnique({
+      where: { userId },
+      select: { interval: true, status: true, currentPeriodEnd: true },
+    }),
+  ]);
+  const limits = PLAN_LIMITS[currentPlan];
+  const [productUsage, taskUsage, aiMessageUsage, metricUsage] = await Promise.all([
+    checkLimit(userId, "products", 0),
+    checkLimit(userId, "tasks", 0),
+    checkLimit(userId, "aiMessages", 0),
+    checkLimit(userId, "metrics", 0),
+  ]);
+
+  const billingData = {
+    plan: currentPlan,
+    interval: subscription?.interval ?? BillingInterval.MONTHLY,
+    status: subscription?.status ?? SubStatus.ACTIVE,
+    currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+    usage: [
+      { key: "products" as const, label: isEn ? "Products" : "Ürünler", used: productUsage.used, limit: limits.products },
+      { key: "tasks" as const, label: isEn ? "Tasks" : "Görevler", used: taskUsage.used, limit: limits.tasks },
+      { key: "aiMessages" as const, label: isEn ? "Agent chat messages" : "Agent chat mesajları", used: aiMessageUsage.used, limit: limits.aiMessages },
+      { key: "metrics" as const, label: isEn ? "Metrics tracked" : "Takip edilen metrikler", used: metricUsage.used, limit: limits.metrics },
+    ],
+  };
 
   return (
     <div className="max-w-6xl">
@@ -291,6 +325,7 @@ export default async function SettingsPage({
         aiError={error}
         sourceSuccess={success}
         sourceError={error}
+        billingData={billingData}
         initialSection={
           section === "tracking"
             ? "tracking"
@@ -298,6 +333,8 @@ export default async function SettingsPage({
               ? "ai"
               : section === "sources"
                 ? "sources"
+              : section === "billing"
+                ? "billing"
               : undefined
         }
       />

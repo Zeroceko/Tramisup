@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import {
+  clearOnboardingRetryDraft,
+  loadOnboardingRetryDraft,
+  saveOnboardingRetryDraft,
+} from "@/lib/onboarding-retry-storage";
 import { Link2, Paperclip, Plus, Sparkles, X } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,6 +50,12 @@ type WizardData = {
   growthGoal: string;
   goalKey: string;
   intendedSources: string[];
+};
+
+type UpgradePrompt = {
+  title: string;
+  description: string;
+  href: string;
 };
 
 const CONNECTABLE_ONBOARDING_SOURCES = ["GA4", "Stripe"] as const;
@@ -373,12 +385,7 @@ function OptionCard({
             {selected && <div className="h-2 w-2 rounded-full bg-[#c77daa]" />}
           </div>
         )}
-        <div>
-          <p className="text-[13px] font-semibold leading-tight">{item.label}</p>
-          <p className={`mt-0.5 text-[11px] ${selected ? "text-[#9c6080]" : "text-[#8a8fa0]"}`}>
-            {item.sub}
-          </p>
-        </div>
+        <p className="text-[13px] font-semibold leading-tight">{item.label}</p>
       </div>
     </button>
   );
@@ -404,10 +411,10 @@ function StepWrapper({
           {badge}
         </span>
       )}
-      <h1 className="text-center text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12] sm:text-[30px]">
+      <h1 className="text-center text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12] sm:text-[26px]">
         {title}
       </h1>
-      <p className="mx-auto mb-6 mt-2 max-w-3xl text-center text-[14px] leading-[1.45] text-[#666d80] sm:text-[16px]">
+      <p className="mx-auto mb-6 mt-1.5 max-w-3xl text-center text-[13px] leading-[1.45] text-[#666d80]">
         {subtitle}
       </p>
       {children}
@@ -551,6 +558,8 @@ function CreatingScreen({ error, locale }: { error: string | null; locale: strin
 
 export default function OnboardingWizard({ locale }: { locale: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeRequested = searchParams.get("resume") === "1";
   const isEn = locale === "en";
   const [stepIndex, setStepIndex] = useState(0);
   const [data, setData] = useState<Partial<WizardData>>({
@@ -565,6 +574,19 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   });
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePrompt, setUpgradePrompt] = useState<UpgradePrompt | null>(null);
+
+  useEffect(() => {
+    if (!resumeRequested) return;
+    const draft = loadOnboardingRetryDraft();
+    if (!draft?.data) return;
+    const restored = draft.data as Partial<WizardData>;
+    setData((prev) => ({ ...prev, ...restored }));
+    const restoredSteps = getActiveSteps(restored);
+    if (restoredSteps.length > 1) {
+      setStepIndex(restoredSteps.length - 1);
+    }
+  }, [resumeRequested]);
 
   const categories = isEn
     ? [
@@ -748,6 +770,15 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   async function submit(useMetrics: boolean) {
     setIsCreating(true);
     setError(null);
+    setUpgradePrompt(null);
+
+    saveOnboardingRetryDraft({
+      locale,
+      useMetrics,
+      savedAt: new Date().toISOString(),
+      data: data as Record<string, unknown>,
+    });
+
     try {
       const stageContext = [
         data.growthGoal ? `Kurucu önceliği: ${data.growthGoal}` : null,
@@ -780,10 +811,21 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
 
       if (!productRes.ok) {
         const err = await productRes.json().catch(() => ({}));
+        const limitErr = err as { error?: string; code?: string; upgradeUrl?: string };
+        if (limitErr.code === "PRODUCT_LIMIT_REACHED") {
+          setUpgradePrompt({
+            title: isEn ? "Product limit reached" : "Ürün limiti doldu",
+            description: isEn
+              ? "Your current plan does not include another product workspace yet. Upgrade to create a new one."
+              : "Mevcut planın yeni bir ürün workspace'i içermiyor. Yeni bir tane oluşturmak için planını yükselt.",
+            href: limitErr.upgradeUrl ?? `/${locale}/pricing`,
+          });
+        }
         throw new Error((err as { error?: string }).error ?? (isEn ? "Product could not be created" : "Ürün oluşturulamadı"));
       }
 
       const product = (await productRes.json()) as { id: string };
+      clearOnboardingRetryDraft();
 
       // Optionally save recommended metric selections
       if (useMetrics && Object.keys(autoMetrics).length > 0) {
@@ -859,7 +901,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
               return (
                 <span
                   key={phase}
-                  className={`inline-flex h-8 items-center rounded-full px-4 text-[11px] font-semibold transition-all ${
+                  className={`inline-flex h-7 items-center rounded-full px-3 text-[10px] font-semibold transition-all ${
                     isCurrent
                       ? "bg-[#95dbda] text-[#0f3b40]"
                       : isDone
@@ -1206,7 +1248,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     <button
                       type="button"
                       onClick={goNext}
-                      className="text-[13px] text-[#8a8fa0] underline-offset-2 hover:text-[#666d80] hover:underline"
+                      className="h-10 rounded-full border border-[#e8e8e8] px-5 text-[13px] font-medium text-[#666d80] transition hover:border-[#9fa4af] hover:text-[#0d0d12]"
                     >
                       {isEn ? "Skip" : "Atla"}
                     </button>
@@ -1238,7 +1280,23 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           })()}
 
           {error && !isCreating && (
-            <p className="mt-4 text-[13px] text-red-600">{error}</p>
+            <div className="mt-4 space-y-3">
+              <p className="text-[13px] text-red-600">{error}</p>
+              {upgradePrompt && (
+                <div className="rounded-[16px] border border-[#ffd7ef] bg-[#fff7fc] p-4">
+                  <p className="text-[14px] font-semibold text-[#0d0d12]">{upgradePrompt.title}</p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#5e6678]">
+                    {upgradePrompt.description}
+                  </p>
+                  <Link
+                    href={upgradePrompt.href}
+                    className="mt-3 inline-flex h-9 items-center justify-center rounded-full bg-[#0d0d12] px-4 text-[12px] font-semibold text-white transition hover:bg-[#1a1a24]"
+                  >
+                    {isEn ? "See plans" : "Planları gör"}
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
         </div>
         </div>
