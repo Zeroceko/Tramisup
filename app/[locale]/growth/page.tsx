@@ -280,108 +280,57 @@ export default async function GrowthPage({
       />
 
       <div className="space-y-4">
-        <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-[12px] bg-[#fafafa] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Status today" : "Bugünkü durum"}</p>
-              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-                {!hasSetup
-                  ? isEn ? "Measurement is missing" : "Ölçüm sistemi eksik"
-                  : !hasMetricEntries
-                    ? isEn ? "Waiting for the first data" : "İlk veri bekleniyor"
-                    : funnelHealth?.headline ?? (isEn ? "Growth rhythm is being read" : "Growth ritmi okunuyor")}
-              </p>
-              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-                {!hasSetup
-                  ? isEn ? "Clarify which signals you track before expecting reliable growth guidance." : "Güvenilir growth önerisi için önce hangi sinyalleri takip ettiğini netleştir."
-                  : !hasMetricEntries
-                    ? isEn ? "Once data arrives, Tiramisup can identify the weak link and the highest-priority growth move much more clearly." : "Veri gelince Tiramisup zayıf halkayı ve öncelikli growth aksiyonunu daha net söyleyebilir."
-                    : funnelHealth?.summary ?? (isEn ? "Growth is being monitored regularly." : "Growth tarafı düzenli olarak izleniyor.")}
-              </p>
-            </div>
-            <div className="rounded-[12px] bg-[#fafafa] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Measurement system" : "Ölçüm sistemi"}</p>
-              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
-                {hasSetup ? (isEn ? `${selectedMetrics.length} signals selected` : `${selectedMetrics.length} sinyal seçili`) : isEn ? "Not configured yet" : "Kurulum yapılmadı"}
-              </p>
-              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-                {hasSetup
-                  ? isEn
-                    ? `${integrations.length} sources are connected. Manage metric choices, data flow, and daily entries in Metrics.`
-                    : `${integrations.length} bağlı kaynak var. Ölçüm seçimlerini, veri akışını ve günlük girişleri Metrics tarafında yönetirsin.`
-                  : isEn
-                    ? "Metric selection and source fit are set up on the Metrics screen."
-                    : "Metrik seçimi ve kaynak uyumu Metrics ekranında kurulur."}
-              </p>
-            </div>
-            <div className="rounded-[12px] bg-[#fafafa] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">{isEn ? "Execution status" : "Execution durumu"}</p>
-              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+        {/* PRIMARY: Today's growth focus — single weak-link callout, the only thing that matters above the fold */}
+        <div id="coach" className="rounded-[18px] border border-[#e8e8e8] bg-white p-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+            {isEn ? "Today's growth focus" : "Bugünün growth odağı"}
+          </p>
+          <h2 className="mt-2 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[#0d0d12]">
+            {primaryGrowthTitle}
+          </h2>
+          <p className="mt-3 max-w-2xl text-[14px] leading-7 text-[#5e6678]">
+            {primaryGrowthDescription}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <a
+              href={primaryGrowthHref}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+            >
+              {primaryGrowthCta}
+            </a>
+            {hasSetup && (
+              <span className="text-[12px] text-[#8a8fa0]">
                 {isEn
-                  ? `${completedGrowthItems}/${growthChecklists.length || 0} growth tasks completed`
-                  : `${completedGrowthItems}/${growthChecklists.length || 0} büyüme işi tamamlandı`}
-              </p>
-              <p className="mt-2 text-[13px] leading-6 text-[#666d80]">
-                {isEn
-                  ? "Goals, checklist items, and routines live here. Seeing the number and doing the work meet on the same surface."
-                  : "Hedefler, checklist ve rutinler burada; yani sayıyı görmekle işi yapmak aynı yüzeyde birleşiyor."}
-              </p>
-            </div>
+                  ? `${selectedMetrics.length} signals · ${integrations.length} sources · ${completedGrowthItems}/${growthChecklists.length || 0} done`
+                  : `${selectedMetrics.length} sinyal · ${integrations.length} kaynak · ${completedGrowthItems}/${growthChecklists.length || 0} tamamlandı`}
+              </span>
+            )}
           </div>
         </div>
 
-        <div id="coach" className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{isEn ? "Today's growth focus" : "Bugünün growth odağı"}</p>
-          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">{primaryGrowthTitle}</h2>
-          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#666d80]">
-            {primaryGrowthDescription}
-          </p>
-          <a
-            href={primaryGrowthHref}
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-          >
-            {primaryGrowthCta}
-          </a>
+        {/* EXECUTION: checklist is the action surface */}
+        <div id="growth-checklist">
+          <GrowthChecklistSection items={growthChecklists} locale={locale} />
         </div>
 
+        {/* SECONDARY: tactics, goals, routines, timeline — all collapsed by default */}
         <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
           <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
         </CollapsibleSection>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            <div id="growth-checklist">
-              <GrowthChecklistSection items={growthChecklists} locale={locale} />
-            </div>
-            <div id="goals">
-              <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
-            </div>
-            <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
+        <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
+          <div id="goals">
+            <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
           </div>
-          <div className="space-y-4">
-            <div className="rounded-[15px] border border-[#e8e8e8] bg-white p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#666d80]">{isEn ? "Measurement system" : "Ölçüm sistemi"}</p>
-              <h3 className="mt-2 text-[17px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                {hasSetup ? (isEn ? "Review the metrics you track" : "Takip ettiğin metrikleri gözden geçir") : isEn ? "Define the metrics first" : "Önce metrikleri tanımla"}
-              </h3>
-              <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
-                {isEn
-                  ? "Growth is where diagnosis and priority live. Metric selection, data entry, and source connections are managed on the Metrics screen."
-                  : "Growth tarafında yorum ve öncelik var. Hangi metriği seçtiğin, veri girişi ve kaynak bağlantıları ise Metrics ekranında yönetilir."}
-              </p>
-              <a
-                href={`/${locale}/settings?section=tracking`}
-                className="mt-4 inline-flex h-10 items-center rounded-full border border-[#0d0d12] bg-white px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#0d0d12] hover:text-white"
-              >
-                {isEn ? "Go to Tracking Metrics" : "Takip Metriklerine git"}
-              </a>
-            </div>
-            <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
-              <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
-            </CollapsibleSection>
-          </div>
-        </div>
+        </CollapsibleSection>
 
+        <CollapsibleSection label={isEn ? "Routines" : "Rutinler"} defaultCollapsed>
+          <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
+        </CollapsibleSection>
+
+        <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
+          <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
+        </CollapsibleSection>
       </div>
     </div>
   );

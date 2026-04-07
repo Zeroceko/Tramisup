@@ -62,7 +62,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
 
   const [loading, setLoading] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [showBacklog, setShowBacklog] = useState(false);
+  const [showLater, setShowLater] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
@@ -110,26 +110,65 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   const doneTasks = filteredTasks.filter((t) => t.status === "DONE");
   const detailTask = detailTaskId ? tasks.find((task) => task.id === detailTaskId) ?? null : null;
 
-  // FOCUS: in_progress OR (HIGH + overdue/today)
-  const focusTasks = activeTasks.filter(
+  // NOW eligibility: IN_PROGRESS OR (HIGH + overdue/today)
+  // Hard cap to 3 to keep founder's working memory clear.
+  const NOW_HARD_CAP = 3;
+
+  const nowEligible = activeTasks.filter(
     (t) =>
       t.status === "IN_PROGRESS" ||
       (t.priority === "HIGH" && (isOverdue(t.dueDate) || isDueToday(t.dueDate)))
   );
+
+  // Sort: IN_PROGRESS first, then HIGH-overdue, then HIGH-today
+  const nowSorted = [...nowEligible].sort((a, b) => {
+    const aRank = a.status === "IN_PROGRESS" ? 0 : isOverdue(a.dueDate) ? 1 : 2;
+    const bRank = b.status === "IN_PROGRESS" ? 0 : isOverdue(b.dueDate) ? 1 : 2;
+    if (aRank !== bRank) return aRank - bRank;
+    if (a.priority !== b.priority) {
+      const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      return order[a.priority] - order[b.priority];
+    }
+    return 0;
+  });
+
+  // If Now is below cap, fill empty slots from highest-priority TODO tasks
+  let focusTasks = nowSorted.slice(0, NOW_HARD_CAP);
+  if (focusTasks.length < NOW_HARD_CAP) {
+    const focusIdsLocal = new Set(focusTasks.map((t) => t.id));
+    const fillCandidates = activeTasks
+      .filter((t) => !focusIdsLocal.has(t.id) && t.status === "TODO")
+      .sort((a, b) => {
+        const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+        if (a.priority !== b.priority) return order[a.priority] - order[b.priority];
+        // Earlier due date first; null due dates last
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+        return 0;
+      });
+    focusTasks = focusTasks.concat(
+      fillCandidates.slice(0, NOW_HARD_CAP - focusTasks.length),
+    );
+  }
   const focusIds = new Set(focusTasks.map((t) => t.id));
 
-  // NEXT: HIGH or MEDIUM TODO, not in focus
-  const nextTasks = activeTasks.filter(
-    (t) =>
-      !focusIds.has(t.id) &&
-      t.status === "TODO" &&
-      (t.priority === "HIGH" || t.priority === "MEDIUM")
-  );
-
-  // BACKLOG: LOW TODO
-  const backlogTasks = activeTasks.filter(
-    (t) => !focusIds.has(t.id) && t.status === "TODO" && t.priority === "LOW"
-  );
+  // LATER: every active task that did not make it into Now
+  // (was previously split into "Up next" + "Backlog")
+  const laterTasks = activeTasks
+    .filter((t) => !focusIds.has(t.id))
+    .sort((a, b) => {
+      const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      if (a.priority !== b.priority) return order[a.priority] - order[b.priority];
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return 0;
+    });
 
   const allDone = tasks.filter((t) => t.status === "DONE").length;
   const completionRate =
@@ -874,12 +913,12 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
         </div>
       )}
 
-      {/* FOCUS — Şimdi Yap */}
+      {/* NOW — Şimdi (max 3) */}
       {focusTasks.length > 0 && (
         <div>
           <SectionLabel
             dot="bg-[#ffd7ef]"
-            label={isEn ? "Do now" : "Şimdi yap"}
+            label={isEn ? "Now" : "Şimdi"}
             count={focusTasks.length}
           />
           <div className="space-y-2">
@@ -890,40 +929,45 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
         </div>
       )}
 
-      {/* NEXT — Sırada */}
-      {nextTasks.length > 0 && (
-        <div>
-          <SectionLabel
-            dot="bg-[#95dbda]"
-            label={isEn ? "Up next" : "Sırada"}
-            count={nextTasks.length}
-          />
-          <div className="space-y-2">
-            {nextTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
+      {/* NOW empty but Later has items — invite founder to promote one */}
+      {focusTasks.length === 0 && laterTasks.length > 0 && (
+        <div className="rounded-[14px] border border-dashed border-[#e8e8e8] bg-white px-5 py-6 text-center">
+          <p className="text-[13px] font-semibold text-[#0d0d12]">
+            {isEn ? "Nothing on your plate right now" : "Şu an üstünde aktif iş yok"}
+          </p>
+          <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+            {isEn
+              ? `Pick one from Later (${laterTasks.length}) to start the day with a single focus.`
+              : `Sonra listesinden (${laterTasks.length}) bir tanesini seçerek güne tek odakla başla.`}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowLater(true)}
+            className="mt-3 inline-flex h-8 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+          >
+            {isEn ? "Open Later" : "Sonra'yı aç"}
+          </button>
         </div>
       )}
 
-      {/* BACKLOG — Bekleyen (collapsible) */}
-      {backlogTasks.length > 0 && (
+      {/* LATER — Sonra (collapsed by default; merges old "Up next" + "Backlog") */}
+      {laterTasks.length > 0 && (
         <div>
           <button
             type="button"
-            onClick={() => setShowBacklog((v) => !v)}
+            onClick={() => setShowLater((v) => !v)}
             className="mb-2 flex items-center gap-2"
           >
-            <span className="h-2 w-2 rounded-full bg-[#e8e8e8]" />
-            <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
-              {isEn ? "Backlog" : "Bekleyen"}
+            <span className="h-2 w-2 rounded-full bg-[#95dbda]" />
+            <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#0d0d12]">
+              {isEn ? "Later" : "Sonra"}
             </span>
-            <span className="text-[11px] text-[#94a3b8]">{backlogTasks.length}</span>
-            <ChevronIcon open={showBacklog} />
+            <span className="text-[11px] text-[#8a8fa0]">{laterTasks.length}</span>
+            <ChevronIcon open={showLater} />
           </button>
-          {showBacklog && (
+          {showLater && (
             <div className="space-y-2">
-              {backlogTasks.map((task) => (
+              {laterTasks.map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}
             </div>
