@@ -176,6 +176,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
           mode,
           recentEvent: { type: "MANUAL_QUESTION" },
           previousAnswer,
+          locale: uiLocale,
         }),
       });
 

@@ -199,6 +199,12 @@ async function buildReactivePrompt(
     )
     .join("\n\n---\n\n");
 
+  const outputLanguage = context.locale === "tr" ? "Turkish" : "English";
+  const langRule =
+    context.locale === "tr"
+      ? "All visible content (title, why_now, expected_outcome, user_action) must be in Turkish, with perfect Turkish characters (ç, ş, ğ, ı, ö, ü). Never produce broken or transliterated Turkish."
+      : "All visible content (title, why_now, expected_outcome, user_action) must be in English. Never insert Turkish words even if the product name or website is Turkish.";
+
   return `You are Founder Coach inside Tiramisup.
 Answer only from the normalized context and evidence map provided below.
 Do not invent unsupported context. If information is listed as unknown, do not treat it as known.
@@ -227,11 +233,11 @@ ${JSON.stringify(previousAnswer, null, 2)}`
 Return valid JSON only in this shape:
 {
   "primary_recommendation": {
-    "title": "short Turkish headline",
+    "title": "short ${outputLanguage} headline",
     "type": "launch_blocker" | "readiness_next_step" | "source_setup" | "metric_selection" | "daily_action" | "weak_link" | "data_collection" | "weekly_focus",
     "priority": "high" | "medium" | "low",
     "impact_area": "launch" | "acquisition" | "activation" | "retention" | "revenue" | "measurement",
-    "why_now": "1-2 sentence Turkish explanation tied to evidence",
+    "why_now": "1-2 sentence ${outputLanguage} explanation tied to evidence",
     "supporting_evidence": ["fact from evidence map"],
     "assumptions": ["assumption if any"],
     "missing_data": ["missing field if any"],
@@ -240,15 +246,15 @@ Return valid JSON only in this shape:
     "user_action": "concrete next step"
   },
   "supporting_recommendations": [
-    { ...same shape as primary, max 3 items }
+    { ...same shape as primary, max 2 items }
   ],
   "missing_information_for_better_guidance": ["field or data point"],
   "critic_status": "approved"
 }
 
 Rules:
-- primary_recommendation is required, supporting_recommendations max 3
-- Turkish output
+- primary_recommendation is required, supporting_recommendations max 2
+- OUTPUT LANGUAGE: ${langRule}
 - no markdown
 - no generic startup fluff
 - tie advice to known_facts and inferred_facts from the evidence map
@@ -279,6 +285,12 @@ async function buildProactivePrompt(context: FounderCoachContext) {
     )
     .join("\n\n---\n\n");
 
+  const outputLanguage = context.locale === "tr" ? "Turkish" : "English";
+  const langRule =
+    context.locale === "tr"
+      ? "All visible content (title, why_now, expected_outcome, user_action) must be in Turkish, with perfect Turkish characters (ç, ş, ğ, ı, ö, ü). Never produce broken or transliterated Turkish."
+      : "All visible content (title, why_now, expected_outcome, user_action) must be in English. Never insert Turkish words even if the product name or website is Turkish.";
+
   return `You are Founder Coach inside Tiramisup.
 You are generating one short proactive suggestion card.
 Do not invent unsupported context. Suggest one high-value next step only.
@@ -299,11 +311,11 @@ ${advisoryKnowledge ? `RELEVANT ADVISORY KNOWLEDGE:\n${advisoryKnowledge}` : ""}
 Return valid JSON only in this shape:
 {
   "primary_recommendation": {
-    "title": "short Turkish suggestion",
+    "title": "short ${outputLanguage} suggestion",
     "type": "launch_blocker" | "readiness_next_step" | "source_setup" | "metric_selection" | "daily_action" | "weak_link" | "data_collection" | "weekly_focus",
     "priority": "high" | "medium" | "low",
     "impact_area": "launch" | "acquisition" | "activation" | "retention" | "revenue" | "measurement",
-    "why_now": "1-2 sentence Turkish explanation tied to evidence",
+    "why_now": "1-2 sentence ${outputLanguage} explanation tied to evidence",
     "supporting_evidence": ["fact from evidence map"],
     "assumptions": [],
     "missing_data": [],
@@ -317,7 +329,7 @@ Return valid JSON only in this shape:
 }
 
 Rules:
-- Turkish only
+- OUTPUT LANGUAGE: ${langRule}
 - one primary recommendation, no supporting for proactive cards
 - strictly follow the stage directive above
 - use recommendation_readiness scores to calibrate confidence
@@ -811,6 +823,13 @@ function applyCriticPass(
     return null;
   }
 
+  // ── Reject: title too short / generic-AI-filler indicator ──
+  // A title under 12 characters is almost always a placeholder ("Set up GA4")
+  // without enough specificity for the founder to act on.
+  if (primary.title.trim().length < 12) {
+    return null;
+  }
+
   // ── Revise: confidence overstated — many missing_data items but high confidence ──
   if (primary.confidence === "high" && primary.missing_data.length >= 3) {
     primary.confidence = "medium";
@@ -844,6 +863,34 @@ function applyCriticPass(
       rec.confidence = "medium";
       revised = true;
     }
+  }
+
+  // ── Revise: drop supporting recs with title too short (filler heuristic) ──
+  const beforeShort = output.supporting_recommendations.length;
+  output.supporting_recommendations = output.supporting_recommendations.filter(
+    (rec) => rec.title.trim().length >= 12
+  );
+  if (output.supporting_recommendations.length < beforeShort) revised = true;
+
+  // ── Revise: dedupe supporting recs by impact_area ──
+  // Prevents the founder from seeing two "metric_selection" recs at once.
+  // Keeps the first occurrence per impact_area.
+  const seenAreas = new Set<string>();
+  const beforeArea = output.supporting_recommendations.length;
+  output.supporting_recommendations = output.supporting_recommendations.filter((rec) => {
+    if (!rec.impact_area) return true;
+    const key = String(rec.impact_area).toLowerCase();
+    if (seenAreas.has(key)) return false;
+    seenAreas.add(key);
+    return true;
+  });
+  if (output.supporting_recommendations.length < beforeArea) revised = true;
+
+  // ── Revise: hard cap supporting recs to 2 (was 3) for focus discipline ──
+  // Three competing alternatives is a recommendation rail, not a recommendation.
+  if (output.supporting_recommendations.length > 2) {
+    output.supporting_recommendations = output.supporting_recommendations.slice(0, 2);
+    revised = true;
   }
 
   if (revised) {

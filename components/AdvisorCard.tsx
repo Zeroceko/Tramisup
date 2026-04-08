@@ -87,7 +87,7 @@ export default function AdvisorCard({
     let cancelled = false;
     setLoading(true);
     setSuggestionError(null);
-    fetch(`/api/products/${productId}/advice?event=${encodeURIComponent(eventType)}`)
+    fetch(`/api/products/${productId}/advice?event=${encodeURIComponent(eventType)}&locale=${locale}`)
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
         return r.json();
@@ -126,6 +126,7 @@ export default function AdvisorCard({
           message: trimmed,
           recentEvent: { type: "MANUAL_QUESTION" },
           previousAnswer,
+          locale,
         }),
       });
 

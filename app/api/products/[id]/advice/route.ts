@@ -26,7 +26,8 @@ export async function GET(
 
     const url = new URL(request.url);
     const eventType = url.searchParams.get("event") ?? undefined;
-    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined);
+    const localeParam = (url.searchParams.get("locale") ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined, localeParam);
     const suggestion = await getFounderCoachSuggestion(context);
 
     return NextResponse.json(suggestion);
@@ -75,7 +76,8 @@ export async function POST(
                 : undefined,
           }
         : null;
-    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined);
+    const localeParam = (typeof body?.locale === "string" && body.locale.toLowerCase().startsWith("tr")) ? "tr" : "en";
+    const context = await getFounderCoachContext(id, eventType ? { type: eventType } : undefined, localeParam);
     const answer = await getFounderCoachAnswer(context, message, previousAnswer);
 
     return NextResponse.json(answer);

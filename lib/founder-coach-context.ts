@@ -49,6 +49,8 @@ export type FounderCoachContext = {
     hasReviewAccount: boolean | null;
   };
   recentEvent?: { type: string; at?: string };
+  /** Output language code: "en" or "tr". Defaults to "en". */
+  locale: "en" | "tr";
   normalizedContext: NormalizedProductContext;
   evidenceMap: EvidenceMap;
 };
@@ -80,7 +82,11 @@ function inferLoginRequired(product: { targetAudience: string | null; descriptio
   return null;
 }
 
-export async function getFounderCoachContext(productId: string, recentEvent?: { type: string; at?: string }): Promise<FounderCoachContext> {
+export async function getFounderCoachContext(
+  productId: string,
+  recentEvent?: { type: string; at?: string },
+  locale: "en" | "tr" = "en",
+): Promise<FounderCoachContext> {
   const [product, metricSetup] = await Promise.all([
     prisma.product.findUnique({
       where: { id: productId },
@@ -264,6 +270,7 @@ export async function getFounderCoachContext(productId: string, recentEvent?: { 
       hasReviewAccount: null,
     },
     recentEvent,
+    locale,
     normalizedContext: nCtx,
     evidenceMap: buildEvidenceMap({
       normalizedContext: nCtx,
