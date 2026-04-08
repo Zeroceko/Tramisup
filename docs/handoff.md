@@ -10,11 +10,166 @@ This repo is already in production and should be treated as a live system, not a
 - Main public goal: waitlist conversion
 - Main app goal: staged launch-to-growth workflow
 - Trusted production baseline commit: `626543d9`
-- Current live/main release line: `6be98945` (last committed; local has uncommitted Sprint 1+2+3 work)
-- Last docs refresh: `6 April 2026`
+- Current live/main release line: `e32d97c4` (8 April 2026 — Stripe lazy init build fix)
+- Last docs refresh: `8 April 2026`
 - Recommended new-team kickoff brief: `docs/team-handoff-prompt.md`
 
-## In-progress work — not yet committed (6 April 2026)
+## Latest release — 8 April 2026 (Tasks/Growth quality pass + Founder Coach hardening)
+
+This is the most recent shipped work. **Read this section first.** It includes a schema change that's already live in prod Supabase.
+
+### What changed at a glance
+
+| Area | Before | After |
+|---|---|---|
+| Task creation | 5 different surfaces, no shared validation | Single canonical `createTaskWithGuards` |
+| Task structure | Free-text description; whyItMatters/doneCriteria parsed at runtime | First-class DB columns |
+| Task category | Inferred from linked LaunchChecklist; standalone tasks fell into "Other" | Dedicated `category` column on Task |
+| Task dedupe | Substring match in some surfaces, none in others | Semantic token-set match (TR+EN aware) in single chokepoint |
+| Locale leakage | TR users could receive English suggestions | Heuristic detector + critic reject |
+| Telemetry | Server-only Prisma counts | `TaskEvent` lifecycle stream |
+
+### Schema migration (already applied to prod)
+
+`prisma/schema.prisma` — pushed to prod via `prisma db push` on 8 April 2026.
+
+**Task table additions:**
+- `whyItMatters String?` — why this matters now (10–220 char target)
+- `doneCriteria String?` — observable definition of done
+- `nextAction   String?` — first concrete next step
+- `source       String?` — `AI_PLAN | AGENT_CHAT | MANUAL | COMPLETION_EFFECT | FOUNDER_COACH`
+- `category     String?` — `PRODUCT | MARKETING | LEGAL | TECH | ACQUISITION | ACTIVATION | RETENTION | REVENUE | MEASUREMENT` (no "OTHER" bucket)
+- New index `Task_productId_category_idx`
+
+**New TaskEvent table:**
+```prisma
+model TaskEvent {
+  id        String   @id @default(cuid())
+  taskId    String
+  productId String
+  eventType String   // CREATED | DEDUPED | DETAIL_OPENED | STARTED | COMPLETED | REOPENED | DISMISSED
+  metadata  String?
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  @@index([productId, eventType, createdAt])
+  @@index([taskId, createdAt])
+}
+```
+
+> **Migrations note:** This repo gitignores `prisma/migrations/`. The workflow is `prisma db push` against `DIRECT_URL`. If `DIRECT_URL` isn't set, fall back: `DIRECT_URL="$DATABASE_URL" npx prisma db push --skip-generate`.
+
+### Single canonical task creator — `lib/task-create.ts`
+
+Every surface that produces a Task now goes through `createTaskWithGuards(input, db?)`:
+
+1. **Validate** the candidate via [lib/task-validator.ts](lib/task-validator.ts) (unless `skipValidation: true` for manual entries).
+2. **Dedupe** against existing OPEN tasks for the same product using semantic token-set match (`tasksAreNearDuplicate` from [lib/task-parsing.ts](lib/task-parsing.ts), ≥75% overlap, TR-aware lowercase, drops stop words like "set/kur/oluştur").
+3. **Create** the row with structured columns + emit a `CREATED` `TaskEvent`. Dedupe path emits `DEDUPED` instead.
+
+`tryCreateTaskWithGuards` is the no-throw variant for batch surfaces (AI plan seeding, completion-effects follow-ups).
+
+**Surfaces wired through:**
+- `lib/seed.ts` — AI plan seeding (`source: AI_PLAN`)
+- `app/api/agent/chat/route.ts` — agent chat task actions (`source: AGENT_CHAT`)
+- `app/api/actions/route.ts` POST — manual user-typed tasks (`source: MANUAL`, `skipValidation: true`)
+- `lib/task-completion-effects.ts` — auto follow-up tasks (`source: COMPLETION_EFFECT`)
+- Founder coach recommendation → task path (`source: FOUNDER_COACH`)
+
+### Validator + parser — `lib/task-validator.ts`, `lib/task-parsing.ts`
+
+- **Title rules:** min 12 chars, blocked filler patterns ("test task", "todo", "fix it" etc.)
+- **Category whitelist:** 9 explicit values (no `OTHER` bucket, no model-invented categories)
+- **Locale enforcement:** `looksTurkish` / `looksEnglish` heuristics — if requested locale is `tr` and the candidate looks English, the candidate is rejected with `wrong_locale`. Inverse for `en`.
+- **Structured field rule:** `whyItMatters`, `doneCriteria`, `nextAction` are zod-validated to 10–220 chars in `lib/ai-plan.ts` `PlanSchema` — if the model returns shorter or longer, the candidate is dropped.
+
+`filterValidCandidates(candidates, locale)` returns `{ valid, rejected }` and is used by AI plan post-generation pipeline. Rejected candidates are logged with reason but do not block the rest of the batch.
+
+### TaskEvent telemetry — `lib/task-events.ts`
+
+`emitTaskLifecycleEvent({ taskId, productId, eventType, metadata? })` writes one row. Event types:
+
+| Event | Emitted by |
+|---|---|
+| `CREATED` | `createTaskWithGuards` (inside the create transaction) |
+| `DEDUPED` | `createTaskWithGuards` when an existing task absorbs a candidate |
+| `DETAIL_OPENED` | Client (TasksList) when the detail modal opens — fire-and-forget |
+| `STARTED` | `PATCH /api/actions/[id]` on `TODO → IN_PROGRESS` |
+| `COMPLETED` | `PATCH /api/actions/[id]` on `→ DONE` |
+| `REOPENED` | `PATCH /api/actions/[id]` on `DONE → other` |
+| `DISMISSED` | Client when founder closes a suggested task without acting on it |
+
+`getTaskQualityReport(productId, daysBack = 30)` aggregates these into `{ counts, actionRate, dedupeSaveRate, completionRate }`. Exposed over HTTP at `GET /api/products/[id]/task-quality?days=30` (owner-scoped).
+
+Client-emitted events go through `POST /api/actions/[id]/event` which only accepts `DETAIL_OPENED` and `DISMISSED` — server-observed transitions are NOT accepted from the client.
+
+### Founder Coach hardening
+
+- **Locale enforcement** in [lib/founder-coach.ts](lib/founder-coach.ts) and [lib/ai-advice.ts](lib/ai-advice.ts) — `locale` is now propagated end-to-end (server → AdvisorCard.tsx → CoachInsight.tsx → advice API GET query + POST body). Without this, TR users could receive English coach output.
+- **Critic pass** rejects/revises recommendations on:
+  - stage mismatch (e.g. `launch_blocker` on `early_growth`, `daily_action` on `launch_prep`)
+  - low confidence + high priority
+  - empty `supporting_evidence`
+  - 3+ `missing_data` items at high confidence → downgrade to medium
+  - supporting recs duplicating primary title → drop
+
+### TasksList UI — [components/TasksList.tsx](components/TasksList.tsx)
+
+- `Task` interface extended with `whyItMatters`, `doneCriteria`, `nextAction`, `category`, `source`.
+- New helper `effectiveCategory(t)` — prefers `task.category`, falls back to linked checklist's category.
+- New helper `resolveStructured(task)` — prefers DB columns, falls back to parsing the description (kept for legacy rows).
+- `CATEGORY_CONFIG` expanded from 4 to **9 entries** (added ACQUISITION, ACTIVATION, RETENTION, REVENUE, MEASUREMENT).
+- `CategoryFilter` now supports all 9 plus `NONE`.
+- `openDetail(taskId)` fires `DETAIL_OPENED` (fire-and-forget) before opening the modal — used for the detail-open rate signal in `getTaskQualityReport`.
+
+### Landing scroll fix
+
+- `app/[locale]/layout.tsx` — removed `overflow-x-hidden` from body
+- `app/[locale]/globals.css` — added `overflow-x: clip` on html instead
+
+`overflow-x-hidden` on body created an unintended scroll context that interacted badly with the Hero's absolute-positioned rotated illustration, locking page scroll. `overflow-x: clip` on html clips horizontal overflow without creating a scroll context, leaving vertical scroll free.
+
+### Vercel build fix — Stripe lazy init
+
+`app/api/billing/checkout/route.ts`, `portal/route.ts`, `webhook/route.ts` previously instantiated `new Stripe(process.env.STRIPE_SECRET_KEY!)` at module load. During Vercel's "Collecting page data" build step the env var isn't injected, causing `Neither apiKey nor config.authenticator provided` and a hard build failure.
+
+Fix: move Stripe construction into a `getStripe()` function called inside the request handler, and add `export const dynamic = "force-dynamic"` so Next doesn't try to prerender the routes.
+
+**Lesson for new code:** never construct provider SDK clients at module top level in App Router route files. Always lazy-instantiate inside the handler.
+
+---
+
+## How to verify the 8 April 2026 release in production
+
+### Task quality smoke test
+1. Sign in, open `/en/tasks`.
+2. Confirm category filter shows 9 categories (PRODUCT, MARKETING, LEGAL, TECH, ACQUISITION, ACTIVATION, RETENTION, REVENUE, MEASUREMENT).
+3. Add a manual task with a 1-word title — should succeed (manual entries skip validation).
+4. Open a task's detail modal — `DETAIL_OPENED` should appear in `TaskEvent` table.
+5. Toggle `TODO → IN_PROGRESS` — `STARTED` event written.
+6. Toggle to `DONE` — `COMPLETED` event written.
+7. `GET /api/products/{productId}/task-quality?days=7` should return non-zero counts.
+
+### AI plan dedupe + validation smoke test
+1. Trigger AI plan generation for a fresh product.
+2. Confirm logs show `[task-create] Skipped task "..."` for any rejected candidate (validator working).
+3. Re-run plan generation — second pass should produce fewer new tasks because semantic dedupe absorbs equivalents (e.g. "Set up GA4" vs "GA4 kurulumu").
+4. Confirm new Tasks have `whyItMatters`, `doneCriteria`, `nextAction`, `category`, `source: "AI_PLAN"` populated.
+
+### Founder Coach locale smoke test
+1. Switch user to Turkish in Settings.
+2. Open advisor card on dashboard.
+3. Confirm response is fully Turkish — no English fragments in `primary_recommendation.title` or `why_now`.
+
+### Landing scroll smoke test
+1. Open `https://tramisup.vercel.app/tr` in a fresh window.
+2. Scroll down with mouse wheel and trackpad.
+3. Confirm Hero → Problem → HowItWorks sections all reachable.
+
+---
+
+## Historical: Sprint 1+2+3 changes (now all committed and live)
+
+> Everything in this section was uncommitted as of 6 April 2026 and is now shipped as of the 8 April 2026 release line above. Kept for historical traceability — do not treat as a TODO list.
 
 ### Sprint 1 — UX friction reduction (complete, uncommitted)
 
@@ -377,6 +532,7 @@ Check in this order:
 
 ## Current known product debt
 
+- The TaskEvent stream is collected but **not yet visualized in the UI**. The endpoint `GET /api/products/[id]/task-quality` exists; a dashboard panel that surfaces `actionRate` / `dedupeSaveRate` / `completionRate` is not built. First two weeks of data needed before it would be meaningful.
 - Some locale-routed product screens still contain Turkish-first hardcoded copy.
 - Local signup and founder-flow testing fail early if Prisma cannot reach the local database.
 - Signup still asks for a product-type selection that is not submitted to backend state.
