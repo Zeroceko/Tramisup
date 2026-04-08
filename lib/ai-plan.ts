@@ -134,8 +134,16 @@ function inferContext(input: WizardInput) {
   };
 }
 
-function makeLaunchItem(category: LaunchCategory, title: string, description: string, priority: Priority): AiLaunchItem {
-  return { category, title, description, priority, order: 0 };
+function makeLaunchItem(
+  category: LaunchCategory,
+  title: string,
+  description: string,
+  priority: Priority,
+  whyItMatters?: string,
+  doneCriteria?: string,
+  nextAction?: string,
+): AiLaunchItem {
+  return { category, title, description, priority, whyItMatters, doneCriteria, nextAction, order: 0 };
 }
 function makeGrowthItem(category: GrowthCategory, title: string, description: string): AiGrowthItem {
   return { category, title, description, order: 0 };
@@ -248,25 +256,93 @@ export function sanitizeAiPlanOutput(
   };
 }
 
-function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
+function pickCopy(locale: Locale, tr: string, en: string) {
+  return locale === "tr" ? tr : en;
+}
+
+export function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
   const context = inferContext(input);
   const productName = input.name;
   const audience = input.targetAudience || "hedef kitlen";
+  const locale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
   const launchChecklist: AiLaunchItem[] = [];
   const growthChecklist: AiGrowthItem[] = [];
 
   if (!context.isLaunched) {
     launchChecklist.push(
-      makeLaunchItem("PRODUCT", "Ilk deger anini launch oncesi netlestir", `${productName} yayina ciktiginda ${audience} hangi ilk aksiyonla deger gordugunu anlamali.`, "HIGH"),
-      makeLaunchItem("MARKETING", "Launch gunu mesajini ve dagitim planini hazirla", `Ilk trafik dalgasi geldigi anda hangi kanalda ne soylenecegi net olmali.`, "HIGH")
+      makeLaunchItem(
+        "PRODUCT",
+        pickCopy(locale, "İlk değer anını launch öncesi netleştir", "Define the first value moment before launch"),
+        pickCopy(
+          locale,
+          `${productName} yayına çıktığında ${audience} hangi ilk aksiyonla değer gördüğünü hemen anlamalı.`,
+          `${productName} should make its first value moment obvious to ${audience} as soon as they land.`
+        ),
+        "HIGH",
+        pickCopy(locale, `${audience} ürünü ilk kez denerken neden kalması gerektiğini birkaç saniyede anlamazsa launch boşa gider.`, `If ${audience} cannot understand the first value in seconds, launch traffic will bounce.`),
+        pickCopy(locale, "Landing, onboarding veya ilk ekran akışında tek bir ana değer adımı açıkça görünür hale geldiğinde bu madde tamamdır.", "This is done when the landing, onboarding, or first-run flow clearly exposes one primary value action."),
+        pickCopy(locale, "Kurucunun ilk 5 kullanıcı için değer anını tek cümlede tanımlayıp bunu ürün akışındaki ilk ekrana yerleştirmesiyle başla.", "Start by writing the first-value moment in one sentence and placing it in the first-run flow.")
+      ),
+      makeLaunchItem(
+        "MARKETING",
+        pickCopy(locale, "Launch günü mesajını ve dağıtım planını hazırla", "Prepare launch-day messaging and distribution"),
+        pickCopy(
+          locale,
+          "İlk trafik dalgası geldiğinde hangi kanalda ne söyleneceği ve kimin davet edileceği net olmalı.",
+          "You should know which channel says what, and who gets invited, when the first traffic wave arrives."
+        ),
+        "MEDIUM",
+        pickCopy(locale, "Launch günü mesajı dağınıksa ürün sinyali zayıflar ve ilk geri bildirimler boşa gider.", "Scattered launch messaging weakens the signal and wastes the first feedback window."),
+        pickCopy(locale, "Launch günü için tek bir ana mesaj, 2-3 dağıtım kanalı ve hedef kişi listesi hazır olduğunda bu madde tamamdır.", "This is done when one core message, 2-3 distribution channels, and an outreach list are ready."),
+        pickCopy(locale, "Önce hangi kullanıcı segmentine hangi cümleyle çıkacağını yaz ve bunu tek launch notunda topla.", "Start by drafting the main message and tying it to a small launch audience list.")
+      ),
+      makeLaunchItem(
+        "TECH",
+        pickCopy(locale, "Temel kullanıcı akışını kıran hataları son kez tara", "Run one last pass on launch-breaking bugs"),
+        pickCopy(
+          locale,
+          `${productName} için kayıt, ilk kullanım ve temel aksiyon akışı launch haftasında hatasız çalışmalı.`,
+          `${productName} needs a clean signup, first-use, and core action flow for launch week.`
+        ),
+        "HIGH",
+        pickCopy(locale, "Launch günü temel akış kırılırsa erken kullanıcılar geri dönmez ve ilk güven penceresi kapanır.", "If the core flow breaks on launch day, early users will not come back."),
+        pickCopy(locale, "Kayıt, giriş, ilk ana aksiyon ve çıkış akışları hatasız test edildiğinde bu madde tamamdır.", "This is done when signup, login, first key action, and exit paths pass a final smoke test."),
+        pickCopy(locale, "Önce kayıt ve ilk değer aksiyonunu canlı benzeri ortamda baştan sona manuel test et.", "Start by manually testing signup and the first-value flow end-to-end.")
+      ),
+      makeLaunchItem(
+        "LEGAL",
+        pickCopy(locale, "Gizlilik ve kullanım koşulları görünürlüğünü kapat", "Make privacy and terms visible before launch"),
+        pickCopy(
+          locale,
+          `${productName} kullanıcı verisi veya iletişim bilgisi topluyorsa gizlilik ve kullanım koşulları launch öncesi görünür olmalı.`,
+          `If ${productName} collects user or contact data, privacy and terms must be visible before launch.`
+        ),
+        "MEDIUM",
+        pickCopy(locale, "Özellikle KOBİ'ler için güven ve hukuki netlik yoksa satış konuşması zayıflar.", "Without trust and legal clarity, the launch message feels incomplete."),
+        pickCopy(locale, "Gizlilik ve kullanım koşulları landing, ürün içi ve gerekli formlarda erişilebilir olduğunda bu madde tamamdır.", "This is done when privacy and terms are reachable from landing, product, and relevant forms."),
+        pickCopy(locale, "Önce kullanıcıdan veri topladığın tüm noktaları listele ve buralara gerekli linkleri ekle.", "Start by listing every point where you collect user data and add the required links.")
+      ),
+      makeLaunchItem(
+        "PRODUCT",
+        pickCopy(locale, "İlk 10 kullanıcı geri bildirimi için net bir kanal kur", "Set up one clear channel for the first 10 users"),
+        pickCopy(
+          locale,
+          `${productName} launch olduktan sonra ilk kullanıcıların takıldığı noktayı hızlı toplamak için tek bir geri bildirim kanalı olmalı.`,
+          `${productName} needs one fast feedback channel to learn where the first users get stuck.`
+        ),
+        "MEDIUM",
+        pickCopy(locale, "İlk kullanıcı geri bildirimi dağınık toplanırsa neyin çalışmadığını geç anlarsın.", "If early feedback is scattered, you learn too slowly."),
+        pickCopy(locale, "İlk kullanıcıların ulaşacağı tek bir form, WhatsApp hattı veya destek kanalı hazır olduğunda bu madde tamamdır.", "This is done when one simple feedback channel is ready for early users."),
+        pickCopy(locale, "Önce ilk 10 kullanıcıya göstereceğin tek geri bildirim kanalını seç ve ürün içine yerleştir.", "Start by choosing one feedback channel and placing it inside the product.")
+      )
     );
   }
 
   growthChecklist.push(
-    makeGrowthItem("ACQUISITION", "Ilk trafik veya install kaynagini netlestir", `Yeni kullanicilarin hangi kanaldan geldigini ayirmadan growth karari bulanir.`),
-    makeGrowthItem("ACTIVATION", "Ilk deger aksiyonunu tek metrikte sabitle", `${productName} icin aha moment noktasini tek sayiyla izle.`),
-    makeGrowthItem("RETENTION", "Geri donen kullanici ritmini olc", `Ilk haftada tekrar gelen kullanici davranisi urunun kaliciligini gosterir.`),
-    makeGrowthItem("REVENUE", "Ucretliye gecis veya gelir ritmini izle", `Gelir davranisi acquisition kadar net okunmali.`)
+    makeGrowthItem("ACQUISITION", pickCopy(locale, "İlk trafik veya kurulum kaynağını netleştir", "Define the first acquisition source"), pickCopy(locale, "Yeni kullanıcıların hangi kanaldan geldiğini ayırmadan growth kararı bulanık kalır.", "Growth decisions stay blurry until you separate where new users came from.")),
+    makeGrowthItem("ACTIVATION", pickCopy(locale, "İlk değer aksiyonunu tek metrikte sabitle", "Track the first value action in one metric"), pickCopy(locale, `${productName} için aha moment noktasını tek sayıyla izle.`, `Track ${productName}'s aha moment with one clear number.`)),
+    makeGrowthItem("RETENTION", pickCopy(locale, "Geri dönen kullanıcı ritmini ölç", "Measure returning-user rhythm"), pickCopy(locale, "İlk haftada tekrar gelen kullanıcı davranışı ürünün kalıcılığını gösterir.", "Returning-user behavior in week one shows whether the product sticks.")),
+    makeGrowthItem("REVENUE", pickCopy(locale, "Ücretliye geçiş veya gelir ritmini izle", "Track paid conversion or revenue rhythm"), pickCopy(locale, "Gelir davranışı acquisition kadar net okunmalı.", "Revenue behavior should be as visible as acquisition."))
   );
 
   const dedupedLaunch = context.isLaunched ? [] : dedupeByTitle(launchChecklist).slice(0, 12);

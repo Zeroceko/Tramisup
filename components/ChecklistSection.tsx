@@ -23,9 +23,9 @@ interface ChecklistSectionProps {
 
 const CATEGORY_LABELS: Record<string, { label: string; risk: string; riskEn: string }> = {
   PRODUCT: {
-    label: "Store & Listing",
-    risk: "Kullanıcı deneyimini ve ilk izlenimi etkiler",
-    riskEn: "Affects user experience and first impression",
+    label: "Ürün hazırlığı",
+    risk: "Temel kullanıcı deneyimini ve ilk değer anını etkiler",
+    riskEn: "Affects the core user experience and first value moment",
   },
   MARKETING: {
     label: "Pazarlama",
