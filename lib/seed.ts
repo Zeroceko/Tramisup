@@ -9,6 +9,23 @@ import type { AiPlan } from "@/lib/ai-plan";
 import { normalizeLaunchChecklistPriority } from "@/lib/launch-checklist-priority";
 import { tryCreateTaskWithGuards } from "@/lib/task-create";
 import type { Locale } from "@/lib/task-validator";
+import { tasksAreNearDuplicate } from "@/lib/task-parsing";
+
+const MAX_LAUNCH_ITEMS = 15;
+const MAX_GROWTH_ITEMS = 15;
+const MAX_TASK_ITEMS = 8;
+
+function dedupeSeedItems<T extends { title: string }>(items: T[], limit: number): T[] {
+  const kept: T[] = [];
+  for (const item of items) {
+    const title = item.title?.trim();
+    if (!title) continue;
+    if (kept.some((existing) => tasksAreNearDuplicate(existing.title, title))) continue;
+    kept.push({ ...item, title });
+    if (kept.length >= limit) break;
+  }
+  return kept;
+}
 
 /** Build a description string for checklists from structured fields, since
  * those tables don't yet carry whyItMatters/doneCriteria/nextAction columns. */
@@ -36,7 +53,7 @@ export async function seedAiPlan(
   if (!plan) return;
   const db = tx || prisma;
 
-  for (const item of plan.launchChecklist) {
+  for (const item of dedupeSeedItems(plan.launchChecklist, MAX_LAUNCH_ITEMS)) {
     await db.launchChecklist.create({
       data: {
         productId,
@@ -50,7 +67,7 @@ export async function seedAiPlan(
     });
   }
 
-  for (const item of plan.growthChecklist) {
+  for (const item of dedupeSeedItems(plan.growthChecklist, MAX_GROWTH_ITEMS)) {
     await db.growthChecklist.create({
       data: {
         productId,
@@ -65,7 +82,7 @@ export async function seedAiPlan(
 
   // Tasks go through the canonical guarded creator: validation, dedupe,
   // structured columns, source tagging, and CREATED instrumentation events.
-  for (const task of plan.tasks) {
+  for (const task of dedupeSeedItems(plan.tasks, MAX_TASK_ITEMS)) {
     await tryCreateTaskWithGuards(
       {
         productId,

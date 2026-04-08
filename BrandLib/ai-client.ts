@@ -148,7 +148,11 @@ export async function generateStructuredFallback<T>(
 
       const content = response.choices[0].message.content || "{}";
       const cleanContent = content.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-      return JSON.parse(cleanContent) as T;
+      const parsed = JSON.parse(cleanContent);
+      if (schema && typeof schema.parse === "function") {
+        return schema.parse(parsed) as T;
+      }
+      return parsed as T;
     } catch (fallbackErr) {
       console.error(`[${context}] Both structured AI paths failed:`, fallbackErr);
       throw fallbackErr;

@@ -1,0 +1,76 @@
+import { describe, expect, it } from "vitest";
+import { sanitizeAiPlanOutput } from "@/lib/ai-plan";
+
+function makeLaunchItem(index: number) {
+  return {
+    category: "PRODUCT",
+    title: `Komşu Kahve launch maddesi ${index}`,
+    description: `Komşu Kahve için launch hazırlık maddesi ${index}.`,
+    whyItMatters: `Komşu Kahve müşterilerinin ilk deneyimini korumak için ${index} önemli.`,
+    doneCriteria: `Kurucu ${index} maddesini tamamladığında ekran ve süreç güncel olur.`,
+    nextAction: `Kurucu bugün ${index} maddesi için ilk somut adımı atsın.`,
+    priority: "MEDIUM",
+  };
+}
+
+function makeGrowthItem(index: number) {
+  return {
+    category: "ACQUISITION",
+    title: `Komşu Kahve growth odağı ${index}`,
+    description: `Komşu Kahve için growth maddesi ${index}.`,
+    whyItMatters: `Komşu Kahve için edinim sinyalini netleştirmek adına ${index} gerekli.`,
+    doneCriteria: `Kurucu ${index} maddesi için tek bir ölçüm ve kanal seçmiş olur.`,
+    nextAction: `Kurucu bugün ${index} maddesiyle ilgili ilk testi planlasın.`,
+  };
+}
+
+function makeTask(index: number) {
+  return {
+    title: `Komşu Kahve görev başlığı ${index}`,
+    description: `Komşu Kahve görevi ${index}.`,
+    whyItMatters: `Komşu Kahve için bu görev ${index} gerçek kullanıcı sinyali toplar.`,
+    doneCriteria: `Kurucu görev ${index} için ölçülebilir çıktıyı üretmiş olur.`,
+    nextAction: `Kurucu bugün görev ${index} için ilk görüşmeyi veya kurulumu yapsın.`,
+    category: "MEASUREMENT",
+    priority: "MEDIUM",
+    status: "TODO",
+  };
+}
+
+describe("sanitizeAiPlanOutput", () => {
+  it("caps and dedupes pre-launch output before seeding", () => {
+    const raw = {
+      launchChecklist: [
+        ...Array.from({ length: 20 }, (_, index) => makeLaunchItem(index + 1)),
+        makeLaunchItem(1),
+      ],
+      growthChecklist: Array.from({ length: 18 }, (_, index) => makeGrowthItem(index + 1)),
+      tasks: [
+        ...Array.from({ length: 10 }, (_, index) => makeTask(index + 1)),
+        makeTask(1),
+      ],
+    };
+
+    const plan = sanitizeAiPlanOutput(raw, "tr", false);
+    expect(plan).not.toBeNull();
+    expect(plan?.launchChecklist).toHaveLength(15);
+    expect(plan?.growthChecklist).toHaveLength(15);
+    expect(plan?.tasks).toHaveLength(8);
+    expect(new Set(plan?.tasks.map((task) => task.title)).size).toBe(plan?.tasks.length);
+  });
+
+  it("never keeps launch checklist items for launched products", () => {
+    const raw = {
+      launchChecklist: Array.from({ length: 8 }, (_, index) => makeLaunchItem(index + 1)),
+      growthChecklist: Array.from({ length: 6 }, (_, index) => makeGrowthItem(index + 1)),
+      tasks: Array.from({ length: 6 }, (_, index) => makeTask(index + 1)),
+    };
+
+    const plan = sanitizeAiPlanOutput(raw, "tr", true);
+    expect(plan).not.toBeNull();
+    expect(plan?.launchChecklist).toHaveLength(0);
+    expect(plan?.growthChecklist).toHaveLength(6);
+    expect(plan?.tasks).toHaveLength(4);
+    expect(plan?.tasks[0]?.title).toBe(plan?.growthChecklist[0]?.title);
+  });
+});

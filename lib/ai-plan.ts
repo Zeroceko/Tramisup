@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defaultModel, withFallback, generateStructuredFallback } from "../BrandLib/ai-client";
+import { generateStructuredFallback } from "../BrandLib/ai-client";
 import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@prisma/client";
 import { loadProjectSkill } from "@/lib/project-skill-loader";
 import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
@@ -71,6 +71,10 @@ const StructuredFields = {
   nextAction: z.string().min(10).max(220),
 };
 
+const MAX_LAUNCH_ITEMS = 15;
+const MAX_GROWTH_ITEMS = 15;
+const MAX_TASK_ITEMS = 8;
+
 const TASK_CATEGORY_ENUM = z.enum([
   "PRODUCT",
   "MARKETING",
@@ -83,34 +87,34 @@ const TASK_CATEGORY_ENUM = z.enum([
   "MEASUREMENT",
 ]);
 
+const LaunchChecklistItemSchema = z.object({
+  category: z.enum(["PRODUCT", "MARKETING", "LEGAL", "TECH"]),
+  title: z.string().min(12).max(80),
+  description: z.string(),
+  ...StructuredFields,
+  priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
+});
+
+const GrowthChecklistItemSchema = z.object({
+  category: z.enum(["ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE"]),
+  title: z.string().min(12).max(80),
+  description: z.string(),
+  ...StructuredFields,
+});
+
+const TaskItemSchema = z.object({
+  title: z.string().min(12).max(80),
+  description: z.string(),
+  ...StructuredFields,
+  category: TASK_CATEGORY_ENUM,
+  priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
+  status: z.enum(["TODO"]),
+});
+
 const PlanSchema = z.object({
-  launchChecklist: z.array(
-    z.object({
-      category: z.enum(["PRODUCT", "MARKETING", "LEGAL", "TECH"]),
-      title: z.string().min(12).max(80),
-      description: z.string(),
-      ...StructuredFields,
-      priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
-    })
-  ).min(5).max(15),
-  growthChecklist: z.array(
-    z.object({
-      category: z.enum(["ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE"]),
-      title: z.string().min(12).max(80),
-      description: z.string(),
-      ...StructuredFields,
-    })
-  ).min(4).max(15),
-  tasks: z.array(
-    z.object({
-      title: z.string().min(12).max(80),
-      description: z.string(),
-      ...StructuredFields,
-      category: TASK_CATEGORY_ENUM,
-      priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
-      status: z.enum(["TODO"]),
-    })
-  ).min(3).max(8)
+  launchChecklist: z.array(LaunchChecklistItemSchema).min(5).max(MAX_LAUNCH_ITEMS),
+  growthChecklist: z.array(GrowthChecklistItemSchema).min(4).max(MAX_GROWTH_ITEMS),
+  tasks: z.array(TaskItemSchema).min(3).max(MAX_TASK_ITEMS),
 });
 
 function inferContext(input: WizardInput) {
@@ -148,6 +152,100 @@ function dedupeByTitle<T extends { title: string }>(items: T[]) {
     if (!isDup) kept.push(item);
   }
   return kept;
+}
+
+function trimPlanText<T extends Record<string, unknown>>(item: T): T {
+  return Object.fromEntries(
+    Object.entries(item).map(([key, value]) => [
+      key,
+      typeof value === "string" ? value.trim() : value,
+    ]),
+  ) as T;
+}
+
+function sanitizeStructuredItems<T extends { title: string }>(
+  input: unknown,
+  schema: z.ZodType<T>,
+  limit: number,
+): T[] {
+  if (!Array.isArray(input)) return [];
+  const valid: T[] = [];
+  for (const item of input) {
+    const parsed = schema.safeParse(
+      item && typeof item === "object" ? trimPlanText(item as Record<string, unknown>) : item,
+    );
+    if (!parsed.success) continue;
+    valid.push(parsed.data);
+  }
+  return dedupeByTitle(valid).slice(0, limit);
+}
+
+export function sanitizeAiPlanOutput(
+  raw: unknown,
+  locale: Locale,
+  isLaunchedStage: boolean,
+): AiPlan | null {
+  const source = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const launchChecklist = isLaunchedStage
+    ? []
+    : assignOrder(
+        sanitizeStructuredItems(source.launchChecklist, LaunchChecklistItemSchema, MAX_LAUNCH_ITEMS),
+      );
+  const growthChecklist = assignOrder(
+    sanitizeStructuredItems(source.growthChecklist, GrowthChecklistItemSchema, MAX_GROWTH_ITEMS),
+  );
+
+  const rawTasks = sanitizeStructuredItems(source.tasks, TaskItemSchema, MAX_TASK_ITEMS).map((task) => ({
+    title: task.title,
+    description: task.description,
+    whyItMatters: task.whyItMatters,
+    doneCriteria: task.doneCriteria,
+    nextAction: task.nextAction,
+    category: task.category,
+    priority: task.priority,
+  }));
+  const { valid: validTasks, rejected } = filterValidCandidates(rawTasks, locale);
+  if (rejected.length > 0) {
+    console.warn(
+      `[ai-plan] Rejected ${rejected.length}/${rawTasks.length} tasks during sanitization:`,
+      rejected.map((r) => `${r.reason}${r.detail ? `:${r.detail}` : ""}`).join(", "),
+    );
+  }
+
+  const tasks = isLaunchedStage
+    ? dedupeByTitle(
+        growthChecklist.slice(0, 4).map<AiTask>((item, index) => ({
+          title: item.title,
+          description: item.description,
+          whyItMatters: item.whyItMatters,
+          doneCriteria: item.doneCriteria,
+          nextAction: item.nextAction,
+          category: item.category,
+          priority: index === 0 ? "HIGH" : "MEDIUM",
+          status: "TODO",
+        })),
+      )
+    : dedupeByTitle(
+        validTasks.map<AiTask>((task) => ({
+          title: task.title,
+          description: task.description ?? undefined,
+          whyItMatters: task.whyItMatters,
+          doneCriteria: task.doneCriteria,
+          nextAction: task.nextAction,
+          category: task.category,
+          priority: task.priority as Priority,
+          status: "TODO",
+        })),
+      ).slice(0, MAX_TASK_ITEMS);
+
+  if (isLaunchedStage && growthChecklist.length === 0) return null;
+  if (!isLaunchedStage && launchChecklist.length === 0 && tasks.length === 0) return null;
+
+  return {
+    launchChecklist,
+    growthChecklist,
+    tasks,
+  };
 }
 
 function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
@@ -297,6 +395,7 @@ DEDUPE RULE:
 Two items must never describe the same outcome with different phrasings. If you find yourself writing two items that share an objective, merge them into one.
 
 ANTI-GENERIC RULE: Never write rote or generic items that could apply to any product. Always reference actual features or audience pulled from the website content or normalized context.
+GROUNDING RULE: Never mention any other founder, product, app, or company name besides "${input.name}". If you are unsure, omit the name rather than inventing or borrowing one.
 
 ${langRule}
 
@@ -352,71 +451,18 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
 
     const isLaunchedStage = ["yayında", "büyüme aşamasında"].includes((input.launchStatus ?? "").toLowerCase());
     const validatorLocale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
-
-    // Run the post-generation validator on tasks. The model may still produce
-    // filler/locale-mismatched/incomplete items even with the schema in place,
-    // so this is the actual contract — schema catches "structurally wrong",
-    // validator catches "structurally fine but useless".
-    const rawTasks = (object.tasks as AiTask[]) ?? [];
-    const taskCandidates: TaskCandidate[] = rawTasks.map((t) => ({
-      title: t.title,
-      description: t.description,
-      whyItMatters: t.whyItMatters,
-      doneCriteria: t.doneCriteria,
-      nextAction: t.nextAction,
-      category: t.category,
-      priority: t.priority,
-    }));
-    const { valid: validTasks, rejected } = filterValidCandidates(taskCandidates, validatorLocale);
-    if (rejected.length > 0) {
-      console.warn(
-        `[ai-plan] Rejected ${rejected.length}/${taskCandidates.length} tasks:`,
-        rejected.map((r) => `${r.reason}${r.detail ? `:${r.detail}` : ""}`).join(", "),
-      );
+    const sanitized = sanitizeAiPlanOutput(object, validatorLocale, isLaunchedStage);
+    if (!sanitized) {
+      console.warn("[ai-plan] Sanitized plan was empty or invalid — using skill-backed fallback");
+      return mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput);
     }
 
-    const orderedLaunch = isLaunchedStage
-      ? []
-      : assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
-    const orderedGrowth = assignOrder(dedupeByTitle(object.growthChecklist as AiGrowthItem[]));
-
-    // Map validated tasks back to AiTask shape, preserving the structured fields.
-    const validatedAiTasks: AiTask[] = validTasks.map((t) => ({
-      title: t.title,
-      description: t.description ?? undefined,
-      whyItMatters: t.whyItMatters ?? undefined,
-      doneCriteria: t.doneCriteria ?? undefined,
-      nextAction: t.nextAction ?? undefined,
-      category: t.category ?? undefined,
-      priority: t.priority as Priority,
-      status: "TODO",
-    }));
-
     console.log(
-      `[ai-plan] SUCCESS: ${orderedLaunch.length} launch / ${orderedGrowth.length} growth / ` +
-      `${validatedAiTasks.length} validated tasks (${rejected.length} rejected)`,
+      `[ai-plan] SUCCESS: ${sanitized.launchChecklist.length} launch / ${sanitized.growthChecklist.length} growth / ` +
+      `${sanitized.tasks.length} tasks after sanitization`,
     );
 
-    const aiGeneratedPlan: AiPlan = {
-      launchChecklist: orderedLaunch,
-      growthChecklist: orderedGrowth,
-      tasks: isLaunchedStage
-        ? dedupeByTitle(
-            orderedGrowth.slice(0, 4).map<AiTask>((item, index) => ({
-              title: item.title,
-              description: item.description,
-              whyItMatters: item.whyItMatters,
-              doneCriteria: item.doneCriteria,
-              nextAction: item.nextAction,
-              // Map AARRR growth category to TaskCategory directly.
-              category: item.category,
-              priority: index === 0 ? "HIGH" : "MEDIUM",
-              status: "TODO",
-            }))
-          )
-        : dedupeByTitle(validatedAiTasks),
-    };
-    return mergeMobileLaunchBaseline(aiGeneratedPlan, finalInput);
+    return mergeMobileLaunchBaseline(sanitized, finalInput);
   } catch (error) {
     console.error("[ai-plan] AI SDK generation failed, using static fallback plan:", error);
     return mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput);
