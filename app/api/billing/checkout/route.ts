@@ -4,7 +4,11 @@ import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+export const dynamic = "force-dynamic";
+
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 const PRICE_IDS: Record<string, Record<string, string>> = {
   STARTER: {
@@ -38,7 +42,7 @@ export async function GET(req: NextRequest) {
     select: { email: true, subscription: { select: { stripeCustomerId: true } } },
   });
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await getStripe().checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],

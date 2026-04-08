@@ -3,7 +3,11 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { PlanTier, BillingInterval, SubStatus } from "@prisma/client";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+export const dynamic = "force-dynamic";
+
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -11,6 +15,7 @@ export async function POST(req: NextRequest) {
 
   if (!sig) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
 
+  const stripe = getStripe();
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
