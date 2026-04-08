@@ -4,11 +4,16 @@ import type { LaunchCategory, GrowthCategory, Priority, TaskStatus } from "@pris
 import { loadProjectSkill } from "@/lib/project-skill-loader";
 import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
 import { normalizeProductContext, type NormalizedProductContext } from "@/lib/normalize-product-context";
+import { tasksAreNearDuplicate } from "@/lib/task-parsing";
+import { filterValidCandidates, type Locale, type TaskCandidate } from "@/lib/task-validator";
 
 export type AiLaunchItem = {
   category: LaunchCategory;
   title: string;
   description?: string;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
   priority: Priority;
   order: number;
 };
@@ -17,12 +22,20 @@ export type AiGrowthItem = {
   category: GrowthCategory;
   title: string;
   description?: string;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
   order: number;
 };
 
 export type AiTask = {
   title: string;
   description?: string;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
+  /** PRODUCT|MARKETING|LEGAL|TECH|ACQUISITION|ACTIVATION|RETENTION|REVENUE|MEASUREMENT */
+  category?: string;
   priority: Priority;
   status: TaskStatus;
 };
@@ -50,26 +63,50 @@ export type WizardInput = {
   storeGuidance?: string;
 };
 
+// Structured fields are required at the schema level so the model literally
+// cannot return shallow items. Validator + parser still run as a second guard.
+const StructuredFields = {
+  whyItMatters: z.string().min(10).max(220),
+  doneCriteria: z.string().min(10).max(220),
+  nextAction: z.string().min(10).max(220),
+};
+
+const TASK_CATEGORY_ENUM = z.enum([
+  "PRODUCT",
+  "MARKETING",
+  "LEGAL",
+  "TECH",
+  "ACQUISITION",
+  "ACTIVATION",
+  "RETENTION",
+  "REVENUE",
+  "MEASUREMENT",
+]);
+
 const PlanSchema = z.object({
   launchChecklist: z.array(
     z.object({
       category: z.enum(["PRODUCT", "MARKETING", "LEGAL", "TECH"]),
-      title: z.string().max(80),
+      title: z.string().min(12).max(80),
       description: z.string(),
+      ...StructuredFields,
       priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
     })
   ).min(5).max(15),
   growthChecklist: z.array(
     z.object({
       category: z.enum(["ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE"]),
-      title: z.string().max(80),
+      title: z.string().min(12).max(80),
       description: z.string(),
+      ...StructuredFields,
     })
   ).min(4).max(15),
   tasks: z.array(
     z.object({
-      title: z.string().max(80),
+      title: z.string().min(12).max(80),
       description: z.string(),
+      ...StructuredFields,
+      category: TASK_CATEGORY_ENUM,
       priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
       status: z.enum(["TODO"]),
     })
@@ -103,13 +140,14 @@ function assignOrder<T extends { order: number }>(items: T[]) {
   return items.map((item, index) => ({ ...item, order: index + 1 }));
 }
 function dedupeByTitle<T extends { title: string }>(items: T[]) {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = item.title.toLocaleLowerCase("tr-TR");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // Semantic dedupe: uses normalized token-set, not raw lowercase, so
+  // "Set up GA4 analytics" and "Configure GA4 tracking" merge.
+  const kept: T[] = [];
+  for (const item of items) {
+    const isDup = kept.some((k) => tasksAreNearDuplicate(k.title, item.title));
+    if (!isDup) kept.push(item);
+  }
+  return kept;
 }
 
 function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
@@ -244,15 +282,16 @@ Be very selective with HIGH. Most items must be MEDIUM or LOW.
 CATEGORY RULE (CRITICAL):
 - Every launch item MUST be assigned a category from the strict enum: PRODUCT, MARKETING, LEGAL, TECH.
 - Every growth item MUST be assigned a category from: ACQUISITION, ACTIVATION, RETENTION, REVENUE.
-- Pick the single category that best matches the actual outcome the item drives. Do not default to PRODUCT for everything. Categories are how the founder navigates work.
+- Every task MUST be assigned a category from the union: PRODUCT, MARKETING, LEGAL, TECH, ACQUISITION, ACTIVATION, RETENTION, REVENUE, MEASUREMENT.
+- Pick the single category that best matches the actual outcome the item drives. Do not default to PRODUCT for everything. Categories are how the founder navigates work. There is no "OTHER" — if you cannot pick a real category, drop the item entirely.
 
-DESCRIPTION FORMAT (CRITICAL — applies to every checklist item AND every task):
-The description field MUST be structured as exactly three short labeled lines, in this order, separated by newlines:
-Why: <one sentence: why this matters for THIS specific product, referencing its real features or audience>
-Done when: <one sentence: the concrete observable state when this item is finished>
-Next action: <one sentence: the very first action the founder should take to start>
+STRUCTURED FIELD RULE (CRITICAL — applies to every checklist item AND every task):
+Every item MUST include three additional fields next to title/description:
+- whyItMatters: one sentence on why this matters for THIS specific product, referencing its real features or audience.
+- doneCriteria: one sentence on the concrete observable state when the item is finished.
+- nextAction: one sentence on the very first action the founder should take to start.
 
-Do not use bullets, do not add markdown, do not omit any of the three lines, and never write "TODO" or placeholder text. Each line must be a real, product-specific sentence written in the OUTPUT LANGUAGE defined below.
+Each field MUST be at least 10 characters, MUST be a real product-specific sentence in the OUTPUT LANGUAGE defined below, MUST NOT be a placeholder ("TODO", "TBD"), and MUST NOT contain markdown or bullets. The description field should be a one-sentence summary or empty — do not duplicate the structured fields inside it.
 
 DEDUPE RULE:
 Two items must never describe the same outcome with different phrasings. If you find yourself writing two items that share an objective, merge them into one.
@@ -312,12 +351,52 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
     );
 
     const isLaunchedStage = ["yayında", "büyüme aşamasında"].includes((input.launchStatus ?? "").toLowerCase());
+    const validatorLocale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+
+    // Run the post-generation validator on tasks. The model may still produce
+    // filler/locale-mismatched/incomplete items even with the schema in place,
+    // so this is the actual contract — schema catches "structurally wrong",
+    // validator catches "structurally fine but useless".
+    const rawTasks = (object.tasks as AiTask[]) ?? [];
+    const taskCandidates: TaskCandidate[] = rawTasks.map((t) => ({
+      title: t.title,
+      description: t.description,
+      whyItMatters: t.whyItMatters,
+      doneCriteria: t.doneCriteria,
+      nextAction: t.nextAction,
+      category: t.category,
+      priority: t.priority,
+    }));
+    const { valid: validTasks, rejected } = filterValidCandidates(taskCandidates, validatorLocale);
+    if (rejected.length > 0) {
+      console.warn(
+        `[ai-plan] Rejected ${rejected.length}/${taskCandidates.length} tasks:`,
+        rejected.map((r) => `${r.reason}${r.detail ? `:${r.detail}` : ""}`).join(", "),
+      );
+    }
+
     const orderedLaunch = isLaunchedStage
       ? []
       : assignOrder(dedupeByTitle(object.launchChecklist as AiLaunchItem[]));
     const orderedGrowth = assignOrder(dedupeByTitle(object.growthChecklist as AiGrowthItem[]));
 
-    console.log(`[ai-plan] SUCCESS: Generated structured plan with ${orderedLaunch.length} launch items and ${orderedGrowth.length} growth items`);
+    // Map validated tasks back to AiTask shape, preserving the structured fields.
+    const validatedAiTasks: AiTask[] = validTasks.map((t) => ({
+      title: t.title,
+      description: t.description ?? undefined,
+      whyItMatters: t.whyItMatters ?? undefined,
+      doneCriteria: t.doneCriteria ?? undefined,
+      nextAction: t.nextAction ?? undefined,
+      category: t.category ?? undefined,
+      priority: t.priority as Priority,
+      status: "TODO",
+    }));
+
+    console.log(
+      `[ai-plan] SUCCESS: ${orderedLaunch.length} launch / ${orderedGrowth.length} growth / ` +
+      `${validatedAiTasks.length} validated tasks (${rejected.length} rejected)`,
+    );
+
     const aiGeneratedPlan: AiPlan = {
       launchChecklist: orderedLaunch,
       growthChecklist: orderedGrowth,
@@ -326,11 +405,16 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
             orderedGrowth.slice(0, 4).map<AiTask>((item, index) => ({
               title: item.title,
               description: item.description,
+              whyItMatters: item.whyItMatters,
+              doneCriteria: item.doneCriteria,
+              nextAction: item.nextAction,
+              // Map AARRR growth category to TaskCategory directly.
+              category: item.category,
               priority: index === 0 ? "HIGH" : "MEDIUM",
               status: "TODO",
             }))
           )
-        : dedupeByTitle(object.tasks as AiTask[]),
+        : dedupeByTitle(validatedAiTasks),
     };
     return mergeMobileLaunchBaseline(aiGeneratedPlan, finalInput);
   } catch (error) {

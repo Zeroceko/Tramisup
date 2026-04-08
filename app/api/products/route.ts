@@ -373,7 +373,12 @@ export async function POST(request: Request) {
         });
 
         if (aiPlan) {
-          await seedAiPlan(newProduct.id, aiPlan, tx);
+          await seedAiPlan(
+            newProduct.id,
+            aiPlan,
+            tx,
+            (locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en",
+          );
         }
 
         // Seed demo metrics only if user opted in

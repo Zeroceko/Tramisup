@@ -14,6 +14,7 @@ import {
 } from "@/lib/agent-prompts";
 import { generateTextFallback } from "@/BrandLib/ai-client";
 import { checkLimit, recordUsageEvent } from "@/lib/plan-limits";
+import { tryCreateTaskWithGuards } from "@/lib/task-create";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
@@ -88,6 +89,7 @@ async function executeActions(
   actions: AgentAction[],
   productId: string,
   userId: string,
+  locale: "en" | "tr",
 ): Promise<{ executedActions: string[] }> {
   const executedActions: string[] = [];
   const taskActions = actions.filter((action) => action.type === "create_task");
@@ -104,19 +106,24 @@ async function executeActions(
       const { title, description, priority } = action.payload;
       if (!title) continue;
 
-      try {
-        await prisma.task.create({
-          data: {
-            title,
-            description: description ?? null,
-            priority: priority ?? "MEDIUM",
-            status: "TODO",
-            productId,
-          },
-        });
-        executedActions.push(`task_created:${title}`);
-      } catch (err) {
-        console.error("[agent/chat] Failed to create task:", err);
+      // Goes through the canonical guard: validation, dedupe, instrumentation.
+      // Agent payloads rarely include structured fields so we accept best-effort
+      // by skipping strict validation; dedupe still runs.
+      const result = await tryCreateTaskWithGuards({
+        productId,
+        title,
+        description: description ?? null,
+        priority: (priority as "HIGH" | "MEDIUM" | "LOW" | undefined) ?? "MEDIUM",
+        source: "AGENT_CHAT",
+        locale,
+        skipValidation: true,
+      });
+      if (result) {
+        executedActions.push(
+          result.deduped
+            ? `task_deduped:${title}`
+            : `task_created:${title}`,
+        );
       }
     }
   }
@@ -200,7 +207,8 @@ export async function POST(request: Request) {
     const { executedActions } = await executeActions(
       agentResponse.actions,
       productId,
-      session.user.id
+      session.user.id,
+      locale,
     );
 
     await recordUsageEvent(session.user.id, "aiMessages");

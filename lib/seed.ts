@@ -7,9 +7,32 @@ import type {
 } from "@prisma/client";
 import type { AiPlan } from "@/lib/ai-plan";
 import { normalizeLaunchChecklistPriority } from "@/lib/launch-checklist-priority";
+import { tryCreateTaskWithGuards } from "@/lib/task-create";
+import type { Locale } from "@/lib/task-validator";
+
+/** Build a description string for checklists from structured fields, since
+ * those tables don't yet carry whyItMatters/doneCriteria/nextAction columns. */
+function buildChecklistDescription(item: {
+  description?: string;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
+}): string {
+  const lines: string[] = [];
+  if (item.whyItMatters) lines.push(`Why: ${item.whyItMatters}`);
+  if (item.doneCriteria) lines.push(`Done when: ${item.doneCriteria}`);
+  if (item.nextAction) lines.push(`Next action: ${item.nextAction}`);
+  if (lines.length === 0) return item.description ?? "";
+  return lines.join("\n");
+}
 
 // Seed AI-generated plan (launch checklist, growth checklist, tasks)
-export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: any) {
+export async function seedAiPlan(
+  productId: string,
+  plan: AiPlan | null,
+  tx?: any,
+  locale: Locale = "en",
+) {
   if (!plan) return;
   const db = tx || prisma;
 
@@ -19,7 +42,7 @@ export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: an
         productId,
         category: item.category,
         title: item.title,
-        description: item.description,
+        description: buildChecklistDescription(item),
         priority: normalizeLaunchChecklistPriority(item),
         order: item.order,
         completed: false,
@@ -33,23 +56,31 @@ export async function seedAiPlan(productId: string, plan: AiPlan | null, tx?: an
         productId,
         category: item.category,
         title: item.title,
-        description: item.description,
+        description: buildChecklistDescription(item),
         order: item.order,
         completed: false,
       },
     });
   }
 
+  // Tasks go through the canonical guarded creator: validation, dedupe,
+  // structured columns, source tagging, and CREATED instrumentation events.
   for (const task of plan.tasks) {
-    await db.task.create({
-      data: {
+    await tryCreateTaskWithGuards(
+      {
         productId,
         title: task.title,
         description: task.description,
+        whyItMatters: task.whyItMatters,
+        doneCriteria: task.doneCriteria,
+        nextAction: task.nextAction,
+        category: task.category,
         priority: task.priority,
-        status: task.status,
+        source: "AI_PLAN",
+        locale,
       },
-    });
+      db,
+    );
   }
 }
 

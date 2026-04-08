@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkLimit } from "@/lib/plan-limits";
+import { createTaskWithGuards, TaskCreationError } from "@/lib/task-create";
 
 type CreateTaskInput = {
   productId: string;
@@ -10,6 +11,7 @@ type CreateTaskInput = {
   description: string | null;
   dueDate: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
+  category: string | null;
 };
 
 export async function POST(request: Request) {
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
         const item = (rawItem ?? {}) as Record<string, unknown>;
         const description =
           item?.description == null ? null : String(item.description).trim();
+        const rawCategory = item?.category == null ? null : String(item.category).trim().toUpperCase();
 
         return {
           productId: String(item?.productId ?? "").trim(),
@@ -48,6 +51,7 @@ export async function POST(request: Request) {
             item?.priority === "LOW" || item?.priority === "HIGH"
               ? item.priority
               : "MEDIUM",
+          category: rawCategory || null,
         };
       })
       .filter((item): item is CreateTaskInput => Boolean(item.productId && item.title));
@@ -86,30 +90,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized product access" }, { status: 403 });
     }
 
-    const createOperations = normalizedItems.map((item: CreateTaskInput) =>
-      prisma.task.create({
-        data: {
+    // Manual user-typed tasks go through createTaskWithGuards with skipValidation:
+    // we still want dedupe + instrumentation, but the founder can legitimately
+    // type a one-word reminder that wouldn't pass strict validation.
+    const createdTasks: Array<{ task: { id: string; title: string }; deduped: boolean }> = [];
+    try {
+      for (const item of normalizedItems) {
+        const result = await createTaskWithGuards({
           productId: item.productId,
           title: item.title,
           description: item.description,
           dueDate: item.dueDate ? new Date(item.dueDate) : null,
           priority: item.priority,
-        },
-      })
-    );
-
-    const createdTasks = await prisma.$transaction(createOperations);
+          category: item.category,
+          source: "MANUAL",
+          locale: "en",
+          skipValidation: true,
+        });
+        createdTasks.push({ task: result.task, deduped: result.deduped });
+      }
+    } catch (err) {
+      if (err instanceof TaskCreationError) {
+        return NextResponse.json(
+          { error: err.message, code: err.reason },
+          { status: 400 },
+        );
+      }
+      throw err;
+    }
 
     if (createdTasks.length === 1) {
-      return NextResponse.json(createdTasks[0], { status: 201 });
+      return NextResponse.json(
+        { ...createdTasks[0].task, deduped: createdTasks[0].deduped },
+        { status: 201 },
+      );
     }
 
     return NextResponse.json(
       {
         count: createdTasks.length,
-        tasks: createdTasks,
+        tasks: createdTasks.map((c) => ({ ...c.task, deduped: c.deduped })),
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error creating task:", error);

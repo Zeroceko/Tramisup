@@ -6,6 +6,7 @@ import {
   normalizeLaunchChecklistPriority,
   normalizeStoredLaunchChecklistPriorities,
 } from "@/lib/launch-checklist-priority";
+import { tryCreateTaskWithGuards } from "@/lib/task-create";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,26 +82,26 @@ export async function computeCompletionEffects(
   }
 
   // 4. Generate follow-up tasks for major milestones
+  // Both follow-ups go through tryCreateTaskWithGuards: dedupe is automatic
+  // (no more manual { contains } findFirst), and structured fields land in
+  // the new columns.
   if (effects.milestones.includes("ALL_HIGH_BLOCKERS_CLEARED")) {
-    const exists = await prisma.task.findFirst({
-      where: {
-        productId,
-        title: { contains: "Launch tarih" },
-        status: { not: "DONE" },
-      },
+    const result = await tryCreateTaskWithGuards({
+      productId,
+      title: "Launch tarihini belirle ve duyur",
+      whyItMatters:
+        "Kritik blokajlar temizlendi; gerçek bir tarih olmadan momentum kaybolur.",
+      doneCriteria:
+        "Belirlenen launch tarihi takvime ve duyuru kanallarına yazılmış olmalı.",
+      nextAction:
+        "Önümüzdeki 14 gün içinden bir tarih seç ve launch listesine ekle.",
+      category: "MARKETING",
+      priority: "MEDIUM",
+      source: "COMPLETION_EFFECT",
+      locale: "tr",
     });
-    if (!exists) {
-      const created = await prisma.task.create({
-        data: {
-          productId,
-          title: "Launch tarihini belirle ve duyur",
-          description:
-            "Tüm kritik blokajlar temizlendi. Yayın tarihini planla ve hedef kitlene duyur.",
-          priority: "MEDIUM",
-          status: "TODO",
-        },
-      });
-      effects.followUpTaskCreated = { id: created.id, title: created.title };
+    if (result && !result.deduped) {
+      effects.followUpTaskCreated = { id: result.task.id, title: result.task.title };
     }
   }
 
@@ -123,27 +124,24 @@ export async function computeCompletionEffects(
     const hasSetup = selections.some((s) => s.selectedMetricKeys.length > 0);
 
     if (!hasSetup && product?.status === ProductStatus.PRE_LAUNCH) {
-      const exists = await prisma.task.findFirst({
-        where: {
-          productId,
-          title: { contains: "metrik" },
-          status: { not: "DONE" },
-        },
+      const result = await tryCreateTaskWithGuards({
+        productId,
+        title: "AARRR metrik kurulumunu yap",
+        whyItMatters:
+          "Launch checklist tamamlandı; growth'u körlemesine takip etmek için zaman yok.",
+        doneCriteria:
+          "Her AARRR aşaması için en az bir tracked metrik seçilmiş olmalı.",
+        nextAction:
+          "Growth ekranındaki metric setup wizard'ını aç ve ilk seçimi yap.",
+        category: "MEASUREMENT",
+        priority: "HIGH",
+        source: "COMPLETION_EFFECT",
+        locale: "tr",
       });
-      if (!exists) {
-        const created = await prisma.task.create({
-          data: {
-            productId,
-            title: "AARRR metrik kurulumunu yap",
-            description:
-              "Launch checklist tamamlandı. Growth takibi için funnel metriklerini seç.",
-            priority: "HIGH",
-            status: "TODO",
-          },
-        });
+      if (result && !result.deduped) {
         effects.followUpTaskCreated = {
-          id: created.id,
-          title: created.title,
+          id: result.task.id,
+          title: result.task.title,
         };
       }
     }

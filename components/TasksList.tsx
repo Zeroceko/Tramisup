@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/sonner";
 import type { CompletionEffects } from "@/lib/task-completion-effects";
+import { parseStructuredDescription } from "@/lib/task-parsing";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
@@ -20,10 +21,23 @@ interface Task {
   id: string;
   title: string;
   description?: string | null;
+  /** Sprint-3 structured fields. Populated for new AI-generated and guarded tasks. */
+  whyItMatters?: string | null;
+  doneCriteria?: string | null;
+  nextAction?: string | null;
+  /** PRODUCT|MARKETING|LEGAL|TECH|ACQUISITION|ACTIVATION|RETENTION|REVENUE|MEASUREMENT */
+  category?: string | null;
+  source?: string | null;
   dueDate: Date | null;
   status: TaskStatus;
   priority: Priority;
   launchChecklistItem?: LinkedChecklist | null;
+}
+
+/** Resolve a task's effective category. Prefers the new task.category column,
+ * falls back to the linked launch checklist for legacy data. */
+function effectiveCategory(t: Task): string | null {
+  return t.category || t.launchChecklistItem?.category || null;
 }
 
 interface TasksListProps {
@@ -45,10 +59,15 @@ const PRIORITY_CONFIG: Record<Priority, { label: string; labelEn: string; dot: s
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; labelEn: string; cls: string }> = {
-  LEGAL:     { label: "Hukuki hazırlık", labelEn: "Legal",   cls: "bg-red-50 text-red-700 border-red-100" },
-  TECH:      { label: "Teknik hazırlık", labelEn: "Tech",    cls: "bg-blue-50 text-blue-700 border-blue-100" },
-  PRODUCT:   { label: "Ürün hazırlığı",  labelEn: "Product", cls: "bg-purple-50 text-purple-700 border-purple-100" },
-  MARKETING: { label: "Pazarlama",       labelEn: "Marketing", cls: "bg-green-50 text-green-700 border-green-100" },
+  LEGAL:       { label: "Hukuki hazırlık", labelEn: "Legal",       cls: "bg-red-50 text-red-700 border-red-100" },
+  TECH:        { label: "Teknik hazırlık", labelEn: "Tech",        cls: "bg-blue-50 text-blue-700 border-blue-100" },
+  PRODUCT:     { label: "Ürün hazırlığı",  labelEn: "Product",     cls: "bg-purple-50 text-purple-700 border-purple-100" },
+  MARKETING:   { label: "Pazarlama",       labelEn: "Marketing",   cls: "bg-green-50 text-green-700 border-green-100" },
+  ACQUISITION: { label: "Edinim",          labelEn: "Acquisition", cls: "bg-amber-50 text-amber-700 border-amber-100" },
+  ACTIVATION:  { label: "Aktivasyon",      labelEn: "Activation",  cls: "bg-teal-50 text-teal-700 border-teal-100" },
+  RETENTION:   { label: "Tutma",           labelEn: "Retention",   cls: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+  REVENUE:     { label: "Gelir",           labelEn: "Revenue",     cls: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+  MEASUREMENT: { label: "Ölçümleme",       labelEn: "Measurement", cls: "bg-sky-50 text-sky-700 border-sky-100" },
 };
 
 const inputCls =
@@ -58,7 +77,10 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   const router = useRouter();
   const isEn = locale === "en";
 
-  type CategoryFilter = "PRODUCT" | "TECH" | "LEGAL" | "MARKETING" | "NONE" | null;
+  type CategoryFilter =
+    | "PRODUCT" | "TECH" | "LEGAL" | "MARKETING"
+    | "ACQUISITION" | "ACTIVATION" | "RETENTION" | "REVENUE" | "MEASUREMENT"
+    | "NONE" | null;
 
   const [loading, setLoading] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -66,6 +88,18 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   const [showDone, setShowDone] = useState(false);
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+
+  // Fire-and-forget DETAIL_OPENED event so the task quality report can answer
+  // "did the founder actually read the task before acting on it?". Failures
+  // are silent — instrumentation must never block the UI.
+  function openDetail(taskId: string) {
+    setDetailTaskId(taskId);
+    fetch(`/api/actions/${taskId}/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventType: "DETAIL_OPENED" }),
+    }).catch(() => {});
+  }
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({
@@ -91,19 +125,24 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     return dd >= todayStart && dd < tomorrowStart;
   }
 
-  // Category filter application
+  // Category filter application — uses effectiveCategory so the new
+  // task.category column is the primary source of truth, with launchChecklist
+  // category as legacy fallback.
   const filteredTasks = activeCategory === null
     ? tasks
     : activeCategory === "NONE"
-    ? tasks.filter((t) => !t.launchChecklistItem)
-    : tasks.filter((t) => t.launchChecklistItem?.category === activeCategory);
+    ? tasks.filter((t) => !effectiveCategory(t))
+    : tasks.filter((t) => effectiveCategory(t) === activeCategory);
 
   // Categories that have at least one task
-  const KNOWN_CATEGORIES = ["PRODUCT", "TECH", "LEGAL", "MARKETING"] as const;
+  const KNOWN_CATEGORIES = [
+    "PRODUCT", "TECH", "LEGAL", "MARKETING",
+    "ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE", "MEASUREMENT",
+  ] as const;
   const presentCategories = KNOWN_CATEGORIES.filter((cat) =>
-    tasks.some((t) => t.launchChecklistItem?.category === cat)
+    tasks.some((t) => effectiveCategory(t) === cat)
   );
-  const hasUnlinked = tasks.some((t) => !t.launchChecklistItem);
+  const hasUnlinked = tasks.some((t) => !effectiveCategory(t));
 
   // Section assignment
   const activeTasks = filteredTasks.filter((t) => t.status !== "DONE");
@@ -295,61 +334,50 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     return text;
   }
 
-  // Parse a structured task description shaped like:
-  //   Why: ...
-  //   Done when: ...
-  //   Next action: ...
-  // into discrete fields. Falls back gracefully when the description is plain text.
-  function parseStructuredDescription(raw?: string | null): {
+  // Resolve structured fields for a task. Prefers the new DB columns, falls
+  // back to parsing the legacy free-text description for tasks created before
+  // the schema migration. parseStructuredDescription is imported from lib.
+  function resolveStructured(task: Task): {
     why: string | null;
-    doneWhen: string | null;
+    doneCriteria: string | null;
     nextAction: string | null;
     leftover: string | null;
   } {
-    if (!raw) return { why: null, doneWhen: null, nextAction: null, leftover: null };
-    const text = raw.replace(/\r\n/g, "\n");
-    const patterns: Array<{ key: "why" | "doneWhen" | "nextAction"; regex: RegExp }> = [
-      { key: "why",        regex: /^\s*(?:why|neden)\s*[:：-]\s*(.+)$/im },
-      { key: "doneWhen",   regex: /^\s*(?:done\s*when|biten\s*hali|biten\s*durum|tamamland[ıi]\s*say[ıi]l[ıi]r)\s*[:：-]\s*(.+)$/im },
-      { key: "nextAction", regex: /^\s*(?:next\s*action|sonraki\s*ad[ıi]m|ilk\s*ad[ıi]m)\s*[:：-]\s*(.+)$/im },
-    ];
-    const fields: { why: string | null; doneWhen: string | null; nextAction: string | null } = {
-      why: null,
-      doneWhen: null,
-      nextAction: null,
-    };
-    let leftover = text;
-    for (const { key, regex } of patterns) {
-      const match = text.match(regex);
-      if (match) {
-        fields[key] = match[1].trim();
-        leftover = leftover.replace(match[0], "").trim();
-      }
+    if (task.whyItMatters || task.doneCriteria || task.nextAction) {
+      return {
+        why: task.whyItMatters ?? null,
+        doneCriteria: task.doneCriteria ?? null,
+        nextAction: task.nextAction ?? null,
+        leftover: task.description ?? null,
+      };
     }
-    const matched = fields.why || fields.doneWhen || fields.nextAction;
+    const parsed = parseStructuredDescription(task.description);
     return {
-      ...fields,
-      leftover: matched ? (leftover.length > 0 ? leftover : null) : text,
+      why: parsed.why,
+      doneCriteria: parsed.doneCriteria,
+      nextAction: parsed.nextAction,
+      leftover: parsed.leftover,
     };
   }
 
   function getTaskTips(task: Task): string[] {
+    const cat = effectiveCategory(task);
     if (isEn) {
-      if (task.launchChecklistItem?.category === "LEGAL") {
+      if (cat === "LEGAL") {
         return [
           "Define the exact legal deliverable first.",
           "Use one owner and one deadline.",
           "Collect links or files in one place.",
         ];
       }
-      if (task.launchChecklistItem?.category === "MARKETING") {
+      if (cat === "MARKETING") {
         return [
           "Write one clear message before channel planning.",
           "Keep launch day distribution simple.",
           "Track one conversion metric from day one.",
         ];
       }
-      if (task.launchChecklistItem?.category === "TECH") {
+      if (cat === "TECH") {
         return [
           "Define done criteria before implementation.",
           "Test with one realistic scenario.",
@@ -363,21 +391,21 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
       ];
     }
 
-    if (task.launchChecklistItem?.category === "LEGAL") {
+    if (cat === "LEGAL") {
       return [
         "Önce net hukuki çıktıyı tanımla.",
         "Tek sorumlu ve tek son tarih belirle.",
         "Link ve dosyaları tek yerde topla.",
       ];
     }
-    if (task.launchChecklistItem?.category === "MARKETING") {
+    if (cat === "MARKETING") {
       return [
         "Kanal planından önce tek net mesajı yaz.",
         "Launch günü dağıtım planını sade tut.",
         "İlk günden tek dönüşüm metriğini izle.",
       ];
     }
-    if (task.launchChecklistItem?.category === "TECH") {
+    if (cat === "TECH") {
       return [
         "Geliştirmeden önce done kriterini yaz.",
         "En az bir gerçek senaryoda test et.",
@@ -462,7 +490,8 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     const today = isDueToday(task.dueDate);
     const isLoading = loading === task.id;
     const linked = task.launchChecklistItem;
-    const catCfg = linked ? CATEGORY_CONFIG[linked.category] : null;
+    const cat = effectiveCategory(task);
+    const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
     const priCfg = PRIORITY_CONFIG[task.priority];
 
     return (
@@ -556,7 +585,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           <div className="shrink-0">
             <button
               type="button"
-              onClick={() => setDetailTaskId(task.id)}
+              onClick={() => openDetail(task.id)}
               className="mb-2 inline-flex h-8 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[12px] font-medium text-[#5e6678] transition hover:bg-[#f6f6f6]"
             >
               {isEn ? "View details" : "Detay Gör"}
@@ -593,7 +622,8 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     const today = isDueToday(task.dueDate);
     const isLoading = loading === task.id;
     const linked = task.launchChecklistItem;
-    const catCfg = linked ? CATEGORY_CONFIG[linked.category] : null;
+    const cat = effectiveCategory(task);
+    const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
     const priCfg = PRIORITY_CONFIG[task.priority];
     const done = task.status === "DONE";
 
@@ -634,7 +664,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
               </p>
               <button
                 type="button"
-                onClick={() => setDetailTaskId(task.id)}
+                onClick={() => openDetail(task.id)}
                 className="shrink-0 rounded-full border border-[#d7dbe3] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
               >
                 {isEn ? "View details" : "Detay Gör"}
@@ -824,9 +854,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           </button>
           {presentCategories.map((cat) => {
             const cfg = CATEGORY_CONFIG[cat];
-            const count = tasks.filter(
-              (t) => t.launchChecklistItem?.category === cat
-            ).length;
+            const count = tasks.filter((t) => effectiveCategory(t) === cat).length;
             return (
               <button
                 key={cat}
@@ -1072,25 +1100,25 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
               </h3>
 
               {(() => {
-                const parsed = parseStructuredDescription(detailTask.description);
-                const hasStructured = !!(parsed.why || parsed.doneWhen || parsed.nextAction);
+                const structured = resolveStructured(detailTask);
+                const hasStructured = !!(structured.why || structured.doneCriteria || structured.nextAction);
 
                 // Structured path: render Why / Done when / Next action as discrete sections.
                 if (hasStructured) {
                   const sections: Array<{ label: string; value: string | null; accent: string }> = [
                     {
                       label: isEn ? "Why it matters" : "Neden önemli",
-                      value: parsed.why,
+                      value: structured.why,
                       accent: "border-l-[#ffd7ef]",
                     },
                     {
                       label: isEn ? "Done when" : "Biten hali",
-                      value: parsed.doneWhen,
+                      value: structured.doneCriteria,
                       accent: "border-l-[#75fc96]",
                     },
                     {
                       label: isEn ? "Next action" : "Sonraki adım",
-                      value: parsed.nextAction,
+                      value: structured.nextAction,
                       accent: "border-l-[#95dbda]",
                     },
                   ];
@@ -1111,9 +1139,9 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                           </div>
                         ) : null,
                       )}
-                      {parsed.leftover && (
+                      {structured.leftover && (
                         <p className="text-[13px] leading-6 text-[#5e6678]">
-                          {normalizeTurkishText(parsed.leftover)}
+                          {normalizeTurkishText(structured.leftover)}
                         </p>
                       )}
                     </div>
