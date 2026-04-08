@@ -87,10 +87,10 @@ export default function BillingUsage({
               </Link>
             ) : (
               <Link
-                href="/api/billing/portal"
+                href={`/${locale}/pricing`}
                 className="inline-flex h-9 items-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6]"
               >
-                {isEn ? "Manage" : "Yönet"}
+                {isEn ? "Change plan" : "Planı değiştir"}
               </Link>
             )}
           </div>

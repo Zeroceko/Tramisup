@@ -79,9 +79,8 @@ export default function PricingPage() {
           interval={interval}
           description={isEn ? "For founders actively building and tracking a real product." : "Gerçek bir ürün inşa eden ve takip eden kurucular için."}
           features={getPlanFeatureList(PlanTier.STARTER, locale)}
-          cta={isEn ? "Coming soon" : "Yakında"}
-          ctaHref="/"
-          ctaDisabled
+          cta={isEn ? "Choose Starter" : "Starter'ı seç"}
+          ctaHref={`/api/billing/checkout?plan=STARTER&interval=${interval === "yearly" ? "YEARLY" : "MONTHLY"}&locale=${locale}`}
           highlighted
           locale={locale}
         />
@@ -91,9 +90,8 @@ export default function PricingPage() {
           interval={interval}
           description={isEn ? "For teams managing multiple products and needing full access." : "Birden fazla ürün yöneten ve tam erişim isteyen ekipler için."}
           features={getPlanFeatureList(PlanTier.PRO, locale)}
-          cta={isEn ? "Coming soon" : "Yakında"}
-          ctaHref="/"
-          ctaDisabled
+          cta={isEn ? "Choose Pro" : "Pro'yu seç"}
+          ctaHref={`/api/billing/checkout?plan=PRO&interval=${interval === "yearly" ? "YEARLY" : "MONTHLY"}&locale=${locale}`}
           locale={locale}
         />
       </div>
@@ -101,8 +99,8 @@ export default function PricingPage() {
       {/* Footer note */}
       <p className="mt-8 text-center text-[12px] text-[#9ca3af]">
         {isEn
-          ? "Payments are coming soon. For now, pricing is for packaging and limits."
-          : "Ödeme yakında. Şimdilik fiyatlandırma paketleme ve limitler için."}
+          ? "Plan selection activates the package immediately for now. We are intentionally skipping real payment during this phase."
+          : "Şimdilik paket seçimi planı anında aktif ediyor. Bu fazda gerçek ödeme akışını bilerek atlıyoruz."}
       </p>
     </div>
   );
