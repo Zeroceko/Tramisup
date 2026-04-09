@@ -5,9 +5,11 @@ Tiramisup is a launch-to-growth workspace for startup teams. The current product
 **Production domain:** `https://tiramisup.app`
 **Default language:** English
 **Secondary language:** Turkish
-**Last updated:** 1 April 2026
+**Last updated:** 9 April 2026
 **Current status:** Production live
 **Trusted production baseline commit:** `626543d9` (`Restore original Ask Tiramisup card`)
+**Current live production line:** `6237204b`
+**Current repo handoff head:** `acc151ed`
 
 ## Live routes
 
@@ -62,6 +64,12 @@ Tiramisup is a launch-to-growth workspace for startup teams. The current product
 - OAuth callback base URL is currently separated via `OAUTH_CALLBACK_BASE_URL`.
 - This was added to avoid Google and Stripe OAuth breakage when the public domain changed.
 - Current production callback base is expected to remain compatible with whitelisted OAuth redirects.
+
+### Latest stabilization changes
+- New pre-launch products now receive `5` launch checklist items instead of the earlier shallow `2`-item fallback.
+- Cross-product task explosion for newly created products was fixed.
+- Metrics hydration regression (`React #418`) was fixed in production.
+- Founder-quality production smoke now asserts launch/growth checklist quality and product-name leak safety.
 
 ## Key product rules
 
@@ -278,11 +286,13 @@ Release validation note:
 2. `HANDOFF.md`
 3. `docs/handoff.md`
 4. `docs/team-handoff-prompt.md`
-5. `docs/ai-agent-system-playbook.md`
-6. `docs/product-intake-question-playbook.md`
-7. `docs/internal-growth-rules.md`
-8. `docs/free-text-understanding-plan.md`
-9. `docs/free-text-eval-rubric.md`
-10. `docs/free-text-dataset-schema.md`
-11. `docs/free-text-normalize-pipeline.md`
-12. `docs/growth-tactics-layer.md`
+5. `docs/full-stack-team-transfer-checklist.md`
+6. `docs/production-stabilization-board.md`
+7. `docs/ai-agent-system-playbook.md`
+8. `docs/product-intake-question-playbook.md`
+9. `docs/internal-growth-rules.md`
+10. `docs/free-text-understanding-plan.md`
+11. `docs/free-text-eval-rubric.md`
+12. `docs/free-text-dataset-schema.md`
+13. `docs/free-text-normalize-pipeline.md`
+14. `docs/growth-tactics-layer.md`

@@ -10,8 +10,8 @@ Scope: Launch checklist quality, founder trust, metrics stability, deployment sa
 - New pre-launch product creation is working again.
 - New products now get `5` launch checklist items instead of the old shallow `2`-item fallback.
 - Duplicate / cross-product task explosion is fixed for newly created products.
+- Production founder smoke now asserts checklist quality and leak-free creation.
 - Remaining live issues:
-  - Metrics page still throws React hydration error `#418`.
   - Left-side launch recommendation cards are still static / generic.
   - Older products still carry old shallow fallback data unless manually regenerated.
   - Founder summary still has duplication / generic feel in places.
@@ -20,9 +20,9 @@ Scope: Launch checklist quality, founder trust, metrics stability, deployment sa
 
 | ID | Sprint | Item | Status | Priority | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| S0-1 | Sprint 0 | Add post-deploy production smoke flow for product creation | Todo | P0 | New prod product can be created; launch checklist count is `>= 5`; no foreign product name leak |
+| S0-1 | Sprint 0 | Add post-deploy production smoke flow for product creation | Done | P0 | New prod product can be created; launch checklist count is `>= 5`; no foreign product name leak |
 | S0-2 | Sprint 0 | Add deployment verification step against `tiramisup.app` alias | Todo | P0 | After deploy, alias commit is confirmed by live behavior, not just by local git state |
-| S0-3 | Sprint 0 | Fix metrics hydration error `#418` | Todo | P0 | `/tr/metrics` opens with no React hydration/pageerror in founder smoke test |
+| S0-3 | Sprint 0 | Fix metrics hydration error `#418` | Done | P0 | `/tr/metrics` opens with no React hydration/pageerror in founder smoke test |
 | S1-1 | Sprint 1 | Replace static launch recommendation cards with context-driven cards | Todo | P0 | Launch left panel reflects active product, stage, and checklist context |
 | S1-2 | Sprint 1 | Remove duplicate / thin founder summary focus areas | Todo | P1 | Founder summary shows unique, product-specific focus areas |
 | S1-3 | Sprint 1 | Make checklist rationale more visible in launch UI | Todo | P1 | Founder can see `neden önemli / done criteria / next action` without hunting |
@@ -212,5 +212,5 @@ Start with Sprint 0.
 
 Reason:
 - It removes the highest-risk hidden regressions.
-- It fixes the only confirmed live hard error (`metrics #418`).
+- It finishes the remaining release-safety gap after smoke and hydration fixes.
 - It gives us a safety rail before we iterate on founder-facing quality again.

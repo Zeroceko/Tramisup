@@ -44,12 +44,13 @@ Then inspect these implementation areas first:
 These production constraints are mandatory:
 - Production is live at https://tiramisup.app
 - Trusted production baseline commit: 626543d9
-- Current release line: eecbf6a9
+- Current live production line: 6237204b
+- Current repo handoff head: acc151ed
 - English is the master language and default locale
 - Turkish is secondary
 - Keep / as the simplified waitlist-first landing page
 - Keep /yayinda as the preserved fuller landing page
-- Do not break Clarity, GA4, Resend, invisible reCAPTCHA, password reset, or OAuth flows
+- Do not break Clarity, GA4, Resend, signup/waitlist reCAPTCHA, password reset, or OAuth flows
 - Do not move product logic outside the boundaries defined in the playbooks
 - Do not introduce generic AI features that are not grounded in the playbooks
 
@@ -98,16 +99,23 @@ Important production behaviors already in place:
 - Preserved /yayinda landing is live
 - Public analytics are consent-aware
 - Public funnel events include waitlist_cta_click, waitlist_signup, thank_you_view
-- Invisible reCAPTCHA is production-only on waitlist join, signup, and login
+- Invisible reCAPTCHA is production-only on waitlist join and signup
+- Login reCAPTCHA was intentionally removed from production after live friction and invalid site-key issues
 - Forgot password and reset password are live (stateless, no reset-token table)
 - Onboarding supports multi-select for category, audience, and business model
 - Selecting Other opens clarification
 - Free-text onboarding description feeds normalized product context and AI plan
+- Founder QA should fill every onboarding question with realistic content; skipping sources or AARRR setup materially weakens recommendation quality
 - Growth includes a deterministic, diagnosis-led tactics layer
 - Metrics manual entry allows integers by default, decimals only for revenue metrics (mrr, arpu)
 - Recommended source suggestions in Metrics are collapsible by default
 - Google OAuth requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CALLBACK_BASE_URL in Vercel env — no trailing newlines
 - Callback URL registered in Google Cloud Console: https://tiramisup.app/api/integrations/google/callback
+- `/[locale]/products/new` now gates product limits before onboarding
+- Pricing upgrade is intentionally in a temporary fake-checkout mode: selecting Starter/Pro directly activates the subscription row
+- Recommendation cards in `components/AgentChatPanel.tsx` are still mostly static fallback actions, so do not confuse them with proven product-context intelligence
+- Founder-quality production smoke now asserts checklist quality and leak-free product creation
+- Metrics hydration regression (`React #418`) was fixed in production on 9 April 2026
 
 Critical warnings before you touch anything:
 - The repo may contain local modified/untracked files that are not the trusted production baseline
@@ -144,6 +152,8 @@ Before any risky release, run or verify these smoke paths:
 - /en/signup
 - /en/login
 - /en/forgot-password
+- /tr/products/new on a full free-plan account -> confirm early upgrade gate
+- /tr/pricing -> select Starter/Pro -> confirm billing success redirect and reopened onboarding access
 - /en/dashboard — confirm stat cards, agent panel separated from chat
 - /en/pre-launch — confirm stat cards, checklist, no PageHeader
 - /en/metrics — confirm stat cards, no PageHeader
@@ -151,6 +161,8 @@ Before any risky release, run or verify these smoke paths:
 - one launched product flow with missing metrics setup
 - GA4 OAuth connect flow (confirm no invalid_client error)
 - agent response in English when locale=en, Turkish when locale=tr
+- founder smoke on prod:
+  - `npx playwright test --config playwright-prod.config.ts prod-founder-takeover --reporter=list`
 
 Success means:
 - no regression on live routes

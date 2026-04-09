@@ -1,4 +1,4 @@
-# Project Snapshot - 29 March 2026
+# Project Snapshot - 9 April 2026
 
 **Purpose:** Fast, accurate snapshot for handoff and deployment checks.
 
@@ -11,6 +11,9 @@
 - Onboarding can hand off directly to Integrations when source intent includes `GA4` or `Stripe`.
 - Growth setup is source-aware: connected providers influence selectable/auto-supported metric options.
 - Metrics system source of truth is `MetricSetup` + `MetricEntry` (not `Product.launchGoals`).
+- New pre-launch products now receive `5` launch checklist items instead of the old shallow `2`-item fallback.
+- Founder-quality production smoke now runs against `https://tiramisup.app`.
+- Metrics hydration regression `React #418` was fixed in live production.
 
 ---
 
@@ -50,7 +53,9 @@
 ## Docs Source of Truth
 
 For operational handoff details, use:
-- `HANDOFF.md` (execution-focused, current state)
+- `docs/handoff.md` (execution-focused, current state)
+- `docs/team-handoff-prompt.md` (new-team kickoff brief)
+- `docs/full-stack-team-transfer-checklist.md` (access + release transfer checklist)
+- `docs/production-stabilization-board.md` (current sprint board)
 - `CLAUDE.md` (project rules, architecture, runbook)
 - `README.md` (product + flow overview)
-

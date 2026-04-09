@@ -10,11 +10,98 @@ This repo is already in production and should be treated as a live system, not a
 - Main public goal: waitlist conversion
 - Main app goal: staged launch-to-growth workflow
 - Trusted production baseline commit: `626543d9`
-- Current live/main release line: `e32d97c4` (8 April 2026 — Stripe lazy init build fix)
-- Last docs refresh: `8 April 2026`
+- Current live production line: `6237204b` (9 Apr 2026)
+- Current repo handoff head: `acc151ed` (9 Apr 2026)
+- Last docs refresh: `9 April 2026`
 - Recommended new-team kickoff brief: `docs/team-handoff-prompt.md`
+- Full-stack team transfer checklist: `docs/full-stack-team-transfer-checklist.md`
+- Current sprint board: `docs/production-stabilization-board.md`
 
-## Latest release — 8 April 2026 (Tasks/Growth quality pass + Founder Coach hardening)
+Recommended reading order for new teams:
+- Test team: start at `How to verify the 8 April 2026 release`
+- Dev team: start at `Post-release production follow-up`, then `Latest release`, then `Single canonical task creator`
+- Product team: start at `What changed at a glance`
+
+## Full-stack team transfer reality — 9 April 2026
+
+This section is the shortest “what is true right now” snapshot for an incoming team.
+
+### Live behavior
+
+- `tiramisup.app` is serving the 9 April stabilization deploy.
+- New pre-launch products now receive `5` launch checklist items instead of the older shallow `2`-item fallback.
+- Duplicate / cross-product task explosion is fixed for newly created products.
+- Founder smoke now verifies launch or growth checklist quality depending on product stage.
+- Metrics hydration regression `React #418` was fixed in production.
+
+### Important distinction for the incoming team
+
+- `6237204b` is the current live application behavior baseline.
+- `acc151ed` is the current repo handoff head and includes stronger production smoke assertions.
+- Do not confuse `main` head with what is already live unless you confirm the active Vercel alias.
+
+### Transfer package files
+
+- `docs/full-stack-team-transfer-checklist.md` — access, secret, and release transfer checklist
+- `docs/team-handoff-prompt.md` — default kickoff prompt for the incoming team
+- `docs/production-stabilization-board.md` — current execution board
+- `PROJECT_SNAPSHOT.md` — compact status snapshot
+
+## Post-release production follow-up — late 8 April 2026
+
+These changes shipped after the main 8 April release and are what a new dev team should treat as the **current live production behavior**.
+
+Shipped commits:
+- `e032aa86` — `Gate product limit before onboarding`
+- `d0da9543` — `Remove login recaptcha gate`
+
+### What changed after the main release
+
+| Area | Before | After |
+|---|---|---|
+| Login | Credentials login still carried reCAPTCHA friction and live prod showed an invalid site key error during review | Login no longer requires reCAPTCHA |
+| Product limit UX | Founder could finish onboarding and only then hit the free-plan product limit | `/[locale]/products/new` now gates immediately and points to pricing |
+| Upgrade path | Pricing was still conceptually Stripe-backed | Choosing `Starter` / `Pro` currently activates the plan immediately |
+| Billing CTA | Paid-plan management implied Stripe portal behavior | Billing CTA now pushes users back to plan selection |
+
+### Files touched in the post-release follow-up
+
+- `app/[locale]/login/page.tsx` — removed login-side reCAPTCHA field and client requirement
+- `lib/auth.ts` — removed login-side server reCAPTCHA requirement
+- `app/[locale]/products/new/page.tsx` — added pre-onboarding product-limit gate
+- `app/[locale]/pricing/page.tsx` — enabled `Starter` / `Pro` CTAs and documented temporary immediate activation
+- `app/api/billing/checkout/route.ts` — currently upserts an active subscription directly instead of opening Stripe Checkout
+- `components/BillingUsage.tsx` — plan management CTA now routes to pricing
+
+### Temporary product decision that is live right now
+
+Billing is intentionally in a **fake checkout phase**:
+- Selecting `Starter` or `Pro` does **not** open Stripe Checkout.
+- `GET /api/billing/checkout` directly writes an active subscription row.
+- This was done so founder testing could continue without payment friction.
+
+Do not mistake this for finished billing. Before reopening real payments:
+1. Restore Stripe Checkout behavior in `app/api/billing/checkout/route.ts`.
+2. Re-test the portal flow from billing settings.
+3. Reconfirm Vercel build still works with lazy Stripe init.
+
+### Live production verification already completed
+
+- Login page no longer renders reCAPTCHA on `https://tiramisup.app/tr/login`.
+- Product-limit gate appears before onboarding on a full free-plan account.
+- `Paketleri gör` routes correctly to pricing.
+- Choosing `Starter` activates the plan and billing reflects `1 / 3` product capacity.
+- After upgrade, `/tr/products/new` correctly opens onboarding instead of blocking.
+- Realistic additional products were successfully created on production after the upgrade path was used.
+
+### Founder-testing findings the new team should know
+
+- **Do not skip onboarding answers in QA.** Context quality drops fast when founders skip or thin out description, audience, business model, sources, or AARRR setup.
+- The current recommendation cards on Dashboard / Launch / Growth are still effectively static fallback copy. They are defined in `components/AgentChatPanel.tsx`, so do not assume they are proof of healthy product-context understanding.
+- A live scripted probe saw `POST /api/agent/chat` abort during navigation churn. Treat chat quality as **not fully re-verified** in this handoff.
+- The login reCAPTCHA was removed only for login. If the team wants to reintroduce it later, re-check the prod key configuration first; live review previously surfaced an invalid site key message.
+
+## Latest release — 8 April 2026
 
 This is the most recent shipped work. **Read this section first.** It includes a schema change that's already live in prod Supabase.
 
@@ -38,8 +125,10 @@ This is the most recent shipped work. **Read this section first.** It includes a
 - `doneCriteria String?` — observable definition of done
 - `nextAction   String?` — first concrete next step
 - `source       String?` — `AI_PLAN | AGENT_CHAT | MANUAL | COMPLETION_EFFECT | FOUNDER_COACH`
-- `category     String?` — `PRODUCT | MARKETING | LEGAL | TECH | ACQUISITION | ACTIVATION | RETENTION | REVENUE | MEASUREMENT` (no "OTHER" bucket)
+- `category     String?` — `PRODUCT | MARKETING | LEGAL | TECH | ACQUISITION | ACTIVATION | RETENTION | REVENUE | MEASUREMENT`
 - New index `Task_productId_category_idx`
+
+That is 5 new columns on `Task` plus the new `TaskEvent` table.
 
 **New TaskEvent table:**
 ```prisma
@@ -165,13 +254,27 @@ Fix: move Stripe construction into a `getStripe()` function called inside the re
 2. Scroll down with mouse wheel and trackpad.
 3. Confirm Hero → Problem → HowItWorks sections all reachable.
 
----
+### Login + upgrade flow smoke test
+1. Open `https://tiramisup.app/tr/login`.
+2. Confirm credentials login renders without any reCAPTCHA widget, token field, or site-key error.
+3. On a free-plan account already using `1/1` products, open `/[locale]/products/new`.
+4. Confirm onboarding does **not** start immediately; the product-limit gate should render first.
+5. Click `Paketleri gör` / `See plans`.
+6. Choose `Starter` or `Pro` and confirm billing redirects to `settings?section=billing&checkout=success`.
+7. Re-open `/[locale]/products/new` and confirm onboarding now starts.
+8. For founder-quality testing, fill every onboarding question with realistic content. Do not skip sources or AARRR setup when shown.
 
-## Historical: Sprint 1+2+3 changes (now all committed and live)
+## Known product debt
+
+- `TaskEvent` telemetry is written and queryable, but there is still no product-facing UI for visualizing that event stream.
+- Recommendation cards in `components/AgentChatPanel.tsx` are still static fallback actions, so live founder tests can make the product look more context-aware than it really is unless chat + task generation are inspected separately.
+- Billing upgrade is intentionally fake right now. The UI behaves as if a package was purchased, but real Stripe checkout is bypassed.
+
+## Historical: Sprint 1+2+3 committed history
 
 > Everything in this section was uncommitted as of 6 April 2026 and is now shipped as of the 8 April 2026 release line above. Kept for historical traceability — do not treat as a TODO list.
 
-### Sprint 1 — UX friction reduction (complete, uncommitted)
+### Sprint 1 — UX friction reduction (complete, now committed)
 
 #### S1-1: OnboardingWizard visual weight reduction
 - `components/OnboardingWizard.tsx`
@@ -199,7 +302,7 @@ Fix: move Stripe construction into a `getStripe()` function called inside the re
 
 ---
 
-### Sprint 2 — Pricing infrastructure (partial, uncommitted)
+### Sprint 2 — Pricing infrastructure (captured here as committed history)
 
 #### Prisma schema
 - `prisma/schema.prisma` — `Subscription` + `UsageEvent` models
@@ -249,7 +352,7 @@ STRIPE_PRICE_PRO_YEARLY
 5. If payments are not ready to launch: keep pricing page but disable/soft-block checkout CTAs so users do not hit a broken flow
    - Current local behavior: paid plan CTAs on `/[locale]/pricing` are disabled ("Coming soon") and do not redirect to Stripe
 
-#### Sprint 3 — Limit enforcement UI (implemented, uncommitted)
+#### Sprint 3 — Limit enforcement UI (implemented, now committed)
 - Soft warning banner when tasks approach limit + hard block at limit
 - Agent chat message limit enforced server-side; upgrade modal shown in UI
 - Product creation blocked + upgrade CTA at product limit (OnboardingWizard)
@@ -259,10 +362,10 @@ STRIPE_PRICE_PRO_YEARLY
 
 ## Latest release note — 6 April 2026
 
-Latest committed release line:
+Latest older committed release line:
 - `main` advanced to `6be98945` (`Handoff docs: Tasks redesign + Dashboard chart row`)
 
-Local-only (uncommitted) fixes worth calling out:
+Older local-only notes preserved for traceability:
 - Landing scroll regression fixed by changing locale layout body overflow from `overflow-hidden` → `overflow-x-hidden` (`app/[locale]/layout.tsx`)
 
 What changed since the previous handoff snapshot:
@@ -366,7 +469,8 @@ Current setup:
 - Clarity: integrated on public site, consent-aware
 - GA4: integrated on public site, consent-aware
 - event coverage includes CTA clicks, waitlist signup, and thank-you page
-- invisible reCAPTCHA is enabled in production on waitlist join, signup, and login
+- invisible reCAPTCHA is enabled in production on waitlist join and signup
+- login no longer uses reCAPTCHA in production
 
 Do not casually move analytics scripts into authenticated product pages without an explicit product/privacy decision.
 
@@ -390,6 +494,7 @@ Do not casually move analytics scripts into authenticated product pages without 
 - `Launch` should stay hidden in top nav for launched/growing products.
 - `Sources` should stay out of top nav and live under `Settings`.
 - Free-text onboarding understanding is now part of normalized product context.
+- Onboarding should not continue with empty or effectively skipped answers during QA or founder testing. Fill every question with realistic product context, including sources and AARRR setup when shown; otherwise downstream recommendations become noticeably more generic and less trustworthy.
 - Recommendation surfaces should stay page-scoped and action-first:
   - `Overview` = `Tiramisup Recommendations`
   - `Growth` = `Growth Recommendations`
@@ -408,7 +513,7 @@ Canonical right now:
 - left-side agent panel available on Overview/Growth/Launch surfaces
 - recommendation cards are separate from chat inside the agent panel
 - public GA4 + Clarity remain consent-aware
-- invisible reCAPTCHA remains production-only
+- invisible reCAPTCHA remains production-only where it is still enabled (waitlist + signup)
 - agent prompts in English, output in user's configured locale
 
 Not canonical right now:
@@ -477,7 +582,8 @@ All three main pages (Dashboard, Launch, Metrics) now open with prominent stat c
 3. Open reset link
 4. Set a password that satisfies rules
 5. Log in with new password
-6. Open `/en/settings` and change password again from the security section
+6. Confirm `/en/login` does not render reCAPTCHA
+7. Open `/en/settings` and change password again from the security section
 
 ### OAuth
 1. Log in
@@ -497,7 +603,7 @@ All three main pages (Dashboard, Launch, Metrics) now open with prominent stat c
 ### Tasks page smoke test
 1. Open `/en/tasks`.
 2. Confirm 4 stat cards (Total, In Progress, Completed, Blockers).
-3. Confirm category filter buttons (All, Product, Tech, Legal, Marketing, Other).
+3. Confirm category filter shows 9 categories (PRODUCT, MARKETING, LEGAL, TECH, ACQUISITION, ACTIVATION, RETENTION, REVENUE, MEASUREMENT).
 4. Click category button — section refreshes.
 5. Completion bar stays global (unfiltred).
 6. Page scrolls (no overflow-hidden cutoff).
@@ -527,7 +633,7 @@ Check in this order:
 2. Resend domain / API key health
 3. OAuth provider whitelists and test-user settings
 4. GA4 and Clarity consent gating
-5. reCAPTCHA envs and verify behavior
+5. reCAPTCHA envs and verify behavior on waitlist/signup only
 6. Only then app code
 
 ## Current known product debt
