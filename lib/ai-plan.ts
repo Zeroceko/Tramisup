@@ -148,7 +148,7 @@ function makeLaunchItem(
 function makeGrowthItem(category: GrowthCategory, title: string, description: string): AiGrowthItem {
   return { category, title, description, order: 0 };
 }
-function assignOrder<T extends { order: number }>(items: T[]) {
+function assignOrder<T>(items: T[]): Array<T & { order: number }> {
   return items.map((item, index) => ({ ...item, order: index + 1 }));
 }
 function dedupeByTitle<T extends { title: string }>(items: T[]) {
@@ -237,10 +237,10 @@ export function sanitizeAiPlanOutput(
         validTasks.map<AiTask>((task) => ({
           title: task.title,
           description: task.description ?? undefined,
-          whyItMatters: task.whyItMatters,
-          doneCriteria: task.doneCriteria,
-          nextAction: task.nextAction,
-          category: task.category,
+          whyItMatters: task.whyItMatters ?? undefined,
+          doneCriteria: task.doneCriteria ?? undefined,
+          nextAction: task.nextAction ?? undefined,
+          category: task.category ?? undefined,
           priority: task.priority as Priority,
           status: "TODO",
         })),
