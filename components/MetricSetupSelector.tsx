@@ -149,10 +149,21 @@ function MetricCard({
   const [showAvoid, setShowAvoid] = useState(false);
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={isDisabled}
+    <div
+      role="button"
+      tabIndex={isDisabled ? -1 : 0}
+      aria-pressed={isSelected}
+      aria-disabled={isDisabled}
+      onClick={() => {
+        if (!isDisabled) onSelect();
+      }}
+      onKeyDown={(e) => {
+        if (isDisabled) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       className={`w-full rounded-[14px] border p-4 text-left transition ${
         isSelected
           ? "border-[#95dbda] bg-[#f0fafa]"
@@ -240,7 +251,7 @@ function MetricCard({
           {isEn ? "This option will not auto-fill from connected sources." : "Bu secenek bagli kaynaklarla otomatik dolmaz."}
         </p>
       )}
-    </button>
+    </div>
   );
 }
 
