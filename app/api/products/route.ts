@@ -289,7 +289,7 @@ export async function POST(request: Request) {
     const candidateLinks = extractCandidateLinks([website, description, stageContext]);
     const websiteContent = await scrapeProductLinks(candidateLinks);
     console.log("[api/products] Generating AI plan...");
-    const aiPlan = await generateAiPlan({
+    const aiPlanResult = await generateAiPlan({
       name,
       description,
       locale,
@@ -304,7 +304,8 @@ export async function POST(request: Request) {
       websiteContent: websiteContent ?? undefined,
       stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
     });
-    console.log("[api/products] AI plan result:", aiPlan ? "SUCCESS (object generated)" : "FALLBACK / NULL");
+    const { plan: aiPlan, source: aiPlanSource } = aiPlanResult;
+    console.log(`[api/products] AI plan result: source=${aiPlanSource}, launch=${aiPlan.launchChecklist.length}, growth=${aiPlan.growthChecklist.length}, tasks=${aiPlan.tasks.length}`);
 
     console.log("[api/products] Building founder summary...");
     const founderSummary = await buildFounderSummary({
@@ -372,14 +373,13 @@ export async function POST(request: Request) {
           },
         });
 
-        if (aiPlan) {
-          await seedAiPlan(
-            newProduct.id,
-            aiPlan,
-            tx,
-            (locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en",
-          );
-        }
+        await seedAiPlan(
+          newProduct.id,
+          aiPlan,
+          tx,
+          (locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en",
+          aiPlanSource,
+        );
 
         // Seed demo metrics only if user opted in
         if (seedData) {

@@ -5,7 +5,7 @@ import type {
   Frequency,
   MetricSource,
 } from "@prisma/client";
-import type { AiPlan } from "@/lib/ai-plan";
+import type { AiPlan, PlanSource } from "@/lib/ai-plan";
 import { normalizeLaunchChecklistPriority } from "@/lib/launch-checklist-priority";
 import { tryCreateTaskWithGuards } from "@/lib/task-create";
 import type { Locale } from "@/lib/task-validator";
@@ -46,11 +46,11 @@ function buildChecklistDescription(item: {
 // Seed AI-generated plan (launch checklist, growth checklist, tasks)
 export async function seedAiPlan(
   productId: string,
-  plan: AiPlan | null,
+  plan: AiPlan,
   tx?: any,
   locale: Locale = "en",
+  source: PlanSource = "fallback",
 ) {
-  if (!plan) return;
   const db = tx || prisma;
 
   for (const item of dedupeSeedItems(plan.launchChecklist, MAX_LAUNCH_ITEMS)) {
@@ -99,6 +99,19 @@ export async function seedAiPlan(
       db,
     );
   }
+
+  // Persist plan generation metadata for observability and repair tooling
+  const planMeta = JSON.stringify({
+    source,
+    generatedAt: new Date().toISOString(),
+    launchCount: plan.launchChecklist.length,
+    growthCount: plan.growthChecklist.length,
+    taskCount: plan.tasks.length,
+  });
+  await db.product.update({
+    where: { id: productId },
+    data: { planMeta },
+  });
 }
 
 // Intentionally do not fabricate fallback workspace data when AI is unavailable.

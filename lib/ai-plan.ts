@@ -46,6 +46,13 @@ export type AiPlan = {
   tasks: AiTask[];
 };
 
+export type PlanSource = "ai" | "sanitized_ai" | "fallback";
+
+export type AiPlanResult = {
+  plan: AiPlan;
+  source: PlanSource;
+};
+
 export type WizardInput = {
   name: string;
   description: string;
@@ -186,6 +193,29 @@ function sanitizeStructuredItems<T extends { title: string }>(
     valid.push(parsed.data);
   }
   return dedupeByTitle(valid).slice(0, limit);
+}
+
+/**
+ * Minimum quality thresholds. A plan below these counts is "thin" and must not
+ * be seeded. The fallback plan always meets these thresholds.
+ */
+const QUALITY_MIN = {
+  preLaunchLaunchItems: 5,
+  preLaunchTasks: 3,
+  launchedGrowthItems: 4,
+} as const;
+
+export function isPlanThin(plan: AiPlan, isLaunchedStage: boolean): boolean {
+  if (isLaunchedStage) {
+    return plan.growthChecklist.length < QUALITY_MIN.launchedGrowthItems;
+  }
+  if (plan.launchChecklist.length < QUALITY_MIN.preLaunchLaunchItems) return true;
+  if (plan.tasks.length < QUALITY_MIN.preLaunchTasks) return true;
+  // Must have at least PRODUCT and TECH coverage — these are non-negotiable for launch
+  const categories = new Set(plan.launchChecklist.map((i) => i.category));
+  if (!categories.has("PRODUCT")) return true;
+  if (!categories.has("TECH")) return true;
+  return false;
 }
 
 export function sanitizeAiPlanOutput(
@@ -478,12 +508,12 @@ ${langRule}
 Use the product name "${input.name}" frequently inside titles and descriptions.`;
 };
 
-export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null> {
+export async function generateAiPlan(input: WizardInput): Promise<AiPlanResult> {
   const hasKey = !!(process.env.QWEN_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);
 
   if (!hasKey) {
     console.warn("[ai-plan] No AI API key configured (checked QWEN, GOOGLE_GENERATIVE_AI, GEMINI) — using static fallback");
-    return null;
+    return { plan: buildSkillBackedFallbackPlan(input), source: "fallback" };
   }
 
   let storeGuidance = "";
@@ -525,22 +555,41 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlan | null>
       "ai-plan"
     );
 
+    // Track raw counts to detect how much sanitization pruned
+    const rawLaunchCount = Array.isArray(object?.launchChecklist) ? object.launchChecklist.length : 0;
+    const rawGrowthCount = Array.isArray(object?.growthChecklist) ? object.growthChecklist.length : 0;
+    const rawTaskCount = Array.isArray(object?.tasks) ? object.tasks.length : 0;
+
     const isLaunchedStage = ["yayında", "büyüme aşamasında"].includes((input.launchStatus ?? "").toLowerCase());
     const validatorLocale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
     const sanitized = sanitizeAiPlanOutput(object, validatorLocale, isLaunchedStage);
     if (!sanitized) {
       console.warn("[ai-plan] Sanitized plan was empty or invalid — using skill-backed fallback");
-      return mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput);
+      return { plan: mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput), source: "fallback" };
     }
 
+    // S3-1: Reject thin plans — fall back to the skill-backed plan which always meets minimums
+    if (isPlanThin(sanitized, isLaunchedStage)) {
+      console.warn(
+        `[ai-plan] Plan is too thin (launch=${sanitized.launchChecklist.length}, growth=${sanitized.growthChecklist.length}, tasks=${sanitized.tasks.length}) — using skill-backed fallback`,
+      );
+      return { plan: mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput), source: "fallback" };
+    }
+
+    const dropped =
+      rawLaunchCount - sanitized.launchChecklist.length +
+      rawGrowthCount - sanitized.growthChecklist.length +
+      rawTaskCount - sanitized.tasks.length;
+    const source: PlanSource = dropped > 0 ? "sanitized_ai" : "ai";
+
     console.log(
-      `[ai-plan] SUCCESS: ${sanitized.launchChecklist.length} launch / ${sanitized.growthChecklist.length} growth / ` +
-      `${sanitized.tasks.length} tasks after sanitization`,
+      `[ai-plan] SUCCESS (${source}): ${sanitized.launchChecklist.length} launch / ${sanitized.growthChecklist.length} growth / ` +
+      `${sanitized.tasks.length} tasks after sanitization (${dropped} items dropped)`,
     );
 
-    return mergeMobileLaunchBaseline(sanitized, finalInput);
+    return { plan: mergeMobileLaunchBaseline(sanitized, finalInput), source };
   } catch (error) {
     console.error("[ai-plan] AI SDK generation failed, using static fallback plan:", error);
-    return mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput);
+    return { plan: mergeMobileLaunchBaseline(buildSkillBackedFallbackPlan(finalInput), finalInput), source: "fallback" };
   }
 }

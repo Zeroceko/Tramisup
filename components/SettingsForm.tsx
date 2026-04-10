@@ -70,6 +70,8 @@ export default function SettingsForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateStatus, setRegenerateStatus] = useState<"idle" | "done" | "error">("idle");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
@@ -145,6 +147,12 @@ export default function SettingsForm({
         dangerZone: "Danger zone",
         deleteProduct: "Delete product",
         deleteProductDesc: "Permanently delete this product and all of its data. This cannot be undone.",
+        regeneratePlan: "Regenerate launch plan",
+        regeneratePlanDesc: "Re-run AI plan generation using current product data. Incomplete checklist items and unstarted tasks will be replaced. Completed items are preserved.",
+        regeneratePlanBtn: "Regenerate plan",
+        regeneratePlanRunning: "Regenerating…",
+        regeneratePlanDone: "Plan regenerated.",
+        regeneratePlanError: "Failed to regenerate. Try again.",
       }
     : {
         errorGeneric: "Bir hata oluştu.",
@@ -210,6 +218,12 @@ export default function SettingsForm({
         dangerZone: "Tehlikeli bölge",
         deleteProduct: "Ürünü sil",
         deleteProductDesc: "Bu ürünü ve tüm verilerini kalıcı olarak sil. Bu işlem geri alınamaz.",
+        regeneratePlan: "Launch planını yenile",
+        regeneratePlanDesc: "Mevcut ürün verilerinle AI plan üretimini yeniden çalıştır. Tamamlanmamış checklist maddeleri ve başlanmamış görevler değiştirilir. Tamamlananlar korunur.",
+        regeneratePlanBtn: "Planı yenile",
+        regeneratePlanRunning: "Yenileniyor…",
+        regeneratePlanDone: "Plan yenilendi.",
+        regeneratePlanError: "Yenileme başarısız. Tekrar dene.",
       };
 
   const parsedLaunchGoals = (() => {
@@ -280,6 +294,20 @@ export default function SettingsForm({
       setError(err instanceof Error ? err.message : copy.errorGeneric);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!user?.product?.id) return;
+    setRegenerating(true);
+    setRegenerateStatus("idle");
+    try {
+      const res = await fetch(`/api/products/${user.product.id}/regenerate`, { method: "POST" });
+      setRegenerateStatus(res.ok ? "done" : "error");
+    } catch {
+      setRegenerateStatus("error");
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -611,6 +639,32 @@ export default function SettingsForm({
         </form>
       </div>
       ) : null}
+
+      {/* Regenerate plan — only on product tab */}
+      {activeSection === "product" && user?.product && (
+        <div className="rounded-[20px] border border-[#e8e8e8] bg-white px-5 py-5 sm:px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {copy.regeneratePlan}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
+            {copy.regeneratePlanDesc}
+          </p>
+          {regenerateStatus === "done" && (
+            <p className="mt-2 text-[13px] font-medium text-emerald-600">{copy.regeneratePlanDone}</p>
+          )}
+          {regenerateStatus === "error" && (
+            <p className="mt-2 text-[13px] font-medium text-red-500">{copy.regeneratePlanError}</p>
+          )}
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] bg-white px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
+          >
+            {regenerating ? copy.regeneratePlanRunning : copy.regeneratePlanBtn}
+          </button>
+        </div>
+      )}
 
       {/* Danger zone — only on product tab */}
       {activeSection === "product" && user?.product && (
