@@ -21,24 +21,28 @@ interface ChecklistSectionProps {
   locale?: string;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; risk: string; riskEn: string }> = {
+const CATEGORY_LABELS: Record<string, { label: string; labelEn: string; risk: string; riskEn: string }> = {
   PRODUCT: {
     label: "Ürün hazırlığı",
+    labelEn: "Product Readiness",
     risk: "Temel kullanıcı deneyimini ve ilk değer anını etkiler",
     riskEn: "Affects the core user experience and first value moment",
   },
   MARKETING: {
     label: "Pazarlama",
+    labelEn: "Marketing",
     risk: "İlk trafik ve kullanıcı kazanımını etkiler",
     riskEn: "Affects initial traffic and user acquisition",
   },
   LEGAL: {
     label: "Compliance & Legal",
+    labelEn: "Compliance & Legal",
     risk: "Hukuki riskler launch'ı ve ürünü durdurabilir",
     riskEn: "Legal risks can stop the launch or the product",
   },
   TECH: {
     label: "Teknik Hazırlık",
+    labelEn: "Technical Readiness",
     risk: "Teknik sorunlar kullanıcıları kaybettirir",
     riskEn: "Technical failures cause user drop-off at launch",
   },
@@ -187,7 +191,7 @@ export default function ChecklistSection({
                     isActive ? "text-white" : "text-[#0d0d12]"
                   }`}
                 >
-                  {meta.label}
+                  {isEn ? meta.labelEn : meta.label}
                 </p>
                 {isActive ? (
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15">
@@ -237,23 +241,12 @@ export default function ChecklistSection({
               <rect x="1" y="1" width="12" height="12" rx="3" stroke="currentColor" strokeWidth="1.3"/>
             </svg>
             <p className="text-[14px] font-semibold text-[#0d0d12]">
-              {categoryMeta.label} {isEn ? "Checklist" : "Checklist"}
+              {isEn ? categoryMeta.labelEn : categoryMeta.label} {isEn ? "Checklist" : "Listesi"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition text-[#5e6678]">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2V12M2 7H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <button className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#f6f6f6] transition text-[#5e6678]">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="3" r="1" fill="currentColor"/>
-                <circle cx="7" cy="7" r="1" fill="currentColor"/>
-                <circle cx="7" cy="11" r="1" fill="currentColor"/>
-              </svg>
-            </button>
-          </div>
+          <p className="text-[12px] text-[#8a8fa0]">
+            {activeCompleted}/{activeItems.length} {isEn ? "done" : "tamamlandı"}
+          </p>
         </div>
 
         {/* Items */}

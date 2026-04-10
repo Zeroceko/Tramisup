@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { buildFunnelHealthSummary } from "@/lib/funnel-health";
+import type { FunnelMetricDescriptor } from "@/lib/funnel-health";
 import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
@@ -425,6 +427,19 @@ export default async function DashboardPage({
 
   const founderSummary = savedMetricSetup?.founderSummary as { headline?: string; summary?: string; nextStep?: string } | null;
 
+  // Build funnel health for launched products when metric data is available
+  const selectedMetricsForFunnel: FunnelMetricDescriptor[] = selections.flatMap((s) =>
+    s.selectedMetricKeys.map((key) => ({ stage: s.stage, metricKey: key, metricName: key }))
+  );
+  const funnelHealth =
+    isLaunched && selectedMetricsForFunnel.length > 0 && (savedMetricSetup?.entries?.length ?? 0) > 0
+      ? buildFunnelHealthSummary({
+          product,
+          selectedMetrics: selectedMetricsForFunnel,
+          entries: savedMetricSetup?.entries ?? [],
+        })
+      : null;
+
   // ---- Chart data ----
   const taskChartData: TaskChartDay[] = [];
   // Weekly buckets (last 8 weeks) to avoid noisy/empty day-level chart for new products.
@@ -501,7 +516,7 @@ export default async function DashboardPage({
         daysUntilLaunch,
         selectedMetricCount,
         enteredToday,
-        funnelOverall: null, // TODO: wire buildFunnelHealthSummary when entries exist
+        funnelOverall: funnelHealth?.overallStatus ?? null,
         locale: uiLocale,
       });
 

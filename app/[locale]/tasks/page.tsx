@@ -34,6 +34,12 @@ export default async function TasksPage({
             ? "Create a product to start tracking tasks"
             : "Görevleri görmek için bir ürün oluşturmalısın"}
         </p>
+        <a
+          href={`/${locale}/onboarding`}
+          className="mt-4 inline-flex h-9 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white hover:bg-[#1a1a2e] transition"
+        >
+          {isEn ? "Create your first product" : "İlk ürününü oluştur"}
+        </a>
       </div>
     );
   }

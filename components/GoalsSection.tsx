@@ -160,7 +160,16 @@ export default function GoalsSection({
       )}
 
       {activeGoals.length === 0 && !showAddForm ? (
-        <p className="text-center text-[13px] text-[#9ca3af] py-8">{isEn ? "No active goals yet. Create your first one." : "Aktif hedef yok. İlk hedefinizi oluşturun!"}</p>
+        <div className="py-8 text-center">
+          <p className="text-[13px] font-semibold text-[#0d0d12]">
+            {isEn ? "No active goals yet" : "Henüz aktif hedef yok"}
+          </p>
+          <p className="mt-1 text-[12px] text-[#8a8fa0]">
+            {isEn
+              ? "Goals tie your metrics to a target and deadline. Add one to keep growth focused."
+              : "Hedefler metriklerini bir hedefe ve tarihe bağlar. Büyümeyi odaklı tutmak için bir tane ekle."}
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {activeGoals.map((goal) => {
