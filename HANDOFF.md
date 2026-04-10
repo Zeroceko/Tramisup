@@ -1,283 +1,392 @@
-# Tiramisup Handoff
+# Tiramisup - Team Handoff Document
 
-**Date:** 5 April 2026
+**Date:** 10 April 2026
 **Production:** `https://tiramisup.app`
-**Status:** Live and handoff-ready
-**Trusted production baseline commit:** `626543d9`
+**Repo:** GitHub (main branch auto-deploys to Vercel)
+**Status:** Live, stable, handoff-ready
+**Current HEAD:** `20c7c811`
 
-## Latest release snapshot
+---
 
-- Current live/main release line: `4b75a35b`
-- Release summary:
-  - launch blocker priority normalization now applies across all products
-  - generic UX/polish checklist items should no longer remain `HIGH`
-  - agent-side recommendations are now separated from chat in the authenticated side panel
-  - page-specific naming is now the intended model:
-    - `Overview` → `Tiramisup Recommendations`
-    - `Growth` → `Growth Recommendations`
-    - `Launch` → `Launch Recommendations`
-- Verified after push:
-  - public/auth smoke routes on `tiramisup.app` returned healthy responses
-  - protected routes still redirect to login when unauthenticated
-- Still needs signed-in manual verify on live:
-  - recommendation cards appear above chat
-  - clicking a recommendation creates a task instead of sending that same text into chat
+## 1. What is Tiramisup?
 
-## What is live right now
+Tiramisup is a founder operating system for early-stage product teams. It helps founders track launch readiness, growth metrics, and daily execution. Everything is product-scoped: one user can have multiple products, one active at a time.
 
-### Public site
-- Simplified waitlist-first landing page is the production homepage.
-- The original fuller landing page is preserved on `/yayinda`.
-- Privacy and Terms are live.
-- Consent-aware Clarity and GA4 are live on the public site.
-- Production-only invisible reCAPTCHA is live on waitlist and auth flows.
+Core surfaces:
+- **Dashboard** - "What should I do next?" single-question answer
+- **Tasks** - Execution queue with smart prioritization
+- **Pre-Launch** - Launch checklist with readiness scoring
+- **Metrics** - AARRR funnel setup, manual entry, trends, source connections
+- **Growth** - Diagnosis, weak-link detection, tactics, goals, routines
+- **Settings** - Account, product, language, security
 
-### Waitlist
-- Waitlist email collection is live.
-- Waitlist confirmation emails are live via Resend.
-- Thank-you page tracking is live.
+---
 
-### Auth
-- Early-access signup is live.
-- Login is live.
-- Forgot password is live.
-- Reset password is live.
-- Change password from Settings is live.
-- Password strength requirements are enforced in both UI and backend.
+## 2. First-Day Setup
 
-### Product app
-- Dashboard, onboarding, integrations, growth, metrics, tasks, and settings are live.
-- Dashboard and onboarding work should remain aligned with:
-  - `docs/ai-agent-system-playbook.md`
-  - `docs/product-intake-question-playbook.md`
-- Current surface split:
-  - `Growth` = recommendation + weak-link + execution surface
-  - `Metrics` = measurement setup + source flow + manual entry + trends
-  - `Settings` = account, product, sources, tracking, and security
-- `Growth` now also includes a deterministic tactics layer:
-  - max 3 tactics
-  - diagnosis-led, not generic
-  - hidden for pre-launch products
-  - guarded by measurement readiness
-- Recommendation and chat are now separate concepts inside the authenticated side panel.
-- New launcher/blob experiments should still not be treated as the approved baseline.
+```bash
+# 1. Clone the repo
+git clone <repo-url> && cd Tiramisup
 
-## Production routes that matter most
+# 2. Install dependencies
+npm install
 
-### Marketing / public
-- `/en`
-- `/tr`
-- `/en/yayinda`
-- `/tr/yayinda`
-- `/en/privacy`
-- `/tr/privacy`
-- `/en/terms`
-- `/tr/terms`
+# 3. Copy environment variables
+cp .env.example .env.local
+# Fill in all values - see "Environment Variables" section below
 
-### Auth
-- `/en/signup`
-- `/tr/signup`
-- `/en/login`
-- `/tr/login`
-- `/en/forgot-password`
-- `/tr/forgot-password`
-- `/en/reset-password`
-- `/tr/reset-password`
+# 4. Generate Prisma client
+npx prisma generate
 
-### App
-- `/en/dashboard`
-- `/tr/dashboard`
-- `/en/settings`
-- `/tr/settings`
-- `/en/integrations`
-- `/tr/integrations`
+# 5. Push schema to database (or run migrations)
+npx prisma db push          # quick sync
+# OR
+npx prisma migrate dev      # full migration history
 
-## Critical implementation decisions
+# 6. Start dev server (PORT 3002 - not 3000!)
+npm run dev
 
-### 1. English is the master language
-- Default locale is `en`.
-- Turkish is secondary.
-- Do not flip the source language back to Turkish.
+# 7. Verify build
+npx tsc --noEmit && npx next build
 
-### 2. Public domain and OAuth callback are intentionally separated
-- Public app URL is `tiramisup.app`.
-- OAuth callback base is separately configurable via `OAUTH_CALLBACK_BASE_URL`.
-- This prevents Google/Stripe OAuth from breaking when the public domain changes.
+# 8. Run tests
+OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+```
 
-### 3. Password reset is stateless
-- No password-reset DB table is required.
-- Reset links are signed.
-- Links expire automatically.
-- Links are invalidated when the password changes.
+**Local port is 3002.** Google and Stripe OAuth redirect URIs are configured for port 3002. Do not change this.
 
-### 4. Waitlist root and preserved landing must remain separate
-- `/` is now conversion-oriented.
-- `/yayinda` is the preserved fuller page.
-- Do not overwrite one with the other by accident.
+---
 
-### 5. Stage-appropriate navigation matters
-- `Launch` should not appear in top navigation for `LAUNCHED` or `GROWING` products.
-- `Sources` should not appear as a top-level app nav item.
-- Source management now lives under `Settings`.
+## 3. Tech Stack
 
-### 6. Metrics entry constraints are intentional
-- Manual entries should be integers by default.
-- Decimals are allowed only for revenue-style monetary metrics such as `mrr` and `arpu`.
-- This is enforced in both client and backend to avoid dirty data.
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| UI | React 19, Tailwind CSS 3 |
+| Language | TypeScript (strict) |
+| Database | PostgreSQL via Supabase |
+| ORM | Prisma 6 |
+| Auth | NextAuth 4 (Credentials + JWT) |
+| i18n | next-intl (EN/TR, default: English) |
+| AI Providers | Qwen > DeepSeek > Gemini > Gemini backup > static fallback |
+| Email | Resend |
+| Analytics | GA4 + Microsoft Clarity (public pages only) |
+| Bot Protection | reCAPTCHA v3 (production only, not on login) |
+| Hosting | Vercel (auto-deploy from main) |
+| Testing | Vitest (unit) + Playwright (E2E) |
 
-### 7. Free-text onboarding understanding is now part of core product logic
-- Product description free text is normalized into structured inferred context.
-- This understanding feeds downstream AI planning and evidence mapping.
-- Treat this as product logic, not decorative copy.
+---
 
-### 8. Growth tactics belong in Growth first
-- Tactical advice should be diagnosis-led and stage-appropriate.
-- `Growth` is the primary home for tactics.
-- `Metrics` can support tactic readiness, but should not become a channel-tip surface.
-- `Settings`, auth, and public landing should not become tactic surfaces.
+## 4. Architecture
 
-### 9. Do not ship from the dirty worktree by accident
-- Always separate committed release truth from local workstation state.
-- As of 5 April 2026, the only visible local drift during handoff prep was:
-  - handoff-doc updates in `HANDOFF.md`, `docs/handoff.md`, and `docs/team-handoff-prompt.md`
-  - a nested repo change under `external/streamlined-solutions`
-- Do not confuse nested repo drift with the main app release line.
-- Before release, compare staged/committed code against the deployed baseline instead of assuming any local file is canonical.
+### Layout Shells
 
-### 10. Launch blocker priority is stricter now
-- `HIGH` should mean a true launch blocker only.
-- Preserve `HIGH` for real compliance, security, or store-review rejection risks.
-- Most other checklist work should resolve to `MEDIUM`.
-- This rule now matters for both new and existing products because blocker counts influence launch/dashboard/agent logic.
+Two layout patterns for authenticated pages:
 
-### 11. Recommendations are not chat prompts
-- If a card looks like an action, it should behave like an action.
-- Recommendation cards should not masquerade as user chat messages.
-- Chat remains useful for follow-up questions and deeper explanation, but not as the default click path for actionable recommendations.
+- **`AgentLayoutShell`** - Split panel: 360px agent chat on the left + content on the right. Used by Dashboard, Pre-Launch, Growth.
+- **`PlainPageShell`** - Full-width content with `max-w-[1080px]` constraint. Used by Settings, Metrics, Tasks.
 
-## Files new teams should inspect first
+Both shells enforce `max-w-[1080px]` to prevent content from stretching across wide screens.
 
-Before starting, use `docs/team-handoff-prompt.md` as the default takeover brief for any new dev/product team.
+### Route Structure
 
-### Product and routing
-- `app/[locale]/page.tsx`
-- `app/[locale]/waitlist/page.tsx`
-- `app/[locale]/yayinda/page.tsx`
-- `middleware.ts`
-- `i18n.ts`
+```
+app/
+  [locale]/               # All pages locale-prefixed (en or tr)
+    dashboard/            # Product overview + next action
+    tasks/                # Task execution queue
+    pre-launch/           # Launch checklist + readiness score
+    metrics/              # AARRR metric dashboard
+    growth/               # Growth diagnosis + execution
+    integrations/         # Source connections (GA4, Stripe)
+    onboarding/           # Product creation wizard
+    settings/             # User profile + preferences
+    admin/waitlist/       # Admin-only waitlist management
+  api/
+    actions/              # Task CRUD + completion cascade
+    agent/                # AI chat + deterministic suggestions
+    integrations/         # OAuth flows + sync + validation
+    products/             # Product CRUD + AI insights
+    metrics/              # Metric entry + activation funnel
+    goals/                # Goal CRUD
+    routines/             # Daily ritual completion
+    users/me/             # User profile update
+```
 
-### Auth
-- `app/[locale]/signup/page.tsx`
-- `app/[locale]/login/page.tsx`
-- `app/[locale]/forgot-password/page.tsx`
-- `app/[locale]/reset-password/page.tsx`
-- `app/api/auth/signup/route.ts`
-- `app/api/auth/forgot-password/route.ts`
-- `app/api/auth/reset-password/route.ts`
-- `app/api/auth/change-password/route.ts`
-- `lib/password-rules.ts`
-- `lib/password-reset.ts`
-- `lib/auth.ts`
-- `lib/signup-bypass.ts`
+### AI Pipeline
 
-### Public analytics and waitlist
-- `components/analytics/`
-- `lib/analytics.ts`
-- `lib/recaptcha.ts`
-- `components/RecaptchaField.tsx`
-- `app/api/waitlist/join/route.ts`
-- `lib/resend-waitlist.ts`
+```
+Onboarding intake
+  -> normalizeProductContext()       lib/normalize-product-context.ts
+  -> buildEvidenceMap()              lib/build-evidence-map.ts
+  -> getFounderCoachContext()        lib/founder-coach-context.ts
+  -> evidence-readiness gate         lib/founder-coach.ts
+  -> AI prompt (normalized context)  lib/founder-coach.ts
+  -> sanitizeRecommendationOutput()  lib/founder-coach.ts
+  -> applyCriticPass()               lib/founder-coach.ts
+  -> CoachRecommendationOutput       rendered in components/AdvisorCard.tsx
+```
 
-### OAuth and app URLs
-- `lib/app-urls.ts`
-- `app/api/integrations/google/link/route.ts`
-- `app/api/integrations/google/callback/route.ts`
-- `app/api/integrations/stripe/link/route.ts`
-- `app/api/integrations/stripe/callback/route.ts`
+AI provider fallback chain (do NOT change priority order):
+1. **Qwen** (`qwen-plus` via Alibaba Cloud) - fastest, cheapest
+2. **DeepSeek** (`deepseek-chat`) - first fallback
+3. **Gemini** (`gemini-2.0-flash`, `GEMINI_API_KEY`) - second fallback
+4. **Gemini backup** (`gemini-2.0-flash`, `GEMINI_API_KEY_2`) - last resort
+5. **Static fallback** - hardcoded safe responses, no crash
 
-### Settings and security
-- `components/SettingsForm.tsx`
-- `components/SettingsWorkspace.tsx`
+### Task Creation Pipeline
 
-### Growth / metrics split
-- `app/[locale]/growth/page.tsx`
-- `app/[locale]/metrics/page.tsx`
-- `components/GrowthTacticsPanel.tsx`
-- `components/GrowthIntegrationRecommendations.tsx`
-- `components/MetricEntryForm.tsx`
-- `components/AgentLayoutShell.tsx`
-- `components/AgentChatPanel.tsx`
-- `lib/growth-tactics.ts`
-- `docs/growth-tactics-layer.md`
+```
+AI/checklist trigger
+  -> lib/task-completion-effects.ts    # Forward/reverse cascade
+  -> app/api/actions/[id]/route.ts     # PATCH with effects
+  -> components/TasksList.tsx          # Reads effects, shows toasts
+```
 
-### AI context and onboarding understanding
-- `components/OnboardingWizard.tsx`
-- `lib/normalize-product-context.ts`
-- `lib/ai-plan.ts`
-- `lib/build-evidence-map.ts`
-- `lib/founder-coach.ts`
-- `docs/internal-growth-rules.md`
-- `docs/free-text-understanding-plan.md`
-- `docs/free-text-eval-rubric.md`
-- `docs/free-text-dataset-schema.md`
-- `docs/free-text-normalize-pipeline.md`
+Task completion can auto-complete linked checklist items and trigger milestone follow-ups (e.g., `ALL_HIGH_BLOCKERS_CLEARED`).
 
-## Production env checklist
+### Deterministic Suggestions
 
-These should exist and be correct in Vercel production:
-- `NEXT_PUBLIC_APP_URL`
-- `NEXTAUTH_URL`
-- `NEXTAUTH_SECRET`
-- `DATABASE_URL`
-- `DIRECT_URL`
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-- `NEXT_PUBLIC_GA_MEASUREMENT_ID`
-- `RECAPTCHA_ENABLED`
-- `NEXT_PUBLIC_RECAPTCHA_ENABLED`
-- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
-- `RECAPTCHA_SECRET_KEY`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `STRIPE_CLIENT_ID`
-- `STRIPE_SECRET_KEY`
-- `OAUTH_CALLBACK_BASE_URL`
+`/api/agent/suggestions` returns max 3 context-driven suggestion cards based on product state. No AI call - pure logic. These appear in the agent panel before any chat interaction.
 
-## Known operational lessons
+---
 
-### Vercel env hygiene
-There was a real production issue caused by env values saved with trailing `\\n` characters. If production starts behaving inexplicably, inspect the exact raw env values first.
+## 5. Completed Work (Sprints 0, 1, UX Audit)
 
-### OAuth testing
-If Google OAuth shows verification warnings, that is not a code bug by itself. It usually means either:
-- test user not whitelisted in Google Cloud, or
-- OAuth app verification is incomplete for broader access.
+### Sprint 0 - Production Safety (Done)
+- **S0-1** Post-deploy smoke flow for product creation
+- **S0-2** Deploy verification script (`npm run verify:deploy`)
+- **S0-3** Metrics hydration fix (#418)
 
-### Resend dependency
-Forgot-password and waitlist confirmation emails depend on Resend being healthy and the sender domain staying verified.
+### Sprint 1 - Founder Trust (Done)
+- **S1-1** Static recommendation cards replaced with context-driven cards
+- **S1-2** Founder summary deduplication via `tasksAreNearDuplicate`
+- **S1-3** Checklist rationale visibility (Why / Done when / Next action inline hints)
 
-### Server-to-client serialization
-Do not pass functions from server components into client components in settings/dashboard composition. This caused a real runtime crash during the settings workspace refactor.
+### UX Audit Fixes (Done)
+- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points
+- Dashboard: "Workspace pulse" filler card removed
+- Metrics: trend chart requires >= 5 entries to show
+- Growth: pre-launch state simplified to single centered message
+- Growth: empty sections (Goals, Routines, Timeline, Tactics) hidden when no data
+- Growth: source recommendations collapsed to single compact row
+- Goals: verbose "Tracked areas" hint removed
+- Agent panel: removed robotic initial greeting, shows skeleton loader then dynamic suggestions
+- Site-wide: max-width constraint added to both layout shells
 
-### Dashboard design regression lesson
-- Several redesign passes were attempted on the `Ask Tiramisup` surface.
-- The old simple-card baseline is historical context, not the latest authenticated panel model.
-- The current direction is page-scoped recommendations with chat separated underneath.
-- Any future redesign should still happen in preview first, not directly on the live dashboard.
+---
 
-### Local E2E caveat
-Local founder-flow tests depend on a working database connection. If Prisma cannot reach the local database, signup will fail with a server error before product-flow UX can be evaluated.
+## 6. Remaining Work (Sprints 2 & 3)
 
-### Current product debt worth keeping visible
-- Some locale-routed app screens still contain Turkish-first hardcoded copy.
-- Signup currently asks for a product-type selection that is not sent to the backend.
-- Dashboard routing for launched products without metrics still needs careful review so Metrics ownership stays clear.
-- The new recommendation-card behavior on live authenticated pages still needs signed-in manual QA.
+### Sprint 2 - Historical Product Repair (Todo)
+| ID | Item | Priority |
+|---|---|---|
+| S2-1 | Safe "regenerate plan" action for existing products | P1 |
+| S2-2 | One-off admin repair path for broken historical products | P1 |
+| S2-3 | Persist plan generation source metadata (ai/sanitized_ai/fallback) | P1 |
 
-## Safe next steps for a new team
-1. Validate the live `Growth` tactics layer with real founder flows before expanding tactics into other surfaces.
-2. Complete signed-in QA for recommendation cards on Overview/Growth/Launch and confirm they create tasks instead of echoing into chat.
-3. Refine settings polish and tab interaction without re-expanding all sections at once.
-4. Improve locale consistency so English stays the master language across app surfaces.
-5. Tighten dashboard and onboarding flow details while staying inside the playbooks.
-6. Add better event naming and funnel reporting in GA4.
+### Sprint 3 - Quality Loop (Todo)
+| ID | Item | Priority |
+|---|---|---|
+| S3-1 | Minimum plan quality guard (reject thin plans) | P1 |
+| S3-2 | Observability for plan quality and fallback rates | P2 |
+| S3-3 | Routine founder walkthrough regression script | P2 |
+
+Full details: `docs/production-stabilization-board.md`
+
+---
+
+## 7. Rules That Must Not Break
+
+1. **No fake product on signup.** Product data starts after the onboarding wizard completes.
+2. **Launched products must not see pre-launch language.** Stage-appropriate UI everywhere.
+3. **Growth setup stays calm.** One primary metric per AARRR category, not a giant form.
+4. **Metric entry is tied to what the user selected.** No free-form metric creation.
+5. **AI must not speculate without evidence.** Low confidence -> data_collection fallback, no AI call.
+6. **User's product description is central context for all AI calls.** Never override with generic text.
+7. **English is the master language.** Default locale is `en`. Turkish is secondary.
+8. **`HIGH` priority means true launch blocker only.** Compliance, security, store-review risks. Everything else is `MEDIUM`.
+9. **Recommendations create tasks, not chat messages.** Action cards behave like actions.
+
+---
+
+## 8. Known Technical Debt
+
+| Item | Details |
+|---|---|
+| `Product.launchGoals` field | Legacy. Only holds `{ goalKey, growthGoal }` from onboarding. Not source of truth for metrics. Should be removed in future migration. |
+| Billing is fake | Stripe Checkout flow exists but is in demo mode. No real payments processed. |
+| Some TR-first hardcoded copy | A few authenticated screens still have Turkish-first strings instead of using next-intl. |
+| Roadmap integrations | RevenueCat, App Store Connect, Google Play Console, Meta/Google/TikTok Ads - UI visible but not functional. |
+| Signup product-type selection | Collected in UI but not sent to backend. |
+| `external/streamlined-solutions` | Nested repo, not part of main app. Ignore its git status. |
+
+---
+
+## 9. Environment Variables
+
+```bash
+# AI providers (in priority order)
+QWEN_API_KEY                # Primary
+DEEPSEEK_API_KEY            # Fallback 1
+GEMINI_API_KEY              # Fallback 2
+GEMINI_API_KEY_2            # Fallback 3
+
+# Auth
+NEXTAUTH_SECRET             # Long random string
+NEXTAUTH_URL                # https://tiramisup.app (local: http://localhost:3002)
+ACCESS_CODE                 # TT31623SEN (signup gate)
+
+# Database
+DATABASE_URL                # Supabase PgBouncer (port 6543, ?pgbouncer=true)
+DIRECT_URL                  # Supabase direct (port 5432, for migrations)
+
+# Google OAuth (GA4)
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+
+# Stripe
+STRIPE_CLIENT_ID
+STRIPE_SECRET_KEY
+STRIPE_PUBLISHABLE_KEY
+STRIPE_WEBHOOK_SECRET
+STRIPE_REDIRECT_URI
+
+# OAuth
+OAUTH_CALLBACK_BASE_URL    # Separate from public URL to prevent OAuth breakage
+
+# Email
+RESEND_API_KEY
+RESEND_FROM_EMAIL
+
+# Analytics (public pages)
+NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+# reCAPTCHA (production only)
+RECAPTCHA_ENABLED
+NEXT_PUBLIC_RECAPTCHA_ENABLED
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+RECAPTCHA_SECRET_KEY
+
+# App
+NEXT_PUBLIC_APP_URL         # https://tiramisup.app (local: http://localhost:3002)
+```
+
+**Critical:** `DATABASE_URL` must use PgBouncer transaction mode (port 6543). Direct connection (port 5432) goes in `DIRECT_URL` only. Without this split, Vercel serverless hits `MaxClientsInSessionMode` errors.
+
+---
+
+## 10. OAuth Flows
+
+### GA4
+1. `GET /api/integrations/google/link?productId=X` -> Google OAuth
+2. Callback: `GET /api/integrations/google/callback`
+3. Property selection: `GET/PUT /api/integrations/[id]/ga4-properties`
+4. Sync: `POST /api/integrations/[id]/sync`
+
+### Stripe
+1. `GET /api/integrations/stripe/link?productId=X` -> Stripe Connect
+2. Callback: `GET /api/integrations/stripe/callback`
+3. Sync: `POST /api/integrations/[id]/sync`
+
+### Integration States
+`DISCONNECTED -> CONNECTED(NEEDS_SETUP) -> CONNECTED(SYNCED)` or `ERROR` / `STALE` (>48h)
+
+**Warning:** If Google OAuth shows verification warnings, check test user whitelist in Google Cloud, not code.
+
+---
+
+## 11. Verification Commands
+
+```bash
+# Type check
+npx tsc --noEmit
+
+# Build
+npx next build
+
+# Unit tests (dummy keys needed for AI modules to load)
+OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+
+# Deploy verification against production
+npm run verify:deploy
+
+# E2E (needs dev server running on :3002)
+npx playwright test --config=playwright-waitlist.config.ts
+
+# If dev becomes flaky
+rm -rf .next && npm run dev
+```
+
+---
+
+## 12. Pre-Release Smoke Test Checklist
+
+Before any production deploy, manually verify:
+
+- [ ] `npx tsc --noEmit` passes
+- [ ] `npx next build` succeeds
+- [ ] All unit tests pass
+- [ ] `/en` and `/tr` load correctly
+- [ ] `/en/login` works (no reCAPTCHA on login)
+- [ ] Create new product through onboarding wizard
+- [ ] New product gets >= 5 launch checklist items
+- [ ] No leaked product names from other products
+- [ ] Dashboard shows correct next action for product stage
+- [ ] Metrics page loads without hydration errors
+- [ ] Growth page shows appropriate content for product stage
+- [ ] Agent panel shows context-driven suggestions (not static cards)
+- [ ] Task completion cascades correctly to checklist items
+
+---
+
+## 13. Document Reading Order
+
+Read these in order to understand the full system:
+
+1. **This file** (`HANDOFF.md`) - overview and setup
+2. **`CLAUDE.md`** - detailed architecture, AI pipeline, design system, coding rules
+3. **`docs/production-stabilization-board.md`** - sprint board with remaining work
+4. **`docs/ai-agent-system-playbook.md`** - AI agent architecture specification
+5. **`docs/product-intake-question-playbook.md`** - onboarding question set and normalization
+6. **`docs/growth-tactics-layer.md`** - growth tactics design
+7. **`docs/internal-growth-rules.md`** - growth logic rules
+
+---
+
+## 14. Access Transfer Checklist
+
+Transfer these to the new team:
+
+- [ ] GitHub repo access (collaborator or transfer)
+- [ ] Vercel project access (`zerocekos-projects/tramisup`)
+- [ ] Supabase project access (`ojecebxxcbxrofnbkaae`, eu-west-3)
+- [ ] Google Cloud Console (OAuth client for GA4)
+- [ ] Stripe Dashboard (Connect app + API keys)
+- [ ] Resend account (email sending)
+- [ ] Domain DNS (`tiramisup.app`)
+- [ ] All `.env` values from Vercel production settings
+
+**Supabase note:** Free tier pauses after 7 days of inactivity. Resume from supabase.com/dashboard if needed.
+
+---
+
+## 15. Design System (Quick Reference)
+
+| Token | Value |
+|---|---|
+| Page background | `#f6f6f6` |
+| Card background | `#ffffff` |
+| Border | `#e8e8e8` |
+| Text primary | `#0d0d12` |
+| Text secondary | `#5e6678` |
+| Text muted | `#8a8fa0` |
+| Accent teal | `#95dbda` |
+| Accent pink | `#ffd7ef` |
+| Accent green | `#75fc96` |
+| Card radius | `24px` |
+| Inner card radius | `18px` |
+| Buttons/tags | `rounded-full` |
+| Eyebrow text | `11px`, `tracking-[0.18em]`, uppercase |
+
+No emojis in UI. All decorative elements use inline SVG. No Shadcn - Tiramisup has its own aesthetic.

@@ -1,5 +1,6 @@
 import type { AiPlan, WizardInput } from "@/lib/ai-plan";
 import { getMetricContext, type MetricSnapshot } from "@/lib/metric-context";
+import { tasksAreNearDuplicate } from "@/lib/task-parsing";
 
 export type FounderSummary = {
   headline: string;
@@ -185,12 +186,23 @@ export async function buildFounderSummary(
     );
   }
 
+  // Dedupe focus areas: merge focusAreas + tasks, remove near-duplicates
+  const rawFocusAreas = [...focusAreas, ...tasks];
+  const dedupedFocusAreas: string[] = [];
+  for (const item of rawFocusAreas) {
+    if (!item?.trim()) continue;
+    const isDuplicate = dedupedFocusAreas.some((existing) =>
+      tasksAreNearDuplicate(existing, item)
+    );
+    if (!isDuplicate) dedupedFocusAreas.push(item);
+  }
+
   return {
     headline: pick(locale, `Tiramisup summary for ${input.name}`, `${input.name} için Tiramisup özeti`),
     summary,
     nextStep,
     strengths: strengths.slice(0, 4),
-    focusAreas: [...focusAreas, ...tasks].slice(0, 4),
+    focusAreas: dedupedFocusAreas.slice(0, 4),
     metricSnapshot,
     connectedIntegrations,
   };

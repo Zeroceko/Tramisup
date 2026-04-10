@@ -91,7 +91,7 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
 
       {/* ── Right: Page content ── */}
       <div className="flex-1 min-w-0 overflow-y-auto rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-        <div className="px-7 py-7">
+        <div className="px-7 py-7 mx-auto max-w-[1080px]">
           {children}
         </div>
       </div>

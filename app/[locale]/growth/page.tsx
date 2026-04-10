@@ -204,65 +204,28 @@ export default async function GrowthPage({
 
   if (!isLaunched) {
     return (
-      <div className="space-y-4">
-        <PageHeader
-          eyebrow={t("eyebrow")}
-          title="Growth"
-          description={isEn
-            ? "This product is still pre-launch. Growth exists here, but it becomes the active workspace only after launch."
-            : "Bu ürün henüz launch öncesi aşamada. Growth alanı burada ama bir sonraki aşama olarak konumlanıyor."}
-        />
-
-        <section className="rounded-[20px] border border-[#e8e8e8] bg-white p-6">
-          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{isEn ? "Next stage" : "Sıradaki aşama"}</p>
-              <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                {isEn ? "Growth is queued as the next workspace" : "Growth burada kilitli değil, sıradaki aşama olarak bekliyor"}
-              </h2>
-              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-[#5e6678]">
-                {isEn
-                  ? "Once launch preparation is complete, this becomes your metric setup, daily input, and growth checklist workspace."
-                  : "Launch hazırlığını tamamladığında burası senin metrik setup, günlük veri girişi ve growth checklist çalışma alanına dönüşecek."}
-              </p>
-
-              <div className="mt-5 space-y-3">
-                <div className="rounded-[16px] bg-[#f8fbfb] px-4 py-4">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "What should you do now?" : "Şimdi ne yapmalısın?"}</p>
-                  <p className="mt-1 text-[14px] leading-6 text-[#3d4658]">
-                    {isEn
-                      ? "First, close the critical items on the Launch side. As you get closer to launch, you can start selecting the AARRR metrics you will track in Growth."
-                      : "Önce `Launch` tarafındaki kritik maddeleri kapat. Yayına yaklaştığında Growth için takip edeceğin AARRR metriklerini seçmeye başlayabilirsin."}
-                  </p>
-                </div>
-                <div className="rounded-[16px] border border-dashed border-[#e8e8e8] bg-[#fcfcfc] px-4 py-4">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "Once Growth opens" : "Growth açılınca"}</p>
-                  <p className="mt-1 text-[14px] leading-6 text-[#3d4658]">
-                    {isEn
-                      ? "First metric selection, then the first daily entry, then trend visibility, and only after that optimization suggestions."
-                      : "Önce tracking seçimi, sonra ilk günlük veri girişi, sonra trend görünümü, en son optimizasyon önerileri."}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[18px] border border-[#eef1f2] bg-[#fbfcfc] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">{isEn ? "Launch link" : "Launch bağlantısı"}</p>
-              <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">{isEn ? "Return to the launch workspace" : "Buradan launch sayfasına dönebilirsin"}</h3>
-              <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
-                {isEn
-                  ? "Once launch is complete, the Growth tab becomes one of your main operating surfaces."
-                  : "Launch tarafı tamamlandığında growth sekmesi otomatik olarak ana çalışma alanına dönüşür."}
-              </p>
-              <a
-                href={`/${locale}/pre-launch`}
-                className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
-              >
-                {isEn ? "Go to Launch" : "Launch sayfasına git"}
-              </a>
-            </div>
+      <div className="flex items-center justify-center py-20">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f0f0f0]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a8fa0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
           </div>
-        </section>
+          <h2 className="text-[20px] font-semibold text-[#0d0d12]">
+            {isEn ? "Growth unlocks after launch" : "Growth, launch sonrası açılır"}
+          </h2>
+          <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
+            {isEn
+              ? "Complete your launch preparation first. Growth becomes your metric setup and execution workspace once the product is live."
+              : "Önce launch hazırlığını tamamla. Ürün yayına geçtiğinde Growth, metrik ve execution çalışma alanın olur."}
+          </p>
+          <a
+            href={`/${locale}/pre-launch`}
+            className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
+          >
+            {isEn ? "Go to Launch" : "Launch sayfasına git"}
+          </a>
+        </div>
       </div>
     );
   }
@@ -313,24 +276,32 @@ export default async function GrowthPage({
           <GrowthChecklistSection items={growthChecklists} locale={locale} />
         </div>
 
-        {/* SECONDARY: tactics, goals, routines, timeline — all collapsed by default */}
-        <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
-          <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
-        </CollapsibleSection>
+        {/* SECONDARY: only show sections that have data */}
+        {tacticsPlan && tacticsPlan.tactics && tacticsPlan.tactics.length > 0 && (
+          <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
+            <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
+          </CollapsibleSection>
+        )}
 
-        <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
-          <div id="goals">
-            <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
-          </div>
-        </CollapsibleSection>
+        {goals.length > 0 && (
+          <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
+            <div id="goals">
+              <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
+            </div>
+          </CollapsibleSection>
+        )}
 
-        <CollapsibleSection label={isEn ? "Routines" : "Rutinler"} defaultCollapsed>
-          <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
-        </CollapsibleSection>
+        {routines.length > 0 && (
+          <CollapsibleSection label={isEn ? "Routines" : "Rutinler"} defaultCollapsed>
+            <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
+          </CollapsibleSection>
+        )}
 
-        <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
-          <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
-        </CollapsibleSection>
+        {timelineEvents.length > 0 && (
+          <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
+            <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
+          </CollapsibleSection>
+        )}
       </div>
     </div>
   );

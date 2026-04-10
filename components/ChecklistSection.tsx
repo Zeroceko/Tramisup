@@ -293,25 +293,61 @@ export default function ChecklistSection({
                     )}
                   </button>
 
-                  {/* Title */}
+                  {/* Title + rationale */}
                   <div className="flex-1 min-w-0">
                     <p className={`text-[14px] font-medium leading-snug ${item.completed ? "text-[#9ca3af]" : "text-[#0d0d12]"}`}>
                       {item.title}
                     </p>
-                    {item.description && !item.completed && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedDesc(isExpanded ? null : item.id)}
-                        className="mt-0.5 text-[11px] text-[#94a3b8] hover:text-[#666d80] transition"
-                      >
-                        {isExpanded ? (isEn ? "Hide ↑" : "Gizle ↑") : (isEn ? "Why this matters ↓" : "Neden önemli ↓")}
-                      </button>
-                    )}
-                    {isExpanded && item.description && (
-                      <p className="mt-1.5 rounded-[8px] bg-[#f6f6f6] px-3 py-2 text-[12px] leading-5 text-[#5e6678]">
-                        {item.description}
-                      </p>
-                    )}
+                    {item.description && !item.completed && (() => {
+                      // Parse structured rationale from description
+                      const lines = item.description.split("\n").filter(Boolean);
+                      const why = lines.find((l) => l.startsWith("Why:"))?.replace("Why:", "").trim();
+                      const done = lines.find((l) => l.startsWith("Done when:"))?.replace("Done when:", "").trim();
+                      const next = lines.find((l) => l.startsWith("Next action:"))?.replace("Next action:", "").trim();
+                      const hasStructured = why || done || next;
+
+                      if (hasStructured) {
+                        return (
+                          <>
+                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] leading-4 text-[#8a8fa0]">
+                              {why && <span title={isEn ? "Why this matters" : "Neden önemli"}>💡 {why}</span>}
+                              {done && <span title={isEn ? "Done when" : "Tamamlanma kriteri"}>✓ {done}</span>}
+                              {next && <span title={isEn ? "Next action" : "Sonraki adım"}>→ {next}</span>}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedDesc(isExpanded ? null : item.id)}
+                              className="mt-0.5 text-[11px] text-[#94a3b8] hover:text-[#666d80] transition"
+                            >
+                              {isExpanded ? (isEn ? "Hide ↑" : "Gizle ↑") : (isEn ? "Full detail ↓" : "Tüm detay ↓")}
+                            </button>
+                            {isExpanded && (
+                              <p className="mt-1.5 rounded-[8px] bg-[#f6f6f6] px-3 py-2 text-[12px] leading-5 text-[#5e6678]">
+                                {item.description}
+                              </p>
+                            )}
+                          </>
+                        );
+                      }
+
+                      // Unstructured description fallback
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDesc(isExpanded ? null : item.id)}
+                            className="mt-0.5 text-[11px] text-[#94a3b8] hover:text-[#666d80] transition"
+                          >
+                            {isExpanded ? (isEn ? "Hide ↑" : "Gizle ↑") : (isEn ? "Why this matters ↓" : "Neden önemli ↓")}
+                          </button>
+                          {isExpanded && (
+                            <p className="mt-1.5 rounded-[8px] bg-[#f6f6f6] px-3 py-2 text-[12px] leading-5 text-[#5e6678]">
+                              {item.description}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Right: actions + arrow */}

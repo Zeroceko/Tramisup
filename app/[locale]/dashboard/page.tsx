@@ -578,7 +578,7 @@ export default async function DashboardPage({
       )}
 
       {/* 3. Stat cards — prominent numbers first */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-3 gap-3">
         <StatCard
           label={isEn ? "Total Tasks" : "Toplam Görev"}
           value={String(totalTasks)}
@@ -586,16 +586,10 @@ export default async function DashboardPage({
           color="blue"
         />
         <StatCard
-          label={isEn ? "Pending" : "Bekleyen"}
-          value={String(totalPending)}
-          hint={`${inProgressTasks} ${isEn ? "in progress" : "devam ediyor"}`}
-          color={totalPending > 0 ? "amber" : "green"}
-        />
-        <StatCard
-          label={isEn ? "Completed" : "Tamamlanan"}
-          value={String(doneTasks)}
-          hint={totalTasks > 0 ? `%${Math.round((doneTasks / totalTasks) * 100)}` : "—"}
-          color="green"
+          label={isEn ? "In Progress" : "Devam Eden"}
+          value={String(inProgressTasks)}
+          hint={`${totalPending} ${isEn ? "pending" : "bekleyen"}`}
+          color={inProgressTasks > 0 ? "amber" : "green"}
         />
         <StatCard
           label={isEn ? "Blockers" : "Blokajlar"}
@@ -605,30 +599,27 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* 4. Chart row — task progress + metric/readiness panel */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <TaskProgressChart
-          data={taskChartData}
-          locale={uiLocale}
-          totalCreated={chartTotalCreated}
-          totalCompleted={chartTotalCompleted}
-        />
-        {metricSparkData.length >= 2 ? (
-          <MetricSparklinePanel
-            data={metricSparkData}
-            label={metricSparkLabel}
-            locale={uiLocale}
-            href={`/${uiLocale}/metrics`}
-          />
-        ) : (
-          <ReadinessPanel
-            phase={phase}
-            readinessScore={readinessScore}
-            daysUntilLaunch={daysUntilLaunch}
-            locale={uiLocale}
-          />
-        )}
-      </div>
+      {/* 4. Chart row — only show if meaningful data exists */}
+      {(chartTotalCreated + chartTotalCompleted >= 3 || metricSparkData.length >= 2) && (
+        <div className={`grid gap-4 ${chartTotalCreated + chartTotalCompleted >= 3 && metricSparkData.length >= 2 ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
+          {chartTotalCreated + chartTotalCompleted >= 3 && (
+            <TaskProgressChart
+              data={taskChartData}
+              locale={uiLocale}
+              totalCreated={chartTotalCreated}
+              totalCompleted={chartTotalCompleted}
+            />
+          )}
+          {metricSparkData.length >= 2 && (
+            <MetricSparklinePanel
+              data={metricSparkData}
+              label={metricSparkLabel}
+              locale={uiLocale}
+              href={`/${uiLocale}/metrics`}
+            />
+          )}
+        </div>
+      )}
 
       {/* 5. Two-column: Primary Action + Decision Strip */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_1fr]">
@@ -658,8 +649,8 @@ export default async function DashboardPage({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <TodayTasks tasks={taskItems} totalPending={totalPending} locale={locale} />
 
-        <div className="space-y-4">
-          {isLaunched && selectedMetricCount > 0 ? (
+        {isLaunched && selectedMetricCount > 0 && (
+          <div className="space-y-4">
             <SourceHealth
               connectedCount={connectedCount}
               errorCount={errorCount}
@@ -668,22 +659,8 @@ export default async function DashboardPage({
               enteredToday={enteredToday}
               locale={uiLocale}
             />
-          ) : (
-            <div className="rounded-[20px] border border-[#e8e4de] bg-white p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-                {uiLocale === "en" ? "Workspace pulse" : "Çalışma alanı özeti"}
-              </p>
-              <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                {uiLocale === "en" ? "Your board is taking shape" : "Çalışma alanın şekilleniyor"}
-              </h3>
-              <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
-                {uiLocale === "en"
-                  ? "Launch, tasks, and growth surfaces stay lightweight until the product context fills in."
-                  : "Ürün bağlamın doldukça launch, görev ve büyüme yüzeyleri daha zengin hale gelecek."}
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

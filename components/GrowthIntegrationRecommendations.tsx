@@ -22,32 +22,38 @@ export default function GrowthIntegrationRecommendations({
   }
 
   return (
-    <section className="rounded-[16px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffdfd_0%,_#fff8fb_100%)] p-5 shadow-[0_14px_36px_rgba(17,16,20,0.03)]">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <button
-          type="button"
-          onClick={() => setIsOpen((value) => !value)}
-          className="flex w-full items-start justify-between gap-4 text-left lg:flex-1"
-        >
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">{isEn ? "Recommended sources" : "Önerilen kaynaklar"}</p>
-            <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-              {isEn ? "Best sources to automate these metrics" : "Bu metrikleri otomatik akıtmak için uygun kaynaklar"}
-            </h2>
-            <p className="mt-2 text-[12px] leading-6 text-[#666d80]">
-              {isEn
-                ? "We suggest stage-aware sources that can automate the signals you selected as much as possible."
-                : "Seçtiğin sinyalleri mümkün olduğunca otomatik besleyecek kaynakları stage bazında öneriyoruz."}
-            </p>
-          </div>
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#eadfe6] bg-white text-[#666d80] transition hover:text-[#0d0d12]">
+    <section className="rounded-[16px] border border-[#eadfe6] bg-[#fffcfd] px-4 py-3">
+      <button
+        type="button"
+        onClick={() => setIsOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#b85e88] shrink-0">
+            {isEn ? "Recommended sources" : "Önerilen kaynaklar"}
+          </span>
+          <span className="text-[12px] text-[#8a8fa0] truncate">
+            {isEn
+              ? `${metricRecommendations.length} metric(s) with source suggestions`
+              : `${metricRecommendations.length} metrik için kaynak önerisi`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/${locale}/integrations`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex h-7 items-center rounded-full bg-[#111014] px-3 text-[11px] font-semibold text-white transition hover:bg-[#28232a]"
+          >
+            {isEn ? "Sources" : "Kaynaklara git"}
+          </Link>
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#eadfe6] bg-white text-[#666d80]">
             <svg
-              width="18"
-              height="18"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.8"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -55,17 +61,11 @@ export default function GrowthIntegrationRecommendations({
               <path d="m6 9 6 6 6-6" />
             </svg>
           </span>
-        </button>
-        <Link
-          href={`/${locale}/integrations`}
-          className="inline-flex h-9 items-center justify-center rounded-full bg-[#111014] px-4 text-[12px] font-semibold text-white transition hover:bg-[#28232a] lg:ml-4"
-        >
-          {isEn ? "Open sources" : "Kaynaklara git"}
-        </Link>
-      </div>
+        </div>
+      </button>
 
       {isOpen ? (
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+      <div className="mt-3 grid gap-2 lg:grid-cols-2">
         {metricRecommendations.map((recommendation) => (
           <div
             key={`${recommendation.stage}-${recommendation.metricKey}`}
@@ -136,14 +136,11 @@ export default function GrowthIntegrationRecommendations({
       ) : null}
 
       {isOpen && uncoveredMetricNames.length > 0 ? (
-        <div className="mt-4 rounded-[14px] border border-dashed border-[#eadfe6] bg-white/70 p-4">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "Manual or extra-setup items" : "Manuel veya ek entegrasyon gerektirenler"}</p>
-          <p className="mt-2 text-[12px] leading-6 text-[#666d80]">
-            {isEn
-              ? `There is no direct connector match yet for these selections: ${uncoveredMetricNames.join(", ")}. For now, we can track them manually in Metrics.`
-              : `Şu seçimler için henüz doğrudan önerilen connector eşlemesi yok: ${uncoveredMetricNames.join(", ")}. Bunları şimdilik Metrics ekranından manuel takip edebiliriz.`}
-          </p>
-        </div>
+        <p className="mt-2 text-[11px] text-[#8a8fa0] px-1">
+          {isEn
+            ? `Manual tracking: ${uncoveredMetricNames.join(", ")}`
+            : `Manuel takip: ${uncoveredMetricNames.join(", ")}`}
+        </p>
       ) : null}
     </section>
   );

@@ -441,8 +441,8 @@ export default async function MetricsPage({
                 })}
               </div>
 
-              {/* Trend chart */}
-              {chartEntries.length >= 2 && (
+              {/* Trend chart — only show with enough data for a meaningful trend */}
+              {chartEntries.length >= 5 && (
                 <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <p className="text-[13px] font-semibold text-[#0d0d12]">{isEn ? "Trend" : "Trend"}</p>

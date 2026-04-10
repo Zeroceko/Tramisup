@@ -108,16 +108,7 @@ export default function GoalsSection({
         </button>
       </div>
 
-      {trackedStages.length > 0 && !showAddForm ? (
-        <div className="mb-4 rounded-[12px] border border-[#eef1f2] bg-[#fbfcfc] px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">{isEn ? "Tracked areas" : "Takip ettiğin alanlar"}</p>
-          <p className="mt-1 text-[13px] leading-6 text-[#4c5567]">
-            {isEn
-              ? `You selected core metrics for ${trackedStages.join(", ")}. Add concrete targets here, like “raise Activation to 120 within 30 days.”`
-              : `Şu anda ${trackedStages.join(", ")} için ana metrik seçtin. Buraya örneğin “30 günde Activation metriğini 120’ye çıkar” gibi ulaşılacak hedefler ekleyebilirsin.`}
-          </p>
-        </div>
-      ) : null}
+      {/* Tracked areas hint removed — users who reach Goals already understand the flow */}
 
       {showAddForm && (
         <form onSubmit={addGoal} className="mb-4 p-4 bg-[#f6f6f6] rounded-[12px] space-y-3">

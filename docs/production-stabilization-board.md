@@ -21,11 +21,11 @@ Scope: Launch checklist quality, founder trust, metrics stability, deployment sa
 | ID | Sprint | Item | Status | Priority | Acceptance |
 | --- | --- | --- | --- | --- | --- |
 | S0-1 | Sprint 0 | Add post-deploy production smoke flow for product creation | Done | P0 | New prod product can be created; launch checklist count is `>= 5`; no foreign product name leak |
-| S0-2 | Sprint 0 | Add deployment verification step against `tiramisup.app` alias | Todo | P0 | After deploy, alias commit is confirmed by live behavior, not just by local git state |
+| S0-2 | Sprint 0 | Add deployment verification step against `tiramisup.app` alias | Done | P0 | After deploy, alias commit is confirmed by live behavior, not just by local git state |
 | S0-3 | Sprint 0 | Fix metrics hydration error `#418` | Done | P0 | `/tr/metrics` opens with no React hydration/pageerror in founder smoke test |
-| S1-1 | Sprint 1 | Replace static launch recommendation cards with context-driven cards | Todo | P0 | Launch left panel reflects active product, stage, and checklist context |
-| S1-2 | Sprint 1 | Remove duplicate / thin founder summary focus areas | Todo | P1 | Founder summary shows unique, product-specific focus areas |
-| S1-3 | Sprint 1 | Make checklist rationale more visible in launch UI | Todo | P1 | Founder can see `neden önemli / done criteria / next action` without hunting |
+| S1-1 | Sprint 1 | Replace static launch recommendation cards with context-driven cards | Done | P0 | Launch left panel reflects active product, stage, and checklist context |
+| S1-2 | Sprint 1 | Remove duplicate / thin founder summary focus areas | Done | P1 | Founder summary shows unique, product-specific focus areas |
+| S1-3 | Sprint 1 | Make checklist rationale more visible in launch UI | Done | P1 | Founder can see `neden önemli / done criteria / next action` without hunting |
 | S2-1 | Sprint 2 | Add safe “regenerate plan” action for an existing product | Todo | P1 | Old shallow products can be re-generated without affecting other products |
 | S2-2 | Sprint 2 | Add one-off reseed/admin repair path for broken historical products | Todo | P1 | Specific product can be repaired with audit log / dry-run output |
 | S2-3 | Sprint 2 | Persist plan generation source metadata | Todo | P1 | We can tell whether a product used AI, sanitized AI, or fallback |

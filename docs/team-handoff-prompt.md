@@ -2,177 +2,139 @@
 
 Use the following prompt as the default kickoff brief for any new development and product team taking over Tiramisup.
 
+---
+
 ```text
 You are taking over the Tiramisup codebase and product.
 
 Treat this as a live production system, not a prototype sandbox.
 
-First, read these files in order:
-1. CLAUDE.md
-2. docs/handoff.md
-3. docs/tiramisup-manifesto.md
-4. docs/ai-agent-system-playbook.md
-5. docs/product-intake-question-playbook.md
-6. docs/internal-growth-rules.md
-7. docs/free-text-understanding-plan.md
-8. docs/free-text-eval-rubric.md
-9. docs/free-text-dataset-schema.md
-10. docs/free-text-normalize-pipeline.md
-11. docs/growth-tactics-layer.md
+## Step 1: Read these files in order
 
-Then inspect these implementation areas first:
-- components/AppShell.tsx                    ← top-level layout wrapper
-- components/AgentLayoutShell.tsx            ← split-panel: agent left, content right
-- components/PlainPageShell.tsx              ← non-agent pages wrapper
-- components/DashboardNav.tsx                ← nav: pill group, section-aware colors
-- components/AgentChatPanel.tsx              ← agent panel: recommendations + chat
-- app/[locale]/dashboard/page.tsx            ← Overview: stat cards, primary action
-- app/[locale]/pre-launch/page.tsx           ← Launch: stat cards, checklist
-- app/[locale]/metrics/page.tsx              ← Metrics: stat cards, entry, trend
-- app/[locale]/settings/page.tsx             ← Settings: tab-based
-- components/OnboardingWizard.tsx            ← product creation wizard
-- lib/agent-prompts.ts                       ← agent system prompts (English only)
-- lib/agent-context.ts                       ← agent context builder (includes locale)
-- app/api/agent/chat/route.ts                ← agent chat API endpoint
-- lib/ai-plan.ts                             ← AI-generated launch/growth plan
-- lib/normalize-product-context.ts
-- lib/build-evidence-map.ts
-- lib/founder-coach.ts
-- lib/launch-checklist-priority.ts           ← runtime priority normalization
-- lib/app-urls.ts                            ← public vs OAuth callback URL helpers
+1. HANDOFF.md — project overview, setup, architecture, completed work, remaining sprints, rules, access transfer
+2. CLAUDE.md — detailed architecture, AI pipeline, design system, coding conventions, GSD skills
+3. docs/production-stabilization-board.md — sprint board with remaining tasks
+4. docs/ai-agent-system-playbook.md — AI agent architecture specification
+5. docs/product-intake-question-playbook.md — onboarding question set and normalization rules
+6. docs/internal-growth-rules.md — growth logic rules
+7. docs/growth-tactics-layer.md — growth tactics design
 
-These production constraints are mandatory:
-- Production is live at https://tiramisup.app
-- Trusted production baseline commit: 626543d9
-- Current live production line: 6237204b
-- Current repo handoff head: acc151ed
-- English is the master language and default locale
-- Turkish is secondary
-- Keep / as the simplified waitlist-first landing page
-- Keep /yayinda as the preserved fuller landing page
-- Do not break Clarity, GA4, Resend, signup/waitlist reCAPTCHA, password reset, or OAuth flows
-- Do not move product logic outside the boundaries defined in the playbooks
-- Do not introduce generic AI features that are not grounded in the playbooks
+## Step 2: Verify local setup works
 
-These manifesto constraints are also mandatory:
-- Tiramisup is an AI-native execution workspace, not a dashboard with chat added on top
-- The primary product value is reducing the distance from user intent to structured action
-- AI features must stay grounded in product context, stage, evidence, and current execution state
-- AI output should become operational whenever possible: task, checklist item, routine, decision, or next step
-- Navigation remains a support layer; it must not become the only path to action again
-- Do not ship AI surfaces that end at generic text when they could end in execution
-- Do not turn Tiramisup into a thin wrapper around a general-purpose model
+Run these commands in order:
+1. npm install
+2. npx prisma generate
+3. npx tsc --noEmit
+4. npx next build
+5. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+6. npm run dev (opens on localhost:3002 — port matters for OAuth)
 
-Current product structure to preserve:
-- Dashboard (Overview) = "What is the next correct step for this product right now?"
-- Launch (pre-launch) = "What is blocking launch and what must be done first?"
-- Growth = "Where is the weak link and what should we focus on next?"
-- Metrics = "What do we measure, how does data arrive, and what changed?"
-- Settings = product, source, tracking, and security management
-- Sources must not return to top nav
-- Launch must not appear in top nav for launched/growing products
+If Supabase is paused (free tier, 7 days inactivity), resume from supabase.com/dashboard first.
 
-Layout rules that must not regress:
-- Full viewport split-panel layout: left agent panel (360px fixed) + right scrollable content
-- AgentLayoutShell wraps Overview, Launch, Growth page layouts
-- PlainPageShell wraps Settings, Account, Integrations, Metrics page layouts
+## Step 3: Walk through the product as a founder
+
+Sign up and go through:
+- Onboarding wizard (fill every field with realistic content — skipping weakens AI quality)
+- Dashboard — should show the right next action for the product stage
+- Pre-Launch — launch checklist with priorities and inline rationale
+- Metrics — AARRR funnel setup, manual entry, trends
+- Growth — diagnosis, tactics, goals (only visible for launched products)
+- Settings — account, product, language, security
+
+## Architecture you must understand
+
+LAYOUT
+- Two shells: AgentLayoutShell (360px agent panel left + content right) and PlainPageShell (full-width)
+- Both enforce max-w-[1080px] to prevent content stretching
 - AppShell provides gradient background + DashboardNav + overflow-hidden main
-- All main pages (Dashboard, Launch, Metrics) open with prominent stat cards before any text
-- Agent panel: recommendation cards above chat, never mixed into one interaction pattern
 
-Agent language rules that must not regress:
-- All agent system prompts (lib/agent-prompts.ts) are written in English
-- The AI model receives English instructions — always
-- User-visible AI output (message, suggestion labels) is written in the user's configured locale
-- locale is passed from AgentChatPanel → POST /api/agent/chat → buildAgentContext → system prompt
-- Never hardcode a language name in a system prompt — derive from ctx.locale
+AI PIPELINE
+- Onboarding → normalizeProductContext → buildEvidenceMap → getFounderCoachContext → evidence gate → AI prompt → sanitize → critic pass → output
+- Provider chain (DO NOT change order): Qwen → DeepSeek → Gemini → Gemini backup → static fallback
+- Low confidence = data_collection fallback, no AI call made
+- Agent suggestions at /api/agent/suggestions are deterministic (no AI), pure product-state logic
 
-AI plan priority rules that must not regress:
-- HIGH checklist priority = only true launch blockers (legal, compliance, security, store rejection)
-- Maximum 2–3 HIGH items per generated plan
-- MEDIUM = important but product can launch without it
-- LOW = nice-to-have, polish, future improvement
-- Runtime normalization in lib/launch-checklist-priority.ts corrects existing products
+TASK CASCADE
+- lib/task-completion-effects.ts handles forward/reverse completion effects
+- Completing a task can auto-complete linked checklist items
+- Milestones trigger follow-up tasks (e.g., ALL_HIGH_BLOCKERS_CLEARED)
 
-Important production behaviors already in place:
-- Waitlist-first homepage is live
-- Preserved /yayinda landing is live
-- Public analytics are consent-aware
-- Public funnel events include waitlist_cta_click, waitlist_signup, thank_you_view
-- Invisible reCAPTCHA is production-only on waitlist join and signup
-- Login reCAPTCHA was intentionally removed from production after live friction and invalid site-key issues
-- Forgot password and reset password are live (stateless, no reset-token table)
-- Onboarding supports multi-select for category, audience, and business model
-- Selecting Other opens clarification
-- Free-text onboarding description feeds normalized product context and AI plan
-- Founder QA should fill every onboarding question with realistic content; skipping sources or AARRR setup materially weakens recommendation quality
-- Growth includes a deterministic, diagnosis-led tactics layer
-- Metrics manual entry allows integers by default, decimals only for revenue metrics (mrr, arpu)
-- Recommended source suggestions in Metrics are collapsible by default
-- Google OAuth requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CALLBACK_BASE_URL in Vercel env — no trailing newlines
-- Callback URL registered in Google Cloud Console: https://tiramisup.app/api/integrations/google/callback
-- `/[locale]/products/new` now gates product limits before onboarding
-- Pricing upgrade is intentionally in a temporary fake-checkout mode: selecting Starter/Pro directly activates the subscription row
-- Recommendation cards in `components/AgentChatPanel.tsx` are still mostly static fallback actions, so do not confuse them with proven product-context intelligence
-- Founder-quality production smoke now asserts checklist quality and leak-free product creation
-- Metrics hydration regression (`React #418`) was fixed in production on 9 April 2026
+DATABASE
+- DATABASE_URL = PgBouncer transaction mode (port 6543)
+- DIRECT_URL = direct connection (port 5432, migrations only)
+- This split is mandatory — without it Vercel hits MaxClientsInSessionMode errors
 
-Critical warnings before you touch anything:
-- The repo may contain local modified/untracked files that are not the trusted production baseline
-- Do not assume local worktree state is canonical just because files exist
-- Compare proposed changes against the trusted production baseline and current production behavior
-- Do not ship from a dirty worktree without explicitly separating release truth from local experiments
-- Any Dashboard redesign must happen in preview first, not directly in production
-- When adding Vercel env vars via copy-paste, confirm there are no trailing newlines — these silently break OAuth
+## Rules that must not break
 
-Your first task is not to redesign. Your first task is to stabilize understanding.
+1. No fake product on signup — product data starts after onboarding wizard
+2. Launched products must never see pre-launch language or UI
+3. Growth setup stays calm — one primary metric per AARRR category, not a giant form
+4. Metric entry is tied to what the user selected in growth setup
+5. AI must not speculate without evidence — no generic advice
+6. User's product description is central context for all AI calls
+7. English is master language, Turkish is secondary
+8. HIGH priority = true launch blocker only (compliance, security, store-review risks)
+9. Recommendation cards create tasks, not chat messages
+10. No emojis in UI — all decorative elements use inline SVG
+11. No Shadcn — Tiramisup has its own design system (see CLAUDE.md)
+12. Agent system prompts are in English — user-facing output follows user locale
+13. Growth tactics must be diagnosis-led, not generic startup tips
+14. Dashboard must remain calm and stage-aware — answers "what should I do next?"
 
-Do this in order:
-1. Audit the current committed architecture against the docs and playbooks
-2. Confirm production behavior still matches the documented baseline
-3. Identify any local worktree drift that should not be shipped by accident
-4. Identify locale inconsistencies, especially Turkish-first hardcoded product copy
-5. Identify any launch/growth/metrics/settings boundary drift
-6. Identify the highest-risk regression points before changing UI or flows
-7. Propose a safe execution plan before editing major surfaces
+## What has already been completed
 
-When reviewing or changing the product, preserve these decision rules:
-- Growth tactics must stay diagnosis-led, not generic startup tips
-- Metrics must remain the measurement workspace, not collapse back into Growth
-- Dashboard must remain calm and stage-aware
-- Free-text understanding must remain a first-class product input, not decorative copy
-- Product recommendations must remain evidence-aware and stage-appropriate
-- New AI surfaces should be intent-first and action-oriented
-- Prefer question -> grounded answer -> selectable action over question -> long text only
-- Preserve classic surfaces as review and control layers even as intent-first entry points expand
-- Agent prompts stay in English; user-facing output respects user locale
+SPRINT 0 (Production Safety) — Done
+- Post-deploy smoke flow for product creation
+- Deploy verification script (npm run verify:deploy)
+- Metrics hydration fix (#418)
 
-Before any risky release, run or verify these smoke paths:
-- /en -> accept cookies -> waitlist signup -> thank-you page
-- /en/signup
-- /en/login
-- /en/forgot-password
-- /tr/products/new on a full free-plan account -> confirm early upgrade gate
-- /tr/pricing -> select Starter/Pro -> confirm billing success redirect and reopened onboarding access
-- /en/dashboard — confirm stat cards, agent panel separated from chat
-- /en/pre-launch — confirm stat cards, checklist, no PageHeader
-- /en/metrics — confirm stat cards, no PageHeader
-- /en/settings
-- one launched product flow with missing metrics setup
-- GA4 OAuth connect flow (confirm no invalid_client error)
-- agent response in English when locale=en, Turkish when locale=tr
-- founder smoke on prod:
-  - `npx playwright test --config playwright-prod.config.ts prod-founder-takeover --reporter=list`
+SPRINT 1 (Founder Trust) — Done
+- Static recommendation cards → context-driven cards from /api/agent/suggestions
+- Founder summary deduplication via tasksAreNearDuplicate
+- Checklist rationale visibility (Why / Done when / Next action inline hints)
 
-Success means:
-- no regression on live routes
-- no regression on auth, email, analytics, reCAPTCHA, or OAuth
-- no accidental rollback of waitlist-first homepage
-- no accidental reintroduction of rejected Ask Tiramisup experiments
-- no blurring of Dashboard, Growth, Metrics, and Settings roles
-- no shipping from local, unreviewed worktree drift
-- agent prompts remain in English; user-facing output in correct user locale
-- HIGH checklist priority reserved for true launch blockers only
+UX AUDIT — Done
+- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points
+- Metrics: trend chart requires >= 5 entries to show
+- Growth: pre-launch state simplified, empty sections hidden when no data
+- Agent panel: removed robotic greeting, shows skeleton → dynamic suggestions
+- Site-wide: max-width constraint on both layout shells
+
+## What is remaining
+
+SPRINT 2 — Historical Product Repair (Todo)
+- S2-1: Safe "regenerate plan" action for existing products
+- S2-2: Admin repair path for broken historical products
+- S2-3: Persist plan generation source metadata
+
+SPRINT 3 — Quality Loop (Todo)
+- S3-1: Minimum plan quality guard (reject thin plans)
+- S3-2: Observability for plan quality and fallback rates
+- S3-3: Routine founder walkthrough regression script
+
+## Known debt to keep in mind
+
+- Product.launchGoals is legacy — only holds { goalKey, growthGoal }, not source of truth for metrics
+- Billing is fake — Stripe Checkout in demo mode, no real payments
+- Some TR-first hardcoded copy remains in authenticated screens
+- Roadmap integrations (RevenueCat, App Store Connect, etc.) are UI-visible but not functional
+- external/streamlined-solutions is a nested repo, ignore its git status
+
+## Before any production release
+
+1. npx tsc --noEmit — must pass
+2. npx next build — must succeed
+3. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run — all tests must pass
+4. Manual smoke: /en, /tr, login, create product, check dashboard, metrics, growth
+5. npm run verify:deploy — after pushing to production
+
+## Critical warnings
+
+- When adding Vercel env vars, confirm no trailing newlines — these silently break OAuth
+- If Google OAuth shows verification warnings, check test user whitelist in Google Cloud, not code
+- Do not ship from a dirty worktree — compare against deployed baseline
+- Any Dashboard redesign must happen in preview first, not directly on production
+- Forgot-password and waitlist emails depend on Resend being healthy and sender domain verified
 
 When in doubt, bias toward preserving the current production baseline and documenting the tradeoff before changing it.
 ```

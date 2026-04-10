@@ -171,12 +171,11 @@ export default function AgentChatPanel({
 }: AgentChatPanelProps) {
   const copy = getCopy(agentType, locale);
   const isEn = locale === "en";
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "greeting", role: "assistant", content: copy.greeting },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<AgentSuggestion[]>(copy.initialSuggestions);
+  const [suggestions, setSuggestions] = useState<AgentSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [limitModal, setLimitModal] = useState<{
     title: string;
     description: string;
@@ -186,11 +185,27 @@ export default function AgentChatPanel({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const nextCopy = getCopy(agentType, locale);
-    setMessages([{ id: "greeting", role: "assistant", content: nextCopy.greeting }]);
-    setSuggestions(nextCopy.initialSuggestions);
+    setMessages([]);
+    setSuggestions([]);
+    setSuggestionsLoading(true);
     setInput("");
-  }, [agentType, locale]);
+
+    const controller = new AbortController();
+    fetch(
+      `/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`,
+      { signal: controller.signal }
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.suggestions?.length > 0) {
+          setSuggestions(data.suggestions);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSuggestionsLoading(false));
+
+    return () => controller.abort();
+  }, [agentType, locale, productId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -367,11 +382,14 @@ export default function AgentChatPanel({
           {copy.recommendationsHint}
         </p>
 
-        {suggestions.length > 0 && !loading && (
+        {suggestionsLoading ? (
           <div className="mt-3 space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9aa1af]">
-              {copy.recommendationsTitle}
-            </p>
+            {[1, 2].map((i) => (
+              <div key={i} className="h-10 animate-pulse rounded-[14px] bg-[#f0ede8]" />
+            ))}
+          </div>
+        ) : suggestions.length > 0 && !loading ? (
+          <div className="mt-3 space-y-2">
             {suggestions.map((suggestion) => (
               <button
                 key={`${suggestion.intent ?? "create_task"}-${suggestion.label}`}
@@ -386,7 +404,7 @@ export default function AgentChatPanel({
               </button>
             ))}
           </div>
-        )}
+        ) : null}
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
