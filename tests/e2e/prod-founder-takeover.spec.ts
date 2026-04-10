@@ -297,10 +297,44 @@ test.describe('Founder takeover (prod)', () => {
     await page.waitForLoadState('networkidle').catch(() => {});
     await shot(page, '27-tasks-after-card');
 
-    // ─── 9. Final settings → billing snapshot ───────────────────
+    // ─── 9. Regenerate plan check (S2-1 / S2-3) ─────────────────
+    note('## 9. Settings → Regenerate plan');
+    await page.goto(`${prefix}/settings?section=product`);
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await shot(page, '28-settings-product');
+
+    // Check that the Regenerate plan button is present
+    const regenBtn = page.getByRole('button', { name: /Regenerate plan|Planı yenile/i });
+    const regenVisible = await regenBtn.isVisible().catch(() => false);
+    note(`Regenerate plan button visible: ${regenVisible}`);
+    expect(regenVisible).toBe(true);
+
+    // Click the regenerate button and wait for response
+    if (regenVisible) {
+      await regenBtn.click();
+      await page.waitForTimeout(30000); // AI plan gen can take up to 30s
+      await shot(page, '29-after-regenerate');
+      const doneText = await page.getByText(/Plan regenerated|Plan yenilendi/i).isVisible().catch(() => false);
+      note(`Regenerate done indicator: ${doneText}`);
+    }
+
+    // Verify planMeta was written via admin endpoint
+    note('## 9b. Admin plan-quality check');
+    const qualityRes = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/plan-quality?limit=5');
+      if (!res.ok) return null;
+      return res.json();
+    }).catch(() => null);
+    if (qualityRes) {
+      note(`Plan quality — scanned: ${qualityRes.scanned}, fallbackRate: ${qualityRes.fallbackRate}, thinProducts: ${qualityRes.thinPreLaunchProducts?.count}`);
+    } else {
+      note('⚠️ Admin plan-quality endpoint not accessible (expected — non-admin user)');
+    }
+
+    // ─── 10. Final settings → billing snapshot ──────────────────
     await page.goto(`${prefix}/settings?section=billing`);
     await page.waitForLoadState('networkidle').catch(() => {});
-    await shot(page, '28-settings-billing-after');
+    await shot(page, '30-settings-billing-after');
 
     note('✅ run complete');
     expect(true).toBe(true);
