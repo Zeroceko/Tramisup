@@ -1,63 +1,93 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 11 April 2026
-**Production:** `https://tiramisup.app`
-**Repo:** GitHub (main branch auto-deploys to Vercel)
-**Status:** Live, stable, handoff-ready
-**Current HEAD:** `20c7c811`
+**Date:** 12 April 2026  
+**Production:** `https://tiramisup.app`  
+**Repo:** GitHub (`main` auto-deploys to Vercel)  
+**Current live app release on `main`:** `80fbb9f5`  
+**Status:** Live, stable, recently updated, handoff-ready
 
 ---
 
-## 1. What is Tiramisup?
+## 1. What Tiramisup Is
 
-Tiramisup is a founder operating system for early-stage product teams. It helps founders track launch readiness, growth metrics, and daily execution. Everything is product-scoped: one user can have multiple products, one active at a time.
+Tiramisup is a founder operating system for early-stage product teams.
 
-Core surfaces:
-- **Dashboard** - "What should I do next?" single-question answer
-- **Tasks** - Execution queue with smart prioritization
-- **Pre-Launch** - Launch checklist with readiness scoring
-- **Metrics** - AARRR funnel setup, manual entry, trends, source connections
-- **Growth** - Diagnosis, weak-link detection, tactics, goals, routines
-- **Settings** - Account, product, language, security
+It has two active faces:
+- **Public site**: waitlist-first marketing surface on `/{locale}`
+- **Authenticated app**: founder workflow for onboarding, launch prep, metrics, growth, tasks, settings, and integrations
+
+Core product surfaces:
+- **Dashboard**: answers "what should I do next?"
+- **Tasks**: execution queue with structured task details and dedupe
+- **Pre-Launch**: checklist, blockers, readiness, launch prep flow
+- **Metrics**: AARRR setup, manual entry, source-backed trend tracking
+- **Growth**: diagnosis-led growth workflow for launched products
+- **Integrations**: GA4 / Stripe source connection setup
+- **Settings / Account**: profile, locale, product context, billing, security
+- **Onboarding**: staged product creation wizard
+
+Everything is product-scoped. A user can have multiple products, one active at a time.
 
 ---
 
-## 2. First-Day Setup
+## 2. Current Production Truth
+
+As of **12 April 2026**, these are true in production:
+
+- `tiramisup.app` is live and serving the current `main` line.
+- Public landing is still **waitlist-first**, not a fully open product homepage.
+- Signup no longer requires an early access code.
+- Signup and waitlist both use **email verification**.
+- Onboarding supports **file upload**, **Google Drive / URL context**, and **async plan generation**.
+- Locale preference is persisted to both DB and cookie, and settings-side language switching now redirects to the correct localized route.
+- Billing is still **fake checkout / demo activation**, not real Stripe payments.
+- AI guidance remains **stage-aware** and must not invent advice when evidence is weak.
+
+Recent shipped commits now on the live line:
+- `39563b2f` - onboarding uploads and email verification flow
+- `7579757f` - Supabase storage lazy init for Vercel build safety
+- `d05b97be` - mobile-only onboarding guidance fix
+- `7c8bf648` - locale switch fix from settings/account
+- `80fbb9f5` - growth workflow hardening with intake-driven setup
+
+---
+
+## 3. First-Day Setup
 
 ```bash
-# 1. Clone the repo
+# 1. Clone
 git clone <repo-url> && cd Tiramisup
 
-# 2. Install dependencies
+# 2. Install
 npm install
 
-# 3. Copy environment variables
+# 3. Copy envs
 cp .env.example .env.local
-# Fill in all values - see "Environment Variables" section below
 
 # 4. Generate Prisma client
 npx prisma generate
 
-# 5. Push schema to database (or run migrations)
-npx prisma db push          # quick sync
-# OR
-npx prisma migrate dev      # full migration history
+# 5. Sync schema
+npx prisma db push
 
-# 6. Start dev server (PORT 3002 - not 3000!)
+# 6. Start dev server
 npm run dev
 
-# 7. Verify build
-npx tsc --noEmit && npx next build
-
-# 8. Run tests
+# 7. Verify
+npx tsc --noEmit
+npx next build
 OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 ```
 
-**Local port is 3002.** Google and Stripe OAuth redirect URIs are configured for port 3002. Do not change this.
+Important local rule:
+- **Local dev runs on port `3002`**, not `3000`
+
+Why it matters:
+- Google and Stripe OAuth redirect settings are aligned to `localhost:3002`
 
 ---
 
-## 3. Tech Stack
+## 4. Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -67,515 +97,397 @@ OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 | Database | PostgreSQL via Supabase |
 | ORM | Prisma 6 |
 | Auth | NextAuth 4 (Credentials + JWT) |
-| i18n | next-intl (EN/TR, default: English) |
-| AI Providers | Qwen > DeepSeek > Gemini > Gemini backup > static fallback |
+| i18n | next-intl (`en`, `tr`, default `en`) |
+| AI | Qwen -> DeepSeek -> Gemini -> Gemini backup -> static fallback |
 | Email | Resend |
-| Analytics | GA4 + Microsoft Clarity (public pages only) |
-| Bot Protection | reCAPTCHA v3 (production only, not on login) |
-| Hosting | Vercel (auto-deploy from main) |
-| Testing | Vitest (unit) + Playwright (E2E) |
+| Storage | Supabase Storage |
+| Hosting | Vercel |
+| Testing | Vitest + Playwright |
 
 ---
 
-## 4. Architecture
+## 5. Architecture Overview
 
-### Layout Shells
+### Layout shells
 
-Two layout patterns for authenticated pages:
+There are two authenticated layout patterns:
 
-- **`AgentLayoutShell`** - Split panel: 360px agent chat on the left + content on the right. Used by Dashboard, Pre-Launch, Growth.
-- **`PlainPageShell`** - Full-width content with `max-w-[1080px]` constraint. Used by Settings, Metrics, Tasks.
+- **`AgentLayoutShell`**: left-side agent panel + right-side content, used on Dashboard / Pre-Launch / Growth
+- **`PlainPageShell`**: full-width content shell, used on Settings / Metrics / Integrations / Account-style pages
 
-Both shells enforce `max-w-[1080px]` to prevent content from stretching across wide screens.
+Both keep content constrained and intentionally calm.
 
-### Route Structure
+### Locale structure
 
-```
-app/
-  [locale]/               # All pages locale-prefixed (en or tr)
-    dashboard/            # Product overview + next action
-    tasks/                # Task execution queue
-    pre-launch/           # Launch checklist + readiness score
-    metrics/              # AARRR metric dashboard
-    growth/               # Growth diagnosis + execution
-    integrations/         # Source connections (GA4, Stripe)
-    onboarding/           # Product creation wizard
-    settings/             # User profile + preferences
-    admin/waitlist/       # Admin-only waitlist management
-  api/
-    actions/              # Task CRUD + completion cascade
-    agent/                # AI chat + deterministic suggestions
-    integrations/         # OAuth flows + sync + validation
-    products/             # Product CRUD + AI insights
-    metrics/              # Metric entry + activation funnel
-    goals/                # Goal CRUD
-    routines/             # Daily ritual completion
-    users/me/             # User profile update
+All pages are locale-prefixed:
+
+```text
+/en/...
+/tr/...
 ```
 
-### AI Pipeline
+Locale persistence lives in two places:
+- `NEXT_LOCALE` cookie
+- `User.preferredLocale`
 
-```
+Language can change from:
+- nav language switcher
+- settings/account language preference
+
+### Product creation architecture
+
+Current onboarding flow is two-phase:
+
+1. **Fast product creation**
+   - `POST /api/products`
+   - creates product + stores base onboarding context quickly
+
+2. **Async plan generation**
+   - `POST /api/products/[id]/generate-plan`
+   - kicks off AI-backed plan generation
+   - `GET /api/products/[id]/plan-status`
+   - polled by onboarding UI until plan generation completes
+
+This prevents the onboarding submit from feeling blocked by heavy AI work.
+
+### Source/context ingestion
+
+Onboarding can now collect context from:
+- free-text founder answers
+- uploaded files
+- normal URLs
+- Google Drive URLs
+
+Key files:
+- `components/OnboardingWizard.tsx`
+- `app/api/upload/route.ts`
+- `lib/supabase-storage.ts`
+- `lib/extract-file-content.ts`
+- `lib/url-scraper.ts`
+
+### AI pipeline
+
+```text
 Onboarding intake
-  -> normalizeProductContext()       lib/normalize-product-context.ts
-  -> buildEvidenceMap()              lib/build-evidence-map.ts
-  -> getFounderCoachContext()        lib/founder-coach-context.ts
-  -> evidence-readiness gate         lib/founder-coach.ts
-  -> AI prompt (normalized context)  lib/founder-coach.ts
-  -> sanitizeRecommendationOutput()  lib/founder-coach.ts
-  -> applyCriticPass()               lib/founder-coach.ts
-  -> CoachRecommendationOutput       rendered in components/AdvisorCard.tsx
+  -> normalizeProductContext()
+  -> buildEvidenceMap()
+  -> getFounderCoachContext()
+  -> evidence-readiness gate
+  -> AI prompt
+  -> sanitize output
+  -> critic pass
+  -> structured recommendations / plan output
 ```
 
-AI provider fallback chain (do NOT change priority order):
-1. **Qwen** (`qwen-plus` via Alibaba Cloud) - fastest, cheapest
-2. **DeepSeek** (`deepseek-chat`) - first fallback
-3. **Gemini** (`gemini-2.0-flash`, `GEMINI_API_KEY`) - second fallback
-4. **Gemini backup** (`gemini-2.0-flash`, `GEMINI_API_KEY_2`) - last resort
-5. **Static fallback** - hardcoded safe responses, no crash
+Provider priority must not change:
+1. Qwen
+2. DeepSeek
+3. Gemini
+4. Gemini backup
+5. static fallback
 
-### Task Creation Pipeline
+### Auth and verification
 
-```
-AI/checklist trigger
-  -> lib/task-completion-effects.ts    # Forward/reverse cascade
-  -> app/api/actions/[id]/route.ts     # PATCH with effects
-  -> components/TasksList.tsx          # Reads effects, shows toasts
-```
+Current auth behavior:
+- Signup creates the user without a product
+- Signup sends verification email
+- Waitlist join sends verification email
+- Verify link lands through `/api/auth/verify-email`
+- Unverified credentials login is blocked
+- Resend verification endpoint exists
 
-Task completion can auto-complete linked checklist items and trigger milestone follow-ups (e.g., `ALL_HIGH_BLOCKERS_CLEARED`).
-
-### Deterministic Suggestions
-
-`/api/agent/suggestions` returns max 3 context-driven suggestion cards based on product state. No AI call - pure logic. These appear in the agent panel before any chat interaction.
+Key files:
+- `app/api/auth/signup/route.ts`
+- `app/api/auth/verify-email/route.ts`
+- `app/api/auth/resend-verification/route.ts`
+- `app/api/waitlist/join/route.ts`
+- `app/[locale]/verify-email/page.tsx`
+- `lib/email-verification.ts`
+- `lib/auth.ts`
 
 ---
 
-## 5. Completed Work (All Sprints)
+## 6. What Was Recently Completed
 
-### Sprint 0 - Production Safety (Done)
-- **S0-1** Post-deploy smoke flow for product creation
-- **S0-2** Deploy verification script (`npm run verify:deploy`)
-- **S0-3** Metrics hydration fix (#418)
+### Production stabilization and quality board
 
-### Sprint 1 - Founder Trust (Done)
-- **S1-1** Static recommendation cards replaced with context-driven cards from `/api/agent/suggestions`
-- **S1-2** Founder summary deduplication via `tasksAreNearDuplicate`
-- **S1-3** Checklist rationale visibility (Why / Done when / Next action inline hints)
+All previously planned stabilization work is effectively complete:
+- Sprint 0 safety work
+- Sprint 1 founder-trust work
+- UX audit cleanups
+- Sprint 2 historical repair work
+- Sprint 3 quality loop
+- CEO audit fixes
 
-### UX Audit (Done)
-- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points, "Workspace pulse" removed
-- Metrics: trend chart requires >= 5 entries to show
-- Growth: pre-launch state simplified, empty sections hidden when no data
-- Agent panel: removed robotic greeting, shows skeleton then dynamic suggestions
-- Site-wide: max-width constraint on both layout shells
+Treat those as **done**, not pending.
 
-### Sprint 2 - Historical Product Repair (Done)
-- **S2-1** `POST /api/products/[id]/regenerate` — safe per-product plan rebuild, preserves completed items. Settings page has "Regenerate plan" button.
-- **S2-2** `POST /api/admin/repair` — dry-run mode, before/after counts, max 10 products per call
-- **S2-3** `planMeta` field on Product — persists `source` (ai/sanitized_ai/fallback), `generatedAt`, item counts on every seed
+### 11 April 2026 release line
 
-### Sprint 3 - Quality Loop (Done)
-- **S3-1** `isPlanThin()` guard — rejects plans with <5 launch items, <3 tasks, or missing PRODUCT/TECH categories
-- **S3-2** `GET /api/admin/plan-quality` — fallback rate, source breakdown, thin product list, launch count buckets
-- **S3-3** `npm run release:signoff` — orchestrates all pre-release gates (tsc, vitest, build, verify:deploy, E2E smoke)
+This is the meaningful new work on top of the earlier board:
 
-### CEO Audit Fixes (Done)
-- `ChecklistSection`: English category labels added (was showing Turkish in EN locale)
-- `ChecklistSection`: Non-functional `+` and `⋮` buttons removed, replaced with done/total counter
-- `tasks/page.tsx`: Added CTA link to `/onboarding` on no-product empty state (was a dead-end)
-- `GoalsSection`: Empty state now explains what goals do instead of generic "No goals yet"
-- `dashboard/page.tsx`: `funnelOverall` wired to `buildFunnelHealthSummary` (TODO removed)
+#### A. Signup and waitlist email verification
+- Early access code removed from signup flow
+- Signup now sends verification email
+- Waitlist join now sends verification email
+- Verify endpoint and resend endpoint are live
+- Login blocks unverified users
+- Verify-email page exists for invalid/used tokens
 
-Full details: `docs/production-stabilization-board.md`
+#### B. Rich onboarding context intake
+- Supabase Storage upload route added
+- PDF / DOCX / image extraction support added
+- Google Drive URL support added to URL scraping
+- Onboarding wizard now supports file uploads and context links in a richer way
 
----
+#### C. Faster onboarding submit
+- Product creation split into:
+  - product create
+  - async plan generation
+  - plan-status polling
+- Wizard shows a more resilient loading / preparation flow
 
-## 6. Remaining Work
+#### D. Production fixes after release
+- Supabase storage client changed to lazy init so Vercel build does not crash when envs are absent at build time
+- Mobile-only launch guidance is no longer incorrectly shown to non-mobile web products
+- Settings/account locale change now correctly moves the user onto the new locale route
 
-**All planned sprints are complete.** The board is clear. Next work should be product-driven, not stabilization-driven.
+### 12 April 2026 release line
 
-Suggested next bets (not committed):
-- Real billing integration (currently Stripe is demo mode)
-- Remove remaining TR-first hardcoded copy in authenticated screens
-- RevenueCat / App Store Connect integration (UI exists, backend not wired)
-- `Product.launchGoals` field retirement (legacy — see technical debt)
+#### E. Growth workflow hardening
+- Growth now has explicit working modes:
+  - `intake_needed`
+  - `metric_setup_needed`
+  - `baseline_needed`
+  - `diagnosis_ready`
+- launched products no longer drop directly into a mixed growth workspace before context and setup are ready
+- a bounded growth intake now asks 3-5 product-specific questions before metric setup
+- growth intake answers are stored inside `Product.additionalContext`
+- Metrics setup now reads that context and slightly personalizes metric recommendations and setup copy
+- source guidance is lighter-weight and now behaves like a contextual note that routes into Integrations instead of a heavy inline block
+- Growth checklist now has stronger execution parity:
+  - structured `Why / Done when / Next action`
+  - expandable details
+  - direct task creation
+  - weak-link aware focus category
+
+Key files for this release:
+- `app/[locale]/growth/page.tsx`
+- `app/[locale]/metrics/page.tsx`
+- `app/[locale]/integrations/page.tsx`
+- `app/api/products/[id]/growth-intake/route.ts`
+- `components/GrowthChecklistSection.tsx`
+- `components/GrowthTransitionCheckin.tsx`
+- `components/MetricSetupSelector.tsx`
+- `components/GrowthIntegrationRecommendations.tsx`
+- `components/IntegrationsWorkspace.tsx`
+- `lib/growth-transition-checkin.ts`
+- `lib/growth-metric-recommendations.ts`
+- `docs/growth-transition-checkin-spec.md`
 
 ---
 
 ## 7. Rules That Must Not Break
 
-1. **No fake product on signup.** Product data starts after the onboarding wizard completes.
-2. **Launched products must not see pre-launch language.** Stage-appropriate UI everywhere.
-3. **Growth setup stays calm.** One primary metric per AARRR category, not a giant form.
-4. **Metric entry is tied to what the user selected.** No free-form metric creation.
-5. **AI must not speculate without evidence.** Low confidence -> data_collection fallback, no AI call.
-6. **User's product description is central context for all AI calls.** Never override with generic text.
-7. **English is the master language.** Default locale is `en`. Turkish is secondary.
-8. **`HIGH` priority means true launch blocker only.** Compliance, security, store-review risks. Everything else is `MEDIUM`.
-9. **Recommendations create tasks, not chat messages.** Action cards behave like actions.
+1. **No fake product on signup.** Product data begins only after onboarding.
+2. **Launched products must not get pre-launch language.**
+3. **Growth must stay diagnosis-led, not generic startup advice.**
+4. **Metric entry must stay tied to configured metrics.**
+5. **AI must not speculate without evidence.**
+6. **User-written product description remains central context.**
+7. **English is the master locale.** Default is `en`.
+8. **`HIGH` priority means a true blocker only.**
+9. **Recommendation cards create actions/tasks, not fake chat.**
+10. **Public landing remains waitlist-first unless product explicitly decides otherwise.**
+11. **Agent prompts stay in English internally; user-facing output follows locale.**
+12. **Billing is not real payments yet. Do not present it as complete Stripe commerce.**
 
 ---
 
-## 8. Known Technical Debt
+## 8. Database and Schema Reality
 
-| Item | Details |
-|---|---|
-| `Product.launchGoals` field | Legacy. Only holds `{ goalKey, growthGoal }` from onboarding. Not source of truth for metrics. Should be removed in future migration. |
-| Billing is fake | Stripe Checkout flow exists but is in demo mode. No real payments processed. |
-| Some TR-first hardcoded copy | A few authenticated screens still have Turkish-first strings instead of using next-intl. |
-| Roadmap integrations | RevenueCat, App Store Connect, Google Play Console, Meta/Google/TikTok Ads - UI visible but not functional. |
-| Signup product-type selection | Collected in UI but not sent to backend. |
-| `external/streamlined-solutions` | Nested repo, not part of main app. Ignore its git status. |
+Current schema already includes live support for:
+
+- `Product.additionalContext`
+- `Product.additionalContext.growthCheckin` envelope on the live line
+- `Product.uploadedFiles`
+- `Product.planMeta`
+- `User.emailVerified`
+- `User.verificationToken`
+- `Waitlist.emailVerifiedAt`
+- `Waitlist.verificationToken`
+- structured task columns and `TaskEvent`
+
+Important operational note:
+- this repo historically relied on `prisma db push`, not a pristine migration history
+- if a new environment is created, the fastest safe path is:
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+For production, the current live database is already aligned with the shipped code.
 
 ---
 
 ## 9. Environment Variables
 
 ```bash
-# AI providers (in priority order)
-QWEN_API_KEY                # Primary
-DEEPSEEK_API_KEY            # Fallback 1
-GEMINI_API_KEY              # Fallback 2
-GEMINI_API_KEY_2            # Fallback 3
+# AI
+QWEN_API_KEY
+DEEPSEEK_API_KEY
+GEMINI_API_KEY
+GEMINI_API_KEY_2
 
-# Auth
-NEXTAUTH_SECRET             # Long random string
-NEXTAUTH_URL                # https://tiramisup.app (local: http://localhost:3002)
-ACCESS_CODE                 # TT31623SEN (signup gate)
+# Auth / app
+NEXTAUTH_SECRET
+NEXTAUTH_URL
+NEXT_PUBLIC_APP_URL
 
 # Database
-DATABASE_URL                # Supabase PgBouncer (port 6543, ?pgbouncer=true)
-DIRECT_URL                  # Supabase direct (port 5432, for migrations)
-
-# Google OAuth (GA4)
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
-
-# Stripe
-STRIPE_CLIENT_ID
-STRIPE_SECRET_KEY
-STRIPE_PUBLISHABLE_KEY
-STRIPE_WEBHOOK_SECRET
-STRIPE_REDIRECT_URI
-
-# OAuth
-OAUTH_CALLBACK_BASE_URL    # Separate from public URL to prevent OAuth breakage
+DATABASE_URL
+DIRECT_URL
 
 # Email
 RESEND_API_KEY
 RESEND_FROM_EMAIL
 
-# Analytics (public pages)
-NEXT_PUBLIC_GA_MEASUREMENT_ID
+# Supabase
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
 
-# reCAPTCHA (production only)
+# OAuth
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+STRIPE_CLIENT_ID
+STRIPE_SECRET_KEY
+STRIPE_PUBLISHABLE_KEY
+STRIPE_WEBHOOK_SECRET
+STRIPE_REDIRECT_URI
+OAUTH_CALLBACK_BASE_URL
+
+# Analytics / bot protection
+NEXT_PUBLIC_GA_MEASUREMENT_ID
 RECAPTCHA_ENABLED
 NEXT_PUBLIC_RECAPTCHA_ENABLED
 NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 RECAPTCHA_SECRET_KEY
-
-# App
-NEXT_PUBLIC_APP_URL         # https://tiramisup.app (local: http://localhost:3002)
 ```
 
-**Critical:** `DATABASE_URL` must use PgBouncer transaction mode (port 6543). Direct connection (port 5432) goes in `DIRECT_URL` only. Without this split, Vercel serverless hits `MaxClientsInSessionMode` errors.
+Important notes:
+- `DATABASE_URL` must be the Supabase **PgBouncer** connection
+- `DIRECT_URL` must be the direct Postgres connection
+- `SUPABASE_SERVICE_ROLE_KEY` is required for server-side uploads
+- early access / access-code env is no longer part of the signup flow
 
 ---
 
-## 10. OAuth Flows
+## 10. Known Debt and Open Bets
 
-### GA4
-1. `GET /api/integrations/google/link?productId=X` -> Google OAuth
-2. Callback: `GET /api/integrations/google/callback`
-3. Property selection: `GET/PUT /api/integrations/[id]/ga4-properties`
-4. Sync: `POST /api/integrations/[id]/sync`
+These are the main non-emergency follow-ups for the next team:
 
-### Stripe
-1. `GET /api/integrations/stripe/link?productId=X` -> Stripe Connect
-2. Callback: `GET /api/integrations/stripe/callback`
-3. Sync: `POST /api/integrations/[id]/sync`
+- **Real billing**: current checkout flow still behaves as demo activation
+- **Some authenticated copy**: a few screens still carry hardcoded strings rather than clean next-intl coverage
+- **Roadmap integrations**: RevenueCat, App Store Connect, Google Play Console, ads connectors are not fully wired
+- **`Product.launchGoals`**: still a legacy field carrying onboarding goal context, not the long-term source of truth
+- **TaskEvent visibility**: telemetry exists, but there is no strong product-facing analytics UI for it yet
+- **Growth transition**: the new intake/setup/baseline separation is live, but founder-style manual walkthroughs should still be done after meaningful future changes
 
-### Integration States
-`DISCONNECTED -> CONNECTED(NEEDS_SETUP) -> CONNECTED(SYNCED)` or `ERROR` / `STALE` (>48h)
-
-**Warning:** If Google OAuth shows verification warnings, check test user whitelist in Google Cloud, not code.
+These are product bets, not production fires.
 
 ---
 
 ## 11. Verification Commands
 
 ```bash
-# Type check
 npx tsc --noEmit
-
-# Build
 npx next build
-
-# Unit tests (dummy keys needed for AI modules to load)
 OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
-
-# Deploy verification against production
 npm run verify:deploy
-
-# Full pre-release signoff (runs all gates in sequence)
 npm run release:signoff
+```
 
-# E2E (needs dev server running on :3002)
-npx playwright test --config=playwright-waitlist.config.ts
+If local Next gets flaky:
 
-# Prod E2E founder smoke (needs credentials)
-E2E_EMAIL=x@x.com E2E_PASSWORD=xxx npx playwright test --config playwright-prod.config.ts prod-founder-takeover
-
-# If dev becomes flaky
-rm -rf .next && npm run dev
+```bash
+rm -rf .next
+npm run dev
 ```
 
 ---
 
-## 12. Pre-Release Smoke Test Checklist
+## 12. Pre-Release Smoke Checklist
 
-Before any production deploy, manually verify:
+Before shipping any meaningful change, verify:
 
-- [ ] `npx tsc --noEmit` passes
-- [ ] `npx next build` succeeds
-- [ ] All unit tests pass
-- [ ] `/en` and `/tr` load correctly
-- [ ] `/en/login` works (no reCAPTCHA on login)
-- [ ] Create new product through onboarding wizard
-- [ ] New product gets >= 5 launch checklist items
-- [ ] No leaked product names from other products
-- [ ] Dashboard shows correct next action for product stage
-- [ ] Metrics page loads without hydration errors
-- [ ] Growth page shows appropriate content for product stage
-- [ ] Agent panel shows context-driven suggestions (not static cards)
-- [ ] Task completion cascades correctly to checklist items
+- `/en` and `/tr` both load
+- signup works and sends verification mail
+- login blocks unverified users and resend flow works
+- waitlist join works and verification flow works
+- onboarding creates a product successfully
+- onboarding file upload works
+- onboarding async plan generation completes
+- non-mobile web products do not get App Store / Google Play launch advice
+- settings/account language change actually moves to the new locale route
+- dashboard shows stage-appropriate next action
+- pre-launch / growth split is correct for the product stage
+- metrics and integrations pages load without hydration or auth regressions
 
 ---
 
-## 13. Document Reading Order
+## 13. Recommended Reading Order
 
-Read these in order to understand the full system:
+Read these in order:
 
-1. **This file** (`HANDOFF.md`) - overview and setup
-2. **`CLAUDE.md`** - detailed architecture, AI pipeline, design system, coding rules
-3. **`docs/production-stabilization-board.md`** - sprint board with remaining work
-4. **`docs/ai-agent-system-playbook.md`** - AI agent architecture specification
-5. **`docs/product-intake-question-playbook.md`** - onboarding question set and normalization
-6. **`docs/growth-tactics-layer.md`** - growth tactics design
-7. **`docs/internal-growth-rules.md`** - growth logic rules
+1. `HANDOFF.md`
+2. `CLAUDE.md`
+3. `docs/handoff.md`
+4. `docs/team-handoff-prompt.md`
+5. `docs/production-stabilization-board.md`
+6. `docs/ai-agent-system-playbook.md`
+7. `docs/product-intake-question-playbook.md`
+8. `docs/internal-growth-rules.md`
+9. `docs/growth-tactics-layer.md`
+10. `docs/growth-transition-checkin-spec.md`
 
 ---
 
 ## 14. Access Transfer Checklist
 
-Transfer these to the new team before handing over:
+Transfer these before full ownership handoff:
 
-### Accounts & Infra
-- [ ] GitHub repo access (collaborator or ownership transfer)
-- [ ] Vercel project access (`zerocekos-projects/tramisup`)
-- [ ] Supabase project access (`ojecebxxcbxrofnbkaae`, eu-west-3)
-- [ ] Google Cloud Console (OAuth client for GA4 integration)
-- [ ] Stripe Dashboard (Connect app + API keys)
-- [ ] Resend account (email sending — forgot-password + waitlist)
-- [ ] Domain DNS (`tiramisup.app`)
+### Infrastructure
+- GitHub repo access
+- Vercel project access
+- Supabase project access
+- Google Cloud Console access
+- Stripe Dashboard access
+- Resend account access
+- domain / DNS access for `tiramisup.app`
 
-### Environment Variables
-Share all values from Vercel production settings:
-```
-QWEN_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, GEMINI_API_KEY_2
-NEXTAUTH_SECRET, NEXTAUTH_URL, ACCESS_CODE
-DATABASE_URL, DIRECT_URL
-GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_REDIRECT_URI
-OAUTH_CALLBACK_BASE_URL
-RESEND_API_KEY, RESEND_FROM_EMAIL
-NEXT_PUBLIC_GA_MEASUREMENT_ID
-RECAPTCHA_ENABLED, NEXT_PUBLIC_RECAPTCHA_ENABLED, NEXT_PUBLIC_RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY
-NEXT_PUBLIC_APP_URL
-```
+### Production secrets
+- all Vercel production environment variables
+- confirmation of active OAuth callback URLs
+- confirmation of Resend sender/domain status
+- confirmation of Supabase Storage bucket existence and policy health
 
-### One-time Migration (run once after takeover)
-The `planMeta` column was added to the `Product` table. Apply it to production:
-
-**Option A — Supabase Dashboard → SQL Editor:**
-```sql
-ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "planMeta" TEXT;
-```
-
-**Option B — CLI with direct connection:**
-```bash
-DIRECT_URL=<supabase-direct-url> npx prisma migrate deploy
-```
-
-After running, verify with:
-```bash
-npm run release:signoff --skip-build
-```
-
-**Supabase note:** Free tier pauses after 7 days of inactivity. Resume from supabase.com/dashboard if DB is unreachable.
+### Operational context
+- current production baseline is `7c8bf648`
+- `main` auto-deploys to Vercel
+- `external/streamlined-solutions` is a nested repo and should be ignored during app work
 
 ---
 
-## 15. Design System (Quick Reference)
+## 15. Immediate Advice For The Next Team
 
-| Token | Value |
-|---|---|
-| Page background | `#f6f6f6` |
-| Card background | `#ffffff` |
-| Border | `#e8e8e8` |
-| Text primary | `#0d0d12` |
-| Text secondary | `#5e6678` |
-| Text muted | `#8a8fa0` |
-| Accent teal | `#95dbda` |
-| Accent pink | `#ffd7ef` |
-| Accent green | `#75fc96` |
-| Card radius | `24px` |
-| Inner card radius | `18px` |
-| Buttons/tags | `rounded-full` |
-| Eyebrow text | `11px`, `tracking-[0.18em]`, uppercase |
+If a new team starts tomorrow, the right first moves are:
 
-No emojis in UI. All decorative elements use inline SVG. No Shadcn - Tiramisup has its own aesthetic.
+1. verify local setup
+2. walk the full founder journey in both locales
+3. inspect the live billing path and decide whether to keep fake checkout or replace it with real Stripe
+4. review onboarding quality using realistic product inputs
+5. keep all new AI or onboarding changes aligned with:
+   - `docs/ai-agent-system-playbook.md`
+   - `docs/product-intake-question-playbook.md`
 
----
-
-## 16. Work In Progress — Pick Up Here
-
-**Last updated:** 11 April 2026  
-**Branch:** `main` (all changes committed — but some features require a Supabase migration before going live)
-
----
-
-### 16a. Completed & Deployed
-
-These are code-complete in `main` and type-check + tests pass (70/70):
-
-| Feature | Files |
-|---|---|
-| Early access code removed from signup | `app/[locale]/signup/page.tsx`, `app/api/auth/signup/route.ts`, `__tests__/api/auth/signup.test.ts` |
-| File upload to Supabase Storage | `app/api/upload/route.ts`, `lib/supabase-storage.ts` |
-| PDF/DOCX/image content extraction | `lib/extract-file-content.ts` |
-| Google Drive URL scraping support | `lib/url-scraper.ts` |
-| Two-phase product creation (fast Phase 1 + async Phase 2) | `app/api/products/route.ts`, `app/api/products/[id]/generate-plan/route.ts`, `app/api/products/[id]/plan-status/route.ts` |
-| Onboarding wizard: file upload + URL chips + polling loading screen | `components/OnboardingWizard.tsx` |
-| Email verification infrastructure | `lib/email-verification.ts`, `app/api/auth/verify-email/route.ts`, `app/api/auth/resend-verification/route.ts` |
-| Signup sends verification email | `app/api/auth/signup/route.ts` |
-| Waitlist join sends verification email | `app/api/waitlist/join/route.ts` |
-| Login blocks unverified users (bypass token for immediate post-signup) | `lib/auth.ts` |
-
----
-
-### 16b. Requires Supabase SQL Migration (run before deploying)
-
-Run these in Supabase Dashboard → SQL Editor:
-
-```sql
--- File upload context fields on Product
-ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "additionalContext" TEXT;
-ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "uploadedFiles" TEXT;
-
--- Email verification on User
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" TIMESTAMP(3);
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verificationToken" TEXT UNIQUE;
-
--- Email verification on Waitlist
-ALTER TABLE "Waitlist" ADD COLUMN IF NOT EXISTS "emailVerifiedAt" TIMESTAMP(3);
-ALTER TABLE "Waitlist" ADD COLUMN IF NOT EXISTS "verificationToken" TEXT UNIQUE;
-```
-
-Then run `npx prisma generate` locally.
-
-Also add to Vercel environment variables:
-```
-SUPABASE_URL=https://ojecebxxcbxrofnbkaae.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
-RESEND_API_KEY=<key>
-RESEND_FROM_EMAIL=Tiramisup <noreply@tiramisup.app>
-```
-
-The Supabase `product-uploads` bucket must exist (private). Already created on the project.
-
----
-
-### 16c. Still Needs Building — Email Verification UX
-
-The backend is complete but the UI still needs these pieces:
-
-**1. `app/[locale]/verify-email/page.tsx`**  
-A simple error landing page for when a verification token is invalid or expired.
-- URL: `/{locale}/verify-email?error=invalid_token`
-- Show: "This verification link is invalid or has already been used." + link back to login
-- No auth required, plain page
-
-**2. Login page: `email_not_verified` state**  
-File: `app/[locale]/login/page.tsx`
-
-Currently `handleSubmit` maps any `result?.error` to `t("errors.wrongCredentials")`. It needs to detect `"email_not_verified"` and show a different UI:
-
-```tsx
-if (result?.error === "CredentialsSignin") {
-  // Check if it's email_not_verified — NextAuth wraps the thrown error
-  // The actual thrown message becomes result.error after NextAuth processing
-  // Use a dedicated error state: emailNotVerified = true
-}
-```
-
-Note: NextAuth v4 swallows the original error message from `authorize()` and returns `"CredentialsSignin"` for all thrown errors. To pass the actual error code through, the workaround is:
-- In `authorize()`, instead of throwing, return `null` and encode the error in a query param via a custom error redirect — OR use the `error` callback in NextAuth options — OR encode the error in the user object before returning null.
-
-The cleanest approach for NextAuth v4:
-```typescript
-// In authorize(), instead of throw new Error("email_not_verified"):
-// Return null but first set a server-side flag, then detect on client via:
-// signIn() → result.error === "CredentialsSignin" + check a separate API endpoint
-```
-
-**Simplest working approach:**
-1. Change `authorize()` to return `null` when email not verified (instead of throw)  
-2. Before returning null, write a short-lived flag to a in-memory store or check via separate endpoint
-3. On login page: after `signIn()` returns error, call `GET /api/auth/check-verification-status?email=x` to check if the user exists but is unverified
-4. If yes, show the "verify email" state with resend button
-
-**The resend button** calls `POST /api/auth/resend-verification` with `{ email, locale }` — endpoint already exists.
-
-**3. i18n keys to add**
-
-Add to `messages/en.json` and `messages/tr.json` under `"login"`:
-
-```json
-"errors": {
-  "wrongCredentials": "Incorrect email or password",
-  "generic": "An error occurred. Please try again.",
-  "emailNotVerified": "Please verify your email before logging in.",
-  "emailNotVerifiedHint": "Check your inbox for a verification link.",
-  "resendVerification": "Resend verification email",
-  "resendSent": "Verification email sent. Check your inbox."
-}
-```
-
-**4. Signup success message**
-
-After successful signup + auto-login, the user is immediately taken to onboarding. Consider showing a toast or banner: "Check your email to verify your account." No blocking needed since bypass token handles the first login.
-
----
-
-### 16d. Architecture Notes for Email Verification
-
-**Token flow:**
-- Signup → `User.verificationToken` = 32-byte hex stored in DB
-- Verification email contains: `{APP_URL}/api/auth/verify-email?token={hex}&type=user`  
-- `GET /api/auth/verify-email` → sets `User.emailVerified = now()`, clears `verificationToken`, redirects to `/{locale}/login?verified=1`
-- Login page detects `?verified=1` → shows green success banner (same pattern as `?reset=success`)
-
-**Bypass token logic (existing, now wired up):**
-- `createSignupBypassToken(email)` in `lib/signup-bypass.ts` — HMAC-signed, 5-minute TTL
-- After signup API creates user, it returns `loginBypassToken`
-- Signup page calls `signIn("credentials", { ..., signupBypassToken: data.loginBypassToken })`
-- `authorize()` in `lib/auth.ts` now checks: if `!user.emailVerified` → verify bypass token → if invalid → throw `"email_not_verified"`
-- This means first auto-login (within 5 min of signup) succeeds; all later logins require verification
-
-**Waitlist token flow:**
-- Join → `Waitlist.verificationToken` stored in DB
-- Verification email: `{APP_URL}/api/auth/verify-email?token={hex}&type=waitlist`
-- Click → sets `Waitlist.emailVerifiedAt = now()`, clears token, redirects to `/en/waitlist/thank-you?verified=1`
-- The `waitlist/thank-you` page can optionally show "Email confirmed!" if `?verified=1` present
+The system is no longer in rescue mode. The next team should treat it as a live product that needs careful product-led iteration, not broad architectural churn.

@@ -1,6 +1,6 @@
 # New Team Handoff Prompt
 
-Use the following prompt as the default kickoff brief for any new development and product team taking over Tiramisup.
+Use the prompt below as the default kickoff brief for any new engineering or product team taking over Tiramisup.
 
 ---
 
@@ -9,132 +9,150 @@ You are taking over the Tiramisup codebase and product.
 
 Treat this as a live production system, not a prototype sandbox.
 
-## Step 1: Read these files in order
+## First, read these files in order
 
-1. HANDOFF.md — project overview, setup, architecture, completed work, remaining sprints, rules, access transfer
-2. CLAUDE.md — detailed architecture, AI pipeline, design system, coding conventions, GSD skills
-3. docs/production-stabilization-board.md — sprint board with remaining tasks
-4. docs/ai-agent-system-playbook.md — AI agent architecture specification
-5. docs/product-intake-question-playbook.md — onboarding question set and normalization rules
-6. docs/internal-growth-rules.md — growth logic rules
-7. docs/growth-tactics-layer.md — growth tactics design
+1. HANDOFF.md
+2. CLAUDE.md
+3. docs/handoff.md
+4. docs/production-stabilization-board.md
+5. docs/ai-agent-system-playbook.md
+6. docs/product-intake-question-playbook.md
+7. docs/internal-growth-rules.md
+8. docs/growth-tactics-layer.md
+9. docs/growth-transition-checkin-spec.md
 
-## Step 2: Verify local setup works
+## What is true right now
 
-Run these commands in order:
+- Production domain is https://tiramisup.app
+- Current live app release on main is 80fbb9f5
+- main auto-deploys to Vercel
+- Public landing is waitlist-first
+- Signup no longer uses an early access code
+- Signup and waitlist both use email verification
+- Unverified users are blocked at login
+- Onboarding now supports file upload, richer URL context, and async plan generation
+- Growth now starts with a bounded intake before metric setup when context is missing
+- Growth workspace is now explicitly staged: intake -> metric setup -> baseline -> diagnosis
+- Billing is still demo / fake checkout behavior, not finished real Stripe commerce
+- English is the source-of-truth locale, Turkish is secondary
+
+## Local setup checklist
+
+Run these in order:
+
 1. npm install
 2. npx prisma generate
-3. npx tsc --noEmit
-4. npx next build
-5. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
-6. npm run dev (opens on localhost:3002 — port matters for OAuth)
+3. npx prisma db push
+4. npx tsc --noEmit
+5. npx next build
+6. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+7. npm run dev
 
-If Supabase is paused (free tier, 7 days inactivity), resume from supabase.com/dashboard first.
+Local dev runs on port 3002. Do not silently switch it to 3000 because OAuth settings depend on 3002.
 
-## Step 3: Walk through the product as a founder
+## Product walkthrough you should do before changing anything
 
-Sign up and go through:
-- Onboarding wizard (fill every field with realistic content — skipping weakens AI quality)
-- Dashboard — should show the right next action for the product stage
-- Pre-Launch — launch checklist with priorities and inline rationale
-- Metrics — AARRR funnel setup, manual entry, trends
-- Growth — diagnosis, tactics, goals (only visible for launched products)
-- Settings — account, product, language, security
+1. Sign up with a new account
+2. Verify the email
+3. Log in
+4. Create a realistic fake product through onboarding
+5. During onboarding, test file upload and at least one context link
+6. Confirm async plan generation completes
+7. Review Dashboard, Pre-Launch, Metrics, Growth, Settings, and Integrations
+8. Change the account language in settings and confirm the route actually moves to the chosen locale
+9. Join the waitlist with another email and verify that flow too
 
-## Architecture you must understand
+## Architecture concepts you must understand
 
 LAYOUT
-- Two shells: AgentLayoutShell (360px agent panel left + content right) and PlainPageShell (full-width)
-- Both enforce max-w-[1080px] to prevent content stretching
-- AppShell provides gradient background + DashboardNav + overflow-hidden main
+- AgentLayoutShell is used for Dashboard / Launch / Growth
+- PlainPageShell is used for Settings / Metrics / Integrations / Account-style screens
 
-AI PIPELINE
-- Onboarding → normalizeProductContext → buildEvidenceMap → getFounderCoachContext → evidence gate → AI prompt → sanitize → critic pass → output
-- Provider chain (DO NOT change order): Qwen → DeepSeek → Gemini → Gemini backup → static fallback
-- Low confidence = data_collection fallback, no AI call made
-- Agent suggestions at /api/agent/suggestions are deterministic (no AI), pure product-state logic
+LOCALE
+- All app routes are locale-prefixed: /en/... and /tr/...
+- Locale preference is stored in NEXT_LOCALE cookie and User.preferredLocale
 
-TASK CASCADE
-- lib/task-completion-effects.ts handles forward/reverse completion effects
-- Completing a task can auto-complete linked checklist items
-- Milestones trigger follow-up tasks (e.g., ALL_HIGH_BLOCKERS_CLEARED)
+PRODUCT CREATION
+- Product creation is now two-phase:
+  - POST /api/products
+  - POST /api/products/[id]/generate-plan
+  - GET /api/products/[id]/plan-status
+- This split is intentional and should not be collapsed casually
 
-DATABASE
-- DATABASE_URL = PgBouncer transaction mode (port 6543)
-- DIRECT_URL = direct connection (port 5432, migrations only)
-- This split is mandatory — without it Vercel hits MaxClientsInSessionMode errors
+CONTEXT INGESTION
+- Founder text, URLs, Google Drive links, and uploaded files can all feed product context
+- Key files:
+  - components/OnboardingWizard.tsx
+  - app/api/upload/route.ts
+  - lib/supabase-storage.ts
+  - lib/extract-file-content.ts
+  - lib/url-scraper.ts
 
-## Rules that must not break
+AI RULES
+- Provider order must stay: Qwen -> DeepSeek -> Gemini -> Gemini backup -> static fallback
+- AI must not speculate when evidence is weak
+- Stage awareness is mandatory
+- User-written product description is central context
 
-1. No fake product on signup — product data starts after onboarding wizard
-2. Launched products must never see pre-launch language or UI
-3. Growth setup stays calm — one primary metric per AARRR category, not a giant form
-4. Metric entry is tied to what the user selected in growth setup
-5. AI must not speculate without evidence — no generic advice
-6. User's product description is central context for all AI calls
-7. English is master language, Turkish is secondary
-8. HIGH priority = true launch blocker only (compliance, security, store-review risks)
-9. Recommendation cards create tasks, not chat messages
-10. No emojis in UI — all decorative elements use inline SVG
-11. No Shadcn — Tiramisup has its own design system (see CLAUDE.md)
-12. Agent system prompts are in English — user-facing output follows user locale
-13. Growth tactics must be diagnosis-led, not generic startup tips
-14. Dashboard must remain calm and stage-aware — answers "what should I do next?"
+AUTH / VERIFICATION
+- Signup sends verification mail
+- Waitlist join sends verification mail
+- Login blocks unverified accounts
+- Resend verification exists
 
-## What has already been completed
+GROWTH WORKFLOW
+- Growth is no longer one mixed workspace
+- The current staged model is:
+  - intake_needed
+  - metric_setup_needed
+  - baseline_needed
+  - diagnosis_ready
+- Growth intake answers are stored in Product.additionalContext
+- Metrics setup now reads that context
+- Integrations surfaces source guidance as a lighter contextual layer
 
-SPRINT 0 (Production Safety) — Done
-- Post-deploy smoke flow for product creation
-- Deploy verification script (npm run verify:deploy)
-- Metrics hydration fix (#418)
+## Rules that must not regress
 
-SPRINT 1 (Founder Trust) — Done
-- Static recommendation cards → context-driven cards from /api/agent/suggestions
-- Founder summary deduplication via tasksAreNearDuplicate
-- Checklist rationale visibility (Why / Done when / Next action inline hints)
+1. No fake product on signup
+2. Launched products must not see pre-launch UX
+3. Growth guidance must stay diagnosis-led, not generic startup advice
+4. Metric entry must remain tied to configured metrics
+5. AI must not invent guidance when evidence is weak
+6. English remains the master locale
+7. HIGH priority means a real blocker only
+8. Public landing remains waitlist-first unless a product decision changes it
+9. Billing must not be misrepresented as complete real checkout
 
-UX AUDIT — Done
-- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points
-- Metrics: trend chart requires >= 5 entries to show
-- Growth: pre-launch state simplified, empty sections hidden when no data
-- Agent panel: removed robotic greeting, shows skeleton → dynamic suggestions
-- Site-wide: max-width constraint on both layout shells
+## Current known debt
 
-## What is remaining
-
-SPRINT 2 — Historical Product Repair (Todo)
-- S2-1: Safe "regenerate plan" action for existing products
-- S2-2: Admin repair path for broken historical products
-- S2-3: Persist plan generation source metadata
-
-SPRINT 3 — Quality Loop (Todo)
-- S3-1: Minimum plan quality guard (reject thin plans)
-- S3-2: Observability for plan quality and fallback rates
-- S3-3: Routine founder walkthrough regression script
-
-## Known debt to keep in mind
-
-- Product.launchGoals is legacy — only holds { goalKey, growthGoal }, not source of truth for metrics
-- Billing is fake — Stripe Checkout in demo mode, no real payments
-- Some TR-first hardcoded copy remains in authenticated screens
-- Roadmap integrations (RevenueCat, App Store Connect, etc.) are UI-visible but not functional
-- external/streamlined-solutions is a nested repo, ignore its git status
+- Billing is still fake checkout / demo activation
+- Some authenticated copy is still not fully clean next-intl coverage
+- Product.launchGoals is legacy and should not become a new source of truth
+- Some roadmap integrations are UI-first and not fully wired
+- Growth transition polish is improved but should still be founder-tested after meaningful changes
 
 ## Before any production release
 
-1. npx tsc --noEmit — must pass
-2. npx next build — must succeed
-3. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run — all tests must pass
-4. Manual smoke: /en, /tr, login, create product, check dashboard, metrics, growth
-5. npm run verify:deploy — after pushing to production
+1. npx tsc --noEmit
+2. npx next build
+3. OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+4. Manual smoke:
+   - /en and /tr load
+   - signup + email verification
+   - waitlist + email verification
+   - onboarding create + file upload + async plan generation
+   - settings/account locale change
+   - non-mobile products do not get App Store / Google Play guidance
+   - growth intake -> metrics setup -> baseline -> growth diagnosis path feels coherent
+5. npm run verify:deploy
 
-## Critical warnings
+## Important warnings
 
-- When adding Vercel env vars, confirm no trailing newlines — these silently break OAuth
-- If Google OAuth shows verification warnings, check test user whitelist in Google Cloud, not code
-- Do not ship from a dirty worktree — compare against deployed baseline
-- Any Dashboard redesign must happen in preview first, not directly on production
-- Forgot-password and waitlist emails depend on Resend being healthy and sender domain verified
+- DATABASE_URL must be PgBouncer and DIRECT_URL must be direct Postgres
+- SUPABASE_SERVICE_ROLE_KEY is required for server-side upload flow
+- Do not instantiate provider SDK clients at module top level in route handlers
+- external/streamlined-solutions is a nested repo and should be ignored for app handoff decisions
+- Do not assume older handoff docs are correct unless they match HANDOFF.md and the current live commit
 
-When in doubt, bias toward preserving the current production baseline and documenting the tradeoff before changing it.
+When in doubt, preserve the current production baseline, document the tradeoff, and change one surface at a time.
 ```
