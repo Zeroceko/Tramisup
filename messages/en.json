@@ -173,6 +173,7 @@
     "loggingIn": "Logging in…",
     "forgotPassword": "Forgot password?",
     "resetSuccess": "Your password has been updated. You can log in with your new password now.",
+    "verifiedSuccess": "Your email is verified. You can log in now.",
     "noAccount": "Don't have an account?",
     "signupHere": "Sign up",
     "sidebarTitle": "Your single workspace from\nlaunch to growth.",
@@ -184,7 +185,16 @@
     ],
     "errors": {
       "wrongCredentials": "Incorrect email or password",
+      "emailRequiredForVerification": "Enter your email address to resend the verification link.",
       "generic": "An error occurred. Please try again."
+    },
+    "verification": {
+      "title": "Verify your email to continue",
+      "description": "This account exists, but the email address has not been verified yet. Check your inbox or send a fresh verification link.",
+      "resend": "Resend verification email",
+      "resending": "Sending…",
+      "resent": "If this email belongs to an account, we sent a fresh verification link.",
+      "resendError": "We couldn't send a new verification email right now. Please try again."
     }
   },
   "forgotPassword": {

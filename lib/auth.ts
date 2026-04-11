@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
+import { verifySignupBypassToken } from "./signup-bypass";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,9 +26,15 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
-          }
+          where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            passwordHash: true,
+            preferredLocale: true,
+            emailVerified: true,
+          },
         });
 
         if (!user || !user.passwordHash) {
@@ -41,6 +48,18 @@ export const authOptions: NextAuthOptions = {
 
         if (!isCorrectPassword) {
           throw new Error("Invalid credentials");
+        }
+
+        // Block login if email not yet verified — unless this is the immediate
+        // post-signup auto-login (signupBypassToken valid for 5 min)
+        if (!user.emailVerified) {
+          const bypassValid = verifySignupBypassToken(
+            credentials.signupBypassToken,
+            credentials.email,
+          );
+          if (!bypassValid) {
+            throw new Error("email_not_verified");
+          }
         }
 
         return {

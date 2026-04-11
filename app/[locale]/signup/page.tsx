@@ -28,7 +28,6 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [productType, setProductType] = useState<(typeof PRODUCT_TYPES)[number]>("SaaS");
   const [email, setEmail] = useState("");
-  const [accessCode, setAccessCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [captchaResetNonce, setCaptchaResetNonce] = useState(0);
@@ -54,7 +53,7 @@ export default function SignupPage() {
     event.preventDefault();
     setError("");
 
-    if (!name.trim() || !email.trim() || !accessCode.trim()) {
+    if (!name.trim() || !email.trim()) {
       setError(t("errors.requiredFields"));
       return;
     }
@@ -103,7 +102,6 @@ export default function SignupPage() {
           name,
           email,
           password,
-          accessCode: accessCode.trim().toUpperCase(),
           locale,
           captchaToken,
         }),
@@ -117,22 +115,13 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-
-      const result = await signIn("credentials", {
-        email,
-        password,
-        captchaToken,
-        signupBypassToken: data.loginBypassToken,
-        redirect: false,
+      const nextParams = new URLSearchParams({
+        sent: "1",
+        type: "user",
+        email: data.email || email,
       });
-
-      if (result?.error) {
-        setError(t("errors.loginAfterCreate"));
-        setCaptchaResetNonce((current) => current + 1);
-      } else {
-        router.push(`/${locale}/onboarding`);
-        router.refresh();
-      }
+      router.push(`/${locale}/verify-email?${nextParams.toString()}`);
+      router.refresh();
     } catch {
       setError(t("errors.generic"));
     } finally {
@@ -254,22 +243,6 @@ export default function SignupPage() {
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder={t("emailPlaceholder")}
                     className={inputCls}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="accessCode" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
-                    {t("accessCode")}
-                  </label>
-                  <input
-                    id="accessCode"
-                    type="text"
-                    value={accessCode}
-                    onChange={(event) => setAccessCode(event.target.value.toUpperCase())}
-                    placeholder="TT31623SEN"
-                    className={inputCls}
-                    maxLength={20}
                     required
                   />
                 </div>

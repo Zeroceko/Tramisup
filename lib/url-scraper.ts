@@ -1,9 +1,20 @@
+function convertDriveUrl(url: string): string | null {
+  const docMatch = url.match(/docs\.google\.com\/document\/d\/([^/]+)/);
+  if (docMatch) return `https://docs.google.com/document/d/${docMatch[1]}/export?format=txt`;
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (driveMatch) return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  return null;
+}
+
 /**
  * Fetches a URL and extracts readable text content for AI analysis.
+ * Supports regular websites and Google Drive/Docs public share links.
  * Returns null on any failure — always optional.
  */
-export async function scrapeUrl(url: string): Promise<string | null> {
-  if (!url || !url.startsWith("http")) return null;
+export async function scrapeUrl(inputUrl: string): Promise<string | null> {
+  if (!inputUrl || !inputUrl.startsWith("http")) return null;
+
+  const url = convertDriveUrl(inputUrl) ?? inputUrl;
 
   try {
     const controller = new AbortController();

@@ -59,8 +59,8 @@ export default function DeleteProductModal({
       });
       if (!res.ok) throw new Error();
       // Belt-and-suspenders: clear cookie client-side too
-      document.cookie = "active_product_id=; path=/; max-age=0";
-      router.push(`/${locale}/dashboard`);
+      document.cookie = "activeProductId=; path=/; max-age=0";
+      router.push(`/${locale}/products`);
     } catch {
       setError(copy.error);
       setDeleting(false);

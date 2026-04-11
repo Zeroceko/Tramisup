@@ -17,12 +17,16 @@ export default function LoginPage() {
   const t = useTranslations("login");
   const callbackUrl = searchParams.get("callbackUrl");
   const resetStatus = searchParams.get("reset");
+  const verified = searchParams.get("verified") === "1";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [verificationRequired, setVerificationRequired] = useState(false);
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -40,6 +44,8 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setVerificationMessage("");
+    setVerificationRequired(false);
 
     try {
       const result = await signIn("credentials", {
@@ -49,7 +55,11 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(t("errors.wrongCredentials"));
+        if (result.error === "email_not_verified") {
+          setVerificationRequired(true);
+        } else {
+          setError(t("errors.wrongCredentials"));
+        }
       } else {
         router.push(callbackUrl || `/${locale}/dashboard`);
         router.refresh();
@@ -58,6 +68,34 @@ export default function LoginPage() {
       setError(t("errors.generic"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setVerificationMessage(t("errors.emailRequiredForVerification"));
+      return;
+    }
+
+    setResendingVerification(true);
+    setVerificationMessage("");
+
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, locale }),
+      });
+
+      if (!response.ok) {
+        throw new Error("resend_failed");
+      }
+
+      setVerificationMessage(t("verification.resent"));
+    } catch {
+      setVerificationMessage(t("verification.resendError"));
+    } finally {
+      setResendingVerification(false);
     }
   };
 
@@ -118,6 +156,11 @@ export default function LoginPage() {
                 {t("resetSuccess")}
               </p>
             ) : null}
+            {verified ? (
+              <p className="rounded-xl border border-[#BFE3C8] bg-[#EDF8F0] px-4 py-3 text-sm font-medium text-[#27623A]">
+                {t("verifiedSuccess")}
+              </p>
+            ) : null}
             <div>
               <label htmlFor="email" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#21231D]/60">
                 {t("email")}
@@ -150,6 +193,23 @@ export default function LoginPage() {
             </div>
 
             {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+            {verificationRequired ? (
+              <div className="rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-4">
+                <p className="text-sm font-semibold text-[#21231D]">{t("verification.title")}</p>
+                <p className="mt-1 text-sm leading-6 text-[#5A5D55]">{t("verification.description")}</p>
+                <button
+                  type="button"
+                  onClick={() => void handleResendVerification()}
+                  disabled={resendingVerification}
+                  className="mt-3 inline-flex h-10 items-center rounded-full bg-[#21231D] px-4 text-sm font-semibold text-white transition hover:bg-[#34363A] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {resendingVerification ? t("verification.resending") : t("verification.resend")}
+                </button>
+                {verificationMessage ? (
+                  <p className="mt-3 text-sm text-[#5A5D55]">{verificationMessage}</p>
+                ) : null}
+              </div>
+            ) : null}
 
             <button
               type="submit"

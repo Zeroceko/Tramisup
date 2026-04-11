@@ -4,45 +4,13 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateAiPlan } from "@/lib/ai-plan";
-import { buildFounderSummary } from "@/lib/founder-summary";
 import { checkLimit } from "@/lib/plan-limits";
-import { seedAiPlan, seedMetricsData } from "@/lib/seed";
-import { scrapeUrl } from "@/lib/url-scraper";
 import { Prisma } from "@prisma/client";
 
 function deriveProductStatus(launchStatus?: string) {
   if (launchStatus === "Büyüme aşamasında") return "GROWING" as const;
   if (launchStatus === "Yayında") return "LAUNCHED" as const;
   return "PRE_LAUNCH" as const;
-}
-
-function extractCandidateLinks(input: Array<string | undefined | null>) {
-  const urlRegex = /https?:\/\/[^\s)]+/gi;
-  const found = new Set<string>();
-
-  for (const value of input) {
-    if (!value) continue;
-    const matches = value.match(urlRegex) ?? [];
-    for (const match of matches) {
-      const normalized = match.replace(/[.,;]+$/, "");
-      found.add(normalized);
-    }
-  }
-
-  return Array.from(found).slice(0, 3);
-}
-
-async function scrapeProductLinks(links: string[]) {
-  const parts = await Promise.all(
-    links.map(async (link) => {
-      const content = await scrapeUrl(link);
-      if (!content) return null;
-      return `URL: ${link}\n${content}`;
-    })
-  );
-
-  return parts.filter(Boolean).join("\n\n---\n\n") || null;
 }
 
 async function resolveProductOwner(sessionUser: {
@@ -241,9 +209,7 @@ export async function POST(request: Request) {
       website,
       growthGoal,
       goalKey,
-      stageContext,
       locale,
-      seedData = false,
     } = body;
 
     if (!name || !category || !targetAudience || !businessModel) {
@@ -268,63 +234,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Normalize platforms: prefer new universal `platforms` field, fallback to legacy `mobilePlatforms`
     const normalizedPlatforms = Array.isArray(platforms)
       ? platforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
       : Array.isArray(mobilePlatforms)
         ? mobilePlatforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
         : [];
-    const isMobileApp = /mobil uygulama|mobile app/i.test(category ?? "");
-    const hasMobilePlatform = normalizedPlatforms.some((p) => ["iOS", "Android"].includes(p));
-    const storeContext = isMobileApp || hasMobilePlatform
-      ? ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
-        ? `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. Urun yayinda; store listing ve ASO tarafini growth sinyali gibi yorumla, submission-ready checklist'e donme.`
-        : `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
-      : "";
 
-    const dbUrl = process.env.DATABASE_URL || "";
-    console.log(`[api/products] DB_URL_PREFIX: ${dbUrl.slice(0, 20)}... (Length: ${dbUrl.length})`);
-
-    // 1. Generate AI plan BEFORE transaction (Gemini call, non-blocking on failure)
-    const candidateLinks = extractCandidateLinks([website, description, stageContext]);
-    const websiteContent = await scrapeProductLinks(candidateLinks);
-    console.log("[api/products] Generating AI plan...");
-    const aiPlanResult = await generateAiPlan({
-      name,
-      description,
-      locale,
-      category,
-      targetAudience,
-      businessModel,
-      launchStatus,
-      goalKey,
-      growthGoal,
-      website,
-      mobilePlatforms: normalizedPlatforms,
-      websiteContent: websiteContent ?? undefined,
-      stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
-    });
-    const { plan: aiPlan, source: aiPlanSource } = aiPlanResult;
-    console.log(`[api/products] AI plan result: source=${aiPlanSource}, launch=${aiPlan.launchChecklist.length}, growth=${aiPlan.growthChecklist.length}, tasks=${aiPlan.tasks.length}`);
-
-    console.log("[api/products] Building founder summary...");
-    const founderSummary = await buildFounderSummary({
-      name,
-      description,
-      locale,
-      category,
-      targetAudience,
-      businessModel,
-      launchStatus,
-      website,
-      mobilePlatforms: normalizedPlatforms,
-      websiteContent: websiteContent ?? undefined,
-      stageContext: [stageContext, storeContext].filter(Boolean).join(" "),
-    }, aiPlan);
-
-    // 2. Create product + seed data in a transaction
-    // If AI plan failed, product still gets created (AI enrichment is non-blocking)
-    console.log("[api/products] Starting DB transaction...");
+    // Phase 1: create minimal product record, plan generation happens in /generate-plan
     const createProductTx = async () =>
       prisma.$transaction(async (tx) => {
         const owner = await ensureProductOwnerInTx(tx, {
@@ -332,13 +248,10 @@ export async function POST(request: Request) {
           email: session.user.email,
           name: session.user.name,
         });
-        if (!owner) {
-          throw new Error("SESSION_OWNER_MISSING");
-        }
+        if (!owner) throw new Error("SESSION_OWNER_MISSING");
 
         const productStatus = deriveProductStatus(launchStatus);
 
-        console.log("[api/products] Creating Product record...");
         const newProduct = await tx.product.create({
           data: {
             userId: owner.id,
@@ -351,40 +264,23 @@ export async function POST(request: Request) {
             businessModel,
             website,
             launchGoals: goalKey ? JSON.stringify({ goalKey, growthGoal }) : undefined,
+            planMeta: JSON.stringify({ step: "pending" }),
             launchDate: (() => {
               if (!launchDate) return undefined;
               const d = new Date(launchDate);
-              if (isNaN(d.getTime())) {
-                console.warn(`[api/products] Invalid launchDate provided: ${launchDate}. Skipping date field.`);
-                return undefined;
-              }
+              if (isNaN(d.getTime())) return undefined;
               return d;
             })(),
           },
         });
 
-        // Create MetricSetup record with platforms and founderSummary
         await tx.metricSetup.create({
           data: {
             productId: newProduct.id,
             selections: [],
             platforms: normalizedPlatforms,
-            founderSummary,
           },
         });
-
-        await seedAiPlan(
-          newProduct.id,
-          aiPlan,
-          tx,
-          (locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en",
-          aiPlanSource,
-        );
-
-        // Seed demo metrics only if user opted in
-        if (seedData) {
-          await seedMetricsData(newProduct.id, tx);
-        }
 
         return newProduct;
       });
@@ -397,7 +293,6 @@ export async function POST(request: Request) {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2003"
       ) {
-        console.warn("[api/products] FK mismatch detected. Attempting owner self-heal + retry.");
         await forceEnsureOwner({
           id: session.user.id,
           email: session.user.email,
@@ -409,7 +304,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const response = NextResponse.json(product, { status: 201 });
+    const response = NextResponse.json({ id: product.id }, { status: 201 });
     response.cookies.set("activeProductId", product.id, {
       path: "/",
       sameSite: "lax",
@@ -432,7 +327,7 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    
+
     return NextResponse.json(
       { error: `Failed to create product: ${error.message || "Unknown error"}` },
       { status: 500 }

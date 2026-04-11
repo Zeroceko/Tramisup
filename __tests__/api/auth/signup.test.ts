@@ -6,10 +6,6 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
     },
-    waitlist: {
-      findFirst: vi.fn(),
-      update: vi.fn(),
-    },
   },
 }))
 
@@ -19,15 +15,22 @@ vi.mock('bcryptjs', () => ({
   },
 }))
 
+vi.mock('@/lib/email-verification', () => ({
+  generateVerificationToken: vi.fn(() => 'fixed-token'),
+  sendUserVerificationEmail: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/recaptcha', () => ({
+  getRequestIp: vi.fn(() => null),
+  verifyRecaptchaToken: vi.fn(async () => ({ success: true })),
+}))
+
 import { POST } from '@/app/api/auth/signup/route'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 const mockPrismaUser = vi.mocked(prisma.user)
-const mockPrismaWaitlist = vi.mocked(prisma.waitlist)
 const mockBcrypt     = vi.mocked(bcrypt)
-
-const VALID_ACCESS_CODE = 'TT31623SEN'
 
 function createRequest(body: Record<string, unknown>) {
   return new Request('http://localhost:3000/api/auth/signup', {
@@ -40,12 +43,10 @@ function createRequest(body: Record<string, unknown>) {
 describe('POST /api/auth/signup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // By default, waitlist lookup returns null (no DB code found)
-    mockPrismaWaitlist.findFirst.mockResolvedValue(null)
   })
 
   it('should return 400 if email is missing', async () => {
-    const request = createRequest({ password: 'password123', accessCode: VALID_ACCESS_CODE })
+    const request = createRequest({ password: 'password123' })
     const response = await POST(request)
     const data = await response.json()
 
@@ -54,7 +55,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if password is missing', async () => {
-    const request = createRequest({ email: 'test@example.com', accessCode: VALID_ACCESS_CODE })
+    const request = createRequest({ email: 'test@example.com' })
     const response = await POST(request)
     const data = await response.json()
 
@@ -63,7 +64,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if both email and password are missing', async () => {
-    const request = createRequest({ name: 'Test', accessCode: VALID_ACCESS_CODE })
+    const request = createRequest({ name: 'Test' })
     const response = await POST(request)
     const data = await response.json()
 
@@ -72,7 +73,7 @@ describe('POST /api/auth/signup', () => {
   })
 
   it('should return 400 if password is too short', async () => {
-    const request = createRequest({ email: 'test@example.com', password: 'short', accessCode: VALID_ACCESS_CODE })
+    const request = createRequest({ email: 'test@example.com', password: 'short' })
     const response = await POST(request)
     const data = await response.json()
 
@@ -80,34 +81,7 @@ describe('POST /api/auth/signup', () => {
     expect(data.error).toBe('Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir')
   })
 
-  it('should return 400 if access code is missing', async () => {
-    const request = createRequest({
-      name: 'Test',
-      email: 'test@example.com',
-      password: 'Password1!',
-    })
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Erken erişim kodu gereklidir')
-  })
-
-  it('should return 400 if access code is invalid', async () => {
-    const request = createRequest({
-      name: 'Test',
-      email: 'test@example.com',
-      password: 'Password1!',
-      accessCode: 'WRONGCODE',
-    })
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Geçersiz erken erişim kodu')
-  })
-
-  it('should accept access code case-insensitively', async () => {
+  it('should create account without access code requirement', async () => {
     mockPrismaUser.findUnique.mockResolvedValue(null)
     mockBcrypt.hash.mockResolvedValue('$2a$10$hashed' as never)
     mockPrismaUser.create.mockResolvedValue({
@@ -115,6 +89,8 @@ describe('POST /api/auth/signup', () => {
       email: 'case@example.com',
       name: 'Case Test',
       passwordHash: '$2a$10$hashed',
+      preferredLocale: 'tr',
+      verificationToken: 'fixed-token',
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
@@ -123,7 +99,6 @@ describe('POST /api/auth/signup', () => {
       name: 'Case Test',
       email: 'case@example.com',
       password: 'Password1!',
-      accessCode: 'tt31623sen',
     })
     const response = await POST(request)
 
@@ -144,7 +119,6 @@ describe('POST /api/auth/signup', () => {
       name: 'Test',
       email: 'existing@example.com',
       password: 'Password1!',
-      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
@@ -161,6 +135,8 @@ describe('POST /api/auth/signup', () => {
       email: 'new@example.com',
       name: 'New User',
       passwordHash: '$2a$10$hashed',
+      preferredLocale: 'tr',
+      verificationToken: 'fixed-token',
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
@@ -169,7 +145,6 @@ describe('POST /api/auth/signup', () => {
       name: 'New User',
       email: 'new@example.com',
       password: 'Password1!',
-      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
@@ -185,6 +160,8 @@ describe('POST /api/auth/signup', () => {
         email: 'new@example.com',
         name: 'New User',
         passwordHash: '$2a$10$hashed',
+        preferredLocale: 'tr',
+        verificationToken: 'fixed-token',
       },
     })
   })
@@ -197,6 +174,8 @@ describe('POST /api/auth/signup', () => {
       email: 'noname@example.com',
       name: 'noname',
       passwordHash: '$2a$10$hashed',
+      preferredLocale: 'tr',
+      verificationToken: 'fixed-token',
       createdAt: new Date(),
       updatedAt: new Date(),
     } as any)
@@ -204,7 +183,6 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       email: 'noname@example.com',
       password: 'Password1!',
-      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
 
@@ -214,6 +192,8 @@ describe('POST /api/auth/signup', () => {
         email: 'noname@example.com',
         name: 'noname',
         passwordHash: '$2a$10$hashed',
+        preferredLocale: 'tr',
+        verificationToken: 'fixed-token',
       },
     })
   })
@@ -225,7 +205,6 @@ describe('POST /api/auth/signup', () => {
       name: 'Test',
       email: 'test@example.com',
       password: 'Password1!',
-      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()
@@ -240,7 +219,6 @@ describe('POST /api/auth/signup', () => {
     const request = createRequest({
       email: 'test@example.com',
       password: 'Password1!',
-      accessCode: VALID_ACCESS_CODE,
     })
     const response = await POST(request)
     const data = await response.json()

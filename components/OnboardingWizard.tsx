@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
@@ -9,9 +9,16 @@ import {
   loadOnboardingRetryDraft,
   saveOnboardingRetryDraft,
 } from "@/lib/onboarding-retry-storage";
-import { Link2, Paperclip, Plus, Sparkles, X } from "lucide-react";
+import { CheckSquare, Link2, Paperclip, Plus, Sparkles, X } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type UploadedFileRef = {
+  storagePath: string;
+  publicUrl: string;
+  filename: string;
+  mimeType: string;
+};
 
 type FunnelStageKey =
   | "Awareness"
@@ -523,31 +530,82 @@ function MetricsStep({
 
 // ─── Creating Screen ──────────────────────────────────────────────────────────
 
-function CreatingScreen({ error, locale }: { error: string | null; locale: string }) {
+const PLAN_STEPS = [
+  { key: "extracting_files", en: "Reading uploaded files", tr: "Dosyalar okunuyor" },
+  { key: "scraping_urls", en: "Analyzing website and links", tr: "Website ve linkler analiz ediliyor" },
+  { key: "generating_plan", en: "Generating your personalized plan", tr: "Kişisel plan oluşturuluyor" },
+  { key: "seeding_tasks", en: "Building your task list", tr: "Görev listesi hazırlanıyor" },
+  { key: "ready", en: "Workspace ready", tr: "Workspace hazır" },
+];
+
+function CreatingScreen({
+  error,
+  locale,
+  planStep,
+  uploadedFileCount,
+}: {
+  error: string | null;
+  locale: string;
+  planStep: string;
+  uploadedFileCount: number;
+}) {
   const isEn = locale === "en";
+  const currentIndex = PLAN_STEPS.findIndex((s) => s.key === planStep);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#fafafa] px-4">
       <div className="w-full max-w-sm text-center">
         <div className="mx-auto mb-6 h-12 w-12 animate-pulse rounded-full bg-[#ffd7ef]" />
         <h2 className="text-[20px] font-bold tracking-[-0.02em] text-[#0d0d12]">
-          {isEn ? "Your workspace is being prepared…" : "Çalışma alanın hazırlanıyor…"}
+          {isEn ? "Building your workspace…" : "Çalışma alanın kuruluyor…"}
         </h2>
-        <p className="mt-2 text-[14px] text-[#666d80]">
-          {isEn ? "The AI plan is being prepared and the system is being personalized" : "AI plan hazırlanıyor ve sistem kişiselleştiriliyor"}
+        <p className="mt-1 text-[13px] text-[#8a8fa0]">
+          {isEn ? "This usually takes 1–2 minutes" : "Bu genellikle 1–2 dakika sürer"}
         </p>
-        <div className="mt-6 overflow-hidden rounded-[14px] border border-[#e8e8e8] bg-white p-4 text-left">
-          {[
-            isEn ? "Product profile is being created" : "Ürün profili oluşturuluyor",
-            isEn ? "Checklist is being prepared" : "Checklist hazırlanıyor",
-            isEn ? "Your metrics are being configured" : "Metriklerin ayarlanıyor",
-            isEn ? "Dashboard is being personalized" : "Dashboard kişiselleştiriliyor",
-          ].map((label) => (
-            <div key={label} className="flex items-center gap-3 py-2">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ffd7ef]" />
-              <p className="text-[12px] text-[#666d80]">{label}</p>
-            </div>
-          ))}
+
+        <div className="mt-6 overflow-hidden rounded-[18px] border border-[#e8e8e8] bg-white p-5 text-left">
+          {PLAN_STEPS.map((s, i) => {
+            const done = i < currentIndex;
+            const active = i === currentIndex;
+            return (
+              <div key={s.key} className="flex items-center gap-3 py-2">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full transition-colors ${
+                    done
+                      ? "bg-[#75fc96]"
+                      : active
+                      ? "animate-pulse bg-[#ffd7ef]"
+                      : "bg-[#e8e8e8]"
+                  }`}
+                />
+                <p
+                  className={`text-[12px] transition-colors ${
+                    done
+                      ? "text-[#adb5bd] line-through"
+                      : active
+                      ? "font-semibold text-[#0d0d12]"
+                      : "text-[#adb5bd]"
+                  }`}
+                >
+                  {isEn ? s.en : s.tr}
+                </p>
+                {done && (
+                  <CheckSquare className="ml-auto h-3.5 w-3.5 shrink-0 text-[#75fc96]" />
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {uploadedFileCount > 0 && (
+          <p className="mt-3 text-[12px] text-[#666d80]">
+            {uploadedFileCount}{" "}
+            {isEn
+              ? `file${uploadedFileCount > 1 ? "s" : ""} being analyzed`
+              : `dosya analiz ediliyor`}
+          </p>
+        )}
+
         {error && <p className="mt-4 text-[13px] text-red-600">{error}</p>}
       </div>
     </div>
@@ -575,6 +633,14 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgradePrompt, setUpgradePrompt] = useState<UpgradePrompt | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRef[]>([]);
+  const [documentLinks, setDocumentLinks] = useState<string[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInputValue, setUrlInputValue] = useState("");
+  const [planStep, setPlanStep] = useState<string>("pending");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!resumeRequested) return;
@@ -725,6 +791,44 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     setData((d) => ({ ...d, [key]: value }));
   }
 
+  async function handleFileUpload(file: File) {
+    setUploadingFile(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("productId", "pending");
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const json = await res.json() as { error?: string; storagePath?: string; publicUrl?: string; filename?: string; mimeType?: string };
+      if (!res.ok) {
+        setUploadError(json.error ?? (isEn ? "Upload failed" : "Yükleme başarısız"));
+        return;
+      }
+      setUploadedFiles((prev) => [
+        ...prev,
+        {
+          storagePath: json.storagePath!,
+          publicUrl: json.publicUrl!,
+          filename: json.filename!,
+          mimeType: json.mimeType!,
+        },
+      ]);
+    } catch {
+      setUploadError(isEn ? "Upload failed" : "Yükleme başarısız");
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
+  function handleAddUrl() {
+    const url = urlInputValue.trim();
+    if (url && url.startsWith("http") && !documentLinks.includes(url)) {
+      setDocumentLinks((prev) => [...prev, url]);
+    }
+    setUrlInputValue("");
+    setShowUrlInput(false);
+  }
+
   function toggleMulti(
     field: "categories" | "platforms" | "targetAudiences" | "businessModels" | "intendedSources",
     value: string
@@ -768,7 +872,6 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   async function submit(useMetrics: boolean) {
-    setIsCreating(true);
     setError(null);
     setUpgradePrompt(null);
 
@@ -779,34 +882,37 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       data: data as Record<string, unknown>,
     });
 
-    try {
-      const stageContext = [
-        data.growthGoal ? `Kurucu önceliği: ${data.growthGoal}` : null,
-        (data.intendedSources ?? []).length > 0
-          ? `Planlanan araçlar: ${(data.intendedSources ?? []).join(", ")}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(". ");
+    const stageContext = [
+      data.growthGoal ? `Kurucu önceliği: ${data.growthGoal}` : null,
+      (data.intendedSources ?? []).length > 0
+        ? `Planlanan araçlar: ${(data.intendedSources ?? []).join(", ")}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(". ");
 
+    const productPayload = {
+      name: data.name,
+      description: data.description,
+      locale,
+      website: data.website || undefined,
+      category: joinSelections(data.categories, data.categoryOther),
+      platforms: data.platforms ?? [],
+      targetAudience: joinSelections(data.targetAudiences, data.targetAudienceOther),
+      businessModel: joinSelections(data.businessModels, data.businessModelOther),
+      launchStatus: data.launchStatus,
+      launchDate: data.timingOption ? timingToDate(data.timingOption) : undefined,
+      growthGoal: data.growthGoal,
+      goalKey: data.goalKey,
+      stageContext: stageContext || undefined,
+    };
+
+    try {
+      // Phase 1: Create product record (fast)
       const productRes = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description,
-          locale,
-          website: data.website || undefined,
-          category: joinSelections(data.categories, data.categoryOther),
-          platforms: data.platforms ?? [],
-          targetAudience: joinSelections(data.targetAudiences, data.targetAudienceOther),
-          businessModel: joinSelections(data.businessModels, data.businessModelOther),
-          launchStatus: data.launchStatus,
-          launchDate: data.timingOption ? timingToDate(data.timingOption) : undefined,
-          growthGoal: data.growthGoal,
-          goalKey: data.goalKey,
-          stageContext: stageContext || undefined,
-        }),
+        body: JSON.stringify(productPayload),
       });
 
       if (!productRes.ok) {
@@ -824,48 +930,78 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         throw new Error((err as { error?: string }).error ?? (isEn ? "Product could not be created" : "Ürün oluşturulamadı"));
       }
 
-      const product = (await productRes.json()) as { id: string };
+      const { id: productId } = (await productRes.json()) as { id: string };
       clearOnboardingRetryDraft();
 
-      // Optionally save recommended metric selections
+      // Save metric selections (non-critical)
       if (useMetrics && Object.keys(autoMetrics).length > 0) {
         const selections = Object.entries(autoMetrics).map(([stage, key]) => ({
           stage,
           selectedMetricKeys: [key],
         }));
-        await fetch(`/api/products/${product.id}/metric-setup`, {
+        fetch(`/api/products/${productId}/metric-setup`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ setup: { selections } }),
-        }).catch(() => {
-          // non-critical: metric setup can be done later
-        });
+        }).catch(() => {});
       }
 
-      if (useMetrics && connectableSources.length > 0) {
-        const params = new URLSearchParams({
-          onboarding: "1",
-          connect: toIntegrationProvider(connectableSources[0]),
-        });
-        if (connectableSources.length > 1) {
-          params.set(
-            "queued",
-            connectableSources
-              .slice(1)
-              .map((source) => toIntegrationProvider(source))
-              .join(","),
-          );
+      // Show loading screen immediately
+      setIsCreating(true);
+      setPlanStep("pending");
+
+      // Phase 2: Fire plan generation (no await)
+      fetch(`/api/products/${productId}/generate-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...productPayload,
+          uploadedFiles,
+          documentLinks,
+        }),
+      }).catch(() => {});
+
+      // Determine post-loading destination
+      const destination = (() => {
+        if (useMetrics && connectableSources.length > 0) {
+          const params = new URLSearchParams({
+            onboarding: "1",
+            connect: toIntegrationProvider(connectableSources[0]),
+          });
+          if (connectableSources.length > 1) {
+            params.set(
+              "queued",
+              connectableSources.slice(1).map((s) => toIntegrationProvider(s)).join(","),
+            );
+          }
+          return `/${locale}/integrations?${params.toString()}`;
         }
-        router.push(`/${locale}/integrations?${params.toString()}`);
-        return;
-      }
+        return `/${locale}/products/${productId}/overview?onboarding=continue`;
+      })();
 
-      if (!useMetrics) {
-        router.push(`/${locale}/products/${product.id}/overview?onboarding=continue`);
-        return;
-      }
+      // Poll plan-status
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/products/${productId}/plan-status`);
+          const json = (await res.json()) as { step?: string };
+          const step = json.step ?? "pending";
+          setPlanStep(step);
+          if (step === "ready") {
+            clearInterval(interval);
+            router.push(destination);
+            router.refresh();
+          }
+        } catch {
+          // ignore transient polling errors
+        }
+      }, 2000);
 
-      router.push(`/${locale}/dashboard`);
+      // Safety timeout: 3 minutes
+      setTimeout(() => {
+        clearInterval(interval);
+        router.push(destination);
+      }, 180000);
+
     } catch (err) {
       setIsCreating(false);
       setError(err instanceof Error ? err.message : isEn ? "Something went wrong, please try again." : "Bir hata oluştu, tekrar dene.");
@@ -873,7 +1009,14 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   if (isCreating) {
-    return <CreatingScreen error={error} locale={locale} />;
+    return (
+      <CreatingScreen
+        error={error}
+        locale={locale}
+        planStep={planStep}
+        uploadedFileCount={uploadedFiles.length}
+      />
+    );
   }
 
   return (
@@ -1202,34 +1345,119 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
             return (
               <div className="mt-8 space-y-3">
                 {currentId === "description" && (
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <button
-                      type="button"
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
-                    >
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f6f2dd] text-[#9c8f45]">
-                        <Paperclip className="h-4 w-4" />
-                      </span>
-                      {isEn ? "Upload file" : "Dosya Yükle"}
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
-                    >
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#dff2f4] text-[#3f8b91]">
-                        <Link2 className="h-4 w-4" />
-                      </span>
-                      {isEn ? "Define URL" : "URL Tanımla"}
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
-                    >
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f2e8dc] text-[#8c6d43]">
-                        <Plus className="h-4 w-4" />
-                      </span>
-                      {isEn ? "Extra note" : "Ek Not"}
-                    </button>
+                  <div className="space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,image/jpeg,image/jpg,image/png"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleFileUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        disabled={uploadingFile}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white disabled:opacity-50"
+                      >
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f6f2dd] text-[#9c8f45]">
+                          <Paperclip className="h-4 w-4" />
+                        </span>
+                        {uploadingFile
+                          ? isEn ? "Uploading…" : "Yükleniyor…"
+                          : isEn ? "Upload file" : "Dosya Yükle"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowUrlInput((v) => !v)}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
+                      >
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#dff2f4] text-[#3f8b91]">
+                          <Link2 className="h-4 w-4" />
+                        </span>
+                        {isEn ? "Define URL" : "URL Tanımla"}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
+                      >
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f2e8dc] text-[#8c6d43]">
+                          <Plus className="h-4 w-4" />
+                        </span>
+                        {isEn ? "Extra note" : "Ek Not"}
+                      </button>
+                    </div>
+
+                    {showUrlInput && (
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={urlInputValue}
+                          onChange={(e) => setUrlInputValue(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleAddUrl()}
+                          placeholder="https://docs.google.com/… or https://yoursite.com"
+                          className="flex-1 rounded-[10px] border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0d0d12]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddUrl}
+                          className="rounded-[10px] bg-[#0d0d12] px-3 py-2 text-[12px] font-semibold text-white"
+                        >
+                          {isEn ? "Add" : "Ekle"}
+                        </button>
+                      </div>
+                    )}
+
+                    {uploadError && (
+                      <p className="text-[12px] text-red-600">{uploadError}</p>
+                    )}
+
+                    {(uploadedFiles.length > 0 || documentLinks.length > 0) && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {uploadedFiles.map((f) => (
+                          <span
+                            key={f.storagePath}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#f6f2dd] px-3 py-1 text-[11px] font-medium text-[#7a6e3a]"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            {f.filename}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadedFiles((prev) =>
+                                  prev.filter((x) => x.storagePath !== f.storagePath),
+                                )
+                              }
+                              className="ml-0.5 opacity-60 hover:opacity-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {documentLinks.map((link) => (
+                          <span
+                            key={link}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#dff2f4] px-3 py-1 text-[11px] font-medium text-[#3f8b91]"
+                          >
+                            <Link2 className="h-3 w-3" />
+                            {link.slice(0, 40)}{link.length > 40 ? "…" : ""}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocumentLinks((prev) => prev.filter((x) => x !== link))
+                              }
+                              className="ml-0.5 opacity-60 hover:opacity-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

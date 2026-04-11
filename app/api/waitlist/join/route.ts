@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { sendWaitlistConfirmationEmail, syncWaitlistLeadToResend } from "@/lib/resend-waitlist"
+import { syncWaitlistLeadToResend } from "@/lib/resend-waitlist"
 import { getRequestIp, verifyRecaptchaToken } from "@/lib/recaptcha"
+import { generateVerificationToken, sendWaitlistVerificationEmail } from "@/lib/email-verification"
 
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
       )
     }
 
+    const verificationToken = generateVerificationToken()
+
     // Create waitlist entry
     const entry = await prisma.waitlist.create({
       data: {
@@ -86,6 +89,7 @@ export async function POST(request: Request) {
         name: name || null,
         source,
         status: "PENDING",
+        verificationToken,
       },
     })
 
@@ -96,10 +100,10 @@ export async function POST(request: Request) {
         source,
         locale,
       }),
-      sendWaitlistConfirmationEmail({
+      sendWaitlistVerificationEmail({
         email: cleanEmail,
         name: name || null,
-        source,
+        token: verificationToken,
         locale,
       }),
     ])

@@ -79,11 +79,11 @@ export default async function ProductOverviewPage({
   } | null;
 
   const nextHref = isLaunched
-    ? `/${locale}/growth`
+    ? `/${locale}/metrics`
     : `/${locale}/pre-launch`;
 
   const nextLabel = isLaunched
-    ? isEn ? "Go to Growth setup" : "Growth setup'a git"
+    ? isEn ? "Set up measurement" : "Ölçüm sistemini kur"
     : isEn ? "Go to Launch prep" : "Launch hazırlığına git";
   const showContinueOnboarding = resolvedSearch.onboarding === "continue";
   const preparedItems = isLaunched ? product._count.growthChecklists : product._count.launchChecklists;
@@ -133,7 +133,7 @@ export default async function ProductOverviewPage({
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
               >
                 {isLaunched
-                  ? isEn ? "Continue with Growth setup" : "Growth kurulumuna devam et"
+                  ? isEn ? "Continue with metric setup" : "Metrik kurulumuna devam et"
                   : isEn ? "Continue with Launch prep" : "Launch hazırlığına devam et"}
               </Link>
               <Link

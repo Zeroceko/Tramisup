@@ -173,6 +173,7 @@
     "loggingIn": "Giriş yapılıyor…",
     "forgotPassword": "Şifremi unuttum",
     "resetSuccess": "Şifren güncellendi. Artık yeni şifrenle giriş yapabilirsin.",
+    "verifiedSuccess": "E-posta adresin doğrulandı. Artık giriş yapabilirsin.",
     "noAccount": "Hesabın yok mu?",
     "signupHere": "Kayıt ol",
     "sidebarTitle": "Launch'tan büyümeye giden\ntek çalışma alanın.",
@@ -184,7 +185,16 @@
     ],
     "errors": {
       "wrongCredentials": "E-posta veya şifre hatalı",
+      "emailRequiredForVerification": "Doğrulama bağlantısını tekrar göndermek için e-posta adresini gir.",
       "generic": "Bir hata oluştu. Lütfen tekrar dene."
+    },
+    "verification": {
+      "title": "Devam etmek için e-postanı doğrula",
+      "description": "Bu hesap var, ancak e-posta adresi henüz doğrulanmamış. Gelen kutunu kontrol et ya da yeni bir doğrulama bağlantısı iste.",
+      "resend": "Doğrulama e-postasını tekrar gönder",
+      "resending": "Gönderiliyor…",
+      "resent": "Bu e-posta bir hesaba aitse, yeni bir doğrulama bağlantısı gönderdik.",
+      "resendError": "Şu anda yeni bir doğrulama e-postası gönderemedik. Lütfen tekrar dene."
     }
   },
   "forgotPassword": {

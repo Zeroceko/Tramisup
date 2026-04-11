@@ -436,3 +436,146 @@ npm run release:signoff --skip-build
 | Eyebrow text | `11px`, `tracking-[0.18em]`, uppercase |
 
 No emojis in UI. All decorative elements use inline SVG. No Shadcn - Tiramisup has its own aesthetic.
+
+---
+
+## 16. Work In Progress — Pick Up Here
+
+**Last updated:** 11 April 2026  
+**Branch:** `main` (all changes committed — but some features require a Supabase migration before going live)
+
+---
+
+### 16a. Completed & Deployed
+
+These are code-complete in `main` and type-check + tests pass (70/70):
+
+| Feature | Files |
+|---|---|
+| Early access code removed from signup | `app/[locale]/signup/page.tsx`, `app/api/auth/signup/route.ts`, `__tests__/api/auth/signup.test.ts` |
+| File upload to Supabase Storage | `app/api/upload/route.ts`, `lib/supabase-storage.ts` |
+| PDF/DOCX/image content extraction | `lib/extract-file-content.ts` |
+| Google Drive URL scraping support | `lib/url-scraper.ts` |
+| Two-phase product creation (fast Phase 1 + async Phase 2) | `app/api/products/route.ts`, `app/api/products/[id]/generate-plan/route.ts`, `app/api/products/[id]/plan-status/route.ts` |
+| Onboarding wizard: file upload + URL chips + polling loading screen | `components/OnboardingWizard.tsx` |
+| Email verification infrastructure | `lib/email-verification.ts`, `app/api/auth/verify-email/route.ts`, `app/api/auth/resend-verification/route.ts` |
+| Signup sends verification email | `app/api/auth/signup/route.ts` |
+| Waitlist join sends verification email | `app/api/waitlist/join/route.ts` |
+| Login blocks unverified users (bypass token for immediate post-signup) | `lib/auth.ts` |
+
+---
+
+### 16b. Requires Supabase SQL Migration (run before deploying)
+
+Run these in Supabase Dashboard → SQL Editor:
+
+```sql
+-- File upload context fields on Product
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "additionalContext" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "uploadedFiles" TEXT;
+
+-- Email verification on User
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verificationToken" TEXT UNIQUE;
+
+-- Email verification on Waitlist
+ALTER TABLE "Waitlist" ADD COLUMN IF NOT EXISTS "emailVerifiedAt" TIMESTAMP(3);
+ALTER TABLE "Waitlist" ADD COLUMN IF NOT EXISTS "verificationToken" TEXT UNIQUE;
+```
+
+Then run `npx prisma generate` locally.
+
+Also add to Vercel environment variables:
+```
+SUPABASE_URL=https://ojecebxxcbxrofnbkaae.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
+RESEND_API_KEY=<key>
+RESEND_FROM_EMAIL=Tiramisup <noreply@tiramisup.app>
+```
+
+The Supabase `product-uploads` bucket must exist (private). Already created on the project.
+
+---
+
+### 16c. Still Needs Building — Email Verification UX
+
+The backend is complete but the UI still needs these pieces:
+
+**1. `app/[locale]/verify-email/page.tsx`**  
+A simple error landing page for when a verification token is invalid or expired.
+- URL: `/{locale}/verify-email?error=invalid_token`
+- Show: "This verification link is invalid or has already been used." + link back to login
+- No auth required, plain page
+
+**2. Login page: `email_not_verified` state**  
+File: `app/[locale]/login/page.tsx`
+
+Currently `handleSubmit` maps any `result?.error` to `t("errors.wrongCredentials")`. It needs to detect `"email_not_verified"` and show a different UI:
+
+```tsx
+if (result?.error === "CredentialsSignin") {
+  // Check if it's email_not_verified — NextAuth wraps the thrown error
+  // The actual thrown message becomes result.error after NextAuth processing
+  // Use a dedicated error state: emailNotVerified = true
+}
+```
+
+Note: NextAuth v4 swallows the original error message from `authorize()` and returns `"CredentialsSignin"` for all thrown errors. To pass the actual error code through, the workaround is:
+- In `authorize()`, instead of throwing, return `null` and encode the error in a query param via a custom error redirect — OR use the `error` callback in NextAuth options — OR encode the error in the user object before returning null.
+
+The cleanest approach for NextAuth v4:
+```typescript
+// In authorize(), instead of throw new Error("email_not_verified"):
+// Return null but first set a server-side flag, then detect on client via:
+// signIn() → result.error === "CredentialsSignin" + check a separate API endpoint
+```
+
+**Simplest working approach:**
+1. Change `authorize()` to return `null` when email not verified (instead of throw)  
+2. Before returning null, write a short-lived flag to a in-memory store or check via separate endpoint
+3. On login page: after `signIn()` returns error, call `GET /api/auth/check-verification-status?email=x` to check if the user exists but is unverified
+4. If yes, show the "verify email" state with resend button
+
+**The resend button** calls `POST /api/auth/resend-verification` with `{ email, locale }` — endpoint already exists.
+
+**3. i18n keys to add**
+
+Add to `messages/en.json` and `messages/tr.json` under `"login"`:
+
+```json
+"errors": {
+  "wrongCredentials": "Incorrect email or password",
+  "generic": "An error occurred. Please try again.",
+  "emailNotVerified": "Please verify your email before logging in.",
+  "emailNotVerifiedHint": "Check your inbox for a verification link.",
+  "resendVerification": "Resend verification email",
+  "resendSent": "Verification email sent. Check your inbox."
+}
+```
+
+**4. Signup success message**
+
+After successful signup + auto-login, the user is immediately taken to onboarding. Consider showing a toast or banner: "Check your email to verify your account." No blocking needed since bypass token handles the first login.
+
+---
+
+### 16d. Architecture Notes for Email Verification
+
+**Token flow:**
+- Signup → `User.verificationToken` = 32-byte hex stored in DB
+- Verification email contains: `{APP_URL}/api/auth/verify-email?token={hex}&type=user`  
+- `GET /api/auth/verify-email` → sets `User.emailVerified = now()`, clears `verificationToken`, redirects to `/{locale}/login?verified=1`
+- Login page detects `?verified=1` → shows green success banner (same pattern as `?reset=success`)
+
+**Bypass token logic (existing, now wired up):**
+- `createSignupBypassToken(email)` in `lib/signup-bypass.ts` — HMAC-signed, 5-minute TTL
+- After signup API creates user, it returns `loginBypassToken`
+- Signup page calls `signIn("credentials", { ..., signupBypassToken: data.loginBypassToken })`
+- `authorize()` in `lib/auth.ts` now checks: if `!user.emailVerified` → verify bypass token → if invalid → throw `"email_not_verified"`
+- This means first auto-login (within 5 min of signup) succeeds; all later logins require verification
+
+**Waitlist token flow:**
+- Join → `Waitlist.verificationToken` stored in DB
+- Verification email: `{APP_URL}/api/auth/verify-email?token={hex}&type=waitlist`
+- Click → sets `Waitlist.emailVerifiedAt = now()`, clears token, redirects to `/en/waitlist/thank-you?verified=1`
+- The `waitlist/thank-you` page can optionally show "Email confirmed!" if `?verified=1` present

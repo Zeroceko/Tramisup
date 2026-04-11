@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { isStrongPassword } from "@/lib/password-rules";
 import { getRequestIp, verifyRecaptchaToken } from "@/lib/recaptcha";
-import { createSignupBypassToken } from "@/lib/signup-bypass";
-
-const EARLY_ACCESS_CODE = process.env.EARLY_ACCESS_CODE || "TT31623SEN";
+import { generateVerificationToken, sendUserVerificationEmail } from "@/lib/email-verification";
 
 function isPoolLimitError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -35,7 +33,7 @@ export async function POST(request: Request) {
   let locale = "tr";
 
   try {
-    const { name, email, password, accessCode, locale: requestLocale = "tr", captchaToken } =
+    const { name, email, password, locale: requestLocale = "tr", captchaToken } =
       await request.json();
     locale = requestLocale === "en" ? "en" : "tr";
     const t = locale === "en"
@@ -43,8 +41,6 @@ export async function POST(request: Request) {
           required: "Email and password are required",
           weakPassword:
             "Password must be at least 8 characters and include at least 1 number and 1 special character",
-          accessCodeRequired: "Early access code is required",
-          invalidAccessCode: "Invalid early access code",
           existingUser: "This email address is already registered",
           created: "Account created",
           serverError: "Server error, please try again",
@@ -55,8 +51,6 @@ export async function POST(request: Request) {
           required: "Email ve şifre zorunludur",
           weakPassword:
             "Şifre en az 8 karakter olmalı; en az 1 sayı ve 1 özel karakter içermelidir",
-          accessCodeRequired: "Erken erişim kodu gereklidir",
-          invalidAccessCode: "Geçersiz erken erişim kodu",
           existingUser: "Bu e-posta adresi zaten kayıtlı",
           created: "Hesap oluşturuldu",
           serverError: "Sunucu hatası, lütfen tekrar deneyin",
@@ -86,31 +80,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: t.weakPassword }, { status: 400 });
     }
 
-    if (!accessCode) {
-      return NextResponse.json({ error: t.accessCodeRequired }, { status: 400 });
-    }
-
-    const normalizedCode = accessCode.toUpperCase();
-    const isValidFallbackCode = normalizedCode === EARLY_ACCESS_CODE;
-
-    let inviteCodeEntry = null;
-
-    if (!isValidFallbackCode) {
-      try {
-        inviteCodeEntry = await withDbRetry(() =>
-          prisma.waitlist.findFirst({
-            where: { inviteCode: normalizedCode },
-          })
-        );
-      } catch (lookupErr) {
-        console.error("Waitlist lookup failed, falling back to static code:", lookupErr);
-      }
-    }
-
-    if (!inviteCodeEntry && !isValidFallbackCode) {
-      return NextResponse.json({ error: t.invalidAccessCode }, { status: 400 });
-    }
-
     const existingUser = await withDbRetry(() =>
       prisma.user.findUnique({ where: { email } })
     );
@@ -119,28 +88,34 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = generateVerificationToken();
 
     const user = await withDbRetry(() =>
       prisma.user.create({
-        data: { email, name: name || email.split("@")[0], passwordHash },
+        data: {
+          email,
+          name: name || email.split("@")[0],
+          passwordHash,
+          preferredLocale: locale,
+          verificationToken,
+        },
       })
     );
 
-    if (inviteCodeEntry) {
-      withDbRetry(() =>
-        prisma.waitlist.update({
-          where: { id: inviteCodeEntry.id },
-          data: { inviteCodeUsedAt: new Date() },
-        })
-      )
-        .catch((err) => console.error("Failed to mark invite code as used:", err));
-    }
+    // Send verification email (non-blocking — don't fail signup if email fails)
+    sendUserVerificationEmail({
+      email: user.email,
+      name: user.name,
+      token: verificationToken,
+      locale,
+    }).catch((err) => console.error("[signup] Failed to send verification email:", err));
 
     return NextResponse.json(
       {
         message: t.created,
         userId: user.id,
-        loginBypassToken: createSignupBypassToken(email),
+        email: user.email,
+        requiresVerification: true,
       },
       { status: 201 }
     );

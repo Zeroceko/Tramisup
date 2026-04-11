@@ -16,6 +16,10 @@ vi.mock('bcryptjs', () => ({
   },
 }))
 
+vi.mock('@/lib/signup-bypass', () => ({
+  verifySignupBypassToken: vi.fn(() => false),
+}))
+
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -84,6 +88,14 @@ describe('Auth Module - authOptions', () => {
 
       expect(mockPrismaUser.findUnique).toHaveBeenCalledWith({
         where: { email: 'notfound@example.com' },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          passwordHash: true,
+          preferredLocale: true,
+          emailVerified: true,
+        },
       })
     })
 
@@ -124,6 +136,8 @@ describe('Auth Module - authOptions', () => {
         email: 'test@example.com',
         name: 'Test User',
         passwordHash: '$2a$10$hashedpassword',
+        preferredLocale: 'en',
+        emailVerified: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any)
@@ -138,6 +152,7 @@ describe('Auth Module - authOptions', () => {
         id: 'user-123',
         email: 'test@example.com',
         name: 'Test User',
+        preferredLocale: 'en',
       })
     })
 
@@ -147,6 +162,8 @@ describe('Auth Module - authOptions', () => {
         email: 'test@example.com',
         name: 'Test User',
         passwordHash: '$2a$10$hashedpassword',
+        preferredLocale: 'en',
+        emailVerified: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any)

@@ -9,6 +9,20 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
+vi.mock('@/lib/email-verification', () => ({
+  generateVerificationToken: vi.fn(() => 'fixed-token'),
+  sendWaitlistVerificationEmail: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/resend-waitlist', () => ({
+  syncWaitlistLeadToResend: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/recaptcha', () => ({
+  getRequestIp: vi.fn(() => null),
+  verifyRecaptchaToken: vi.fn(async () => ({ success: true })),
+}))
+
 import { POST } from '@/app/api/waitlist/join/route'
 import { prisma } from '@/lib/prisma'
 
@@ -120,6 +134,7 @@ describe('POST /api/waitlist/join', () => {
         name: 'Test User',
         source: 'landing',
         status: 'PENDING',
+        verificationToken: 'fixed-token',
       },
     })
   })

@@ -3,25 +3,50 @@ import TrackedLink from "@/components/analytics/TrackedLink";
 
 const COPY = {
   en: {
-    title: "Thanks, you're on the list.",
-    subtitle: "Your early-access request is in. We'll send your invite by email as soon as the next batch opens.",
-    boxTitle: "What happens next",
-    boxText: "Keep an eye on your inbox and spam folder. We'll reach out with access details and onboarding instructions.",
-    back: "Back to early access",
+    pending: {
+      title: "Confirm your email to keep your spot.",
+      subtitle: "We sent a confirmation email to the address you entered. Click the link there to lock in your waitlist spot.",
+      boxTitle: "What happens next",
+      boxText: "After you confirm, your spot is secured. When the next batch opens, we'll email you with access details.",
+      back: "Back to early access",
+    },
+    verified: {
+      title: "Your waitlist spot is confirmed.",
+      subtitle: "Your email is verified and your place in the next invite batches is secured.",
+      boxTitle: "What happens next",
+      boxText: "Keep an eye on your inbox and spam folder. We'll reach out with access details and onboarding instructions.",
+      back: "Back to early access",
+    },
   },
   tr: {
-    title: "Teşekkürler, listedesin.",
-    subtitle: "Erken erişim talebin alındı. Sıradaki davet grubu açıldığında sana email göndereceğiz.",
-    boxTitle: "Sırada ne var",
-    boxText: "Gelen kutunu ve spam klasörünü kontrol et. Erişim detaylarını ve onboarding adımlarını email ile paylaşacağız.",
-    back: "Erken erişim sayfasına dön",
+    pending: {
+      title: "Yerini korumak için e-postanı doğrula.",
+      subtitle: "Girdiğin adrese bir onay maili gönderdik. Waitlist yerini netleştirmek için içindeki bağlantıya tıkla.",
+      boxTitle: "Sırada ne var",
+      boxText: "Onayladıktan sonra yerin kesinleşir. Yeni davet grubu açıldığında erişim detaylarını sana e-posta ile yollarız.",
+      back: "Erken erişim sayfasına dön",
+    },
+    verified: {
+      title: "Waitlist yerin doğrulandı.",
+      subtitle: "E-posta adresin doğrulandı ve sıradaki davet grupları için yerin kesinleşti.",
+      boxTitle: "Sırada ne var",
+      boxText: "Gelen kutunu ve spam klasörünü kontrol et. Erişim detaylarını ve onboarding adımlarını email ile paylaşacağız.",
+      back: "Erken erişim sayfasına dön",
+    },
   },
 } as const;
 
-export default async function ThankYouPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function ThankYouPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ verified?: string }>;
+}) {
   const { locale: rawLocale } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const locale = rawLocale === "tr" ? "tr" : "en";
-  const copy = COPY[locale];
+  const copy = resolvedSearchParams.verified === "1" ? COPY[locale].verified : COPY[locale].pending;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#fffafc_0%,_#f5f7fb_100%)] px-4">

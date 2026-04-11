@@ -9,17 +9,19 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String?
-  passwordHash String
-  preferredLocale String  @default("en")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  products     Product[]
-  aiConnections AIConnection[]
-  subscription Subscription?
-  usageEvents   UsageEvent[]
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  passwordHash      String
+  preferredLocale   String    @default("en")
+  emailVerified     DateTime?
+  verificationToken String?   @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  products          Product[]
+  aiConnections     AIConnection[]
+  subscription      Subscription?
+  usageEvents       UsageEvent[]
 }
 
 model Subscription {
@@ -49,15 +51,17 @@ model UsageEvent {
 }
 
 model Waitlist {
-  id               String         @id @default(cuid())
-  email            String         @unique
-  name             String?
-  source           String         @default("landing")
-  status           WaitlistStatus @default(PENDING)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  inviteCode       String?        @unique
-  inviteCodeUsedAt DateTime?
+  id                String         @id @default(cuid())
+  email             String         @unique
+  name              String?
+  source            String         @default("landing")
+  status            WaitlistStatus @default(PENDING)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  inviteCode        String?        @unique
+  inviteCodeUsedAt  DateTime?
+  emailVerifiedAt   DateTime?
+  verificationToken String?        @unique
 
   @@index([email])
   @@index([status])
@@ -79,6 +83,8 @@ model Product {
   logoUrl           String?
   launchGoals       String?
   planMeta          String?
+  additionalContext String?
+  uploadedFiles     String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   activationFunnels ActivationFunnel[]
