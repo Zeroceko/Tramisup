@@ -112,9 +112,15 @@ export async function GET(request: Request) {
         if (tasks.high_priority_open > 0) {
           suggestions.push({
             label: isEn
-              ? `${tasks.high_priority_open} high-priority task(s) open — review and act`
-              : `${tasks.high_priority_open} yüksek öncelikli görev açık — incele ve harekete geç`,
-            intent: "ask",
+              ? `${tasks.high_priority_open} high-priority task(s) still open — close the top one`
+              : `${tasks.high_priority_open} yüksek öncelikli görev hâlâ açık — en kritik olanı kapat`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Close the top high-priority task for ${productName}`
+                : `${productName} için en kritik yüksek öncelikli görevi kapat`,
+              priority: "HIGH",
+            },
           });
         }
       } else {
@@ -124,9 +130,15 @@ export async function GET(request: Request) {
         if (tasks.in_progress > 0 && suggestions.length < 3) {
           suggestions.push({
             label: isEn
-              ? `${tasks.in_progress} task(s) in progress — what's blocking them?`
-              : `${tasks.in_progress} görev devam ediyor — sıkıştıran ne?`,
-            intent: "ask",
+              ? `${tasks.in_progress} task(s) in progress — find and remove what's blocking them`
+              : `${tasks.in_progress} görev devam ediyor — sıkıştıran şeyi bul ve kaldır`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Remove the blocker on in-progress tasks for ${productName}`
+                : `${productName}'deki devam eden görevlerin önündeki engeli kaldır`,
+              priority: "MEDIUM",
+            },
           });
         }
         if (tasks.done === 0 && tasks.total > 0 && suggestions.length < 3) {
@@ -216,43 +228,73 @@ export async function GET(request: Request) {
           suggestions.push(metricCard);
         }
 
-        // Card 2 — goalKey-specific question
+        // Card 2 — goalKey-specific action task
         if (suggestions.length < 3) {
           let goalCard: Suggestion;
           if (goalKey === "build_growth_rhythm") {
             goalCard = {
               label: isEn
-                ? `What does your current acquisition look like — where are users coming from?`
-                : `Şu anki edinim nasıl gidiyor — kullanıcılar nereden geliyor?`,
-              intent: "ask",
+                ? `Map current acquisition sources — understand where users are coming from`
+                : `Mevcut edinim kaynaklarını haritala — kullanıcıların nereden geldiğini netleştir`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Map current acquisition sources for ${productName}`
+                  : `${productName} için mevcut edinim kaynaklarını haritala`,
+                priority: "HIGH",
+              },
             };
           } else if (goalKey === "get_first_users") {
             goalCard = {
               label: isEn
-                ? `Who are your first 10 target users, and how are you reaching them?`
-                : `İlk 10 hedef kullanıcın kim, onlara nasıl ulaşıyorsun?`,
-              intent: "ask",
+                ? `List the first 10 target users and define how to reach each one`
+                : `İlk 10 hedef kullanıcıyı listele ve her birine nasıl ulaşacağını tanımla`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Identify and reach first 10 target users for ${productName}`
+                  : `${productName} için ilk 10 hedef kullanıcıyı belirle ve ulaş`,
+                priority: "HIGH",
+              },
             };
           } else if (goalKey === "get_first_revenue") {
             goalCard = {
               label: isEn
-                ? `Who is your most likely first paying customer right now?`
-                : `Şu an ödeme yapması en muhtemel ilk müşteri kim?`,
-              intent: "ask",
+                ? `Identify the single most likely first paying customer — and make contact`
+                : `İlk ödeme yapacak en muhtemel müşteriyi belirle ve iletişime geç`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Identify and contact the first paying customer prospect for ${productName}`
+                  : `${productName} için ilk ödeme yapacak müşteri adayını belirle ve iletişime geç`,
+                priority: "HIGH",
+              },
             };
           } else if (goalKey === "validate_product") {
             goalCard = {
               label: isEn
-                ? `What is the one assumption about ${productName} you still haven't validated?`
-                : `${productName} hakkında henüz doğrulayamadığın tek varsayım ne?`,
-              intent: "ask",
+                ? `Write down the key unvalidated assumption about ${productName} — then test it`
+                : `${productName} hakkındaki temel doğrulanmamış varsayımı yaz — sonra test et`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Validate the key unproven assumption about ${productName}`
+                  : `${productName} hakkındaki temel doğrulanmamış varsayımı test et`,
+                priority: "HIGH",
+              },
             };
           } else {
             goalCard = {
               label: isEn
-                ? `What is the single biggest thing blocking ${productName}'s growth right now?`
-                : `${productName}'in büyümesini şu an en çok engelleyen tek şey ne?`,
-              intent: "ask",
+                ? `Name the single biggest growth blocker for ${productName} — and remove it`
+                : `${productName}'in büyümesini engelleyen tek şeyi tanımla ve kaldır`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Remove the biggest growth blocker for ${productName}`
+                  : `${productName} için en büyük growth engelini kaldır`,
+                priority: "HIGH",
+              },
             };
           }
           suggestions.push(goalCard);
@@ -322,9 +364,15 @@ export async function GET(request: Request) {
       if (weakestCat && weakestRate < 100) {
         suggestions.push({
           label: isEn
-            ? `${weakestCat} is the weakest area (${Math.round(weakestRate)}%) — what needs to happen?`
-            : `${weakestCat} en zayıf alan (%${Math.round(weakestRate)}) — ne yapılmalı?`,
-          intent: "ask",
+            ? `${weakestCat} is the weakest area (${Math.round(weakestRate)}%) — advance the next item`
+            : `${weakestCat} en zayıf alan (%${Math.round(weakestRate)}) — sıradaki maddeyi ilerlet`,
+          intent: "create_task",
+          payload: {
+            title: isEn
+              ? `Advance ${weakestCat} launch items for ${productName} (currently at ${Math.round(weakestRate)}%)`
+              : `${productName} için ${weakestCat} launch maddelerini ilerlet (şu an %${Math.round(weakestRate)})`,
+            priority: "MEDIUM",
+          },
         });
       }
 
@@ -419,34 +467,58 @@ export async function GET(request: Request) {
         }
         suggestions.push(setupCard);
 
-        // Card 2 — goalKey-specific question
+        // Card 2 — goalKey-specific action task
         if (goalKey === "build_growth_rhythm") {
           suggestions.push({
             label: isEn
-              ? `What does your current acquisition look like — where are users coming from?`
-              : `Şu anki edinim nasıl gidiyor — kullanıcılar nereden geliyor?`,
-            intent: "ask",
+              ? `Map current acquisition sources — understand where users are coming from`
+              : `Mevcut edinim kaynaklarını haritala — kullanıcıların nereden geldiğini netleştir`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Map current acquisition sources for ${productName}`
+                : `${productName} için mevcut edinim kaynaklarını haritala`,
+              priority: "HIGH",
+            },
           });
         } else if (goalKey === "get_first_users") {
           suggestions.push({
             label: isEn
-              ? `Who are your first 10 target users, and how are you reaching them?`
-              : `İlk 10 hedef kullanıcın kim, onlara nasıl ulaşıyorsun?`,
-            intent: "ask",
+              ? `List the first 10 target users and define how to reach each one`
+              : `İlk 10 hedef kullanıcıyı listele ve her birine nasıl ulaşacağını tanımla`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Identify and reach first 10 target users for ${productName}`
+                : `${productName} için ilk 10 hedef kullanıcıyı belirle ve ulaş`,
+              priority: "HIGH",
+            },
           });
         } else if (goalKey === "get_first_revenue") {
           suggestions.push({
             label: isEn
-              ? `Who is your most likely first paying customer right now?`
-              : `Şu an ödeme yapması en muhtemel ilk müşteri kim?`,
-            intent: "ask",
+              ? `Identify the single most likely first paying customer — and make contact`
+              : `İlk ödeme yapacak en muhtemel müşteriyi belirle ve iletişime geç`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Identify and contact the first paying customer prospect for ${productName}`
+                : `${productName} için ilk ödeme yapacak müşteri adayını belirle ve iletişime geç`,
+              priority: "HIGH",
+            },
           });
         } else {
           suggestions.push({
             label: isEn
-              ? `What is the single biggest thing blocking ${productName}'s growth right now?`
-              : `${productName}'in büyümesini şu an en çok engelleyen tek şey ne?`,
-            intent: "ask",
+              ? `Name the single biggest growth blocker for ${productName} — and remove it`
+              : `${productName}'in büyümesini engelleyen tek şeyi tanımla ve kaldır`,
+            intent: "create_task",
+            payload: {
+              title: isEn
+                ? `Remove the biggest growth blocker for ${productName}`
+                : `${productName} için en büyük growth engelini kaldır`,
+              priority: "HIGH",
+            },
           });
         }
 
@@ -482,9 +554,15 @@ export async function GET(request: Request) {
           if (trend.prev !== null && trend.latest < trend.prev) {
             suggestions.push({
               label: isEn
-                ? `${key} dropped from ${trend.prev} to ${trend.latest} — investigate why`
-                : `${key} ${trend.prev}'den ${trend.latest}'e düştü — nedenini araştır`,
-              intent: "ask",
+                ? `${key} dropped from ${trend.prev} to ${trend.latest} — find and fix the cause`
+                : `${key} ${trend.prev}'den ${trend.latest}'e düştü — nedenini bul ve gider`,
+              intent: "create_task",
+              payload: {
+                title: isEn
+                  ? `Investigate why ${key} dropped from ${trend.prev} to ${trend.latest} for ${productName}`
+                  : `${productName}'de ${key} neden ${trend.prev}'den ${trend.latest}'e düştü — araştır ve çöz`,
+                priority: "HIGH",
+              },
             });
             break; // only surface the first declining metric
           }
@@ -509,9 +587,15 @@ export async function GET(request: Request) {
       if (entries >= 5) {
         suggestions.push({
           label: isEn
-            ? `What is the weakest AARRR stage for ${productName} right now?`
-            : `${productName} için şu an en zayıf AARRR aşaması hangisi?`,
-          intent: "ask",
+            ? `Identify the weakest AARRR stage for ${productName} and focus on it this week`
+            : `${productName} için en zayıf AARRR aşamasını belirle ve bu hafta ona odaklan`,
+          intent: "create_task",
+          payload: {
+            title: isEn
+              ? `Identify and address the weakest AARRR stage for ${productName}`
+              : `${productName} için en zayıf AARRR aşamasını belirle ve harekete geç`,
+            priority: "MEDIUM",
+          },
         });
       }
     }
