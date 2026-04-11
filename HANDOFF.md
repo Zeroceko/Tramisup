@@ -1,10 +1,10 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 12 April 2026  
-**Production:** `https://tiramisup.app`  
-**Repo:** GitHub (`main` auto-deploys to Vercel)  
-**Current live app release on `main`:** `80fbb9f5`  
-**Status:** Live, stable, recently updated, handoff-ready
+**Date:** 12 April 2026
+**Production:** `https://tiramisup.app`
+**Repo:** GitHub (`main` auto-deploys to Vercel)
+**Current live app release on `main`:** `93c8a82f`
+**Status:** Live, stable, handoff-ready
 
 ---
 
@@ -18,9 +18,9 @@ It has two active faces:
 
 Core product surfaces:
 - **Dashboard**: answers "what should I do next?"
-- **Tasks**: execution queue with structured task details and dedupe
-- **Pre-Launch**: checklist, blockers, readiness, launch prep flow
-- **Metrics**: AARRR setup, manual entry, source-backed trend tracking
+- **Tasks / Board**: execution queue
+- **Pre-Launch**: checklist, blockers, readiness — only visible to pre-launch products
+- **Metrics**: AARRR setup, manual entry, source-backed trend tracking — standalone nav item for launched products
 - **Growth**: diagnosis-led growth workflow for launched products
 - **Integrations**: GA4 / Stripe source connection setup
 - **Settings / Account**: profile, locale, product context, billing, security
@@ -35,55 +35,45 @@ Everything is product-scoped. A user can have multiple products, one active at a
 As of **12 April 2026**, these are true in production:
 
 - `tiramisup.app` is live and serving the current `main` line.
-- Public landing is still **waitlist-first**, not a fully open product homepage.
+- Public landing is still **waitlist-first**.
 - Signup no longer requires an early access code.
 - Signup and waitlist both use **email verification**.
 - Onboarding supports **file upload**, **Google Drive / URL context**, and **async plan generation**.
-- Locale preference is persisted to both DB and cookie, and settings-side language switching now redirects to the correct localized route.
+- Locale preference is persisted to both DB and cookie, and settings-side language switching redirects to the correct localized route.
 - Billing is still **fake checkout / demo activation**, not real Stripe payments.
 - AI guidance remains **stage-aware** and must not invent advice when evidence is weak.
+- **Nav is now stage-aware**: pre-launch products see Overview + Launch; launched/growing products see Overview + Metrics + Growth.
+- **Growth intake gate**: launched/growing products without a completed growth check-in are redirected to `/growth` before seeing the dashboard.
+- **Growth diagnosis is data-driven**: includes actual metric values (current, baseline, rate) and is locale-aware (EN/TR).
+- **Agent panel cards are all task-creation**: no more "ask"-intent cards that sent text to chat. Every card creates a task when clicked.
 
-Recent shipped commits now on the live line:
-- `39563b2f` - onboarding uploads and email verification flow
-- `7579757f` - Supabase storage lazy init for Vercel build safety
-- `d05b97be` - mobile-only onboarding guidance fix
-- `7c8bf648` - locale switch fix from settings/account
-- `80fbb9f5` - growth workflow hardening with intake-driven setup
+Recent shipped commits on the live line:
+- `93c8a82f` — agent panel all-task fix, remove ask intent
+- `470c1e58` — growth diagnosis data-driven + locale-aware, category labels translated
+- `8defc50f` — stage-aware nav, Metrics as standalone nav item, growth intake gate on dashboard
+- `80fbb9f5` — growth workflow hardening with intake-driven setup
+- `7c8bf648` — locale switch fix from settings/account
 
 ---
 
 ## 3. First-Day Setup
 
 ```bash
-# 1. Clone
 git clone <repo-url> && cd Tiramisup
-
-# 2. Install
 npm install
-
-# 3. Copy envs
-cp .env.example .env.local
-
-# 4. Generate Prisma client
 npx prisma generate
-
-# 5. Sync schema
 npx prisma db push
-
-# 6. Start dev server
 npm run dev
+```
 
-# 7. Verify
+Verify:
+```bash
 npx tsc --noEmit
 npx next build
 OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 ```
 
-Important local rule:
-- **Local dev runs on port `3002`**, not `3000`
-
-Why it matters:
-- Google and Stripe OAuth redirect settings are aligned to `localhost:3002`
+**Local dev runs on port `3002`** — Google and Stripe OAuth redirect settings are aligned to this port.
 
 ---
 
@@ -110,223 +100,105 @@ Why it matters:
 
 ### Layout shells
 
-There are two authenticated layout patterns:
+- **`AgentLayoutShell`**: left agent panel + right content — Dashboard, Pre-Launch, Growth
+- **`PlainPageShell`**: full-width — Settings, Metrics, Integrations, Account
 
-- **`AgentLayoutShell`**: left-side agent panel + right-side content, used on Dashboard / Pre-Launch / Growth
-- **`PlainPageShell`**: full-width content shell, used on Settings / Metrics / Integrations / Account-style pages
+### Nav structure (stage-aware)
 
-Both keep content constrained and intentionally calm.
+| Product status | Nav items shown |
+|---|---|
+| PRE_LAUNCH | Overview · Launch |
+| LAUNCHED / GROWING | Overview · Metrics · Growth |
+| No product | Overview only |
 
-### Locale structure
+Key file: `components/DashboardNav.tsx`
 
-All pages are locale-prefixed:
+### Growth intake gate
 
-```text
-/en/...
-/tr/...
+Launched/growing products that have not completed the growth check-in are redirected from `/dashboard` to `/growth`, which shows the intake form. The gate is in `app/[locale]/dashboard/page.tsx`.
+
+### Growth workspace modes
+
+```
+intake_needed → metric_setup_needed → baseline_needed → diagnosis_ready
 ```
 
-Locale persistence lives in two places:
-- `NEXT_LOCALE` cookie
-- `User.preferredLocale`
+Intake answers stored in `Product.additionalContext.growthCheckin`.
 
-Language can change from:
-- nav language switcher
-- settings/account language preference
+### Growth diagnosis
 
-### Product creation architecture
+`lib/funnel-health.ts` builds the funnel health summary:
+- Locale-aware (EN/TR) — accepts `locale` parameter
+- Data-driven: `nextFocus` text includes actual metric values, direction, and rate vs target
+- Called from both `app/[locale]/growth/page.tsx` and `app/[locale]/dashboard/page.tsx`
 
-Current onboarding flow is two-phase:
+### Agent panel (left sidebar)
 
-1. **Fast product creation**
-   - `POST /api/products`
-   - creates product + stores base onboarding context quickly
+`components/AgentChatPanel.tsx` — all suggestion cards use `createTaskFromSuggestion`:
+- Clicking any card creates a task immediately via `POST /api/actions`
+- No "ask"-intent cards remain — the panel is an "AI-suggested next actions" list
+- Suggestion content is product-specific and generated deterministically in `app/api/agent/suggestions/route.ts`
+- Chat input at the bottom is for free-form questions to the AI
 
-2. **Async plan generation**
-   - `POST /api/products/[id]/generate-plan`
-   - kicks off AI-backed plan generation
-   - `GET /api/products/[id]/plan-status`
-   - polled by onboarding UI until plan generation completes
+### Product creation (two-phase)
 
-This prevents the onboarding submit from feeling blocked by heavy AI work.
+1. `POST /api/products` — fast create
+2. `POST /api/products/[id]/generate-plan` — async AI plan generation
+3. `GET /api/products/[id]/plan-status` — polled until complete
 
-### Source/context ingestion
+### AI provider chain (must not change)
 
-Onboarding can now collect context from:
-- free-text founder answers
-- uploaded files
-- normal URLs
-- Google Drive URLs
-
-Key files:
-- `components/OnboardingWizard.tsx`
-- `app/api/upload/route.ts`
-- `lib/supabase-storage.ts`
-- `lib/extract-file-content.ts`
-- `lib/url-scraper.ts`
-
-### AI pipeline
-
-```text
-Onboarding intake
-  -> normalizeProductContext()
-  -> buildEvidenceMap()
-  -> getFounderCoachContext()
-  -> evidence-readiness gate
-  -> AI prompt
-  -> sanitize output
-  -> critic pass
-  -> structured recommendations / plan output
-```
-
-Provider priority must not change:
-1. Qwen
-2. DeepSeek
-3. Gemini
-4. Gemini backup
-5. static fallback
-
-### Auth and verification
-
-Current auth behavior:
-- Signup creates the user without a product
-- Signup sends verification email
-- Waitlist join sends verification email
-- Verify link lands through `/api/auth/verify-email`
-- Unverified credentials login is blocked
-- Resend verification endpoint exists
-
-Key files:
-- `app/api/auth/signup/route.ts`
-- `app/api/auth/verify-email/route.ts`
-- `app/api/auth/resend-verification/route.ts`
-- `app/api/waitlist/join/route.ts`
-- `app/[locale]/verify-email/page.tsx`
-- `lib/email-verification.ts`
-- `lib/auth.ts`
+1. Qwen (`qwen-plus`)
+2. DeepSeek (`deepseek-chat`)
+3. Gemini (`gemini-2.0-flash`, `GEMINI_API_KEY`)
+4. Gemini backup (`gemini-2.0-flash`, `GEMINI_API_KEY_2`)
+5. Static fallback — no crash
 
 ---
 
-## 6. What Was Recently Completed
-
-### Production stabilization and quality board
-
-All previously planned stabilization work is effectively complete:
-- Sprint 0 safety work
-- Sprint 1 founder-trust work
-- UX audit cleanups
-- Sprint 2 historical repair work
-- Sprint 3 quality loop
-- CEO audit fixes
-
-Treat those as **done**, not pending.
-
-### 11 April 2026 release line
-
-This is the meaningful new work on top of the earlier board:
-
-#### A. Signup and waitlist email verification
-- Early access code removed from signup flow
-- Signup now sends verification email
-- Waitlist join now sends verification email
-- Verify endpoint and resend endpoint are live
-- Login blocks unverified users
-- Verify-email page exists for invalid/used tokens
-
-#### B. Rich onboarding context intake
-- Supabase Storage upload route added
-- PDF / DOCX / image extraction support added
-- Google Drive URL support added to URL scraping
-- Onboarding wizard now supports file uploads and context links in a richer way
-
-#### C. Faster onboarding submit
-- Product creation split into:
-  - product create
-  - async plan generation
-  - plan-status polling
-- Wizard shows a more resilient loading / preparation flow
-
-#### D. Production fixes after release
-- Supabase storage client changed to lazy init so Vercel build does not crash when envs are absent at build time
-- Mobile-only launch guidance is no longer incorrectly shown to non-mobile web products
-- Settings/account locale change now correctly moves the user onto the new locale route
-
-### 12 April 2026 release line
-
-#### E. Growth workflow hardening
-- Growth now has explicit working modes:
-  - `intake_needed`
-  - `metric_setup_needed`
-  - `baseline_needed`
-  - `diagnosis_ready`
-- launched products no longer drop directly into a mixed growth workspace before context and setup are ready
-- a bounded growth intake now asks 3-5 product-specific questions before metric setup
-- growth intake answers are stored inside `Product.additionalContext`
-- Metrics setup now reads that context and slightly personalizes metric recommendations and setup copy
-- source guidance is lighter-weight and now behaves like a contextual note that routes into Integrations instead of a heavy inline block
-- Growth checklist now has stronger execution parity:
-  - structured `Why / Done when / Next action`
-  - expandable details
-  - direct task creation
-  - weak-link aware focus category
-
-Key files for this release:
-- `app/[locale]/growth/page.tsx`
-- `app/[locale]/metrics/page.tsx`
-- `app/[locale]/integrations/page.tsx`
-- `app/api/products/[id]/growth-intake/route.ts`
-- `components/GrowthChecklistSection.tsx`
-- `components/GrowthTransitionCheckin.tsx`
-- `components/MetricSetupSelector.tsx`
-- `components/GrowthIntegrationRecommendations.tsx`
-- `components/IntegrationsWorkspace.tsx`
-- `lib/growth-transition-checkin.ts`
-- `lib/growth-metric-recommendations.ts`
-- `docs/growth-transition-checkin-spec.md`
-
----
-
-## 7. Rules That Must Not Break
+## 6. Rules That Must Not Break
 
 1. **No fake product on signup.** Product data begins only after onboarding.
-2. **Launched products must not get pre-launch language.**
+2. **Launched products must not get pre-launch language or nav.**
 3. **Growth must stay diagnosis-led, not generic startup advice.**
 4. **Metric entry must stay tied to configured metrics.**
 5. **AI must not speculate without evidence.**
 6. **User-written product description remains central context.**
 7. **English is the master locale.** Default is `en`.
 8. **`HIGH` priority means a true blocker only.**
-9. **Recommendation cards create actions/tasks, not fake chat.**
-10. **Public landing remains waitlist-first unless product explicitly decides otherwise.**
-11. **Agent prompts stay in English internally; user-facing output follows locale.**
-12. **Billing is not real payments yet. Do not present it as complete Stripe commerce.**
+9. **Agent panel cards create tasks — they do not open chat.**
+10. **Public landing remains waitlist-first unless explicitly decided otherwise.**
+11. **Billing is not real payments. Do not present it as complete Stripe commerce.**
 
 ---
 
-## 8. Database and Schema Reality
+## 7. Known Debt
 
-Current schema already includes live support for:
+- **Billing**: still fake checkout / demo activation
+- **i18n gaps**: some authenticated copy still has hardcoded strings
+- **Roadmap integrations**: RevenueCat, App Store Connect, Google Play Console, ads connectors are UI-first only
+- **`Product.launchGoals`**: legacy field, do not build new logic on it
+- **"Launch to Growth" tagline**: shown in the logo/nav — misleading for users who already launched. Needs product decision.
+- **Dashboard first impression**: what a user sees on first login after onboarding is still not sharp enough. Needs product work.
 
-- `Product.additionalContext`
-- `Product.additionalContext.growthCheckin` envelope on the live line
+---
+
+## 8. Database and Schema
+
+Current schema includes live support for:
+- `Product.additionalContext` — including `growthCheckin` envelope
 - `Product.uploadedFiles`
 - `Product.planMeta`
-- `User.emailVerified`
-- `User.verificationToken`
-- `Waitlist.emailVerifiedAt`
-- `Waitlist.verificationToken`
-- structured task columns and `TaskEvent`
+- `User.emailVerified` / `User.verificationToken`
+- `Waitlist.emailVerifiedAt` / `Waitlist.verificationToken`
+- `MetricSetup` / `MetricEntry` tables
+- Structured task columns and `TaskEvent`
 
-Important operational note:
-- this repo historically relied on `prisma db push`, not a pristine migration history
-- if a new environment is created, the fastest safe path is:
-
+For a new environment:
 ```bash
 npx prisma generate
 npx prisma db push
 ```
-
-For production, the current live database is already aligned with the shipped code.
 
 ---
 
@@ -345,8 +217,8 @@ NEXTAUTH_URL
 NEXT_PUBLIC_APP_URL
 
 # Database
-DATABASE_URL
-DIRECT_URL
+DATABASE_URL        # PgBouncer — port 6543
+DIRECT_URL          # Direct Postgres — port 5432
 
 # Email
 RESEND_API_KEY
@@ -354,7 +226,7 @@ RESEND_FROM_EMAIL
 
 # Supabase
 SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_SERVICE_ROLE_KEY   # required for upload flow
 
 # OAuth
 GOOGLE_CLIENT_ID
@@ -366,7 +238,7 @@ STRIPE_WEBHOOK_SECRET
 STRIPE_REDIRECT_URI
 OAUTH_CALLBACK_BASE_URL
 
-# Analytics / bot protection
+# Analytics / protection
 NEXT_PUBLIC_GA_MEASUREMENT_ID
 RECAPTCHA_ENABLED
 NEXT_PUBLIC_RECAPTCHA_ENABLED
@@ -374,120 +246,35 @@ NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 RECAPTCHA_SECRET_KEY
 ```
 
-Important notes:
-- `DATABASE_URL` must be the Supabase **PgBouncer** connection
-- `DIRECT_URL` must be the direct Postgres connection
-- `SUPABASE_SERVICE_ROLE_KEY` is required for server-side uploads
-- early access / access-code env is no longer part of the signup flow
+---
+
+## 10. Pre-Release Smoke Checklist
+
+Before shipping any meaningful change:
+
+- [ ] `npx tsc --noEmit` passes
+- [ ] `npx next build` passes
+- [ ] `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` — all pass
+- [ ] `/en` and `/tr` both load
+- [ ] Signup → email verify → login flow works
+- [ ] Waitlist join → email verify flow works
+- [ ] Onboarding creates product, file upload works, async plan generates
+- [ ] Pre-launch product sees Overview + Launch in nav (not Metrics/Growth)
+- [ ] Launched/growing product sees Overview + Metrics + Growth in nav (not Launch)
+- [ ] Launched product without growth check-in redirects from dashboard to `/growth`
+- [ ] Settings/account language change moves to the correct locale route
+- [ ] Non-mobile web products do not get App Store / Google Play guidance
+- [ ] Agent panel cards create tasks when clicked — not chat messages
 
 ---
 
-## 10. Known Debt and Open Bets
+## 11. Access Transfer Checklist
 
-These are the main non-emergency follow-ups for the next team:
-
-- **Real billing**: current checkout flow still behaves as demo activation
-- **Some authenticated copy**: a few screens still carry hardcoded strings rather than clean next-intl coverage
-- **Roadmap integrations**: RevenueCat, App Store Connect, Google Play Console, ads connectors are not fully wired
-- **`Product.launchGoals`**: still a legacy field carrying onboarding goal context, not the long-term source of truth
-- **TaskEvent visibility**: telemetry exists, but there is no strong product-facing analytics UI for it yet
-- **Growth transition**: the new intake/setup/baseline separation is live, but founder-style manual walkthroughs should still be done after meaningful future changes
-
-These are product bets, not production fires.
-
----
-
-## 11. Verification Commands
-
-```bash
-npx tsc --noEmit
-npx next build
-OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
-npm run verify:deploy
-npm run release:signoff
-```
-
-If local Next gets flaky:
-
-```bash
-rm -rf .next
-npm run dev
-```
-
----
-
-## 12. Pre-Release Smoke Checklist
-
-Before shipping any meaningful change, verify:
-
-- `/en` and `/tr` both load
-- signup works and sends verification mail
-- login blocks unverified users and resend flow works
-- waitlist join works and verification flow works
-- onboarding creates a product successfully
-- onboarding file upload works
-- onboarding async plan generation completes
-- non-mobile web products do not get App Store / Google Play launch advice
-- settings/account language change actually moves to the new locale route
-- dashboard shows stage-appropriate next action
-- pre-launch / growth split is correct for the product stage
-- metrics and integrations pages load without hydration or auth regressions
-
----
-
-## 13. Recommended Reading Order
-
-Read these in order:
-
-1. `HANDOFF.md`
-2. `CLAUDE.md`
-3. `docs/handoff.md`
-4. `docs/team-handoff-prompt.md`
-5. `docs/production-stabilization-board.md`
-6. `docs/ai-agent-system-playbook.md`
-7. `docs/product-intake-question-playbook.md`
-8. `docs/internal-growth-rules.md`
-9. `docs/growth-tactics-layer.md`
-10. `docs/growth-transition-checkin-spec.md`
-
----
-
-## 14. Access Transfer Checklist
-
-Transfer these before full ownership handoff:
-
-### Infrastructure
 - GitHub repo access
-- Vercel project access
-- Supabase project access
-- Google Cloud Console access
+- Vercel project access (`zerocekos-projects/tramisup`)
+- Supabase project access (`ojecebxxcbxrofnbkaae`, eu-west-3)
+- Google Cloud Console access (OAuth)
 - Stripe Dashboard access
 - Resend account access
-- domain / DNS access for `tiramisup.app`
-
-### Production secrets
-- all Vercel production environment variables
-- confirmation of active OAuth callback URLs
-- confirmation of Resend sender/domain status
-- confirmation of Supabase Storage bucket existence and policy health
-
-### Operational context
-- current production baseline is `7c8bf648`
-- `main` auto-deploys to Vercel
-- `external/streamlined-solutions` is a nested repo and should be ignored during app work
-
----
-
-## 15. Immediate Advice For The Next Team
-
-If a new team starts tomorrow, the right first moves are:
-
-1. verify local setup
-2. walk the full founder journey in both locales
-3. inspect the live billing path and decide whether to keep fake checkout or replace it with real Stripe
-4. review onboarding quality using realistic product inputs
-5. keep all new AI or onboarding changes aligned with:
-   - `docs/ai-agent-system-playbook.md`
-   - `docs/product-intake-question-playbook.md`
-
-The system is no longer in rescue mode. The next team should treat it as a live product that needs careful product-led iteration, not broad architectural churn.
+- Domain / DNS access for `tiramisup.app`
+- All Vercel production environment variables
