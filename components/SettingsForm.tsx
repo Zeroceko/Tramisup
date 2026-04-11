@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isStrongPassword } from "@/lib/password-rules";
@@ -66,6 +66,8 @@ export default function SettingsForm({
   activeSection?: SettingsSectionKey;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -286,7 +288,11 @@ export default function SettingsForm({
 
       setSuccess(copy.success);
       if (formData.preferredLocale && formData.preferredLocale !== locale) {
-        router.push(`/${formData.preferredLocale}/settings`);
+        const localizedPath = pathname.startsWith(`/${locale}`)
+          ? pathname.replace(`/${locale}`, `/${formData.preferredLocale}`)
+          : `/${formData.preferredLocale}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+        const query = searchParams.toString();
+        window.location.assign(query ? `${localizedPath}?${query}` : localizedPath);
         return;
       }
       router.refresh();
