@@ -128,12 +128,13 @@ function inferContext(input: WizardInput) {
   const launchStage = (input.launchStatus ?? "").toLowerCase();
   const isLaunched = ["yayında", "büyüme aşamasında"].includes(launchStage);
   const platforms = Array.from(new Set(input.mobilePlatforms ?? []));
+  const mobilePlatforms = platforms.filter((platform) => ["iOS", "Android"].includes(platform));
   const haystack = `${input.category ?? ""} ${input.targetAudience ?? ""} ${input.businessModel ?? ""} ${input.description ?? ""} ${input.websiteContent ?? ""}`.toLowerCase();
 
   return {
     launchStage,
     isLaunched,
-    isMobile: platforms.length > 0 || /mobil uygulama|mobile app|app store|play store|ios|android/.test(haystack),
+    isMobile: mobilePlatforms.length > 0 || /mobil uygulama|mobile app|app store|play store|ios|android/.test(haystack),
     platforms,
     isB2B: /team|teams|business|b2b|saas|company|startup|ekip|işletme/.test(haystack),
     isContent: /content|newsletter|media|community|creator|blog/.test(haystack),

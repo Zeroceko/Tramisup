@@ -30,6 +30,10 @@ function pick(locale: string | undefined, en: string, tr: string) {
   return locale === "en" ? en : tr;
 }
 
+function getMobilePlatforms(platforms: string[]) {
+  return platforms.filter((platform) => ["iOS", "Android"].includes(platform));
+}
+
 /**
  * Builds a founder summary enriched with real metric data from the database.
  * When called during product creation (no productId yet), it operates in
@@ -44,6 +48,7 @@ export async function buildFounderSummary(
   const categories = splitList(input.category);
   const audiences = splitList(input.targetAudience);
   const platforms = input.mobilePlatforms ?? [];
+  const mobilePlatforms = getMobilePlatforms(platforms);
   const launchItems = aiPlan?.launchChecklist.slice(0, 2).map((item) => item.title) ?? [];
   const growthItems = aiPlan?.growthChecklist.slice(0, 2).map((item) => item.title) ?? [];
   const tasks = aiPlan?.tasks.slice(0, 2).map((item) => item.title) ?? [];
@@ -71,8 +76,8 @@ export async function buildFounderSummary(
     audiences.length
       ? pick(locale, `The primary audience is clearly defined as ${toNaturalList(audiences)}.`, `Ana hedef kitle ${toNaturalList(audiences)} olarak netleşmiş durumda.`)
       : null,
-    platforms.length
-      ? pick(locale, `Mobile distribution is also prepared for ${toNaturalList(platforms)}.`, `Mobil dağıtım hedefi ${toNaturalList(platforms)} için ayrıca hazırlandı.`)
+    mobilePlatforms.length
+      ? pick(locale, `Mobile distribution is also prepared for ${toNaturalList(mobilePlatforms)}.`, `Mobil dağıtım hedefi ${toNaturalList(mobilePlatforms)} için ayrıca hazırlandı.`)
       : null,
     input.businessModel
       ? pick(locale, `The revenue model is defined as ${input.businessModel.toLowerCase()}.`, `Gelir modeli ${input.businessModel.toLowerCase()} tarafında tanımlı.`)
@@ -153,7 +158,7 @@ export async function buildFounderSummary(
     }
   } else if (isLaunched) {
     nextStep = pick(locale, "Choose one core metric for each category on the Growth setup screen.", "Growth setup ekranında her kategori için tek ana metrik seç.");
-  } else if (platforms.length) {
+  } else if (mobilePlatforms.length) {
     nextStep = pick(locale, "On the pre-launch screen, close the App Store and Google Play requirements with the critical checklist items.", "Pre-launch ekranında App Store ve Google Play gereksinimlerini kritik maddelerle birlikte kapat.");
   } else {
     nextStep = pick(locale, "Start with the first critical prep items on the pre-launch screen.", "Pre-launch ekranında ilk kritik hazırlık maddelerine başla.");
