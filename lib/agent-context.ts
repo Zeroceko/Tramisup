@@ -28,19 +28,38 @@ export interface AgentContext {
 // ─── Overview Agent ──────────────────────────────────────────────────────────
 
 async function buildOverviewContext(productId: string): Promise<string> {
-  const [product, tasks, checklist] = await Promise.all([
-    prisma.product.findUnique({
-      where: { id: productId },
-      select: { name: true, description: true, status: true, launchGoals: true },
-    }),
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { name: true, description: true, status: true, launchGoals: true },
+  });
+
+  const isPreLaunch = product?.status === "PRE_LAUNCH";
+
+  const [tasks, checklist, metricSetup, recentEntries] = await Promise.all([
     prisma.task.findMany({
       where: { productId },
       select: { status: true, priority: true },
     }),
-    prisma.launchChecklist.findMany({
-      where: { productId },
-      select: { completed: true, priority: true },
-    }),
+    isPreLaunch
+      ? prisma.launchChecklist.findMany({
+          where: { productId },
+          select: { completed: true, priority: true },
+        })
+      : Promise.resolve([]),
+    isPreLaunch
+      ? Promise.resolve(null)
+      : prisma.metricSetup.findFirst({
+          where: { productId },
+          select: { selections: true },
+        }),
+    isPreLaunch
+      ? Promise.resolve([])
+      : prisma.metricEntry.findMany({
+          where: { productId },
+          orderBy: { date: "desc" },
+          take: 7,
+          select: { values: true },
+        }),
   ]);
 
   const totalTasks = tasks.length;
@@ -50,11 +69,51 @@ async function buildOverviewContext(productId: string): Promise<string> {
     (t) => t.priority === "HIGH" && t.status !== "DONE"
   ).length;
 
-  const totalChecklist = checklist.length;
-  const doneChecklist = checklist.filter((c) => c.completed).length;
-  const highBlockers = checklist.filter(
-    (c) => normalizeLaunchChecklistPriority(c) === "HIGH" && !c.completed
-  ).length;
+  if (isPreLaunch) {
+    const totalChecklist = checklist.length;
+    const doneChecklist = checklist.filter((c) => c.completed).length;
+    const highBlockers = checklist.filter(
+      (c) => normalizeLaunchChecklistPriority(c) === "HIGH" && !c.completed
+    ).length;
+
+    return JSON.stringify({
+      product_status: product?.status ?? "unknown",
+      tasks: {
+        total: totalTasks,
+        done: doneTasks,
+        in_progress: inProgressTasks,
+        high_priority_open: highPriorityOpen,
+      },
+      launch_checklist: {
+        total: totalChecklist,
+        completed: doneChecklist,
+        completion_rate:
+          totalChecklist > 0
+            ? Math.round((doneChecklist / totalChecklist) * 100)
+            : 0,
+        high_blockers_remaining: highBlockers,
+      },
+    });
+  }
+
+  // LAUNCHED / GROWING — return growth-focused context, no launch checklist
+  const selections = metricSetup?.selections as { metricKey?: string }[] | null;
+  const selectedMetricKeys = Array.isArray(selections)
+    ? selections.map((s) => s.metricKey).filter(Boolean)
+    : [];
+
+  const metricTrends: Record<string, { latest: number; prev: number | null }> = {};
+  for (const entry of recentEntries) {
+    const vals = entry.values as Record<string, number>;
+    for (const [key, value] of Object.entries(vals)) {
+      if (typeof value !== "number") continue;
+      if (!metricTrends[key]) {
+        metricTrends[key] = { latest: value, prev: null };
+      } else if (metricTrends[key].prev === null) {
+        metricTrends[key].prev = value;
+      }
+    }
+  }
 
   return JSON.stringify({
     product_status: product?.status ?? "unknown",
@@ -64,15 +123,12 @@ async function buildOverviewContext(productId: string): Promise<string> {
       in_progress: inProgressTasks,
       high_priority_open: highPriorityOpen,
     },
-    launch_checklist: {
-      total: totalChecklist,
-      completed: doneChecklist,
-      completion_rate:
-        totalChecklist > 0
-          ? Math.round((doneChecklist / totalChecklist) * 100)
-          : 0,
-      high_blockers_remaining: highBlockers,
+    metric_setup: {
+      has_setup: !!metricSetup,
+      selected_metrics: selectedMetricKeys,
     },
+    recent_metric_trends: metricTrends,
+    data_entries_last_7_days: recentEntries.length,
   });
 }
 
