@@ -1,9 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Supabase storage env vars are missing.");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 export async function uploadProductFile(
   userId: string,
@@ -12,6 +18,7 @@ export async function uploadProductFile(
   buffer: Buffer,
   mimeType: string,
 ): Promise<{ path: string; url: string }> {
+  const supabaseAdmin = getSupabaseAdmin();
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${userId}/${productId}/${Date.now()}-${safeName}`;
   const { error } = await supabaseAdmin.storage
@@ -23,6 +30,7 @@ export async function uploadProductFile(
 }
 
 export async function getFileBuffer(path: string): Promise<Buffer> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.storage
     .from("product-uploads")
     .download(path);
