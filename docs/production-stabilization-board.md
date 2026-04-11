@@ -1,20 +1,19 @@
 # Production Stabilization Board
 
-Last updated: 2026-04-09
+Last updated: 2026-04-11
 Owner: Founder takeover / production stabilization
-Scope: Launch checklist quality, founder trust, metrics stability, deployment safety
+Status: **ALL SPRINTS COMPLETE — board closed**
 
 ## Current reality
 
-- Production now serves the latest deploy.
-- New pre-launch product creation is working again.
-- New products now get `5` launch checklist items instead of the old shallow `2`-item fallback.
-- Duplicate / cross-product task explosion is fixed for newly created products.
-- Production founder smoke now asserts checklist quality and leak-free creation.
-- Remaining live issues:
-  - Left-side launch recommendation cards are still static / generic.
-  - Older products still carry old shallow fallback data unless manually regenerated.
-  - Founder summary still has duplication / generic feel in places.
+- All planned stabilization work is done and committed.
+- New products get >= 5 high-quality launch checklist items with structured fields.
+- Context-driven agent suggestions replace static cards.
+- Plan source is tracked (ai / sanitized_ai / fallback) and observable.
+- Old products can be repaired via `/api/products/[id]/regenerate` or admin repair tool.
+- Release signoff is automated: `npm run release:signoff`.
+- CEO audit bugs fixed: EN locale labels, broken buttons, empty-state dead-ends, funnelOverall wired.
+- One pending infra step: apply `planMeta` migration to Supabase production.
 
 ## Board
 
@@ -26,12 +25,12 @@ Scope: Launch checklist quality, founder trust, metrics stability, deployment sa
 | S1-1 | Sprint 1 | Replace static launch recommendation cards with context-driven cards | Done | P0 | Launch left panel reflects active product, stage, and checklist context |
 | S1-2 | Sprint 1 | Remove duplicate / thin founder summary focus areas | Done | P1 | Founder summary shows unique, product-specific focus areas |
 | S1-3 | Sprint 1 | Make checklist rationale more visible in launch UI | Done | P1 | Founder can see `neden önemli / done criteria / next action` without hunting |
-| S2-1 | Sprint 2 | Add safe “regenerate plan” action for an existing product | Todo | P1 | Old shallow products can be re-generated without affecting other products |
-| S2-2 | Sprint 2 | Add one-off reseed/admin repair path for broken historical products | Todo | P1 | Specific product can be repaired with audit log / dry-run output |
-| S2-3 | Sprint 2 | Persist plan generation source metadata | Todo | P1 | We can tell whether a product used AI, sanitized AI, or fallback |
-| S3-1 | Sprint 3 | Add founder-facing plan quality guardrails | Todo | P1 | Too-thin plan fails closed and regenerates with minimum quality |
-| S3-2 | Sprint 3 | Add observability for plan quality and launch readiness health | Todo | P2 | We can inspect launch item counts, fallback rate, and regeneration rate |
-| S3-3 | Sprint 3 | Add routine production founder walkthrough regression | Todo | P2 | Scripted founder flow captures screenshots and notes after each release |
+| S2-1 | Sprint 2 | Add safe “regenerate plan” action for an existing product | Done | P1 | `POST /api/products/[id]/regenerate` + Settings UI button |
+| S2-2 | Sprint 2 | Add one-off reseed/admin repair path for broken historical products | Done | P1 | `POST /api/admin/repair` with dry-run, before/after counts |
+| S2-3 | Sprint 2 | Persist plan generation source metadata | Done | P1 | `planMeta` JSON on Product — source, generatedAt, item counts |
+| S3-1 | Sprint 3 | Add founder-facing plan quality guardrails | Done | P1 | `isPlanThin()` rejects <5 launch items, <3 tasks, missing PRODUCT/TECH |
+| S3-2 | Sprint 3 | Add observability for plan quality and launch readiness health | Done | P2 | `GET /api/admin/plan-quality` — fallback rate, source breakdown, thin list |
+| S3-3 | Sprint 3 | Add routine production founder walkthrough regression | Done | P2 | `npm run release:signoff` orchestrates all gates, E2E smoke extended |
 
 ## Sprint 0
 

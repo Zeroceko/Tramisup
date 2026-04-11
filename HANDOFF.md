@@ -1,6 +1,6 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 10 April 2026
+**Date:** 11 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (main branch auto-deploys to Vercel)
 **Status:** Live, stable, handoff-ready
@@ -151,7 +151,7 @@ Task completion can auto-complete linked checklist items and trigger milestone f
 
 ---
 
-## 5. Completed Work (Sprints 0, 1, UX Audit)
+## 5. Completed Work (All Sprints)
 
 ### Sprint 0 - Production Safety (Done)
 - **S0-1** Post-deploy smoke flow for product creation
@@ -159,40 +159,47 @@ Task completion can auto-complete linked checklist items and trigger milestone f
 - **S0-3** Metrics hydration fix (#418)
 
 ### Sprint 1 - Founder Trust (Done)
-- **S1-1** Static recommendation cards replaced with context-driven cards
+- **S1-1** Static recommendation cards replaced with context-driven cards from `/api/agent/suggestions`
 - **S1-2** Founder summary deduplication via `tasksAreNearDuplicate`
 - **S1-3** Checklist rationale visibility (Why / Done when / Next action inline hints)
 
-### UX Audit Fixes (Done)
-- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points
-- Dashboard: "Workspace pulse" filler card removed
+### UX Audit (Done)
+- Dashboard: stat cards reduced to 3, empty chart hidden when < 3 data points, "Workspace pulse" removed
 - Metrics: trend chart requires >= 5 entries to show
-- Growth: pre-launch state simplified to single centered message
-- Growth: empty sections (Goals, Routines, Timeline, Tactics) hidden when no data
-- Growth: source recommendations collapsed to single compact row
-- Goals: verbose "Tracked areas" hint removed
-- Agent panel: removed robotic initial greeting, shows skeleton loader then dynamic suggestions
-- Site-wide: max-width constraint added to both layout shells
+- Growth: pre-launch state simplified, empty sections hidden when no data
+- Agent panel: removed robotic greeting, shows skeleton then dynamic suggestions
+- Site-wide: max-width constraint on both layout shells
+
+### Sprint 2 - Historical Product Repair (Done)
+- **S2-1** `POST /api/products/[id]/regenerate` — safe per-product plan rebuild, preserves completed items. Settings page has "Regenerate plan" button.
+- **S2-2** `POST /api/admin/repair` — dry-run mode, before/after counts, max 10 products per call
+- **S2-3** `planMeta` field on Product — persists `source` (ai/sanitized_ai/fallback), `generatedAt`, item counts on every seed
+
+### Sprint 3 - Quality Loop (Done)
+- **S3-1** `isPlanThin()` guard — rejects plans with <5 launch items, <3 tasks, or missing PRODUCT/TECH categories
+- **S3-2** `GET /api/admin/plan-quality` — fallback rate, source breakdown, thin product list, launch count buckets
+- **S3-3** `npm run release:signoff` — orchestrates all pre-release gates (tsc, vitest, build, verify:deploy, E2E smoke)
+
+### CEO Audit Fixes (Done)
+- `ChecklistSection`: English category labels added (was showing Turkish in EN locale)
+- `ChecklistSection`: Non-functional `+` and `⋮` buttons removed, replaced with done/total counter
+- `tasks/page.tsx`: Added CTA link to `/onboarding` on no-product empty state (was a dead-end)
+- `GoalsSection`: Empty state now explains what goals do instead of generic "No goals yet"
+- `dashboard/page.tsx`: `funnelOverall` wired to `buildFunnelHealthSummary` (TODO removed)
+
+Full details: `docs/production-stabilization-board.md`
 
 ---
 
-## 6. Remaining Work (Sprints 2 & 3)
+## 6. Remaining Work
 
-### Sprint 2 - Historical Product Repair (Todo)
-| ID | Item | Priority |
-|---|---|---|
-| S2-1 | Safe "regenerate plan" action for existing products | P1 |
-| S2-2 | One-off admin repair path for broken historical products | P1 |
-| S2-3 | Persist plan generation source metadata (ai/sanitized_ai/fallback) | P1 |
+**All planned sprints are complete.** The board is clear. Next work should be product-driven, not stabilization-driven.
 
-### Sprint 3 - Quality Loop (Todo)
-| ID | Item | Priority |
-|---|---|---|
-| S3-1 | Minimum plan quality guard (reject thin plans) | P1 |
-| S3-2 | Observability for plan quality and fallback rates | P2 |
-| S3-3 | Routine founder walkthrough regression script | P2 |
-
-Full details: `docs/production-stabilization-board.md`
+Suggested next bets (not committed):
+- Real billing integration (currently Stripe is demo mode)
+- Remove remaining TR-first hardcoded copy in authenticated screens
+- RevenueCat / App Store Connect integration (UI exists, backend not wired)
+- `Product.launchGoals` field retirement (legacy — see technical debt)
 
 ---
 
@@ -311,8 +318,14 @@ OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 # Deploy verification against production
 npm run verify:deploy
 
+# Full pre-release signoff (runs all gates in sequence)
+npm run release:signoff
+
 # E2E (needs dev server running on :3002)
 npx playwright test --config=playwright-waitlist.config.ts
+
+# Prod E2E founder smoke (needs credentials)
+E2E_EMAIL=x@x.com E2E_PASSWORD=xxx npx playwright test --config playwright-prod.config.ts prod-founder-takeover
 
 # If dev becomes flaky
 rm -rf .next && npm run dev
@@ -356,18 +369,51 @@ Read these in order to understand the full system:
 
 ## 14. Access Transfer Checklist
 
-Transfer these to the new team:
+Transfer these to the new team before handing over:
 
-- [ ] GitHub repo access (collaborator or transfer)
+### Accounts & Infra
+- [ ] GitHub repo access (collaborator or ownership transfer)
 - [ ] Vercel project access (`zerocekos-projects/tramisup`)
 - [ ] Supabase project access (`ojecebxxcbxrofnbkaae`, eu-west-3)
-- [ ] Google Cloud Console (OAuth client for GA4)
+- [ ] Google Cloud Console (OAuth client for GA4 integration)
 - [ ] Stripe Dashboard (Connect app + API keys)
-- [ ] Resend account (email sending)
+- [ ] Resend account (email sending — forgot-password + waitlist)
 - [ ] Domain DNS (`tiramisup.app`)
-- [ ] All `.env` values from Vercel production settings
 
-**Supabase note:** Free tier pauses after 7 days of inactivity. Resume from supabase.com/dashboard if needed.
+### Environment Variables
+Share all values from Vercel production settings:
+```
+QWEN_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, GEMINI_API_KEY_2
+NEXTAUTH_SECRET, NEXTAUTH_URL, ACCESS_CODE
+DATABASE_URL, DIRECT_URL
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_REDIRECT_URI
+OAUTH_CALLBACK_BASE_URL
+RESEND_API_KEY, RESEND_FROM_EMAIL
+NEXT_PUBLIC_GA_MEASUREMENT_ID
+RECAPTCHA_ENABLED, NEXT_PUBLIC_RECAPTCHA_ENABLED, NEXT_PUBLIC_RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY
+NEXT_PUBLIC_APP_URL
+```
+
+### One-time Migration (run once after takeover)
+The `planMeta` column was added to the `Product` table. Apply it to production:
+
+**Option A — Supabase Dashboard → SQL Editor:**
+```sql
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "planMeta" TEXT;
+```
+
+**Option B — CLI with direct connection:**
+```bash
+DIRECT_URL=<supabase-direct-url> npx prisma migrate deploy
+```
+
+After running, verify with:
+```bash
+npm run release:signoff --skip-build
+```
+
+**Supabase note:** Free tier pauses after 7 days of inactivity. Resume from supabase.com/dashboard if DB is unreachable.
 
 ---
 
