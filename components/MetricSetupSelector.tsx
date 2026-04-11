@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { GrowthMetricPlan, FunnelSection, FunnelMetricRecommendation } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
 import { getStageAutomationGuides } from "@/lib/integration-recommendations";
+import type { GrowthCheckinSetupContext } from "@/lib/growth-transition-checkin";
 
 // --- Types ---
 
@@ -352,12 +353,14 @@ export default function MetricSetupSelector({
   initialSetup,
   locale,
   connectedProviders,
+  setupContext,
 }: {
   productId: string;
   plan: GrowthMetricPlan;
   initialSetup: SavedMetricSetup | null;
   locale: string;
   connectedProviders: string[];
+  setupContext?: GrowthCheckinSetupContext | null;
 }) {
   const router = useRouter();
   const isEn = locale === "en";
@@ -516,7 +519,7 @@ export default function MetricSetupSelector({
       {/* Header */}
       <div className="mb-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-          {isEn ? "Growth = what will we track?" : "Growth = neyi takip edeceğiz?"}
+          {isEn ? "Growth = what will we track?" : "Growth için neyi takip edeceğiz?"}
         </p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
           {isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
@@ -526,7 +529,26 @@ export default function MetricSetupSelector({
             ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
             : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.</>}
         </p>
+        <p className="mt-2 max-w-3xl text-[12px] leading-6 text-[#7a8192]">
+          {plan.summary}
+        </p>
       </div>
+
+      {setupContext && (
+        <div className="mb-5 rounded-[16px] border border-[#e3edf8] bg-[#f8fbff] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#54708c]">
+            {setupContext.title}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#334155]">
+            {setupContext.description}
+          </p>
+          <p className="mt-2 text-[11px] text-[#708198]">
+            {isEn
+              ? "These answers influence which signals we recommend first and how cautiously we treat source automation."
+              : "Bu cevaplar, önce hangi sinyalleri önereceğimizi ve kaynak otomasyonuna ne kadar temkinli yaklaşacağımızı belirler."}
+          </p>
+        </div>
+      )}
 
       {hasConnectedSources && (automatedStages.length > 0 || manualStages.length > 0) && (
         <div className="mb-5 rounded-[16px] border border-[#e8e8e8] bg-white p-5">

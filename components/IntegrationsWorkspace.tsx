@@ -24,6 +24,11 @@ type IntegrationsWorkspaceProps = {
   onboarding?: string;
   connect?: string;
   queued?: string;
+  sourceContext?: {
+    title: string;
+    body: string;
+    note?: string | null;
+  } | null;
 };
 
 // Feedback from OAuth redirects
@@ -139,7 +144,9 @@ export default function IntegrationsWorkspace({
   onboarding,
   connect,
   queued,
+  sourceContext,
 }: IntegrationsWorkspaceProps) {
+  const isEn = locale === "en";
   const integrationMap = useMemo(
     () => new Map(integrations.map((i) => [i.provider, i])),
     [integrations]
@@ -153,7 +160,28 @@ export default function IntegrationsWorkspace({
     getSourceState(integrationMap.get(i.provider), i.provider)
   );
   const trustLevel = computeTrustLevel(sourceStates);
-  const trustCfg = TRUST_CONFIG[trustLevel];
+  const trustCfgBase = TRUST_CONFIG[trustLevel];
+  const trustCfg = {
+    ...trustCfgBase,
+    label:
+      trustLevel === "TRUSTED"
+        ? isEn ? "Data is reliable" : "Veri güvenilir"
+        : trustLevel === "PARTIAL"
+          ? isEn ? "Partially connected" : "Kısmi bağlantı"
+          : isEn ? "Manual data" : "Manuel veri",
+    body:
+      trustLevel === "TRUSTED"
+        ? isEn
+          ? "Your metrics are flowing from real sources. Coach commentary and suggestions can lean on stronger signals."
+          : "Metrikler gerçek veri kaynaklarından akıyor. Koç yorumları ve öneriler güvenilir sinyallere dayanır."
+        : trustLevel === "PARTIAL"
+          ? isEn
+            ? "Some sources are connected but still waiting for setup or a fresh sync. Missing pieces are filled manually for now."
+            : "Bağlı kaynaklar kurulum ya da yeni bir sync bekliyor. Eksik veriler manuel giriş ile tamamlanır."
+          : isEn
+            ? "There is no active data source yet. All metrics are still tracked manually until you connect one."
+            : "Henüz aktif veri kaynağı yok. Tüm metrikler manuel giriş ile takip ediliyor. Kaynak bağladığında koç gerçek verilerle çalışır.",
+  };
 
   const syncedSources = sourceStates.filter((s) => s === "SYNCED").length;
   const queuedProviders = (queued ?? "")
@@ -201,9 +229,13 @@ export default function IntegrationsWorkspace({
     <div className="space-y-4">
       {!embedded && (
         <PageHeader
-          eyebrow="Veri güvenilirliği"
-          title="Kaynaklar"
-          description={`${productName} · Metriklerini besleyen veri kaynakları burada yönetilir.`}
+          eyebrow={isEn ? "Data reliability" : "Veri güvenilirliği"}
+          title={isEn ? "Sources" : "Kaynaklar"}
+          description={
+            isEn
+              ? `${productName} · Manage the data sources that feed your metrics here.`
+              : `${productName} · Metriklerini besleyen veri kaynakları burada yönetilir.`
+          }
         />
       )}
 
@@ -237,9 +269,9 @@ export default function IntegrationsWorkspace({
                 {trustCfg.label}
               </span>
               {syncedSources > 0 && (
-                <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-semibold text-[#666d80]">
-                  {syncedSources} kaynak aktif
-                </span>
+              <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-semibold text-[#666d80]">
+                  {isEn ? `${syncedSources} active source${syncedSources > 1 ? "s" : ""}` : `${syncedSources} kaynak aktif`}
+              </span>
               )}
             </div>
             <p className="mt-1.5 text-[13px] leading-5 text-[#666d80]">
@@ -249,16 +281,16 @@ export default function IntegrationsWorkspace({
 
           {/* Coach signal indicator */}
           <div className="shrink-0 rounded-[12px] bg-white/60 px-3 py-2 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
-              Koç sinyali
-            </p>
-            <p className="mt-0.5 text-[13px] font-semibold text-[#0d0d12]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
+              {isEn ? "Coach signal" : "Koç sinyali"}
+              </p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#0d0d12]">
               {trustLevel === "TRUSTED"
-                ? "Gerçek veri"
+                ? isEn ? "Real data" : "Gerçek veri"
                 : trustLevel === "PARTIAL"
-                ? "Karma veri"
-                : "Tahmini"}
-            </p>
+                ? isEn ? "Mixed data" : "Karma veri"
+                : isEn ? "Estimated" : "Tahmini"}
+              </p>
           </div>
         </div>
 
@@ -267,17 +299,37 @@ export default function IntegrationsWorkspace({
           <div className="mt-3 border-t border-black/5 pt-3">
             <p className="text-[12px] leading-5 text-[#666d80]">
               {trustLevel === "MANUAL"
-                ? "Kaynak bağlandığında ve sync çalıştığında koç seni gerçek metriklerle değerlendirir: kaç kullanıcı, ne kadar gelir, hangi oran düşüyor."
-                : "Kurulumu tamamlanan kaynaklar sync'e hazır. Her kaynak için sync'i başlatman yeterli."}
+                ? isEn
+                  ? "Once a source is connected and synced, the coach starts reading real metrics instead of rough estimates."
+                  : "Kaynak bağlandığında ve sync çalıştığında koç seni gerçek metriklerle değerlendirir: kaç kullanıcı, ne kadar gelir, hangi oran düşüyor."
+                : isEn
+                  ? "These sources are close. Finish setup or trigger a sync so the product can rely on them."
+                  : "Kurulumu tamamlanan kaynaklar sync'e hazır. Her kaynak için sync'i başlatman yeterli."}
             </p>
           </div>
         )}
       </div>
 
+      {sourceContext && (
+        <div className="rounded-[16px] border border-[#e4edf3] bg-[#f8fbff] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#54708c]">
+            {sourceContext.title}
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-[#334155]">
+            {sourceContext.body}
+          </p>
+          {sourceContext.note ? (
+            <p className="mt-2 text-[12px] leading-5 text-[#708198]">
+              {sourceContext.note}
+            </p>
+          ) : null}
+        </div>
+      )}
+
       {/* Live sources grid */}
       <div>
         <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#0d0d12]">
-          Aktif kaynaklar
+          {isEn ? "Active sources" : "Aktif kaynaklar"}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {liveIntegrations.map((integration) => (
@@ -302,10 +354,12 @@ export default function IntegrationsWorkspace({
       {roadmapIntegrations.length > 0 && (
         <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8a8fa0]">
-            Yakında gelecekler
+            {isEn ? "Coming soon" : "Yakında gelecekler"}
           </p>
           <p className="mt-1 text-[12px] leading-5 text-[#8a8fa0]">
-            Bu kaynaklar henüz aktif değil. Her biri bağlandığında koç sinyaline ek bir veri katmanı ekler.
+            {isEn
+              ? "These sources are not active yet. Once connected, each one adds another layer of evidence to the coach."
+              : "Bu kaynaklar henüz aktif değil. Her biri bağlandığında koç sinyaline ek bir veri katmanı ekler."}
           </p>
           <div className="mt-4 divide-y divide-[#f0f0f0]">
             {roadmapIntegrations.map((integration) => (
@@ -328,7 +382,7 @@ export default function IntegrationsWorkspace({
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full border border-[#e8e8e8] bg-[#f6f6f6] px-2.5 py-0.5 text-[11px] font-medium text-[#94a3b8]">
-                  Yakında
+                  {isEn ? "Soon" : "Yakında"}
                 </span>
               </div>
             ))}

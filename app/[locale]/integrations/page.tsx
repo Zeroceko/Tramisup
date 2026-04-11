@@ -5,6 +5,13 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import IntegrationsWorkspace from "@/components/IntegrationsWorkspace";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
 import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
+import { getMetricSetup } from "@/lib/metric-setup";
+import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
+import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
+import {
+  readGrowthCheckinFromAdditionalContext,
+  summarizeGrowthCheckinForSetup,
+} from "@/lib/growth-transition-checkin";
 
 function parseConfig(value: string | null) {
   if (!value) return null;
@@ -48,6 +55,59 @@ export default async function IntegrationsPage({
   const manualEntryCount = await prisma.metricEntry.count({
     where: { productId: product.id },
   });
+  const connectedProviders = existingIntegrations
+    .filter((integration) => integration.status === "CONNECTED")
+    .map((integration) => integration.provider);
+  const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
+  const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
+  const growthSetupContext = summarizeGrowthCheckinForSetup({
+    answers: growthCheckinAnswers,
+    locale,
+  });
+  const metricSetup = await getMetricSetup(product.id);
+  const metricPlan = getGrowthMetricRecommendations({
+    name: product.name,
+    status: product.status,
+    category: product.category,
+    description: product.description,
+    targetAudience: product.targetAudience,
+    businessModel: product.businessModel,
+    website: product.website,
+    locale,
+    growthCheckinAnswers,
+  });
+  const integrationRecommendations = getRecommendedIntegrationsForSetup({
+    setup: metricSetup,
+    plan: metricPlan,
+    connectedProviders,
+  });
+  const recommendedProviderNames = Array.from(
+    new Set(
+      integrationRecommendations.metricRecommendations.flatMap((recommendation) =>
+        recommendation.providers.map((provider) => provider.name),
+      ),
+    ),
+  );
+  const sourceContext =
+    growthSetupContext || recommendedProviderNames.length > 0
+      ? {
+          title:
+            locale === "en"
+              ? "Why sources matter now"
+              : "Kaynaklar neden şimdi önemli",
+          body:
+            growthSetupContext?.description ??
+            (locale === "en"
+              ? "The measurement system is taking shape. Connecting the right sources now reduces manual entry and makes Growth diagnosis more reliable."
+              : "Ölçüm sistemi şekilleniyor. Doğru kaynakları şimdi bağlamak manuel girişi azaltır ve Growth teşhisini daha az tahmine dayalı hale getirir."),
+          note:
+            recommendedProviderNames.length > 0
+              ? locale === "en"
+                ? `Based on your current metric setup, ${recommendedProviderNames.join(", ")} would cover the most important source gaps first.`
+                : `Mevcut metric setup'ına göre önce ${recommendedProviderNames.join(", ")} kaynakları en önemli kapsama boşluklarını kapatır.`
+              : null,
+        }
+      : null;
 
   const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
     const config = parseConfig(integration.config);
@@ -82,6 +142,7 @@ export default async function IntegrationsPage({
       onboarding={resolvedSearchParams.onboarding}
       connect={resolvedSearchParams.connect}
       queued={resolvedSearchParams.queued}
+      sourceContext={sourceContext}
     />
   );
 }

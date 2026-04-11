@@ -11,12 +11,46 @@ import TimelineFeed from "@/components/TimelineFeed";
 import PageHeader from "@/components/PageHeader";
 import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
+import GrowthTransitionCheckin from "@/components/GrowthTransitionCheckin";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
 import { getMetricSetup } from "@/lib/metric-setup";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
+import {
+  readGrowthCheckinFromAdditionalContext,
+  selectGrowthCheckinQuestions,
+} from "@/lib/growth-transition-checkin";
+
+type GrowthWorkspaceMode =
+  | "intake_needed"
+  | "metric_setup_needed"
+  | "baseline_needed"
+  | "diagnosis_ready";
+
+function getGrowthWorkspaceMode({
+  hasIntake,
+  hasSetup,
+  hasMetricEntries,
+}: {
+  hasIntake: boolean;
+  hasSetup: boolean;
+  hasMetricEntries: boolean;
+}): GrowthWorkspaceMode {
+  if (!hasIntake) return "intake_needed";
+  if (!hasSetup) return "metric_setup_needed";
+  if (!hasMetricEntries) return "baseline_needed";
+  return "diagnosis_ready";
+}
+
+function mapStageToGrowthCategory(stage?: string | null) {
+  if (stage === "Awareness" || stage === "Acquisition") return "ACQUISITION";
+  if (stage === "Activation") return "ACTIVATION";
+  if (stage === "Retention" || stage === "Referral") return "RETENTION";
+  if (stage === "Revenue") return "REVENUE";
+  return undefined;
+}
 
 export default async function GrowthPage({
   params,
@@ -81,6 +115,7 @@ export default async function GrowthPage({
     where: { productId: product.id, status: "CONNECTED" },
     select: { provider: true },
   });
+  const connectedSourceCount = integrations.length;
 
   const timelineEvents = await prisma.timelineEvent.findMany({
     where: { productId: product.id },
@@ -99,11 +134,23 @@ export default async function GrowthPage({
     locale,
   });
   const savedMetricSetup = await getMetricSetup(product.id);
+  const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
+  const hasGrowthCheckin = Boolean(storedAdditionalContext.growthCheckin?.completedAt);
   const hasSetup = !!savedMetricSetup?.selections?.length;
   const hasMetricEntries = (savedMetricSetup?.entries?.length ?? 0) > 0;
+  const workspaceMode = getGrowthWorkspaceMode({
+    hasIntake: hasGrowthCheckin,
+    hasSetup,
+    hasMetricEntries,
+  });
   const hasGoals = goals.length > 0;
   const completedGrowthItems = growthChecklists.filter((item) => item.completed).length;
   const isLaunched = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
+  const growthCheckinQuestions = selectGrowthCheckinQuestions({
+    product,
+    locale,
+    connectedSourceCount,
+  });
   const nextStep = getGrowthWorkspaceStep({
     hasSetup,
     hasMetricEntries,
@@ -138,8 +185,23 @@ export default async function GrowthPage({
         })
       : null;
   const atRiskStage = funnelHealth?.stages.find((item) => item.status === "AT_RISK") ?? null;
+  const initialChecklistCategory = mapStageToGrowthCategory(atRiskStage?.stage);
+  const checklistFocusNote =
+    workspaceMode === "diagnosis_ready"
+      ? atRiskStage
+        ? funnelHealth?.nextFocus ?? null
+        : hasGoals
+          ? isEn
+            ? "Your tracking system is live. Use the checklist to remove the next execution bottleneck."
+            : "Takip sistemi çalışıyor. Şimdi checklist üzerinden sıradaki execution darboğazını kapat."
+          : isEn
+            ? "Your signals are visible now. Finish the checklist items that make those signals easier to move."
+            : "Artık sinyaller görünür. Bu sayıları oynatmayı kolaylaştıracak checklist maddelerini tamamla."
+      : null;
   const primaryGrowthTitle = !hasSetup
-    ? isEn ? "Set up your measurement system first" : "Önce ölçüm sistemini kur"
+    ? !hasGrowthCheckin
+      ? isEn ? "Start with a short growth check-in" : "Önce kısa bir growth değerlendirmesi yap"
+      : isEn ? "Set up your measurement system first" : "Önce ölçüm sistemini kur"
     : !hasMetricEntries
         ? isEn ? "Create the first baseline" : "İlk baz çizgisini oluştur"
       : atRiskStage
@@ -150,9 +212,13 @@ export default async function GrowthPage({
             ? isEn ? "Push the execution side forward" : "Şimdi execution tarafını ilerlet"
             : isEn ? "Protect your growth rhythm and watch for repeated bottlenecks" : "Büyüme ritmini koru ve tekrar eden darboğazı izle";
   const primaryGrowthDescription = !hasSetup
-    ? isEn
-      ? "Before Growth can give you reliable guidance, you need to define which signals you track on the Metrics screen."
-      : "Growth tarafında güvenilir öneri verebilmemiz için önce metrics ekranında hangi sinyalleri takip ettiğini netleştirmen gerekiyor."
+    ? !hasGrowthCheckin
+      ? isEn
+        ? "Before metric setup starts, Tiramisup should learn a little more about this product's growth shape. Keep it short and specific."
+        : "Metric setup başlamadan önce Tiramisup'ın bu ürünün growth yapısını biraz daha net anlaması gerekiyor. Kısa ve spesifik kal."
+      : isEn
+        ? "Before Growth can give you reliable guidance, you need to define which signals you track on the Metrics screen."
+        : "Growth tarafında güvenilir öneri verebilmemiz için önce metrics ekranında hangi sinyalleri takip ettiğini netleştirmen gerekiyor."
     : !hasMetricEntries
       ? isEn
         ? "Your metrics are selected, but there is no real data flow yet. Before the first entries land, Growth can only guess."
@@ -164,15 +230,21 @@ export default async function GrowthPage({
             ? "Now it is time to define a target value. Clarify what you are trying to move that metric toward."
             : "Veriyi yorumlamak için artık hedef değer tanımlama zamanı. Ölçtüğün sayıyı neye taşımaya çalıştığını netleştir."
           : completedGrowthItems < growthChecklists.length
-            ? isEn
-              ? "The measurement system is running. From here, the job is to finish the growth work that will actually move the metric."
-              : "Ölçüm sistemi çalışıyor. Bundan sonraki iş, metriği gerçekten hareket ettirecek growth işlerini tamamlamak."
-            : isEn
+          ? isEn
+            ? "The measurement system is running. From here, the job is to finish the growth work that will actually move the metric."
+            : "Ölçüm sistemi çalışıyor. Bundan sonraki iş, metriği gerçekten hareket ettirecek growth işlerini tamamlamak."
+          : isEn
               ? "The foundation is set. Now keep a weekly rhythm, watch the weak link, and react fast when a new problem appears."
               : "Temel kurulum oturdu. Şimdi haftalık ritimde zayıf halkayı izleyip yeni problem belirdiğinde hızlı aksiyon almak önemli.";
-  const primaryGrowthHref = !hasSetup || !hasMetricEntries ? `/${locale}/metrics` : nextStep.href;
-  const primaryGrowthCta = !hasSetup
-    ? isEn ? "Go to Metrics" : "Ölçüm sistemine git"
+  const primaryGrowthHref = !hasGrowthCheckin
+    ? "#growth-intake"
+    : !hasSetup || !hasMetricEntries
+      ? `/${locale}/metrics`
+      : nextStep.href;
+  const primaryGrowthCta = !hasGrowthCheckin
+    ? isEn ? "Complete check-in" : "Değerlendirmeyi tamamla"
+    : !hasSetup
+      ? isEn ? "Go to Metrics" : "Ölçüm sistemine git"
     : !hasMetricEntries
       ? isEn ? "Enter the first metrics" : "İlk metriği gir"
       : nextStep.cta;
@@ -201,6 +273,80 @@ export default async function GrowthPage({
     funnelHealth,
     locale,
   });
+  const pageHeaderTitle =
+    workspaceMode === "intake_needed"
+      ? isEn ? "Growth intake" : "Growth başlangıcı"
+      : workspaceMode === "metric_setup_needed"
+      ? isEn ? "Growth setup" : "Growth kurulumu"
+      : workspaceMode === "baseline_needed"
+        ? isEn ? "Record the baseline" : "Baz çizgisini kaydet"
+        : isEn ? "Growth focus" : "Growth odağı";
+  const pageHeaderDescription =
+    workspaceMode === "intake_needed"
+      ? isEn
+        ? "Before setup begins, answer a few focused questions so Growth can fit this product instead of falling back to a generic template."
+        : "Setup başlamadan önce birkaç odaklı soruyu cevapla; böylece Growth genel bir şablona değil, bu ürünün gerçek bağlamına göre çalışsın."
+      : workspaceMode === "metric_setup_needed"
+      ? isEn
+        ? "Growth should not start with guesswork. First define the signals you will trust, then move into diagnosis and execution."
+        : "Growth tahminle başlamamalı. Önce güveneceğin sinyalleri tanımla, sonra teşhis ve execution tarafına geç."
+      : workspaceMode === "baseline_needed"
+        ? isEn
+          ? "Your metric setup exists now. The next job is giving it the first real numbers so Growth can stop guessing."
+          : "Metrik setup artık var. Sıradaki iş, Growth'ün tahmin etmeyi bırakması için ilk gerçek sayıları girmek."
+        : isEn
+          ? "This is the diagnosis, priority, and execution surface. Metrics decides what you track; Growth decides what to act on next."
+          : "Burası teşhis, öncelik ve execution yüzeyi. Metrics neyi takip ettiğini netleştirir; Growth ise sıradaki doğru hamleyi seçtirir.";
+  const workspaceStages = [
+    {
+      key: "intake",
+      title: isEn ? "Growth intake" : "Growth başlangıcı",
+      description: isEn
+        ? "Answer a few product-specific questions so setup fits the real growth motion."
+        : "Setup'ın gerçek growth hareketine uyması için ürüne özel birkaç soruyu cevapla.",
+      state:
+        workspaceMode === "intake_needed"
+          ? "active"
+          : "done",
+    },
+    {
+      key: "setup",
+      title: isEn ? "Signals to track" : "Takip edeceğin sinyaller",
+      description: isEn
+        ? "Choose the metrics that define healthy progress for this product."
+        : "Bu ürün için sağlıklı ilerlemeyi tanımlayan metrikleri seç.",
+      state:
+        workspaceMode === "intake_needed"
+          ? "locked"
+          : workspaceMode === "metric_setup_needed"
+          ? "active"
+          : "done",
+    },
+    {
+      key: "baseline",
+      title: isEn ? "First baseline" : "İlk baz çizgisi",
+      description: isEn
+        ? "Enter the first real values so the product has a starting point."
+        : "Ürünün referans noktası olması için ilk gerçek değerleri gir.",
+      state:
+        workspaceMode === "intake_needed" || workspaceMode === "metric_setup_needed"
+          ? "locked"
+          : workspaceMode === "baseline_needed"
+            ? "active"
+            : "done",
+    },
+    {
+      key: "diagnosis",
+      title: isEn ? "Diagnosis & execution" : "Teşhis ve aksiyon",
+      description: isEn
+        ? "See the weak link, open the checklist, and turn insight into work."
+        : "Zayıf halkayı gör, checklist'i aç ve içgörüyü işe çevir.",
+      state:
+        workspaceMode === "diagnosis_ready"
+          ? "active"
+          : "locked",
+    },
+  ] as const;
 
   if (!isLaunched) {
     return (
@@ -234,19 +380,17 @@ export default async function GrowthPage({
     <div>
       <PageHeader
         eyebrow={t("eyebrow")}
-        title={isEn ? "Growth focus" : "Growth odağın"}
-        description={
-          isEn
-            ? "This is the diagnosis, priority, and execution surface. Manage what you measure and how data arrives in Metrics; use Growth to see what is blocked and what to do next."
-            : "Burası yorum, öncelik ve execution yüzeyi. Neyi ölçtüğünü ve veri akışını Metrics ekranında yönet; burada ise neyin sıkıştığını ve sıradaki hamleyi gör."
-        }
+        title={pageHeaderTitle}
+        description={pageHeaderDescription}
       />
 
       <div className="space-y-4">
-        {/* PRIMARY: Today's growth focus — single weak-link callout, the only thing that matters above the fold */}
+        {/* PRIMARY: one card that changes by workspace mode */}
         <div id="coach" className="rounded-[18px] border border-[#e8e8e8] bg-white p-7">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
-            {isEn ? "Today's growth focus" : "Bugünün growth odağı"}
+            {workspaceMode === "diagnosis_ready"
+              ? isEn ? "Today's growth focus" : "Bugünün growth odağı"
+              : isEn ? "Next growth step" : "Sıradaki growth adımı"}
           </p>
           <h2 className="mt-2 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[#0d0d12]">
             {primaryGrowthTitle}
@@ -271,36 +415,200 @@ export default async function GrowthPage({
           </div>
         </div>
 
-        {/* EXECUTION: checklist is the action surface */}
-        <div id="growth-checklist">
-          <GrowthChecklistSection items={growthChecklists} locale={locale} />
-        </div>
-
-        {/* SECONDARY: only show sections that have data */}
-        {tacticsPlan && tacticsPlan.tactics && tacticsPlan.tactics.length > 0 && (
-          <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
-            <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
-          </CollapsibleSection>
-        )}
-
-        {goals.length > 0 && (
-          <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
-            <div id="goals">
-              <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
+        {workspaceMode === "intake_needed" ? (
+          <>
+            <div id="growth-intake">
+              <GrowthTransitionCheckin
+                productId={product.id}
+                locale={locale}
+                questions={growthCheckinQuestions}
+                initialAnswers={storedAdditionalContext.growthCheckin?.answers ?? {}}
+                nextHref={`/${locale}/metrics`}
+              />
             </div>
-          </CollapsibleSection>
-        )}
 
-        {routines.length > 0 && (
-          <CollapsibleSection label={isEn ? "Routines" : "Rutinler"} defaultCollapsed>
-            <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
-          </CollapsibleSection>
-        )}
+            <div className="rounded-[18px] border border-[#e8e8e8] bg-white p-6">
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                    {isEn ? "Growth workflow" : "Growth akışı"}
+                  </p>
+                  <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                    {isEn ? "Start with context, then build the system" : "Önce bağlamı netleştir, sonra sistemi kur"}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#5e6678]">
+                    {isEn
+                      ? "This step keeps Growth from forcing the same setup on every product. Once the short intake is complete, we move into Metrics to choose the right signals."
+                      : "Bu adım, Growth'ün her ürüne aynı setup'ı zorlamasını engeller. Kısa değerlendirme tamamlandığında doğru sinyalleri seçmek için Metrics tarafına geçeriz."}
+                  </p>
+                </div>
+                <div className="hidden shrink-0 rounded-[16px] border border-[#edf0f3] bg-[#fafbfc] px-4 py-3 text-right lg:block">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">
+                    {isEn ? "Current mode" : "Geçerli mod"}
+                  </p>
+                  <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
+                    {isEn ? "Context first" : "Önce bağlam"}
+                  </p>
+                </div>
+              </div>
 
-        {timelineEvents.length > 0 && (
-          <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
-            <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
-          </CollapsibleSection>
+              <div className="mt-5 grid gap-3 md:grid-cols-4">
+                {workspaceStages.map((stage) => {
+                  const isActiveStage = stage.state === "active";
+                  const isDoneStage = stage.state === "done";
+                  return (
+                    <div
+                      key={stage.key}
+                      className={`rounded-[16px] border px-4 py-4 ${
+                        isActiveStage
+                          ? "border-[#0d0d12] bg-[#0d0d12] text-white"
+                          : isDoneStage
+                            ? "border-[#d9f1ee] bg-[#f4fffd]"
+                            : "border-[#eceff2] bg-[#fafbfc]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className={`text-[13px] font-semibold ${isActiveStage ? "text-white" : "text-[#0d0d12]"}`}>
+                          {stage.title}
+                        </p>
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                            isActiveStage
+                              ? "bg-white/15 text-white"
+                              : isDoneStage
+                                ? "bg-[#dcfce7] text-[#166534]"
+                                : "bg-[#f1f5f9] text-[#64748b]"
+                          }`}
+                        >
+                          {isActiveStage
+                            ? isEn ? "Now" : "Şimdi"
+                            : isDoneStage
+                              ? isEn ? "Done" : "Tamam"
+                              : isEn ? "Next" : "Sırada"}
+                        </span>
+                      </div>
+                      <p className={`mt-2 text-[12px] leading-5 ${isActiveStage ? "text-white/72" : "text-[#5e6678]"}`}>
+                        {stage.description}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        ) : workspaceMode !== "diagnosis_ready" ? (
+          <div className="rounded-[18px] border border-[#e8e8e8] bg-white p-6">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
+                  {isEn ? "Growth workflow" : "Growth akışı"}
+                </p>
+                <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                  {isEn ? "Keep setup and diagnosis separate" : "Kurulumu ve teşhisi ayır"}
+                </h2>
+                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#5e6678]">
+                  {workspaceMode === "metric_setup_needed"
+                    ? isEn
+                      ? "Right now the safest next move is deciding what to measure. The checklist and tactics surface unlock after the tracking system is real."
+                      : "Şu anda en güvenli sonraki adım neyi ölçeceğine karar vermek. Checklist ve tactics yüzeyi, takip sistemi gerçek anlamda kurulduktan sonra açılmalı."
+                    : isEn
+                      ? "The setup exists now. Entering the first baseline is what turns Growth from a planning surface into a real diagnosis surface."
+                      : "Setup artık var. İlk baz çizgisini girmek, Growth'ü planlama ekranından gerçek teşhis yüzeyine dönüştüren şey."}
+                </p>
+              </div>
+              <div className="hidden shrink-0 rounded-[16px] border border-[#edf0f3] bg-[#fafbfc] px-4 py-3 text-right lg:block">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">
+                  {isEn ? "Current mode" : "Geçerli mod"}
+                </p>
+                <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
+                  {workspaceMode === "metric_setup_needed"
+                    ? isEn ? "Setup first" : "Önce setup"
+                    : isEn ? "Baseline first" : "Önce baz çizgisi"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              {workspaceStages.map((stage) => {
+                const isActiveStage = stage.state === "active";
+                const isDoneStage = stage.state === "done";
+                return (
+                  <div
+                    key={stage.key}
+                    className={`rounded-[16px] border px-4 py-4 ${
+                      isActiveStage
+                        ? "border-[#0d0d12] bg-[#0d0d12] text-white"
+                        : isDoneStage
+                          ? "border-[#d9f1ee] bg-[#f4fffd]"
+                          : "border-[#eceff2] bg-[#fafbfc]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className={`text-[13px] font-semibold ${isActiveStage ? "text-white" : "text-[#0d0d12]"}`}>
+                        {stage.title}
+                      </p>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                          isActiveStage
+                            ? "bg-white/15 text-white"
+                            : isDoneStage
+                              ? "bg-[#dcfce7] text-[#166534]"
+                              : "bg-[#f1f5f9] text-[#64748b]"
+                        }`}
+                      >
+                        {isActiveStage
+                          ? isEn ? "Now" : "Şimdi"
+                          : isDoneStage
+                            ? isEn ? "Done" : "Tamam"
+                            : isEn ? "Next" : "Sırada"}
+                      </span>
+                    </div>
+                    <p className={`mt-2 text-[12px] leading-5 ${isActiveStage ? "text-white/72" : "text-[#5e6678]"}`}>
+                      {stage.description}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div id="growth-checklist">
+              <GrowthChecklistSection
+                items={growthChecklists}
+                locale={locale}
+                productId={product.id}
+                initialCategory={initialChecklistCategory}
+                focusNote={checklistFocusNote}
+              />
+            </div>
+
+            {tacticsPlan && tacticsPlan.tactics && tacticsPlan.tactics.length > 0 && (
+              <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
+                <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
+              </CollapsibleSection>
+            )}
+
+            {goals.length > 0 && (
+              <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
+                <div id="goals">
+                  <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {routines.length > 0 && (
+              <CollapsibleSection label={isEn ? "Routines" : "Rutinler"} defaultCollapsed>
+                <GrowthRoutines routines={routines} productId={product.id} locale={locale} />
+              </CollapsibleSection>
+            )}
+
+            {timelineEvents.length > 0 && (
+              <CollapsibleSection label={isEn ? "Timeline" : "Zaman tüneli"} defaultCollapsed>
+                <TimelineFeed events={timelineEvents} productId={product.id} locale={locale} />
+              </CollapsibleSection>
+            )}
+          </>
         )}
       </div>
     </div>

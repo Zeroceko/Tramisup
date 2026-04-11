@@ -1,4 +1,5 @@
 import { ProductStatus } from "@prisma/client";
+import type { GrowthCheckinAnswers } from "@/lib/growth-transition-checkin";
 
 export type FunnelMetricRecommendation = {
   key: string;
@@ -33,6 +34,7 @@ type ProductInput = {
   platforms?: string[] | null;
   goalKey?: string | null;
   locale?: string;
+  growthCheckinAnswers?: GrowthCheckinAnswers | null;
 };
 
 function pick(locale: string | undefined, en: string, tr: string) {
@@ -55,18 +57,72 @@ function isMobileProduct(p: ProductInput) {
 }
 
 function prefersRevenueSignal(p: ProductInput) {
-  const h = `${p.businessModel ?? ""} ${p.goalKey ?? ""}`.toLowerCase();
+  const h = `${p.businessModel ?? ""} ${p.goalKey ?? ""} ${p.growthCheckinAnswers?.growth_goal ?? ""} ${p.growthCheckinAnswers?.revenue_motion ?? ""}`.toLowerCase();
   return /abonelik|subscription|freemium|trial|revenue|get_first_revenue/.test(h);
 }
 
 function prefersActivationSignal(p: ProductInput) {
-  const h = `${p.goalKey ?? ""} ${p.description ?? ""}`.toLowerCase();
+  const h = `${p.goalKey ?? ""} ${p.description ?? ""} ${p.growthCheckinAnswers?.growth_goal ?? ""} ${p.growthCheckinAnswers?.first_value_action ?? ""}`.toLowerCase();
   return /validate_product|reach_first_value_usage|onboarding|activation|aha/.test(h);
 }
 
 function prefersRetentionSignal(p: ProductInput) {
-  const h = `${p.goalKey ?? ""}`.toLowerCase();
-  return /build_growth_rhythm/.test(h);
+  const h = `${p.goalKey ?? ""} ${p.growthCheckinAnswers?.growth_goal ?? ""} ${p.growthCheckinAnswers?.retention_rhythm ?? ""}`.toLowerCase();
+  return /build_growth_rhythm|weekly|repeat_usage/.test(h);
+}
+
+function prefersWebsiteAwareness(p: ProductInput) {
+  return p.growthCheckinAnswers?.acquisition_source === "website_organic";
+}
+
+function prefersReachAwareness(p: ProductInput) {
+  return (
+    p.growthCheckinAnswers?.acquisition_source === "partners" ||
+    p.growthCheckinAnswers?.acquisition_source === "app_store"
+  );
+}
+
+function prefersWaitlistSignal(p: ProductInput) {
+  return p.growthCheckinAnswers?.acquisition_source === "direct_outreach";
+}
+
+function getFirstValueExamples(p: ProductInput, locale: string | undefined) {
+  const action = p.growthCheckinAnswers?.first_value_action?.trim();
+  if (action) {
+    return locale === "en"
+      ? `Current first value definition: ${action}.`
+      : `Şu anki ilk değer tanımı: ${action}.`;
+  }
+
+  return isB2B(p)
+    ? pick(locale, "For example: first campaign created, first product added, first dashboard configured.", "Örn: ilk kampanya oluşturma, ilk ürün ekleme, ilk dashboard kurma.")
+    : pick(locale, "For example: first content created, first share, first goal completed.", "Örn: ilk içerik oluşturma, ilk paylaşım, ilk hedef tamamlama.");
+}
+
+function buildPlanSummary(product: ProductInput) {
+  const locale = product.locale;
+  const dataConfidence = product.growthCheckinAnswers?.source_confidence;
+  const source = product.growthCheckinAnswers?.acquisition_source;
+
+  if (dataConfidence === "low") {
+    return pick(
+      locale,
+      `Start with a measurement system that stays trustworthy even when data flow is rough. Choose the smallest set of signals you can update reliably before chasing deeper diagnosis.`,
+      `Veri akışı henüz pürüzlüyken bile güvenilir kalacak bir ölçüm sistemiyle başla. Derin teşhise geçmeden önce güvenle güncelleyebileceğin en küçük sinyal setini seç.`
+    );
+  }
+
+  if (source === "website_organic") {
+    return pick(
+      locale,
+      `This product appears to discover users through the website and organic channels. Favor metrics that keep traffic quality, signup conversion, and first value visible together.`,
+      `Bu ürün kullanıcıyı daha çok website ve organik kanallardan buluyor gibi görünüyor. Trafik kalitesini, signup dönüşümünü ve ilk değeri birlikte görünür kılan metrikleri öne al.`
+    );
+  }
+
+  return product.status === ProductStatus.PRE_LAUNCH
+    ? pick(locale, `Set up the growth measurement system for ${product.name} now. Knowing which numbers to track before launch makes the first data much easier to interpret.`, `${product.name} için growth ölçüm sistemini şimdiden kur. Launch öncesi hangi sayıları takip edeceğini bilmek, ilk verileri anlamlandırmayı kolaylaştırır.`)
+    : pick(locale, `Choose one primary signal for each AARRR stage in ${product.name}. Fewer but sharper metrics beat a long list of meaningless numbers.`, `${product.name} için her AARRR aşamasında tek bir ana sinyal seç. Az ama doğru metrik, çok ama anlamsız metrikten daha değerlidir.`);
 }
 
 export function getGrowthMetricRecommendations(product: ProductInput): GrowthMetricPlan {
@@ -80,9 +136,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
   const retentionFocused = prefersRetentionSignal(product);
 
   return {
-    summary: preLaunch
-      ? pick(locale, `Set up the growth measurement system for ${product.name} now. Knowing which numbers to track before launch makes the first data much easier to interpret.`, `${product.name} için growth ölçüm sistemini şimdiden kur. Launch öncesi hangi sayıları takip edeceğini bilmek, ilk verileri anlamlandırmayı kolaylaştırır.`)
-      : pick(locale, `Choose one primary signal for each AARRR stage in ${product.name}. Fewer but sharper metrics beat a long list of meaningless numbers.`, `${product.name} için her AARRR aşamasında tek bir ana sinyal seç. Az ama doğru metrik, çok ama anlamsız metrikten daha değerlidir.`),
+    summary: buildPlanSummary(product),
     sections: [
       {
         stage: "Awareness",
@@ -95,7 +149,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: pick(locale, "The total number of visitors reaching your landing page or main site.", "Landing page veya ana sitene gelen toplam ziyaretçi sayısı."),
             whenToUse: pick(locale, "Use this if you collect demand through a website. It is the most universal and easiest awareness metric to measure.", "Web sitesi üzerinden ilgi topluyorsan. En evrensel ve ölçülmesi en kolay awareness metriği."),
             whenToAvoid: pick(locale, "Do not track only total traffic without looking at traffic source quality.", "Trafik kaynağını izlemeden sadece toplam ziyareti takip etme — kaynak kalitesi de önemli."),
-            recommended: !content && !mobile,
+            recommended: prefersWebsiteAwareness(product) || (!prefersReachAwareness(product) && !content && !mobile),
           },
           {
             key: "reach",
@@ -107,7 +161,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
               ? pick(locale, "Use this if growth is driven by content, newsletters, or community.", "İçerik, bülten veya topluluk odaklı büyüme yapıyorsan.")
               : pick(locale, "Use this if you rely on organic content, launch posts, or community distribution.", "Organik içerik, launch postu veya topluluk dağıtımı yapıyorsan."),
             whenToAvoid: pick(locale, "High reach with no downstream conversion is not meaningful on its own.", "Erişim sayısı yüksek ama dönüşüm yoksa bu metrik tek başına anlam ifade etmez."),
-            recommended: content || mobile,
+            recommended: prefersReachAwareness(product) || content || mobile,
           },
           {
             key: "ad-impressions",
@@ -130,7 +184,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: pick(locale, "Shows what portion of site visitors leave a signup or demand signal.", "Siteye gelenlerin ne kadarının kayıt veya talep bıraktığını gösterir."),
             whenToUse: pick(locale, "Use this if you have a landing page, waitlist, or signup flow. It is the clearest acquisition signal.", "Landing page, waitlist veya signup akışın varsa. En net acquisition sinyali."),
             whenToAvoid: pick(locale, "If you have fewer than 10 visitors per day, the conversion rate may be too noisy to trust.", "Günde 10'dan az ziyaretçin varsa dönüşüm oranı istatistiksel anlam taşımaz."),
-            recommended: !preLaunch && !mobile,
+            recommended: !prefersWaitlistSignal(product) && !preLaunch && !mobile,
           },
           {
             key: "waitlist-joins",
@@ -138,7 +192,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
             description: pick(locale, "One of the best early signals for measuring interest before launch.", "Launch öncesi ilgiyi ölçmek için en iyi erken sinyallerden biri."),
             whenToUse: pick(locale, "Use this when the product is not public yet or when you want to validate demand before launch.", "Henüz herkese açık değilsen ya da launch öncesi talep doğrulamak istiyorsan."),
             whenToAvoid: pick(locale, "After launch, move from this metric to signup conversion.", "Launch sonrasında bu metriğin yerine signup dönüşümüne geç."),
-            recommended: preLaunch || mobile,
+            recommended: prefersWaitlistSignal(product) || preLaunch || mobile,
           },
           {
             key: "cac",
@@ -165,9 +219,7 @@ export function getGrowthMetricRecommendations(product: ProductInput): GrowthMet
           {
             key: "first-value-action",
             name: b2b ? pick(locale, "First valuable business action", "İlk faydalı iş aksiyonu") : pick(locale, "First valuable user action", "İlk faydalı kullanıcı aksiyonu"),
-            description: b2b
-              ? pick(locale, "For example: first campaign created, first product added, first dashboard configured.", "Örn: ilk kampanya oluşturma, ilk ürün ekleme, ilk dashboard kurma.")
-              : pick(locale, "For example: first content created, first share, first goal completed.", "Örn: ilk içerik oluşturma, ilk paylaşım, ilk hedef tamamlama."),
+            description: getFirstValueExamples(product, locale),
             whenToUse: pick(locale, "Use this when the product's aha moment can be defined clearly.", "Ürünün 'aha moment' noktası net tanımlanabiliyorsa."),
             whenToAvoid: pick(locale, "If there is no single critical first action or users find value in different ways, this can mislead.", "Tek bir kritik ilk aksiyon yoksa ya da kullanıcılar farklı yollarla değer buluyorsa yanıltıcı olabilir."),
             recommended: b2b || (!activationFocused && (revenueFocused || retentionFocused)),

@@ -12,6 +12,10 @@ import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendati
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelStageKey } from "@/lib/metric-setup";
 import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
+import {
+  readGrowthCheckinFromAdditionalContext,
+  summarizeGrowthCheckinForSetup,
+} from "@/lib/growth-transition-checkin";
 
 function formatMetricValue(value: number | null | undefined, locale: string) {
   if (value == null) return "—";
@@ -81,6 +85,12 @@ export default async function MetricsPage({
     },
   });
   const connectedSourceCount = connectedIntegrations.length;
+  const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
+  const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
+  const growthSetupContext = summarizeGrowthCheckinForSetup({
+    answers: growthCheckinAnswers,
+    locale,
+  });
 
   const metricPlan = getGrowthMetricRecommendations({
     name: product.name,
@@ -91,6 +101,7 @@ export default async function MetricsPage({
     businessModel: product.businessModel,
     website: product.website,
     locale,
+    growthCheckinAnswers,
   });
 
   const savedSetup = await getMetricSetup(product.id);
@@ -229,6 +240,7 @@ export default async function MetricsPage({
         initialSetup={savedSetup}
         locale={locale}
         connectedProviders={connectedIntegrations.map((integration) => integration.provider)}
+        setupContext={growthSetupContext}
       />
 
       {selectedMetrics.length > 0 && (
@@ -270,16 +282,29 @@ export default async function MetricsPage({
             {connectedSourceCount === 0 && (
               <a
                 href={`/${locale}/integrations`}
-                className="flex items-center gap-2 rounded-[18px] border border-[#d7efef] bg-[#f4fbfb] p-4 transition hover:bg-[#eaf7f7]"
+                className="group flex items-start gap-3 rounded-[14px] border border-[#d7efef] bg-[#f7fcfc] px-4 py-3 transition hover:bg-[#eef8f8]"
               >
-                <div>
-                  <p className="text-[12px] font-semibold text-[#0d0d12]">
-                    {isEn ? "Connect a source" : "Kaynak bağla"}
+                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#e7f7f6] text-[#1c6b69]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1c6b69]">
+                    {isEn ? "Tip" : "İpucu"}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-[#6a7283]">
-                    {isEn ? "GA4, Stripe — automate data flow" : "GA4, Stripe — veri akışını otomatikleştir"}
+                  <p className="mt-1 text-[12px] font-semibold text-[#0d0d12]">
+                    {isEn ? "Connect a source when you are ready" : "Hazır olduğunda bir kaynak bağla"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-[#6a7283]">
+                    {isEn
+                      ? "Open Integrations to connect GA4 or Stripe and reduce manual entry later."
+                      : "Daha sonra manuel girişi azaltmak için Integrations ekranından GA4 veya Stripe bağla."}
                   </p>
                 </div>
+                <span className="shrink-0 text-[11px] font-semibold text-[#1c6b69] group-hover:text-[#145654]">
+                  {isEn ? "Open" : "Aç"}
+                </span>
               </a>
             )}
           </div>
