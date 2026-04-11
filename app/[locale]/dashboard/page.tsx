@@ -449,6 +449,7 @@ export default async function DashboardPage({
           product,
           selectedMetrics: selectedMetricsForFunnel,
           entries: savedMetricSetup?.entries ?? [],
+          locale: uiLocale,
         })
       : null;
 

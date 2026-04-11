@@ -12,13 +12,9 @@ type GrowthItem = {
   order: number;
 };
 
-const CATEGORY_META: Record<
-  string,
-  {
-    label: string;
-    risk: string;
-  }
-> = {
+type CategoryMeta = { label: string; risk: string };
+
+const CATEGORY_META_EN: Record<string, CategoryMeta> = {
   ACQUISITION: {
     label: "Acquisition & Distribution",
     risk: "Defines where new users come from and whether traffic quality is strong enough.",
@@ -34,6 +30,25 @@ const CATEGORY_META: Record<
   REVENUE: {
     label: "Revenue & Monetization",
     risk: "Clarifies whether value is turning into paid behavior or repeat revenue.",
+  },
+};
+
+const CATEGORY_META_TR: Record<string, CategoryMeta> = {
+  ACQUISITION: {
+    label: "Edinim & Dağıtım",
+    risk: "Yeni kullanıcıların nereden geldiğini ve trafik kalitesinin yeterince güçlü olup olmadığını tanımlar.",
+  },
+  ACTIVATION: {
+    label: "Aktivasyon & İlk Değer",
+    risk: "Kullanıcıların geldikten sonra ilk değere ne kadar hızlı ulaştığını gösterir.",
+  },
+  RETENTION: {
+    label: "Tutundurma & Alışkanlık",
+    risk: "Kullanıcıların geri dönüp dönmediğini veya kullanımın azalıp azalmadığını ortaya koyar.",
+  },
+  REVENUE: {
+    label: "Gelir & Monetizasyon",
+    risk: "Değerin ödeme davranışına veya tekrarlayan gelire dönüşüp dönüşmediğini netleştirir.",
   },
 };
 
@@ -111,7 +126,8 @@ export default function GrowthChecklistSection({
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [taskAddedIds, setTaskAddedIds] = useState<string[]>([]);
   const isEn = locale === "en";
-  const categories = Object.keys(CATEGORY_META).filter((cat) =>
+  const CATEGORY_META = isEn ? CATEGORY_META_EN : CATEGORY_META_TR;
+  const categories = Object.keys(CATEGORY_META_EN).filter((cat) =>
     items.some((i) => i.category === cat)
   );
   const firstIncompleteCategory =

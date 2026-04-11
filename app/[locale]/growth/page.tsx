@@ -182,6 +182,7 @@ export default async function GrowthPage({
           },
           selectedMetrics,
           entries: savedMetricSetup?.entries ?? [],
+          locale,
         })
       : null;
   const atRiskStage = funnelHealth?.stages.find((item) => item.status === "AT_RISK") ?? null;

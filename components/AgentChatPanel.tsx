@@ -211,6 +211,69 @@ export default function AgentChatPanel({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Trigger an AI insight directly — no user bubble, just the agent's response.
+  // Used when clicking "ask"-intent suggestion cards so it feels like agent-generated insight.
+  const triggerInsight = useCallback(
+    async (question: string) => {
+      if (!question.trim() || loading) return;
+      setLoading(true);
+      setSuggestions([]);
+      try {
+        const res = await fetch("/api/agent/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentType,
+            message: question,
+            productId,
+            locale,
+            conversationHistory: [],
+          }),
+        });
+        const data = await res.json().catch(() => null) as AgentApiResponse & LimitErrorPayload;
+        if (!res.ok) {
+          if (data?.code === "AI_MESSAGE_LIMIT_REACHED") {
+            setLimitModal({
+              title: isEn ? "Agent chat limit reached" : "Agent chat limiti doldu",
+              description: isEn
+                ? "Your current plan has no chat messages left for this month. Upgrade to keep using the agent."
+                : "Mevcut planındaki aylık agent chat mesaj hakkı doldu. Agent'ı kullanmaya devam etmek için planını yükselt.",
+              upgradeHref: data.upgradeUrl ?? `/${locale}/pricing`,
+            });
+            return;
+          }
+          throw new Error(data?.error ?? "insight failed");
+        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: data.message,
+          },
+        ]);
+        if (data.suggestions?.length > 0) {
+          setSuggestions(data.suggestions.slice(0, 4));
+        }
+        if (data.executedActions?.length > 0 && onTasksCreated) {
+          const taskTitles = data.executedActions
+            .filter((a) => a.startsWith("task_created:"))
+            .map((a) => a.replace("task_created:", ""));
+          if (taskTitles.length > 0) onTasksCreated(taskTitles);
+        }
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString(), role: "assistant", content: copy.genericError },
+        ]);
+      } finally {
+        setLoading(false);
+        inputRef.current?.focus();
+      }
+    },
+    [agentType, copy.genericError, isEn, loading, locale, onTasksCreated, productId]
+  );
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || loading) return;
@@ -395,7 +458,7 @@ export default function AgentChatPanel({
                 key={`${suggestion.intent ?? "create_task"}-${suggestion.label}`}
                 onClick={() =>
                   suggestion.intent === "ask"
-                    ? void sendMessage(suggestion.label)
+                    ? void triggerInsight(suggestion.label)
                     : void createTaskFromSuggestion(suggestion)
                 }
                 className="w-full rounded-[14px] border border-[#ece7e2] bg-[#faf8f5] px-3 py-3 text-left text-[12px] font-medium leading-5 text-[#3d4658] transition hover:border-[#d8d1ca] hover:bg-white"

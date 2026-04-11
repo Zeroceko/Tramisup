@@ -47,13 +47,22 @@ const STAGE_ORDER: FunnelStageKey[] = [
   "Revenue",
 ];
 
-const STAGE_LABELS: Record<FunnelStageKey, string> = {
-  Awareness: "Farkindalik",
-  Acquisition: "Kazanım",
-  Activation: "Ilk deger",
-  Retention: "Geri donus",
+const STAGE_LABELS_TR: Record<FunnelStageKey, string> = {
+  Awareness: "Farkındalık",
+  Acquisition: "Edinim",
+  Activation: "İlk değer",
+  Retention: "Geri dönüş",
   Referral: "Tavsiye",
   Revenue: "Gelir",
+};
+
+const STAGE_LABELS_EN: Record<FunnelStageKey, string> = {
+  Awareness: "Awareness",
+  Acquisition: "Acquisition",
+  Activation: "Activation",
+  Retention: "Retention",
+  Referral: "Referral",
+  Revenue: "Revenue",
 };
 
 const STAGE_TARGET_MULTIPLIERS: Record<FunnelStageKey, number> = {
@@ -135,12 +144,21 @@ function pickBaselineEntry(entries: MetricEntryRow[], cadenceDays: number) {
   return entries[entries.length - 2] ?? null;
 }
 
+function formatNum(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(Math.round(value));
+}
+
 export function buildFunnelHealthSummary(input: {
   product: ProductShape;
   selectedMetrics: FunnelMetricDescriptor[];
   entries: MetricEntryRow[];
+  locale?: string;
 }): FunnelHealthSummary | null {
-  const { product, selectedMetrics, entries } = input;
+  const { product, selectedMetrics, entries, locale = "tr" } = input;
+  const isEn = locale === "en";
+  const STAGE_LABELS = isEn ? STAGE_LABELS_EN : STAGE_LABELS_TR;
   if (selectedMetrics.length === 0) return null;
 
   const profile = inferProfile(product);
@@ -212,24 +230,77 @@ export function buildFunnelHealthSummary(input: {
   }
 
   const nextFocusStage = atRiskStage ?? baselineNeededStage ?? stages[0];
-  const headline =
-    overallStatus === "STRONG"
-      ? "Funnel saglikli ilerliyor"
+
+  // Build data-aware next focus text — include actual metric values when available
+  function buildNextFocus(stage: FunnelStageHealth): string {
+    const label = stage.stageLabel;
+    const metric = stage.metricName;
+    const cur = stage.currentValue;
+    const base = stage.baselineValue;
+    const rate = stage.growthRate;
+
+    if (stage.status === "AT_RISK") {
+      if (cur != null && base != null && rate != null) {
+        const direction = rate < 0 ? (isEn ? "dropped" : "düştü") : (isEn ? "grew" : "büyüdü");
+        const sign = rate >= 0 ? "+" : "";
+        if (isEn) {
+          return `${label}: ${metric} ${direction} from ${formatNum(base)} to ${formatNum(cur)} (${sign}${rate}% vs target +${stage.targetRate}%). This is the current weak link — investigate what changed in this stage.`;
+        }
+        return `${label}: ${metric} ${formatNum(base)}'den ${formatNum(cur)}'e ${direction} (%${sign}${rate}, hedef %+${stage.targetRate}). Şu anki zayıf halka bu — bu aşamada neyin değiştiğini araştır.`;
+      }
+      if (isEn) {
+        return `${label} is below target. This is the weakest link right now — focus here before expanding other areas.`;
+      }
+      return `${label} hedefin gerisinde. Şu anki zayıf halka bu — diğer alanlara genişlemeden önce buraya odaklan.`;
+    }
+
+    if (stage.status === "NEEDS_BASELINE") {
+      if (isEn) {
+        return `${label} (${metric}) doesn't have enough data yet for a ${profile.cadenceLabel} comparison. Keep entering values so the system can read this stage clearly.`;
+      }
+      return `${label} (${metric}) için henüz ${profile.cadenceLabel} karşılaştırma yapacak kadar veri yok. Sistemi net okuyabilmek için değer girmeye devam et.`;
+    }
+
+    if (cur != null && base != null && rate != null) {
+      const sign = rate >= 0 ? "+" : "";
+      if (isEn) {
+        return `${label} is performing well (${metric}: ${formatNum(base)} → ${formatNum(cur)}, ${sign}${rate}%). Keep the rhythm and watch the next stage in the funnel.`;
+      }
+      return `${label} iyi görünüyor (${metric}: ${formatNum(base)} → ${formatNum(cur)}, %${sign}${rate}). Ritmi koru, funnel'ın bir sonraki aşamasını takipte tut.`;
+    }
+
+    if (isEn) {
+      return `${label} is on track. Focus on maintaining the current rhythm and watch for any early dips.`;
+    }
+    return `${label} yolunda. Mevcut ritmi korumaya odaklan ve erken düşüşleri yakından izle.`;
+  }
+
+  const nextFocus = buildNextFocus(nextFocusStage);
+
+  const headline = isEn
+    ? overallStatus === "STRONG"
+      ? "Funnel is performing well"
       : overallStatus === "MIXED"
-        ? "Funnel'da zayif halka var"
-        : "Funnel ritmi yeni olusuyor";
-  const summary =
-    overallStatus === "STRONG"
-      ? `Tiramisup bu ${profile.label.toLowerCase()} icin ${profile.cadenceLabel} bazda yaklasik %${profile.baseTargetRate} buyume ritmini saglikli kabul ediyor. Sectigin funnel halkalarinin cogu bu ritmi yakaliyor.`
+        ? "Weak link detected in funnel"
+        : "Funnel rhythm is still forming"
+    : overallStatus === "STRONG"
+      ? "Funnel sağlıklı ilerliyor"
       : overallStatus === "MIXED"
-        ? `Tiramisup bu ${profile.label.toLowerCase()} icin ${profile.cadenceLabel} bazda yaklasik %${profile.baseTargetRate} buyume bekliyor. Funnel'in tum halkalari ayni hizda buyumuyor; en zayif halka sonraki odagin olmali.`
-        : `Tiramisup bu ${profile.label.toLowerCase()} icin ${profile.cadenceLabel} bazda yaklasik %${profile.baseTargetRate} buyume ritmi izler. Ancak henuz duzenli bir baz cizgi olusmadigi icin once biraz daha veri gerekir.`;
-  const nextFocus =
-    nextFocusStage.status === "AT_RISK"
-      ? `${nextFocusStage.stageLabel} halkasi hedefin gerisinde. Bir sonraki odak burada donusumu veya buyume hizini guclendirmek olmali.`
-      : nextFocusStage.status === "NEEDS_BASELINE"
-        ? `${nextFocusStage.stageLabel} halkasi icin henuz yeterli ${profile.cadenceLabel} veri yok. Tiramisup bu halkayi net okuyabilmek icin ritmi tamamlamani bekliyor.`
-        : `${nextFocusStage.stageLabel} halkasi iyi gorunuyor. Simdi funnel'in sonraki asamasini ayni ritimde tutmaya odaklan.`;
+        ? "Funnel'da zayıf halka var"
+        : "Funnel ritmi henüz oluşuyor";
+
+  const profileLabelDisplay = profile.label;
+  const summary = isEn
+    ? overallStatus === "STRONG"
+      ? `For a ${profileLabelDisplay.toLowerCase()}, Tiramisup targets roughly ${profile.baseTargetRate}% ${profile.cadenceLabel} growth. Most of your tracked funnel stages are hitting or beating that rhythm.`
+      : overallStatus === "MIXED"
+        ? `For a ${profileLabelDisplay.toLowerCase()}, Tiramisup targets roughly ${profile.baseTargetRate}% ${profile.cadenceLabel} growth. Not all funnel stages are moving at the same rate — the weakest link should be the next focus.`
+        : `For a ${profileLabelDisplay.toLowerCase()}, Tiramisup tracks roughly ${profile.baseTargetRate}% ${profile.cadenceLabel} growth. There isn't a stable baseline yet — keep entering data to get a clearer read.`
+    : overallStatus === "STRONG"
+      ? `Tiramisup, bu ${profileLabelDisplay.toLowerCase()} için ${profile.cadenceLabel} bazda yaklaşık %${profile.baseTargetRate} büyüme ritmini sağlıklı kabul ediyor. Seçtiğin funnel halkalarının çoğu bu ritmi yakalıyor.`
+      : overallStatus === "MIXED"
+        ? `Tiramisup, bu ${profileLabelDisplay.toLowerCase()} için ${profile.cadenceLabel} bazda yaklaşık %${profile.baseTargetRate} büyüme bekliyor. Funnel'ın tüm halkaları aynı hızda büyümüyor; en zayıf halka sonraki odağın olmalı.`
+        : `Tiramisup, bu ${profileLabelDisplay.toLowerCase()} için ${profile.cadenceLabel} bazda yaklaşık %${profile.baseTargetRate} büyüme ritmi izler. Ancak henüz düzenli bir baz çizgi oluşmadığı için önce biraz daha veri gerekir.`;
 
   return {
     profileLabel: profile.label,
