@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { ProductStatus } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
@@ -8,6 +9,7 @@ import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import type { FunnelMetricDescriptor } from "@/lib/funnel-health";
 import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
+import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
 import PrimaryAction from "@/components/today/PrimaryAction";
@@ -342,6 +344,16 @@ export default async function DashboardPage({
   fourteenDaysAgo.setDate(today.getDate() - 13);
 
   const isLaunchedProduct = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
+
+  // Growth intake gate: launched/growing products must complete the check-in
+  // before seeing the dashboard. Redirect to growth page which shows the intake.
+  if (isLaunchedProduct && !justLaunched) {
+    const checkinContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
+    const hasGrowthCheckin = Boolean(checkinContext.growthCheckin?.completedAt);
+    if (!hasGrowthCheckin) {
+      redirect(`/${locale}/growth`);
+    }
+  }
 
   const [
     completedLaunchChecklists,

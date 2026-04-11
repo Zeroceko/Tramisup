@@ -37,9 +37,10 @@ function getInitials(name?: string): string {
 }
 
 // Section-aware active pill colors matching the mockup
-function getActiveStyle(section: "overview" | "launch" | "growth"): string {
+function getActiveStyle(section: "overview" | "launch" | "growth" | "metrics"): string {
   if (section === "overview") return "bg-[#ffeb69] text-[#0d0d12] font-bold shadow-sm";
   if (section === "launch") return "bg-[#ffd7ef] text-[#0d0d12] font-bold shadow-sm";
+  if (section === "metrics") return "bg-[#ffd7ef] text-[#0d0d12] font-bold shadow-sm";
   return "bg-[#95dbda] text-[#0d0d12] font-bold shadow-sm";
 }
 
@@ -60,6 +61,7 @@ export default function DashboardNav({
     ? {
         overview: "Overview",
         launch: "Launch",
+        metrics: "Metrics",
         growth: "Growth",
         newProduct: "+ Add product",
         settings: "Settings",
@@ -71,6 +73,7 @@ export default function DashboardNav({
     : {
         overview: "Genel Bakış",
         launch: "Launch",
+        metrics: "Metrikler",
         growth: "Büyüme",
         newProduct: "+ Ürün ekle",
         settings: "Ayarlar",
@@ -88,17 +91,24 @@ export default function DashboardNav({
       return part === "/dashboard" ? pathname === full : pathname?.startsWith(full);
     });
 
-  const currentSection: "overview" | "launch" | "growth" =
-    isActive(["/growth", "/metrics"]) ? "growth"
+  const currentSection: "overview" | "launch" | "growth" | "metrics" =
+    isActive(["/growth"]) ? "growth"
+    : isActive(["/metrics"]) ? "metrics"
     : isActive(["/pre-launch"]) ? "launch"
     : "overview";
 
-  const navItems = [
+  const preLaunchNavItems = [
     { href: "/dashboard", label: labels.overview, section: "overview" as const, match: ["/dashboard"] },
     { href: "/pre-launch", label: labels.launch, section: "launch" as const, match: ["/pre-launch"] },
-    { href: "/growth", label: labels.growth, section: "growth" as const, match: ["/growth", "/metrics"] },
   ];
 
+  const launchedNavItems = [
+    { href: "/dashboard", label: labels.overview, section: "overview" as const, match: ["/dashboard"] },
+    { href: "/metrics", label: labels.metrics, section: "metrics" as const, match: ["/metrics"] },
+    { href: "/growth", label: labels.growth, section: "growth" as const, match: ["/growth"] },
+  ];
+
+  const navItems = isLaunchedProduct ? launchedNavItems : preLaunchNavItems;
   const visibleNavItems = hasProducts ? navItems : navItems.slice(0, 1);
 
   return (
