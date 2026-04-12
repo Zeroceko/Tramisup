@@ -32,13 +32,25 @@ export interface AgentMessageAction {
 }
 
 export interface AgentSuggestion {
+  id?: string;
   label: string;
+  title?: string;
   intent?: "ask" | "create_task";
   payload?: {
     title: string;
     description?: string;
     priority?: "HIGH" | "MEDIUM" | "LOW";
   };
+  description?: string | null;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
+  category?: string;
+  priority?: "HIGH" | "MEDIUM" | "LOW";
+  source?: "ai" | "fallback";
+  confidence?: "high" | "medium" | "low";
+  existingTaskId?: string;
+  existingTaskTitle?: string;
 }
 
 export interface AgentResponse {

@@ -1,7 +1,7 @@
 # Sprint Status & Roadmap
 
-**Last Updated:** 21 March 2026  
-**Current Phase:** Launch Operating System (Sprint 2) - COMPLETE ✅
+**Last Updated:** 12 April 2026  
+**Current Phase:** Sprint 3.5 - AI Suggestion Quality ⏳ IN PROGRESS
 
 > Note: This document is historical sprint tracking. For current production flow and routes, use `HANDOFF.md`, `CLAUDE.md`, and `README.md`.
 
@@ -13,6 +13,7 @@
 Sprint 0: Foundation Reset          ✅ COMPLETE
 Sprint 1: Product Creation          ✅ COMPLETE
 Sprint 2: Launch Operating System   ✅ COMPLETE
+Sprint 3.5: AI Suggestion Quality   ⏳ IN PROGRESS
 Sprint 2.5: iOS App Store (opt)     ⏳ PLANNED
 Sprint 3: SEO & Content Skills      ⏳ PLANNED
 Sprint 4: Growth Readiness          🔮 PLANNED
@@ -183,6 +184,24 @@ model Task {
 ---
 
 ## ⏳ Upcoming Sprints
+
+### Sprint 3.5 - AI Suggestion Quality (CURRENT)
+**Goal:** Turn agent cards into concrete, previewable, product-specific task candidates  
+**Estimated:** 1 week  
+**Status:** In progress  
+**Priority:** P0 (core product credibility)
+
+**Scope:**
+- Replace deterministic suggestion templates with hybrid AI + guarded fallback
+- Add explicit preview-vs-create UX in the agent panel
+- Preserve task quality contract via validator + guarded task creation
+- Add regression coverage for suggestion usefulness
+
+**Verification:**
+- [ ] Launch cards are no longer generic checklist wrappers
+- [ ] Suggestion preview opens in a right-side sheet
+- [ ] Create action uses guarded task creation and dedupes cleanly
+- [ ] Overview / Launch / Growth surfaces all return context-specific suggestions
 
 ### Sprint 2.5 - iOS App Store Preflight (OPTIONAL)
 **Goal:** Help iOS developers reduce App Store rejection risk  

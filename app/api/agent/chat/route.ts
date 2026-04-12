@@ -15,6 +15,7 @@ import {
 import { generateTextFallback } from "@/BrandLib/ai-client";
 import { checkLimit, recordUsageEvent } from "@/lib/plan-limits";
 import { tryCreateTaskWithGuards } from "@/lib/task-create";
+import { buildTaskDetailFallback } from "@/lib/task-detail-fallback";
 import {
   createStoredAgentMessage,
   listStoredAgentMessages,
@@ -23,7 +24,7 @@ import {
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
-function normalizeSuggestions(rawSuggestions: unknown): AgentSuggestion[] {
+function normalizeSuggestions(rawSuggestions: unknown, locale: "en" | "tr"): AgentSuggestion[] {
   if (!Array.isArray(rawSuggestions)) return [];
 
   return rawSuggestions.flatMap<AgentSuggestion>((item) => {
@@ -48,13 +49,21 @@ function normalizeSuggestions(rawSuggestions: unknown): AgentSuggestion[] {
       suggestion.payload && typeof suggestion.payload === "object"
         ? suggestion.payload as Record<string, unknown>
         : null;
+    const title = payload && typeof payload.title === "string" ? payload.title : label;
+    const fallback = buildTaskDetailFallback({
+      title,
+      category: typeof suggestion.category === "string" ? suggestion.category : null,
+      locale,
+    });
 
     return [{
+      id: typeof suggestion.id === "string" ? suggestion.id : undefined,
       label,
+      title,
       intent,
       payload: payload
         ? {
-            title: typeof payload.title === "string" ? payload.title : label,
+            title,
             description:
               typeof payload.description === "string" ? payload.description : undefined,
             priority:
@@ -63,6 +72,27 @@ function normalizeSuggestions(rawSuggestions: unknown): AgentSuggestion[] {
                 : "MEDIUM",
           }
         : undefined,
+      description: typeof suggestion.description === "string" ? suggestion.description : null,
+      whyItMatters:
+        typeof suggestion.whyItMatters === "string" ? suggestion.whyItMatters : fallback.why,
+      doneCriteria:
+        typeof suggestion.doneCriteria === "string" ? suggestion.doneCriteria : fallback.doneCriteria,
+      nextAction:
+        typeof suggestion.nextAction === "string" ? suggestion.nextAction : fallback.nextAction,
+      category: typeof suggestion.category === "string" ? suggestion.category : undefined,
+      priority:
+        payload?.priority === "HIGH" || payload?.priority === "LOW"
+          ? payload.priority
+          : "MEDIUM",
+      source: suggestion.source === "fallback" ? "fallback" : "ai",
+      confidence:
+        suggestion.confidence === "high" || suggestion.confidence === "low"
+          ? suggestion.confidence
+          : "medium",
+      existingTaskId:
+        typeof suggestion.existingTaskId === "string" ? suggestion.existingTaskId : undefined,
+      existingTaskTitle:
+        typeof suggestion.existingTaskTitle === "string" ? suggestion.existingTaskTitle : undefined,
     }];
   }).slice(0, 4);
 }
@@ -84,7 +114,7 @@ function parseAgentResponse(raw: string): AgentResponse | null {
       message: parsed.message,
       actions: Array.isArray(parsed.actions) ? parsed.actions : [],
       messageActions: Array.isArray(parsed.messageActions) ? parsed.messageActions : [],
-      suggestions: normalizeSuggestions(parsed.suggestions),
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
     };
   } catch {
     return null;
@@ -214,7 +244,9 @@ export async function POST(request: Request) {
     try {
       const raw = await generateTextFallback(systemPrompt, userPrompt, `agent:${agentType}`);
       const parsed = parseAgentResponse(raw);
-      agentResponse = parsed ?? buildFallbackResponse(agentType, locale);
+      agentResponse = parsed
+        ? { ...parsed, suggestions: normalizeSuggestions(parsed.suggestions, locale) }
+        : buildFallbackResponse(agentType, locale);
     } catch (err) {
       console.error("[agent/chat] AI call failed:", err);
       agentResponse = buildFallbackResponse(agentType, locale);

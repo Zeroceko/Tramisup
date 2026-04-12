@@ -1,14 +1,15 @@
 # Production Stabilization Board
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 Owner: Founder takeover / production stabilization
-Status: **ALL SPRINTS COMPLETE — board closed**
+Status: **REOPENED FOR SPRINT 3.5 — suggestion quality + actionability**
 
 ## Current reality
 
-- All planned stabilization work is done and committed.
+- All original stabilization work is done and committed.
 - New products get >= 5 high-quality launch checklist items with structured fields.
 - Context-driven agent suggestions replace static cards.
+- Current open issue: agent suggestions are still too template-like and do not add enough founder-facing synthesis.
 - Plan source is tracked (ai / sanitized_ai / fallback) and observable.
 - Old products can be repaired via `/api/products/[id]/regenerate` or admin repair tool.
 - Release signoff is automated: `npm run release:signoff`.
@@ -31,6 +32,10 @@ Status: **ALL SPRINTS COMPLETE — board closed**
 | S3-1 | Sprint 3 | Add founder-facing plan quality guardrails | Done | P1 | `isPlanThin()` rejects <5 launch items, <3 tasks, missing PRODUCT/TECH |
 | S3-2 | Sprint 3 | Add observability for plan quality and launch readiness health | Done | P2 | `GET /api/admin/plan-quality` — fallback rate, source breakdown, thin list |
 | S3-3 | Sprint 3 | Add routine production founder walkthrough regression | Done | P2 | `npm run release:signoff` orchestrates all gates, E2E smoke extended |
+| S3.5-1 | Sprint 3.5 | Replace deterministic suggestion cards with hybrid AI generation | In Progress | P0 | Agent cards are concrete, product-specific, and pass structured task validation |
+| S3.5-2 | Sprint 3.5 | Add preview-vs-create suggestion UX | In Progress | P0 | Card rows show preview + create actions; preview opens right-side sheet |
+| S3.5-3 | Sprint 3.5 | Add suggestion quality guardrails and fallback logging | In Progress | P1 | Thin / invalid AI suggestion sets fall back safely and log the reason |
+| S3.5-4 | Sprint 3.5 | Add founder regression checks for suggestion usefulness | Planned | P1 | Launch, Overview, and Growth all surface at least one actionable suggestion |
 
 ## Sprint 0
 

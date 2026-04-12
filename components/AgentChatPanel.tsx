@@ -4,6 +4,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { AgentType } from "@/lib/agent-types";
 import UsageLimitModal from "@/components/UsageLimitModal";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 export type { AgentType };
 
 interface Message {
@@ -25,9 +32,21 @@ interface AgentMessageAction {
 }
 
 interface AgentSuggestion {
+  id?: string;
   label: string;
+  title?: string;
   intent?: "ask" | "create_task";
   payload?: { title: string; description?: string; priority?: string };
+  description?: string | null;
+  whyItMatters?: string;
+  doneCriteria?: string;
+  nextAction?: string;
+  category?: string;
+  priority?: "HIGH" | "MEDIUM" | "LOW";
+  source?: "ai" | "fallback";
+  confidence?: "high" | "medium" | "low";
+  existingTaskId?: string;
+  existingTaskTitle?: string;
 }
 
 interface AgentApiResponse {
@@ -186,6 +205,7 @@ export default function AgentChatPanel({
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<AgentSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [previewSuggestion, setPreviewSuggestion] = useState<AgentSuggestion | null>(null);
   const [limitModal, setLimitModal] = useState<{
     title: string;
     description: string;
@@ -227,20 +247,21 @@ export default function AgentChatPanel({
     return () => controller.abort();
   }, [agentType, locale, productId]);
 
+  const refetchSuggestions = useCallback(() => {
+    setSuggestionsLoading(true);
+    fetch(`/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+      })
+      .catch(() => {})
+      .finally(() => setSuggestionsLoading(false));
+  }, [agentType, locale, productId]);
+
   useEffect(() => {
-    function refetchSuggestions() {
-      setSuggestionsLoading(true);
-      fetch(`/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
-        })
-        .catch(() => {})
-        .finally(() => setSuggestionsLoading(false));
-    }
     window.addEventListener("tiramisup:checklist-updated", refetchSuggestions);
     return () => window.removeEventListener("tiramisup:checklist-updated", refetchSuggestions);
-  }, [agentType, productId, locale]);
+  }, [refetchSuggestions]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -389,12 +410,86 @@ export default function AgentChatPanel({
   }
 
   async function createTaskFromSuggestion(suggestion: AgentSuggestion) {
-    await createTask({
-      title: suggestion.payload?.title?.trim() || suggestion.label.trim(),
-      description: suggestion.payload?.description,
-      priority: suggestion.payload?.priority,
-    });
-    setSuggestions((prev) => prev.filter((item) => item.label !== suggestion.label));
+    if (suggestion.existingTaskId) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          role: "assistant",
+          content: isEn
+            ? `That work is already on the board as "${suggestion.existingTaskTitle ?? suggestion.title ?? suggestion.label}".`
+            : `Bu iş zaten board'da: "${suggestion.existingTaskTitle ?? suggestion.title ?? suggestion.label}".`,
+        },
+      ]);
+      router.push(`/${locale}/tasks`);
+      setPreviewSuggestion(null);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/agent/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          locale,
+          suggestion: {
+            title: suggestion.title ?? suggestion.payload?.title ?? suggestion.label,
+            description: suggestion.description ?? suggestion.payload?.description ?? null,
+            whyItMatters: suggestion.whyItMatters,
+            doneCriteria: suggestion.doneCriteria,
+            nextAction: suggestion.nextAction,
+            category: suggestion.category,
+            priority: suggestion.priority ?? suggestion.payload?.priority ?? "MEDIUM",
+          },
+        }),
+      });
+
+      const data = await res.json().catch(() => null) as {
+        error?: string;
+        task?: { title: string };
+        deduped?: boolean;
+        dedupedAgainst?: string | null;
+      } | null;
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? copy.taskFailed);
+      }
+
+      const title = data?.task?.title ?? suggestion.title ?? suggestion.label;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          role: "assistant",
+          content:
+            data?.deduped
+              ? isEn
+                ? `Already on the board: ${data.dedupedAgainst ?? title}`
+                : `Zaten board'da: ${data.dedupedAgainst ?? title}`
+              : copy.taskAdded(title),
+        },
+      ]);
+      setPreviewSuggestion(null);
+      refetchSuggestions();
+      onTasksCreated?.([title]);
+      if (data?.deduped) {
+        router.push(`/${locale}/tasks`);
+      }
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          role: "assistant",
+          content: err instanceof Error ? err.message : copy.taskFailed,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
   }
 
   async function handleMessageAction(action: AgentMessageAction) {
@@ -422,6 +517,24 @@ export default function AgentChatPanel({
     }
   };
 
+  const categoryMeta: Record<string, { en: string; tr: string; cls: string }> = {
+    PRODUCT: { en: "Product", tr: "Ürün hazırlığı", cls: "bg-purple-50 text-purple-700 border-purple-100" },
+    TECH: { en: "Tech", tr: "Teknik hazırlık", cls: "bg-blue-50 text-blue-700 border-blue-100" },
+    LEGAL: { en: "Legal", tr: "Hukuki hazırlık", cls: "bg-red-50 text-red-700 border-red-100" },
+    MARKETING: { en: "Marketing", tr: "Pazarlama", cls: "bg-green-50 text-green-700 border-green-100" },
+    ACQUISITION: { en: "Acquisition", tr: "Edinim", cls: "bg-amber-50 text-amber-700 border-amber-100" },
+    ACTIVATION: { en: "Activation", tr: "Aktivasyon", cls: "bg-teal-50 text-teal-700 border-teal-100" },
+    RETENTION: { en: "Retention", tr: "Tutma", cls: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+    REVENUE: { en: "Revenue", tr: "Gelir", cls: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+    MEASUREMENT: { en: "Measurement", tr: "Ölçümleme", cls: "bg-sky-50 text-sky-700 border-sky-100" },
+  };
+
+  const confidenceLabel = (confidence?: "high" | "medium" | "low") => {
+    if (confidence === "high") return isEn ? "High confidence" : "Yüksek güven";
+    if (confidence === "low") return isEn ? "Low confidence" : "Düşük güven";
+    return isEn ? "Medium confidence" : "Orta güven";
+  };
+
   return (
     <>
       <UsageLimitModal
@@ -432,6 +545,109 @@ export default function AgentChatPanel({
         upgradeHref={limitModal?.upgradeHref ?? `/${locale}/pricing`}
         onClose={() => setLimitModal(null)}
       />
+
+      <Sheet open={Boolean(previewSuggestion)} onOpenChange={(open) => !open && setPreviewSuggestion(null)}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto border-l border-[#e8e8e8] bg-white p-0 sm:max-w-[560px]"
+        >
+          {previewSuggestion ? (
+            <div className="flex min-h-full flex-col">
+              <SheetHeader className="border-b border-[#f0f0f0] px-6 py-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8fa0]">
+                  {copy.panelTitle}
+                </p>
+                <SheetTitle className="pr-10 text-[24px] font-bold leading-tight tracking-[-0.02em] text-[#0d0d12]">
+                  {previewSuggestion.title ?? previewSuggestion.label}
+                </SheetTitle>
+                <SheetDescription className="text-[13px] leading-5 text-[#5e6678]">
+                  {previewSuggestion.description ??
+                    (isEn
+                      ? "Review the reason, done criteria, and first action before adding this to the board."
+                      : "Bu işi board'a eklemeden önce nedeni, bitmiş hali ve ilk aksiyonu gözden geçir.")}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="flex-1 space-y-4 px-6 py-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {previewSuggestion.category && categoryMeta[previewSuggestion.category] ? (
+                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${categoryMeta[previewSuggestion.category].cls}`}>
+                      {isEn ? categoryMeta[previewSuggestion.category].en : categoryMeta[previewSuggestion.category].tr}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full border border-[#ece7e2] bg-[#faf8f5] px-2.5 py-1 text-[11px] font-semibold text-[#5e6678]">
+                    {previewSuggestion.priority === "HIGH"
+                      ? isEn ? "High impact" : "Yüksek etki"
+                      : previewSuggestion.priority === "LOW"
+                        ? isEn ? "Low impact" : "Düşük etki"
+                        : isEn ? "Medium impact" : "Orta etki"}
+                  </span>
+                  <span className="rounded-full border border-[#ece7e2] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#5e6678]">
+                    {confidenceLabel(previewSuggestion.confidence)}
+                  </span>
+                  <span className="rounded-full border border-[#ece7e2] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#5e6678]">
+                    {previewSuggestion.source === "fallback" ? "Fallback" : "AI"}
+                  </span>
+                </div>
+
+                {previewSuggestion.existingTaskTitle ? (
+                  <div className="rounded-[14px] border border-[#d7efdf] bg-[#f5fcf7] px-4 py-3">
+                    <p className="text-[12px] font-semibold text-[#166534]">
+                      {isEn ? "Already on the board" : "Zaten board'da"}
+                    </p>
+                    <p className="mt-1 text-[12px] leading-5 text-[#166534]">
+                      {previewSuggestion.existingTaskTitle}
+                    </p>
+                  </div>
+                ) : null}
+
+                {[
+                  {
+                    label: isEn ? "Why it matters" : "Neden önemli",
+                    value: previewSuggestion.whyItMatters,
+                    accent: "border-l-[#ffd7ef]",
+                  },
+                  {
+                    label: isEn ? "Done when" : "Biten hali",
+                    value: previewSuggestion.doneCriteria,
+                    accent: "border-l-[#75fc96]",
+                  },
+                  {
+                    label: isEn ? "Next action" : "Sonraki adım",
+                    value: previewSuggestion.nextAction,
+                    accent: "border-l-[#95dbda]",
+                  },
+                ].map((section) => (
+                  <div
+                    key={section.label}
+                    className={`rounded-r-[14px] border-l-[3px] bg-[#fafafa] px-4 py-3 ${section.accent}`}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                      {section.label}
+                    </p>
+                    <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+                      {section.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-[#f0f0f0] px-6 py-4">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void createTaskFromSuggestion(previewSuggestion)}
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
+                >
+                  {previewSuggestion.existingTaskId
+                    ? isEn ? "Open board" : "Board'u aç"
+                    : isEn ? "Create task" : "Görev oluştur"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <div className="flex h-full flex-col">
         <div className="border-b border-[#f0ede8] px-4 py-4">
@@ -451,13 +667,43 @@ export default function AgentChatPanel({
         ) : suggestions.length > 0 && !loading ? (
           <div className="mt-3 space-y-2">
             {suggestions.map((suggestion) => (
-              <button
-                key={`${suggestion.intent ?? "create_task"}-${suggestion.label}`}
-                onClick={() => void createTaskFromSuggestion(suggestion)}
-                className="w-full rounded-[14px] border border-[#ece7e2] bg-[#faf8f5] px-3 py-3 text-left text-[12px] font-medium leading-5 text-[#3d4658] transition hover:border-[#d8d1ca] hover:bg-white"
+              <div
+                key={suggestion.id ?? `${suggestion.intent ?? "create_task"}-${suggestion.label}`}
+                className="flex items-center gap-2 rounded-[14px] border border-[#ece7e2] bg-[#faf8f5] px-3 py-3 transition hover:border-[#d8d1ca] hover:bg-white"
               >
-                {suggestion.label}
-              </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-medium leading-5 text-[#3d4658]">
+                    {suggestion.title ?? suggestion.label}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewSuggestion(suggestion)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#ddd6ce] bg-white text-[#5e6678] transition hover:border-[#c8c0b7] hover:bg-[#faf8f5]"
+                  aria-label={isEn ? "Preview suggestion" : "Öneri detayını aç"}
+                  title={isEn ? "Preview" : "Önizle"}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void createTaskFromSuggestion(suggestion)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0d0d12] text-white transition hover:bg-[#1a1a24]"
+                  aria-label={suggestion.existingTaskId
+                    ? isEn ? "Open existing task on board" : "Var olan görevi board'da aç"
+                    : isEn ? "Create task" : "Görev oluştur"}
+                  title={suggestion.existingTaskId
+                    ? isEn ? "Open board" : "Board'u aç"
+                    : isEn ? "Create task" : "Görev oluştur"}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
             ))}
           </div>
         ) : null}
