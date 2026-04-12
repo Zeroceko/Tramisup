@@ -12,5 +12,9 @@ export default function RouteScopedBoundary({
 }) {
   const pathname = usePathname() ?? "";
 
-  return <div key={`${scope}:${pathname}`}>{children}</div>;
+  return (
+    <div key={`${scope}:${pathname}`} className="h-full min-h-0">
+      {children}
+    </div>
+  );
 }
