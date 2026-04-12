@@ -26,7 +26,7 @@ export default async function SettingsLayout({
 
   return (
     <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>
-      <RouteScopedBoundary scope="settings">
+      <RouteScopedBoundary key="settings" scope="settings">
         <PlainPageShell>{children}</PlainPageShell>
       </RouteScopedBoundary>
     </AppShell>

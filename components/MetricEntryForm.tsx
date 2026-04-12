@@ -107,6 +107,7 @@ export default function MetricEntryForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [postSave, setPostSave] = useState<PostSave | null>(null);
+  const [funnelWarnings, setFunnelWarnings] = useState<string[]>([]);
   const [buildingDashboard, setBuildingDashboard] = useState(false);
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
@@ -137,6 +138,27 @@ export default function MetricEntryForm({
         return;
       }
     }
+
+    // Funnel consistency check (non-blocking)
+    const valueMap: Partial<Record<FunnelStageKey, number>> = {};
+    for (const m of selectedMetrics) {
+      valueMap[m.stage] = Number(formData.values[m.stage]);
+    }
+    const warnings: string[] = [];
+    for (let i = 0; i < FUNNEL_ORDER.length - 1; i++) {
+      const upper = FUNNEL_ORDER[i];
+      const lower = FUNNEL_ORDER[i + 1];
+      const upperVal = valueMap[upper];
+      const lowerVal = valueMap[lower];
+      if (upperVal !== undefined && lowerVal !== undefined && lowerVal > upperVal) {
+        warnings.push(
+          isEn
+            ? `${lower} (${lowerVal}) is higher than ${upper} (${upperVal}) — this may indicate a data entry issue.`
+            : `${lower} (${lowerVal}), ${upper} (${upperVal})'den yüksek — veri girişinde hata olabilir.`
+        );
+      }
+    }
+    setFunnelWarnings(warnings);
 
     setLoading(true);
     setError("");
@@ -381,6 +403,18 @@ export default function MetricEntryForm({
               ? `${selectedMetrics.length - filledCount} more field${selectedMetrics.length - filledCount > 1 ? "s" : ""} to fill`
               : `${selectedMetrics.length - filledCount} alan daha doldurulacak`}
           </p>
+        )}
+
+        {/* Funnel consistency warnings (non-blocking) */}
+        {funnelWarnings.length > 0 && (
+          <div className="rounded-[12px] border border-[#fde68a] bg-[#fffdf5] px-3 py-2.5 space-y-1">
+            <p className="text-[11px] font-semibold text-[#92400e]">
+              {isEn ? "Possible data entry issue" : "Olası veri girişi hatası"}
+            </p>
+            {funnelWarnings.map((w, i) => (
+              <p key={i} className="text-[11px] text-[#a16207] leading-4">· {w}</p>
+            ))}
+          </div>
         )}
 
         <button

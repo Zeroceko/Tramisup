@@ -170,6 +170,7 @@ export default function PreLaunchWorkspace({
           : item,
       ),
     );
+    window.dispatchEvent(new CustomEvent("tiramisup:checklist-updated"));
     return undefined;
   }
 

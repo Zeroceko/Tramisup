@@ -61,11 +61,12 @@ export default function LaunchButton({
 
   const hasIgnoredRisks = ignoredBlockers.length > 0;
 
+  const reviewDone = REVIEW_ITEMS.every((item) => checked[item.id]);
+
   const readyForLaunch = useMemo(() => {
-    const reviewDone = REVIEW_ITEMS.every((item) => checked[item.id]);
     const riskOk = hasIgnoredRisks ? riskAcknowledged : true;
     return reviewDone && riskOk && confirmLive;
-  }, [checked, riskAcknowledged, confirmLive, hasIgnoredRisks]);
+  }, [reviewDone, riskAcknowledged, confirmLive, hasIgnoredRisks]);
 
   async function handleLaunch() {
     setLoading(true);
@@ -251,7 +252,11 @@ export default function LaunchButton({
             )}
 
             {/* Final confirmation */}
-            <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border border-[#ffd7ef] bg-[#fff7fb] p-4">
+            <label className={`flex cursor-pointer items-start gap-3 rounded-[14px] border p-4 transition ${
+              reviewDone && !confirmLive
+                ? "border-[#ffd7ef] bg-[#fff7fb] ring-2 ring-[#ffd7ef] ring-offset-2 animate-pulse"
+                : "border-[#ffd7ef] bg-[#fff7fb]"
+            }`}>
               <input
                 type="checkbox"
                 checked={confirmLive}
@@ -275,9 +280,11 @@ export default function LaunchButton({
             {/* Actions */}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[11px] leading-5 text-[#94a3b8] max-w-xs">
-                {isEn
-                  ? "Non-critical open items stay visible on the Launch Readiness page after launch."
-                  : "Kritik olmayan açık maddeler launch sonrası Launch Readiness sayfasında görünmeye devam eder."}
+                {reviewDone && !confirmLive
+                  ? (isEn ? "↑ Confirm the final step above to enable launch." : "↑ Son adımı onayladıktan sonra launch yapabilirsin.")
+                  : (isEn
+                    ? "Non-critical open items stay visible on the Launch Readiness page after launch."
+                    : "Kritik olmayan açık maddeler launch sonrası Launch Readiness sayfasında görünmeye devam eder.")}
               </p>
               <div className="flex items-center gap-2">
                 <button

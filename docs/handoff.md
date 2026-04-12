@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current live release: `f8f56491`
+- Current live release: `27dfd71d`
 - Last docs refresh: `12 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
@@ -32,42 +32,19 @@
 
 ### Recent shipped commits
 
+- `27dfd71d` — allow chef admin access
+- `eded8530` — finish trust sprint 2 hardening and verification
 - `f8f56491` — handoff/docs refresh on top of the current production baseline
 - `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
 - `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
 - `13ba0851` — fix overview agent: stage-aware context for launched/growing products
 - `93c8a82f` — agent panel all-task, remove ask intent
-- `470c1e58` — growth diagnosis data-driven + locale-aware, TR category labels
 
 ---
 
-## Local Workspace Warning
+## Local Workspace State
 
-The current local workspace is **not** a clean production mirror. It contains a partial implementation of **Founder Trust Sprint 2** and should be treated as an unfinished branch state.
-
-### Started locally but not completed
-
-- Canonical launch stage migration
-- Route-scoped remounting for `/dashboard`, `/pre-launch`, `/settings`
-- Client-synced pre-launch checklist/task workspace
-- Agent message persistence scaffold and `messageActions` contract
-
-### Current compile blockers
-
-As of **12 April 2026**, `npx tsc --noEmit` fails in the local workspace because of:
-
-1. `app/api/agent/chat/route.ts` still returning the old `AgentResponse` shape without `messageActions`
-2. `components/OnboardingWizard.tsx` still referencing removed stage helper names
-3. `components/OnboardingWizard.tsx` still carrying one `string` → `LaunchStageKey | ""` typing mismatch
-4. `lib/agent-messages.ts` using the unfinished `AgentMessage` Prisma model before Prisma client regeneration / final typing cleanup
-
-### First resume steps for the next team
-
-1. Finish or back out the incomplete `AgentMessage` / agent history path
-2. Finish the `OnboardingWizard` canonical stage migration
-3. Run `npx prisma generate`
-4. Run `npx tsc --noEmit`
-5. Only then continue the remaining Trust Sprint 2 scope
+The local workspace is a **clean, production-aligned state**. Trust Sprint 2 has been completed and verified (`eded8530`). `npx tsc --noEmit` passes clean.
 
 ---
 
@@ -107,6 +84,33 @@ As of **12 April 2026**, `npx tsc --noEmit` fails in the local workspace because
 - Every card is `intent: "create_task"` with an action-oriented label and payload
 - Clicking any card calls `createTaskFromSuggestion` → `POST /api/actions` → task created
 - Declining metric cards carry actual before/after numbers in the task title
+
+### 6. Launch modal UX fix (Session 3 founder test)
+
+`components/LaunchButton.tsx`:
+- `reviewDone` is now computed outside `useMemo` so it can drive UI hints independently
+- When all 3 review toggles are checked but `confirmLive` is still unchecked, the confirmation section pulses with a teal ring and the action area shows a directional hint: "↑ Confirm the final step above to enable launch."
+- This resolves the P0 bug where users completed all toggles but the launch button stayed disabled with no visible cue
+
+### 7. Route subtree isolation fix (Settings → Pre-launch regression)
+
+`app/[locale]/pre-launch/layout.tsx`, `app/[locale]/settings/layout.tsx`:
+- Added `key` props to `RouteScopedBoundary` in both layouts (`key="pre-launch"`, `key="settings"`)
+- Guarantees React unmounts and remounts the boundary on route change, preventing Settings form from leaking into Pre-launch subtree
+
+### 8. Agent panel suggestions auto-refresh on checklist change
+
+`components/PreLaunchWorkspace.tsx`, `components/AgentChatPanel.tsx`:
+- After a checklist item is toggled complete, `PreLaunchWorkspace` dispatches `CustomEvent('tiramisup:checklist-updated')`
+- `AgentChatPanel` listens for this event and re-fetches suggestions from `/api/agent/suggestions`
+- Fixes stale "PRODUCT is the weakest area (0%)" banner that persisted after category completion
+
+### 9. Funnel consistency warning in metric entry (non-blocking)
+
+`components/MetricEntryForm.tsx`:
+- On submit, values are checked against `FUNNEL_ORDER` (Awareness → Acquisition → Activation → Retention → Referral → Revenue)
+- If a downstream stage value exceeds its upstream stage, a yellow non-blocking warning card is shown before the save button
+- Submit still proceeds — warning is informational only, not a gate
 
 ---
 
@@ -149,7 +153,7 @@ As of **12 April 2026**, `npx tsc --noEmit` fails in the local workspace because
 
 1. Local setup: `npm install && npx prisma generate && npx prisma db push`
 2. `npx tsc --noEmit` and `npx next build` pass clean
-3. `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` — all 70 pass
+3. `QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run` — non-waitlist tests pass
 4. Sign up → verify email → login
 5. Create a product through onboarding with file upload and a context URL
 6. Confirm plan generation completes
@@ -158,3 +162,7 @@ As of **12 April 2026**, `npx tsc --noEmit` fails in the local workspace because
 9. Complete growth check-in and confirm dashboard loads
 10. Click agent panel card — confirm task is created, not a chat message
 11. Language switch from settings — confirm route changes
+12. Pre-launch: open launch modal, check all 3 toggles → confirmation section should pulse + show hint; check confirmLive → button activates
+13. Navigate Settings → Pre-launch — Settings form must NOT appear in pre-launch route
+14. Pre-launch: complete a checklist item → agent panel "Launch Recommendations" banner should refresh within ~2s
+15. Metrics daily entry: enter Retention value higher than Acquisition → yellow warning card should appear; save should still work

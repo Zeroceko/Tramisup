@@ -207,9 +207,7 @@ export default function AgentChatPanel({
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.suggestions?.length > 0) {
-          setSuggestions(data.suggestions);
-        }
+        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
       })
       .catch(() => {})
       .finally(() => setSuggestionsLoading(false));
@@ -228,6 +226,21 @@ export default function AgentChatPanel({
 
     return () => controller.abort();
   }, [agentType, locale, productId]);
+
+  useEffect(() => {
+    function refetchSuggestions() {
+      setSuggestionsLoading(true);
+      fetch(`/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+        })
+        .catch(() => {})
+        .finally(() => setSuggestionsLoading(false));
+    }
+    window.addEventListener("tiramisup:checklist-updated", refetchSuggestions);
+    return () => window.removeEventListener("tiramisup:checklist-updated", refetchSuggestions);
+  }, [agentType, productId, locale]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
