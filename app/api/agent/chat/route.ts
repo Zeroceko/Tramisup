@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +13,7 @@ import {
   type AgentAction,
   type AgentSuggestion,
 } from "@/lib/agent-prompts";
-import { generateTextFallback } from "@/BrandLib/ai-client";
+import { generateStructuredFallback } from "@/BrandLib/ai-client";
 import { checkLimit, recordUsageEvent } from "@/lib/plan-limits";
 import { tryCreateTaskWithGuards } from "@/lib/task-create";
 import { buildTaskDetailFallback } from "@/lib/task-detail-fallback";
@@ -23,6 +24,55 @@ import {
 } from "@/lib/agent-messages";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
+const AgentActionSchema = z.object({
+  type: z.literal("create_task"),
+  payload: z.object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
+  }),
+});
+
+const AgentMessageActionSchema = z.object({
+  type: z.enum(["create_task", "open_checklist", "open_tracking"]),
+  label: z.string().min(1),
+  payload: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
+  }).optional(),
+});
+
+const AgentSuggestionSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().min(1).optional(),
+  title: z.string().min(1).optional(),
+  intent: z.enum(["ask", "create_task"]).optional(),
+  payload: z.object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
+  }).optional(),
+  description: z.string().nullable().optional(),
+  whyItMatters: z.string().optional(),
+  doneCriteria: z.string().optional(),
+  nextAction: z.string().optional(),
+  category: z.string().optional(),
+  priority: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
+  source: z.enum(["ai", "fallback"]).optional(),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  existingTaskId: z.string().optional(),
+  existingTaskTitle: z.string().optional(),
+}).refine((item) => Boolean(item.label || item.title || item.payload?.title), {
+  message: "suggestion requires label, title, or payload.title",
+});
+
+const AgentResponseSchema = z.object({
+  message: z.string().min(1),
+  actions: z.array(AgentActionSchema).default([]),
+  messageActions: z.array(AgentMessageActionSchema).default([]),
+  suggestions: z.array(AgentSuggestionSchema).default([]),
+});
 
 function normalizeSuggestions(rawSuggestions: unknown, locale: "en" | "tr"): AgentSuggestion[] {
   if (!Array.isArray(rawSuggestions)) return [];
@@ -41,14 +91,21 @@ function normalizeSuggestions(rawSuggestions: unknown, locale: "en" | "tr"): Age
 
     if (!item || typeof item !== "object") return [];
     const suggestion = item as Record<string, unknown>;
-    const label = typeof suggestion.label === "string" ? suggestion.label.trim() : "";
-    if (!label) return [];
-
-    const intent = suggestion.intent === "ask" ? "ask" : "create_task";
     const payload =
       suggestion.payload && typeof suggestion.payload === "object"
         ? suggestion.payload as Record<string, unknown>
         : null;
+    const label =
+      typeof suggestion.label === "string" && suggestion.label.trim().length > 0
+        ? suggestion.label.trim()
+        : typeof suggestion.title === "string" && suggestion.title.trim().length > 0
+          ? suggestion.title.trim()
+          : payload && typeof payload.title === "string"
+            ? payload.title.trim()
+            : "";
+    if (!label) return [];
+
+    const intent = suggestion.intent === "ask" ? "ask" : "create_task";
     const title = payload && typeof payload.title === "string" ? payload.title : label;
     const fallback = buildTaskDetailFallback({
       title,
@@ -95,30 +152,6 @@ function normalizeSuggestions(rawSuggestions: unknown, locale: "en" | "tr"): Age
         typeof suggestion.existingTaskTitle === "string" ? suggestion.existingTaskTitle : undefined,
     }];
   }).slice(0, 4);
-}
-
-function parseAgentResponse(raw: string): AgentResponse | null {
-  try {
-    // Strip markdown code fences if present
-    const cleaned = raw
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-
-    const parsed = JSON.parse(cleaned);
-
-    if (typeof parsed.message !== "string") return null;
-
-    return {
-      message: parsed.message,
-      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
-      messageActions: Array.isArray(parsed.messageActions) ? parsed.messageActions : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-    };
-  } catch {
-    return null;
-  }
 }
 
 async function executeActions(
@@ -242,11 +275,15 @@ export async function POST(request: Request) {
     // Call AI
     let agentResponse: AgentResponse;
     try {
-      const raw = await generateTextFallback(systemPrompt, userPrompt, `agent:${agentType}`);
-      const parsed = parseAgentResponse(raw);
-      agentResponse = parsed
-        ? { ...parsed, suggestions: normalizeSuggestions(parsed.suggestions, locale) }
-        : buildFallbackResponse(agentType, locale);
+      const generated = await generateStructuredFallback<AgentResponse>(
+        `${systemPrompt}\n\nUser prompt:\n${userPrompt}`,
+        AgentResponseSchema,
+        `agent:${agentType}`,
+      );
+      agentResponse = {
+        ...generated,
+        suggestions: normalizeSuggestions(generated.suggestions, locale),
+      };
     } catch (err) {
       console.error("[agent/chat] AI call failed:", err);
       agentResponse = buildFallbackResponse(agentType, locale);
