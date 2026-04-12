@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Settings, User } from "lucide-react";
+import { KanbanSquare, Settings, User } from "lucide-react";
 import ProductSelector from "@/components/ProductSelector";
 import {
   DropdownMenu,
@@ -162,18 +162,21 @@ export default function DashboardNav({
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right: Board + Product selector + Avatar */}
+      {/* Right: Board workspace entry + Product selector + Avatar */}
       <div className="flex items-center gap-2">
         {hasProducts && (
           <Link
             href={withLocale("/tasks")}
-            className={`hidden h-[34px] items-center rounded-full px-4 text-[13px] font-semibold transition-colors lg:flex border ${
+            className={`inline-flex h-[34px] shrink-0 items-center gap-2 rounded-full border px-3 text-[13px] font-semibold transition-colors sm:px-4 ${
               isActive(["/tasks"])
-                ? "bg-[#ffeb69] text-[#0d0d12] border-[#ffeb69]"
-                : "bg-white text-[#0d0d12] border-[#e0ddd6] hover:bg-[#f9f7f3]"
+                ? "border-[#0d0d12] bg-[#0d0d12] text-white shadow-sm"
+                : "border-[#e0ddd6] bg-white text-[#0d0d12] hover:bg-[#f9f7f3]"
             }`}
+            aria-label={labels.board}
+            title={labels.board}
           >
-            {labels.board}
+            <KanbanSquare className="h-4 w-4 shrink-0" />
+            <span className="max-[380px]:hidden">{labels.board}</span>
           </Link>
         )}
 
