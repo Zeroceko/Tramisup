@@ -180,6 +180,23 @@ export default function GrowthChecklistSection({
       setTaskAddedIds((current) =>
         current.includes(item.id) ? current : [...current, item.id]
       );
+
+      if (!item.completed) {
+        const checklistRes = await fetch(`/api/growth-checklist/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: true }),
+        });
+
+        if (checklistRes.ok) {
+          setItems((prev) =>
+            prev.map((entry) =>
+              entry.id === item.id ? { ...entry, completed: true } : entry,
+            ),
+          );
+        }
+      }
+
       router.refresh();
     } finally {
       setLoadingItemId(null);

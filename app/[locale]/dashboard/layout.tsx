@@ -29,7 +29,7 @@ export default async function DashboardLayout({
 
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
-      <RouteScopedBoundary scope="dashboard">
+      <RouteScopedBoundary key="dashboard" scope="dashboard">
         {effectiveActiveId ? (
           <AgentLayoutShell agentType="overview" productId={effectiveActiveId} locale={locale}>
             {children}

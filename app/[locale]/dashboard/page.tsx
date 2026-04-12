@@ -523,7 +523,7 @@ export default async function DashboardPage({
   ];
 
   // ---- Status line ----
-  const statusLine = founderSummary?.summary
+  const statusLine = phase === "pre-launch" && founderSummary?.summary
     ? founderSummary.summary
     : buildStatusLine(phase, product.launchStatus, {
         readinessScore,

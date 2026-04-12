@@ -38,7 +38,7 @@ export default function GoalsSection({
   const router = useRouter();
   const isEn = locale === "en";
   const [loading, setLoading] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(goals.length === 0);
   const [newGoal, setNewGoal] = useState({
     title: "",
     targetValue: "",

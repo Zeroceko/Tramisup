@@ -574,6 +574,15 @@ export default async function GrowthPage({
           </div>
         ) : (
           <>
+            <div id="goals">
+              <CollapsibleSection
+                label={isEn ? "Goals" : "Hedefler"}
+                defaultCollapsed={goals.length > 0}
+              >
+                <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
+              </CollapsibleSection>
+            </div>
+
             <div id="growth-checklist">
               <GrowthChecklistSection
                 items={growthChecklists}
@@ -587,14 +596,6 @@ export default async function GrowthPage({
             {tacticsPlan && tacticsPlan.tactics && tacticsPlan.tactics.length > 0 && (
               <CollapsibleSection label={isEn ? "Growth tactics" : "Growth taktikleri"} defaultCollapsed>
                 <GrowthTacticsPanel plan={tacticsPlan} locale={locale} />
-              </CollapsibleSection>
-            )}
-
-            {goals.length > 0 && (
-              <CollapsibleSection label={isEn ? "Goals" : "Hedefler"} defaultCollapsed>
-                <div id="goals">
-                  <GoalsSection goals={goals} productId={product.id} metricSetup={savedMetricSetup} locale={locale} />
-                </div>
               </CollapsibleSection>
             )}
 

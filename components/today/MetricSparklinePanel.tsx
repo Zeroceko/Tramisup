@@ -46,8 +46,11 @@ export default function MetricSparklinePanel({ data, label, locale, href }: Prop
   const isEn = locale === "en";
 
   const lastValue = data[data.length - 1]?.value ?? 0;
-  const firstValue = data[0]?.value ?? 0;
-  const delta = firstValue > 0 ? Math.round(((lastValue - firstValue) / firstValue) * 100) : null;
+  const previousValue = data[data.length - 2]?.value ?? null;
+  const delta =
+    previousValue != null && previousValue > 0
+      ? Math.round(((lastValue - previousValue) / previousValue) * 100)
+      : null;
   const isPositive = delta !== null && delta >= 0;
 
   return (

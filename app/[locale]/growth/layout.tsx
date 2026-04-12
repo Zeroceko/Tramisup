@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
 import AgentLayoutShell from "@/components/AgentLayoutShell";
+import RouteScopedBoundary from "@/components/RouteScopedBoundary";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function GrowthLayout({
@@ -27,13 +28,15 @@ export default async function GrowthLayout({
 
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
-      {effectiveActiveId ? (
-        <AgentLayoutShell agentType="growth" productId={effectiveActiveId} locale={locale}>
-          {children}
-        </AgentLayoutShell>
-      ) : (
-        children
-      )}
+      <RouteScopedBoundary key="growth" scope="growth">
+        {effectiveActiveId ? (
+          <AgentLayoutShell agentType="growth" productId={effectiveActiveId} locale={locale}>
+            {children}
+          </AgentLayoutShell>
+        ) : (
+          children
+        )}
+      </RouteScopedBoundary>
     </AppShell>
   );
 }
