@@ -181,6 +181,41 @@ export default async function MetricsPage({
       ? isEn ? "Measurement system is taking shape" : "Ölçüm sistemi kuruluyor"
       : isEn ? "Measurement system" : "Ölçüm sistemi";
 
+  const workflowTitle =
+    dataState === "no_setup"
+      ? isEn ? "Step 1: choose the metrics you will track" : "Adım 1: takip edeceğin metrikleri seç"
+      : dataState === "first_entry"
+      ? isEn ? "Step 2: save the first baseline" : "Adım 2: ilk baz çizgisini kaydet"
+      : dataState === "building"
+      ? isEn ? "Step 3: keep feeding the system" : "Adım 3: sistemi veriyle beslemeye devam et"
+      : isEn ? "Setup complete: Growth can now read the trend" : "Kurulum tamam: Growth artık trendi okuyabilir";
+
+  const workflowDescription =
+    dataState === "no_setup"
+      ? isEn
+        ? "Pick one core metric for each AARRR stage. Daily entry starts after the setup is clear."
+        : "Her AARRR aşaması için bir ana metrik seç. Günlük giriş, setup netleştikten sonra başlar."
+      : dataState === "first_entry"
+      ? isEn
+        ? "Your metric setup is ready. Enter today's numbers once to create the baseline that Growth will use."
+        : "Metrik setup'ı hazır. Growth'un kullanacağı baz çizgisini oluşturmak için bugünkü sayıları bir kez gir."
+      : dataState === "building"
+      ? isEn
+        ? "Setup is complete and entries are flowing. A few more saves will make trend and weak-link detection stable."
+        : "Setup tamam ve veri akışı başladı. Birkaç giriş daha sonra trend ve zayıf halka tespiti daha stabil olacak."
+      : isEn
+        ? "Metrics and entries are both active. Use this page for daily inputs, and use Growth for diagnosis and next actions."
+        : "Metrikler ve girişler aktif. Bu sayfayı günlük giriş için, Growth'u teşhis ve sonraki aksiyon için kullan.";
+
+  const workflowToneClass =
+    dataState === "no_setup"
+      ? "border-[#eadfd3] bg-[#fffaf4]"
+      : dataState === "first_entry"
+      ? "border-[#d7efef] bg-[#f7fcfc]"
+      : dataState === "building"
+      ? "border-[#efe6d7] bg-[#fffbf5]"
+      : "border-[#d7efdf] bg-[#f5fcf7]";
+
 
   return (
     <div className="space-y-5">
@@ -232,6 +267,18 @@ export default async function MetricsPage({
             <p className="text-[11px] text-[#98a0ae]">{isEn ? "recorded" : "kaydedildi"}</p>
           </div>
         </div>
+      </div>
+
+      <div className={`rounded-[18px] border px-5 py-4 ${workflowToneClass}`}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6f7482]">
+          {isEn ? "Current workflow" : "Mevcut akış"}
+        </p>
+        <p className="mt-1 text-[15px] font-semibold text-[#0d0d12]">
+          {workflowTitle}
+        </p>
+        <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
+          {workflowDescription}
+        </p>
       </div>
 
       <MetricSetupSelector

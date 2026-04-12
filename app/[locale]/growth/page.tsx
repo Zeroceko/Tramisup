@@ -424,7 +424,7 @@ export default async function GrowthPage({
                 locale={locale}
                 questions={growthCheckinQuestions}
                 initialAnswers={storedAdditionalContext.growthCheckin?.answers ?? {}}
-                nextHref={`/${locale}/metrics`}
+                nextHref={hasSetup && hasMetricEntries ? `/${locale}/growth` : `/${locale}/metrics`}
               />
             </div>
 

@@ -97,9 +97,9 @@ async function buildOverviewContext(productId: string): Promise<string> {
   }
 
   // LAUNCHED / GROWING — return growth-focused context, no launch checklist
-  const selections = metricSetup?.selections as { metricKey?: string }[] | null;
+  const selections = metricSetup?.selections as { stage: string; selectedMetricKeys: string[] }[] | null;
   const selectedMetricKeys = Array.isArray(selections)
-    ? selections.map((s) => s.metricKey).filter(Boolean)
+    ? selections.flatMap((s) => s.selectedMetricKeys ?? []).filter(Boolean)
     : [];
 
   const metricTrends: Record<string, { latest: number; prev: number | null }> = {};
@@ -124,7 +124,7 @@ async function buildOverviewContext(productId: string): Promise<string> {
       high_priority_open: highPriorityOpen,
     },
     metric_setup: {
-      has_setup: !!metricSetup,
+      has_setup: selectedMetricKeys.length > 0,
       selected_metrics: selectedMetricKeys,
     },
     recent_metric_trends: metricTrends,
@@ -221,14 +221,14 @@ async function buildGrowthContext(productId: string): Promise<string> {
     .map((i) => i.provider);
 
   // selections is FunnelMetricSelection[] stored as JSON
-  const selections = metricSetup?.selections as { metricKey?: string }[] | null;
+  const selections = metricSetup?.selections as { stage: string; selectedMetricKeys: string[] }[] | null;
   const selectedMetricKeys = Array.isArray(selections)
-    ? selections.map((s) => s.metricKey).filter(Boolean)
+    ? selections.flatMap((s) => s.selectedMetricKeys ?? []).filter(Boolean)
     : [];
 
   return JSON.stringify({
     metric_setup: {
-      has_setup: !!metricSetup,
+      has_setup: selectedMetricKeys.length > 0,
       selected_metrics: selectedMetricKeys,
     },
     recent_metric_trends: metricTrends,

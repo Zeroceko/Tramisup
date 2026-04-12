@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { FunnelStageKey } from "@/lib/metric-setup";
@@ -76,6 +77,12 @@ export async function POST(request: Request) {
     ) as Partial<Record<FunnelStageKey, number>>;
 
     await saveMetricEntry(productId, date, sanitizedValues);
+
+    for (const locale of ["en", "tr"]) {
+      revalidatePath(`/${locale}/metrics`);
+      revalidatePath(`/${locale}/growth`);
+      revalidatePath(`/${locale}/dashboard`);
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

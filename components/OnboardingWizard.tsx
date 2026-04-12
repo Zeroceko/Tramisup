@@ -434,6 +434,7 @@ function MetricsStep({
   data,
   locale,
   hasConnectableSources,
+  isSubmitting,
   onAccept,
   onSkip,
 }: {
@@ -441,6 +442,7 @@ function MetricsStep({
   data: Partial<WizardData>;
   locale: string;
   hasConnectableSources: boolean;
+  isSubmitting: boolean;
   onAccept: () => void;
   onSkip: () => void;
 }) {
@@ -508,16 +510,20 @@ function MetricsStep({
         <button
           type="button"
           onClick={onAccept}
-          className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24]"
+          disabled={isSubmitting}
+          className="h-10 rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {hasConnectableSources
-            ? isEn ? "Use this setup and connect sources" : "Bu kurulumu kullan ve kaynak bagla"
-            : isEn ? "Use this setup" : "Bu kurulumu kullan"}
+          {isSubmitting
+            ? isEn ? "Creating…" : "Oluşturuluyor…"
+            : hasConnectableSources
+              ? isEn ? "Use this setup and connect sources" : "Bu kurulumu kullan ve kaynak bagla"
+              : isEn ? "Use this setup" : "Bu kurulumu kullan"}
         </button>
         <button
           type="button"
           onClick={onSkip}
-          className="h-10 rounded-full border border-[#e5e7eb] px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12]"
+          disabled={isSubmitting}
+          className="h-10 rounded-full border border-[#e5e7eb] px-4 text-[12px] font-medium text-[#666d80] transition hover:border-[#0d0d12] hover:text-[#0d0d12] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isEn ? "Continue later" : "Daha sonra devam et"}
         </button>
@@ -629,6 +635,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     intendedSources: [],
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgradePrompt, setUpgradePrompt] = useState<UpgradePrompt | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRef[]>([]);
@@ -870,6 +877,8 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   }
 
   async function submit(useMetrics: boolean) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setError(null);
     setUpgradePrompt(null);
 
@@ -931,13 +940,13 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       const { id: productId } = (await productRes.json()) as { id: string };
       clearOnboardingRetryDraft();
 
-      // Save metric selections (non-critical)
+      // Save metric selections before showing loading screen — must complete before /metrics loads
       if (useMetrics && Object.keys(autoMetrics).length > 0) {
         const selections = Object.entries(autoMetrics).map(([stage, key]) => ({
           stage,
           selectedMetricKeys: [key],
         }));
-        fetch(`/api/products/${productId}/metric-setup`, {
+        await fetch(`/api/products/${productId}/metric-setup`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ setup: { selections } }),
@@ -1002,6 +1011,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
 
     } catch (err) {
       setIsCreating(false);
+      setIsSubmitting(false);
       setError(err instanceof Error ? err.message : isEn ? "Something went wrong, please try again." : "Bir hata oluştu, tekrar dene.");
     }
   }
@@ -1332,6 +1342,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
               data={data}
               locale={locale}
               hasConnectableSources={connectableSources.length > 0}
+              isSubmitting={isSubmitting}
               onAccept={() => submit(true)}
               onSkip={() => submit(false)}
             />
