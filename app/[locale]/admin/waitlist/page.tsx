@@ -1,10 +1,9 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
+import { isAdminEmail } from "@/lib/admin-access"
 import { prisma } from "@/lib/prisma"
 import WaitlistTable from "@/components/WaitlistTable"
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup"
 
 export default async function AdminWaitlistPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -14,7 +13,7 @@ export default async function AdminWaitlistPage({ params }: { params: Promise<{ 
     redirect(`/${locale}/login?callbackUrl=/${locale}/admin/waitlist`)
   }
 
-  if (session.user.email !== ADMIN_EMAIL) {
+  if (!isAdminEmail(session.user.email)) {
     return (
       <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center px-4">
         <div className="max-w-md text-center rounded-[20px] border border-[#e8e8e8] bg-white p-8">
@@ -34,20 +33,18 @@ export default async function AdminWaitlistPage({ params }: { params: Promise<{ 
 
   const stats = {
     total: entries.length,
-    pending: entries.filter((e) => e.status === "PENDING").length,
-    approved: entries.filter((e) => e.status === "APPROVED").length,
+    pending: entries.filter((entry) => entry.status === "PENDING").length,
+    approved: entries.filter((entry) => entry.status === "APPROVED").length,
   }
 
   return (
     <div className="min-h-screen bg-[#f6f6f6] p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-[32px] font-bold text-[#0d0d12] mb-2">Waitlist Yönetimi</h1>
           <p className="text-[14px] text-[#666d80]">Kaydolan emailleri yönet ve onayla</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
             <p className="text-[12px] font-semibold text-[#666d80] mb-2">TOPLAM</p>
@@ -63,7 +60,6 @@ export default async function AdminWaitlistPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-[15px] border border-[#e8e8e8] overflow-hidden">
           <WaitlistTable entries={entries} />
         </div>

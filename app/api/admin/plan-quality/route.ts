@@ -13,15 +13,14 @@
 
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
+import { isAdminEmail } from "@/lib/admin-access";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup";
 const THIN_LAUNCH_THRESHOLD = 5;
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+  if (!session?.user?.email || !isAdminEmail(session.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

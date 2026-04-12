@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { isAdminEmail } from "@/lib/admin-access"
 import { prisma } from "@/lib/prisma"
 import { sendInviteEmail } from "@/lib/email"
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup"
 
 function generateInviteCode(): string {
   // Generate 8-character random code (A-Z0-9)
@@ -15,7 +14,7 @@ function generateInviteCode(): string {
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+  if (!session?.user?.email || !isAdminEmail(session.user.email)) {
     return false
   }
   return true

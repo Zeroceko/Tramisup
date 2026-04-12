@@ -1,13 +1,12 @@
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
+import { isAdminEmail } from "@/lib/admin-access";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   buildLaunchStageRepairData,
   isCanonicalLaunchStageKey,
 } from "@/lib/launch-stage";
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@tiramisup";
 const MAX_PRODUCTS_PER_CALL = 100;
 
 type RepairResult = {
@@ -27,7 +26,7 @@ type RepairResult = {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+  if (!session?.user?.email || !isAdminEmail(session.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
