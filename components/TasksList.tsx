@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { CheckCircle2, Circle, Eye, Play, RotateCcw } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import type { CompletionEffects } from "@/lib/task-completion-effects";
 import { parseStructuredDescription } from "@/lib/task-parsing";
@@ -87,7 +95,6 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   const [showAdd, setShowAdd] = useState(false);
   const [showLater, setShowLater] = useState(false);
   const [showDone, setShowDone] = useState(false);
-  const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   // Fire-and-forget DETAIL_OPENED event so the task quality report can answer
@@ -457,6 +464,34 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     );
   }
 
+  function actionLabel(status: TaskStatus) {
+    if (status === "TODO") return isEn ? "Start" : "Başla";
+    if (status === "IN_PROGRESS") return isEn ? "Mark done" : "Bitti";
+    return isEn ? "Reopen" : "Yeniden aç";
+  }
+
+  function actionIcon(status: TaskStatus) {
+    if (status === "TODO") return <Play className="h-3.5 w-3.5" />;
+    if (status === "IN_PROGRESS") return <CheckCircle2 className="h-3.5 w-3.5" />;
+    return <RotateCcw className="h-3.5 w-3.5" />;
+  }
+
+  function actionClass(status: TaskStatus) {
+    if (status === "TODO") {
+      return "border border-[#e8e8e8] bg-white text-[#5e6678] hover:bg-[#f6f6f6]";
+    }
+    if (status === "IN_PROGRESS") {
+      return "bg-[#75fc96]/25 text-[#0d0d12] hover:bg-[#75fc96]/40";
+    }
+    return "border border-[#e8e8e8] bg-white text-[#5e6678] hover:bg-[#f6f6f6]";
+  }
+
+  function statusAction(task: Task) {
+    if (task.status === "TODO") return () => updateStatus(task.id, "IN_PROGRESS");
+    if (task.status === "IN_PROGRESS") return () => updateStatus(task.id, "DONE");
+    return () => updateStatus(task.id, "TODO");
+  }
+
   function SectionLabel({
     dot,
     label,
@@ -485,33 +520,48 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     );
   }
 
-  // Focus card — prominent, full-width
-  function FocusCard({ task }: { task: Task }) {
+  function TaskRow({ task, emphasized = false }: { task: Task; emphasized?: boolean }) {
     const overdue = isOverdue(task.dueDate);
     const today = isDueToday(task.dueDate);
     const isLoading = loading === task.id;
-    const linked = task.launchChecklistItem;
     const cat = effectiveCategory(task);
     const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
     const priCfg = PRIORITY_CONFIG[task.priority];
+    const done = task.status === "DONE";
+    const structured = resolveStructured(task);
+    const summary = structured.nextAction || structured.why || task.description || null;
 
     return (
-      <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
-        <div className="flex items-start gap-4">
-          {/* Done circle */}
+      <div
+        className={`rounded-[16px] border bg-white transition ${
+          done
+            ? "border-[#e8e8e8] opacity-65"
+            : emphasized
+            ? "border-[#f3d7ea] shadow-[0_10px_30px_rgba(255,215,239,0.22)]"
+            : overdue
+            ? "border-red-100"
+            : "border-[#e8e8e8]"
+        }`}
+      >
+        <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
           <button
             type="button"
             disabled={isLoading}
-            onClick={() => updateStatus(task.id, "DONE")}
-            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#cfcfcf] bg-white transition hover:border-[#75fc96] disabled:opacity-50"
+            onClick={() => updateStatus(task.id, done ? "TODO" : "DONE")}
+            className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-50 ${
+              done
+                ? "border-[#75fc96] bg-[#75fc96]"
+                : "border-[#cfcfcf] bg-white hover:border-[#95dbda]"
+            }`}
           >
-            {isLoading && (
+            {isLoading ? (
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#95dbda]" />
-            )}
+            ) : done ? (
+              <CheckIcon />
+            ) : null}
           </button>
 
           <div className="min-w-0 flex-1">
-            {/* Badges row */}
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
               {task.status === "IN_PROGRESS" && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#95dbda]/20 px-2 py-0.5 text-[11px] font-semibold text-[#2a7c7a]">
@@ -524,7 +574,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                   {isEn ? "Overdue" : "Gecikmiş"}
                 </span>
               )}
-              {today && !overdue && (
+              {today && !overdue && !done && (
                 <span className="rounded-full bg-[#fff7ed] px-2 py-0.5 text-[11px] font-semibold text-[#c2410c]">
                   {isEn ? "Due today" : "Bugün son gün"}
                 </span>
@@ -533,217 +583,51 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${catCfg.cls}`}
                 >
-                  Launch → {isEn ? catCfg.labelEn : catCfg.label}
+                  {isEn ? catCfg.labelEn : catCfg.label}
+                </span>
+              )}
+              <span
+                className={`flex items-center gap-1 text-[11px] font-medium ${priCfg.textColor}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${priCfg.dot}`} />
+                {isEn ? priCfg.labelEn : priCfg.label}
+              </span>
+              {task.dueDate && !done && (
+                <span className={`text-[11px] ${overdue ? "font-semibold text-red-600" : "text-[#8a8fa0]"}`}>
+                  {today ? (isEn ? "Today" : "Bugün") : format(new Date(task.dueDate), emphasized ? "d MMM yyyy" : "d MMM")}
                 </span>
               )}
             </div>
 
-            {/* Title */}
-            <h3 className="text-[16px] font-semibold leading-snug text-[#0d0d12]">
+            <h3 className={`text-[15px] font-semibold leading-snug ${done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"}`}>
               {normalizeTurkishText(task.title)}
             </h3>
 
-            {/* Description — click to expand */}
-            {task.description && (
-              <p
-                role="button"
-                onClick={() =>
-                  setExpandedDescs((prev) => {
-                    const next = new Set(prev);
-                    next.has(task.id) ? next.delete(task.id) : next.add(task.id);
-                    return next;
-                  })
-                }
-                className={`mt-1 cursor-pointer text-[13px] leading-5 text-[#666d80] ${
-                  expandedDescs.has(task.id) ? "" : "line-clamp-2"
-                }`}
-              >
-                {normalizeTurkishText(task.description)}
+            {summary && (
+              <p className={`mt-1 line-clamp-2 text-[13px] leading-5 ${done ? "text-[#b0b7c3]" : "text-[#666d80]"}`}>
+                {normalizeTurkishText(summary)}
               </p>
             )}
-
-            {/* Meta row */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span
-                className={`flex items-center gap-1 text-[12px] font-medium ${priCfg.textColor}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${priCfg.dot}`} />
-                {isEn ? priCfg.labelEn : priCfg.label}
-              </span>
-              {task.dueDate && (
-                <span
-                  className={`text-[12px] ${
-                    overdue ? "font-semibold text-red-600" : "text-[#8a8fa0]"
-                  }`}
-                >
-                  {format(new Date(task.dueDate), "d MMM yyyy")}
-                </span>
-              )}
-            </div>
           </div>
 
-          {/* CTA */}
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => openDetail(task.id)}
-              className="mb-2 inline-flex h-8 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[12px] font-medium text-[#5e6678] transition hover:bg-[#f6f6f6]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e8e8] text-[#5e6678] transition hover:bg-[#f6f6f6]"
+              aria-label={isEn ? "Preview task" : "Görevi önizle"}
             >
-              {isEn ? "View details" : "Detay Gör"}
+              <Eye className="h-4 w-4" />
             </button>
-            {task.status === "TODO" && (
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => updateStatus(task.id, "IN_PROGRESS")}
-                className="inline-flex h-8 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
-              >
-                {isEn ? "Start" : "Başla"}
-              </button>
-            )}
-            {task.status === "IN_PROGRESS" && (
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => updateStatus(task.id, "DONE")}
-                className="inline-flex h-8 items-center justify-center rounded-full bg-[#75fc96]/30 px-4 text-[12px] font-semibold text-[#0d0d12] transition hover:bg-[#75fc96]/50 disabled:opacity-50"
-              >
-                {isEn ? "Mark done ✓" : "Bitti ✓"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Regular card — compact
-  function TaskCard({ task }: { task: Task }) {
-    const overdue = isOverdue(task.dueDate) && task.status !== "DONE";
-    const today = isDueToday(task.dueDate);
-    const isLoading = loading === task.id;
-    const linked = task.launchChecklistItem;
-    const cat = effectiveCategory(task);
-    const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
-    const priCfg = PRIORITY_CONFIG[task.priority];
-    const done = task.status === "DONE";
-
-    return (
-      <div
-        className={`rounded-[12px] border bg-white transition ${
-          done
-            ? "border-[#e8e8e8] opacity-55"
-            : overdue
-            ? "border-red-100"
-            : "border-[#e8e8e8]"
-        }`}
-      >
-        <div className="flex items-start gap-3 p-4">
-          {/* Checkbox */}
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => updateStatus(task.id, done ? "TODO" : "DONE")}
-            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-50 ${
-              done
-                ? "border-[#75fc96] bg-[#75fc96]"
-                : "border-[#cfcfcf] bg-white hover:border-[#95dbda]"
-            }`}
-          >
-            {done && <CheckIcon />}
-          </button>
-
-          <div className="min-w-0 flex-1">
-            {/* Title */}
-            <div className="flex items-start justify-between gap-2">
-              <p
-                className={`text-[14px] font-semibold leading-snug ${
-                  done ? "text-[#8a8fa0] line-through" : "text-[#0d0d12]"
-                }`}
-              >
-                {normalizeTurkishText(task.title)}
-              </p>
-              <button
-                type="button"
-                onClick={() => openDetail(task.id)}
-                className="shrink-0 rounded-full border border-[#d7dbe3] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6]"
-              >
-                {isEn ? "View details" : "Detay Gör"}
-              </button>
-            </div>
-
-            {/* Description — click to expand */}
-            {task.description && (
-              <p
-                role="button"
-                onClick={() =>
-                  setExpandedDescs((prev) => {
-                    const next = new Set(prev);
-                    next.has(task.id) ? next.delete(task.id) : next.add(task.id);
-                    return next;
-                  })
-                }
-                className={`mt-0.5 cursor-pointer text-[12px] leading-5 ${
-                  done ? "text-[#b0b7c3]" : "text-[#666d80]"
-                } ${expandedDescs.has(task.id) ? "" : "line-clamp-2"}`}
-              >
-                {normalizeTurkishText(task.description)}
-              </p>
-            )}
-
-            {/* Meta row */}
-            {!done && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span
-                  className={`flex items-center gap-1 text-[11px] font-medium ${priCfg.textColor}`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${priCfg.dot}`} />
-                  {isEn ? priCfg.labelEn : priCfg.label}
-                </span>
-
-                {catCfg && (
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${catCfg.cls}`}
-                  >
-                    {isEn ? catCfg.labelEn : catCfg.label}
-                  </span>
-                )}
-
-                {overdue && (
-                  <span className="text-[11px] font-semibold text-red-600">
-                    {isEn ? "Overdue" : "Gecikmiş"}
-                  </span>
-                )}
-
-                {task.dueDate && !overdue && (
-                  <span className="text-[11px] text-[#8a8fa0]">
-                    {today
-                      ? isEn
-                        ? "Today"
-                        : "Bugün"
-                      : format(new Date(task.dueDate), "d MMM")}
-                  </span>
-                )}
-
-                {task.status === "IN_PROGRESS" && (
-                  <span className="flex items-center gap-1 rounded-full bg-[#95dbda]/20 px-2 py-0.5 text-[11px] font-semibold text-[#2a7c7a]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#2a7c7a] animate-pulse" />
-                    {isEn ? "In progress" : "Yapılıyor"}
-                  </span>
-                )}
-
-                {task.status === "TODO" && (
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => updateStatus(task.id, "IN_PROGRESS")}
-                    className="rounded-full border border-[#e8e8e8] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80] transition hover:bg-[#f6f6f6] disabled:opacity-50"
-                  >
-                    {isEn ? "Start" : "Başla"}
-                  </button>
-                )}
-              </div>
-            )}
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={statusAction(task)}
+              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-[12px] font-semibold transition disabled:opacity-50 ${actionClass(task.status)}`}
+            >
+              {actionIcon(task.status)}
+              <span>{actionLabel(task.status)}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -990,7 +874,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           />
           <div className="space-y-2">
             {focusTasks.map((task) => (
-              <FocusCard key={task.id} task={task} />
+              <TaskRow key={task.id} task={task} emphasized />
             ))}
           </div>
         </div>
@@ -1035,7 +919,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           {showLater && (
             <div className="space-y-2">
               {laterTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskRow key={task.id} task={task} />
               ))}
             </div>
           )}
@@ -1060,71 +944,93 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           {showDone && (
             <div className="space-y-2">
               {doneTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskRow key={task.id} task={task} />
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Task detail modal */}
-      {detailTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-          <button
-            type="button"
-            aria-label={isEn ? "Close detail" : "Detayı kapat"}
-            className="absolute inset-0"
-            onClick={() => setDetailTaskId(null)}
-          />
-          <div className="relative w-full max-w-2xl rounded-[22px] border border-[#e8e8e8] bg-white shadow-[0_24px_72px_rgba(13,13,18,0.2)]">
-            <div className="flex items-center justify-between border-b border-[#f0f0f0] px-6 py-4">
-              <p className="text-[13px] text-[#8a8fa0]">
-                {isEn
-                  ? "Launch Agent / Task detail"
-                  : "Launch Agent / Görev detayı"}
-              </p>
-              <button
-                type="button"
-                onClick={() => setDetailTaskId(null)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e8e8] text-[#5e6678] transition hover:bg-[#f6f6f6]"
-                aria-label={isEn ? "Close" : "Kapat"}
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
+      <Sheet open={Boolean(detailTask)} onOpenChange={(open) => !open && setDetailTaskId(null)}>
+        {detailTask ? (
+          <SheetContent
+            side="right"
+            className="w-full overflow-y-auto border-l border-[#ececec] bg-white p-0 sm:max-w-[560px]"
+          >
+            <div className="flex min-h-full flex-col">
+              <SheetHeader className="border-b border-[#f0f0f0] px-6 py-5">
+                <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#8a8fa0]">
+                  {isEn ? "Board / Task preview" : "Board / Görev önizleme"}
+                </p>
+                <SheetTitle className="pr-10 text-[24px] font-bold leading-tight tracking-[-0.02em] text-[#0d0d12]">
+                  {normalizeTurkishText(detailTask.title)}
+                </SheetTitle>
+                <SheetDescription className="text-[14px] leading-6 text-[#5e6678]">
+                  {normalizeTurkishText(
+                    resolveStructured(detailTask).nextAction ||
+                      resolveStructured(detailTask).why ||
+                      detailTask.description ||
+                      (isEn ? "Task detail preview" : "Görev detay önizlemesi"),
+                  )}
+                </SheetDescription>
+              </SheetHeader>
 
-            <div className="px-6 py-5">
-              <h3 className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-[#0d0d12]">
-                {normalizeTurkishText(detailTask.title)}
-              </h3>
-
-              {(() => {
-                const structured = resolveStructured(detailTask);
-                const hasStructured = !!(structured.why || structured.doneCriteria || structured.nextAction);
-
-                // Structured path: render Why / Done when / Next action as discrete sections.
-                if (hasStructured) {
+              <div className="flex-1 px-6 py-5">
+                {(() => {
+                  const structured = resolveStructured(detailTask);
+                  const fallback = buildTaskDetailFallback({
+                    title: detailTask.title,
+                    category: effectiveCategory(detailTask),
+                    linkedChecklistTitle: detailTask.launchChecklistItem?.title ?? null,
+                    locale,
+                  });
+                  const cat = effectiveCategory(detailTask);
+                  const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
+                  const priCfg = PRIORITY_CONFIG[detailTask.priority];
                   const sections: Array<{ label: string; value: string | null; accent: string }> = [
                     {
                       label: isEn ? "Why it matters" : "Neden önemli",
-                      value: structured.why,
+                      value: structured.why ?? fallback.why,
                       accent: "border-l-[#ffd7ef]",
                     },
                     {
                       label: isEn ? "Done when" : "Biten hali",
-                      value: structured.doneCriteria,
+                      value: structured.doneCriteria ?? fallback.doneCriteria,
                       accent: "border-l-[#75fc96]",
                     },
                     {
                       label: isEn ? "Next action" : "Sonraki adım",
-                      value: structured.nextAction,
+                      value: structured.nextAction ?? fallback.nextAction,
                       accent: "border-l-[#95dbda]",
                     },
                   ];
+
                   return (
-                    <div className="mt-5 space-y-3">
+                    <div className="space-y-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {catCfg ? (
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${catCfg.cls}`}>
+                            {isEn ? catCfg.labelEn : catCfg.label}
+                          </span>
+                        ) : null}
+                        <span className={`inline-flex items-center gap-1.5 rounded-full bg-[#fafafa] px-2.5 py-1 text-[11px] font-semibold ${priCfg.textColor}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${priCfg.dot}`} />
+                          {isEn ? priCfg.labelEn : priCfg.label}
+                        </span>
+                        <span className="rounded-full bg-[#fafafa] px-2.5 py-1 text-[11px] font-semibold text-[#5e6678]">
+                          {detailTask.status === "IN_PROGRESS"
+                            ? isEn ? "In progress" : "Yapılıyor"
+                            : detailTask.status === "DONE"
+                            ? isEn ? "Done" : "Tamamlandı"
+                            : isEn ? "Todo" : "Yapılacak"}
+                        </span>
+                        {detailTask.dueDate ? (
+                          <span className="rounded-full bg-[#fafafa] px-2.5 py-1 text-[11px] font-semibold text-[#5e6678]">
+                            {format(new Date(detailTask.dueDate), "d MMM yyyy")}
+                          </span>
+                        ) : null}
+                      </div>
+
                       {sections.map((section) =>
                         section.value ? (
                           <div
@@ -1140,105 +1046,40 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                           </div>
                         ) : null,
                       )}
-                      {structured.leftover && (
-                        <p className="text-[13px] leading-6 text-[#5e6678]">
-                          {normalizeTurkishText(structured.leftover)}
-                        </p>
-                      )}
+
+                      {structured.leftover ? (
+                        <div className="rounded-[14px] border border-[#f0f0f0] bg-white px-4 py-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                            {isEn ? "Notes" : "Notlar"}
+                          </p>
+                          <p className="mt-1 text-[14px] leading-6 text-[#5e6678]">
+                            {normalizeTurkishText(structured.leftover)}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   );
-                }
+                })()}
+              </div>
 
-                const fallback = buildTaskDetailFallback({
-                  title: detailTask.title,
-                  category: effectiveCategory(detailTask),
-                  linkedChecklistTitle: detailTask.launchChecklistItem?.title ?? null,
-                  locale,
-                });
-
-                return (
-                  <div className="mt-5 space-y-3">
-                    {[
-                      {
-                        label: isEn ? "Why it matters" : "Neden önemli",
-                        value: fallback.why,
-                        accent: "border-l-[#ffd7ef]",
-                      },
-                      {
-                        label: isEn ? "Done when" : "Biten hali",
-                        value: fallback.doneCriteria,
-                        accent: "border-l-[#75fc96]",
-                      },
-                      {
-                        label: isEn ? "Next action" : "Sonraki adım",
-                        value: fallback.nextAction,
-                        accent: "border-l-[#95dbda]",
-                      },
-                    ].map((section) => (
-                      <div
-                        key={section.label}
-                        className={`rounded-r-[14px] border-l-[3px] bg-[#fafafa] px-4 py-3 ${section.accent}`}
-                      >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
-                          {section.label}
-                        </p>
-                        <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
-                          {normalizeTurkishText(section.value)}
-                        </p>
-                      </div>
-                    ))}
-                    {detailTask.description ? (
-                      <p className="text-[13px] leading-6 text-[#5e6678]">
-                        {normalizeTurkishText(detailTask.description)}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })()}
-
-              {/* Action row — primary actions visible directly in the modal */}
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                {detailTask.status === "TODO" && (
-                  <button
-                    type="button"
-                    disabled={loading === detailTask.id}
-                    onClick={() => updateStatus(detailTask.id, "IN_PROGRESS")}
-                    className="inline-flex h-9 items-center justify-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
-                  >
-                    {isEn ? "Start" : "Başla"}
-                  </button>
-                )}
-                {detailTask.status !== "DONE" && (
-                  <button
-                    type="button"
-                    disabled={loading === detailTask.id}
-                    onClick={() => {
-                      updateStatus(detailTask.id, "DONE");
-                      setDetailTaskId(null);
-                    }}
-                    className="inline-flex h-9 items-center justify-center rounded-full bg-[#75fc96]/30 px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#75fc96]/50 disabled:opacity-50"
-                  >
-                    {isEn ? "Mark done" : "Bitti"}
-                  </button>
-                )}
-                {detailTask.status === "DONE" && (
-                  <button
-                    type="button"
-                    disabled={loading === detailTask.id}
-                    onClick={() => {
-                      updateStatus(detailTask.id, "TODO");
-                      setDetailTaskId(null);
-                    }}
-                    className="inline-flex h-9 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-semibold text-[#5e6678] transition hover:bg-[#f6f6f6] disabled:opacity-50"
-                  >
-                    {isEn ? "Reopen" : "Yeniden aç"}
-                  </button>
-                )}
+              <div className="border-t border-[#f0f0f0] px-6 py-4">
+                <button
+                  type="button"
+                  disabled={loading === detailTask.id}
+                  onClick={() => {
+                    statusAction(detailTask)();
+                    if (detailTask.status !== "TODO") setDetailTaskId(null);
+                  }}
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-[13px] font-semibold transition disabled:opacity-50 ${actionClass(detailTask.status)}`}
+                >
+                  {actionIcon(detailTask.status)}
+                  <span>{actionLabel(detailTask.status)}</span>
+                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </SheetContent>
+        ) : null}
+      </Sheet>
     </div>
   );
 }
