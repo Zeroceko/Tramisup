@@ -127,9 +127,6 @@ export default function DashboardNav({
           <span className="font-black text-[15px] text-[#0d0d12] tracking-[-0.01em]">
             Tiramisup
           </span>
-          <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] text-[#8a8fa0]">
-            Launch to Growth
-          </span>
         </div>
       </Link>
 

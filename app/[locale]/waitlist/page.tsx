@@ -280,9 +280,6 @@ function Navbar({
           <img src={illusTiramisu} alt="Tiramisup" className="h-10 w-10 object-contain" />
           <div className="flex flex-col">
             <span className="text-[17px] font-black leading-tight">Tiramisup</span>
-            <span className="text-[9px] font-bold uppercase tracking-[.18em] text-foreground/50">
-              {copy.nav.tagline}
-            </span>
           </div>
         </a>
 

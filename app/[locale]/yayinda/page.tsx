@@ -520,7 +520,6 @@ function Navbar() {
           <img src={illusTiramisu} alt="Tiramisup" className="w-10 h-10 object-contain" />
           <div className="flex flex-col">
             <span className="font-black text-[17px] leading-tight">Tiramisup</span>
-            <span className="text-[9px] font-bold tracking-[.18em] uppercase text-foreground/50">{copy.nav.tagline}</span>
           </div>
         </a>
         <ul className="hidden md:flex gap-8 list-none">
@@ -1040,7 +1039,6 @@ function Footer() {
               <img src={illusTiramisu} alt="Tiramisup" className="w-10 h-10 object-contain" />
               <div className="flex flex-col">
                 <span className="font-black text-[17px] leading-tight">Tiramisup</span>
-                <span className="text-[9px] font-bold tracking-[.18em] uppercase text-foreground/50">{copy.nav.tagline}</span>
               </div>
             </a>
             <p className="text-sm text-muted leading-relaxed max-w-[230px]">{copy.footer.desc}</p>

@@ -176,7 +176,6 @@ function PreviewNav({
           <img src="/landing-preview/illus-tiramisu-slice.png" alt="Tiramisup" className="h-10 w-10 object-contain" />
           <div className="flex flex-col">
             <span className="font-outfit text-[17px] font-black leading-tight">Tiramisup</span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#21231D]/50">Launch to Growth</span>
           </div>
         </a>
 
@@ -693,7 +692,6 @@ export default function LandingPreviewPage() {
                   <img src="/landing-preview/illus-tiramisu-slice.png" alt="Tiramisup" className="h-10 w-10 object-contain" />
                   <div className="flex flex-col">
                     <span className="font-outfit text-[17px] font-black leading-tight">Tiramisup</span>
-                    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#21231D]/50">Launch to Growth</span>
                   </div>
                 </a>
                 <p className="max-w-[230px] text-sm leading-relaxed text-[#676B63]">Launch OS for SaaS founders. From checklist to growth, in one platform.</p>
