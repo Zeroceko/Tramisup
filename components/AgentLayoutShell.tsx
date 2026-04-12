@@ -35,11 +35,11 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
   }, [router]);
 
   return (
-    <div className="flex gap-3 h-full p-3">
+    <div className="flex h-full min-h-0 gap-3 p-3">
       {/* ── Left: Agent chat panel ── */}
       {open ? (
         <div
-          className="shrink-0 flex flex-col rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden"
+          className="shrink-0 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#e8e4de] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
           style={{ width: 360 }}
         >
           {/* Header */}
@@ -90,7 +90,7 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
       )}
 
       {/* ── Right: Page content ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto rounded-2xl bg-white border border-[#e8e4de] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-[#e8e4de] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
         <div className="px-7 py-7 mx-auto max-w-[1080px]">
           {children}
         </div>
