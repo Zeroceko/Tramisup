@@ -3,7 +3,7 @@
 **Date:** 12 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current live app release on `main`:** `93c8a82f`
+**Current live app release on `main`:** `eacecb50`
 **Status:** Live, stable, handoff-ready
 
 ---
@@ -48,11 +48,11 @@ As of **12 April 2026**, these are true in production:
 - **Agent panel cards are all task-creation**: no more "ask"-intent cards that sent text to chat. Every card creates a task when clicked.
 
 Recent shipped commits on the live line:
+- `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
+- `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
+- `13ba0851` — fix overview agent: stage-aware context for launched/growing products
 - `93c8a82f` — agent panel all-task fix, remove ask intent
 - `470c1e58` — growth diagnosis data-driven + locale-aware, category labels translated
-- `8defc50f` — stage-aware nav, Metrics as standalone nav item, growth intake gate on dashboard
-- `80fbb9f5` — growth workflow hardening with intake-driven setup
-- `7c8bf648` — locale switch fix from settings/account
 
 ---
 
@@ -178,8 +178,8 @@ Intake answers stored in `Product.additionalContext.growthCheckin`.
 - **i18n gaps**: some authenticated copy still has hardcoded strings
 - **Roadmap integrations**: RevenueCat, App Store Connect, Google Play Console, ads connectors are UI-first only
 - **`Product.launchGoals`**: legacy field, do not build new logic on it
-- **"Launch to Growth" tagline**: shown in the logo/nav — misleading for users who already launched. Needs product decision.
 - **Dashboard first impression**: what a user sees on first login after onboarding is still not sharp enough. Needs product work.
+- **Email delivery latency**: `RESEND_FROM_EMAIL` must be set in Vercel env to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` (shared Resend domain — causes spam filter delays). Domain `tiramisup.app` is already verified in Resend.
 
 ---
 

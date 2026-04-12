@@ -21,7 +21,7 @@ First read, in order:
 
 What is true right now:
 - Production domain is https://tiramisup.app
-- Current live app release on main is 93c8a82f
+- Current live app release on main is eacecb50
 - main auto-deploys to Vercel
 - Public landing is waitlist-first
 - Signup no longer uses an early access code
@@ -93,8 +93,8 @@ Known debt:
 - Some authenticated copy is still not fully next-intl clean
 - Product.launchGoals is legacy
 - Some roadmap integrations are still UI-first
-- "Launch to Growth" tagline in nav logo is misleading for launched users
 - Dashboard first impression after onboarding needs product work
+- RESEND_FROM_EMAIL must be set in Vercel to `Tiramisup <hello@tiramisup.app>` — if unset, fallback is onboarding@resend.dev which causes email delivery delays
 
 When in doubt, preserve the current production baseline, document the tradeoff, and change one surface at a time.
 ```

@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current live release: `93c8a82f`
+- Current live release: `eacecb50`
 - Last docs refresh: `12 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
@@ -32,11 +32,11 @@
 
 ### Recent shipped commits
 
+- `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
+- `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
+- `13ba0851` — fix overview agent: stage-aware context for launched/growing products
 - `93c8a82f` — agent panel all-task, remove ask intent
 - `470c1e58` — growth diagnosis data-driven + locale-aware, TR category labels
-- `8defc50f` — stage-aware nav, Metrics nav item, growth intake gate
-- `80fbb9f5` — growth workflow hardening with intake-driven setup
-- `7c8bf648` — locale switch fix from settings/account
 
 ---
 
@@ -86,7 +86,7 @@
 - **Roadmap integrations.** Some integration surfaces are still UI-first placeholders.
 - **`Product.launchGoals` is legacy.** Do not build new core logic on top of it.
 - **Dashboard first impression needs product work.** What a newly onboarded user sees first is not sharp enough. Known issue, not a bug.
-- **"Launch to Growth" tagline** in nav logo is misleading for users who already launched.
+- **Email delivery latency.** `RESEND_FROM_EMAIL` must be set in Vercel to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` which causes spam filter delays. `tiramisup.app` is already verified in Resend.
 
 ---
 
