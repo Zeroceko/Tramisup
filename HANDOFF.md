@@ -3,8 +3,8 @@
 **Date:** 12 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current live app release on `main`:** `eacecb50`
-**Status:** Live, stable, handoff-ready
+**Current live release on `main`:** `f8f56491`
+**Status:** Live baseline is stable, but the local workspace currently contains an unfinished Trust Sprint 2 branch state. Do not ship the local worktree as-is.
 
 ---
 
@@ -48,11 +48,90 @@ As of **12 April 2026**, these are true in production:
 - **Agent panel cards are all task-creation**: no more "ask"-intent cards that sent text to chat. Every card creates a task when clicked.
 
 Recent shipped commits on the live line:
+- `f8f56491` — handoff/docs refresh on top of the current production baseline
 - `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
 - `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
 - `13ba0851` — fix overview agent: stage-aware context for launched/growing products
 - `93c8a82f` — agent panel all-task fix, remove ask intent
 - `470c1e58` — growth diagnosis data-driven + locale-aware, category labels translated
+
+---
+
+## 2.5 Current Local Workspace Handoff
+
+The current checked-out workspace is **mid-implementation for Founder Trust Sprint 2**. It is not finished, not verified, and should be treated as a partial branch state rather than a candidate release.
+
+### Important distinction
+
+- **Production baseline**: the app behavior described in this document and currently live on `main`
+- **Local workspace**: partially implemented Trust Sprint 2 work intended to address Session 2 founder test findings
+
+### What has already been started locally
+
+- **Canonical launch-stage migration (partial)**
+  - `lib/launch-stage.ts` has been expanded around canonical keys
+  - `components/OnboardingWizard.tsx` has started moving stage option values from localized labels to canonical keys
+  - `app/api/products/route.ts`, `lib/ai-plan.ts`, and `lib/mobile-launch-baseline.ts` have partial updates to consume canonical stage keys
+- **Route/render isolation (partial)**
+  - `components/RouteScopedBoundary.tsx` was added
+  - `app/[locale]/dashboard/layout.tsx`, `app/[locale]/pre-launch/layout.tsx`, and `app/[locale]/settings/layout.tsx` were started on route-scoped remounting
+  - `components/SettingsWorkspace.tsx` now has a pathname guard
+- **Pre-launch consistency work (partial)**
+  - `components/PreLaunchWorkspace.tsx` was added as a client-synced wrapper for pending task count / blockers / checklist state
+  - `app/[locale]/pre-launch/page.tsx` server actions were started on normalized mutation payloads
+  - `components/ChecklistSection.tsx` was partially adapted to receive parent-driven completion / ignore callbacks
+- **Agent history bridge (partial)**
+  - `prisma/schema.prisma` now includes an `AgentMessage` model
+  - `lib/agent-prompts.ts` has started adding `messageActions`
+  - `lib/agent-messages.ts` was added as an unfinished persistence helper
+  - `app/api/agent/chat/route.ts` has **not** yet been fully updated to the new contract
+
+### Current workspace blockers before anyone continues
+
+`npx tsc --noEmit` currently fails in this workspace. As of **12 April 2026**, the failing points are:
+
+1. `app/api/agent/chat/route.ts`
+   Missing `messageActions` in the parsed `AgentResponse` object after the prompt contract changed.
+2. `components/OnboardingWizard.tsx`
+   Old helper references `isLaunchedStage` / `isVeryEarlyStage` remain after moving to canonical stage helpers.
+3. `components/OnboardingWizard.tsx`
+   One stage selection path still passes a generic `string` where `LaunchStageKey | ""` is now expected.
+4. `lib/agent-messages.ts`
+   The new Prisma model is referenced before the generated Prisma client has been updated, and typing is incomplete.
+
+### Files touched in the local Trust Sprint 2 workspace
+
+High-signal touched files:
+
+- `components/OnboardingWizard.tsx`
+- `lib/launch-stage.ts`
+- `app/api/products/route.ts`
+- `lib/ai-plan.ts`
+- `lib/mobile-launch-baseline.ts`
+- `components/SettingsWorkspace.tsx`
+- `app/[locale]/dashboard/layout.tsx`
+- `app/[locale]/pre-launch/layout.tsx`
+- `app/[locale]/settings/layout.tsx`
+- `app/[locale]/pre-launch/page.tsx`
+- `components/ChecklistSection.tsx`
+- `components/PreLaunchWorkspace.tsx`
+- `prisma/schema.prisma`
+- `lib/agent-prompts.ts`
+- `lib/agent-messages.ts`
+
+### Recommended resume order for the next team
+
+1. Get the workspace back to green:
+   - finish the `OnboardingWizard` canonical stage migration
+   - finish `app/api/agent/chat/route.ts` so it satisfies the new `messageActions` contract
+   - either finish the `AgentMessage` Prisma integration and run `npx prisma generate`, or back the model out before continuing
+2. Re-run:
+   - `npx prisma generate`
+   - `npx tsc --noEmit`
+   - focused tests for settings, checklist, and agent chat
+3. Only after the workspace is green:
+   - continue the remaining Trust Sprint 2 product work
+   - verify it against Session 2 founder findings
 
 ---
 

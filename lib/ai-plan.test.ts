@@ -98,4 +98,32 @@ describe("buildSkillBackedFallbackPlan", () => {
     expect(plan.launchChecklist[0]?.title).toContain("İlk değer");
     expect(plan.launchChecklist.every((item) => typeof item.whyItMatters === "string" && item.whyItMatters.length > 10)).toBe(true);
   });
+
+  it("avoids injecting noisy mixed-locale audience text into English fallback copy", () => {
+    const plan = buildSkillBackedFallbackPlan({
+      locale: "en",
+      name: "StackSignal",
+      description: "Async standup replacement for remote engineering teams.",
+      targetAudience: "Startup ekipleri, KOBİ'ler",
+      launchStatus: "PREPARING",
+    });
+
+    expect(plan.launchChecklist[0]?.description).toContain("new users");
+    expect(plan.launchChecklist[0]?.description).not.toContain("Startup ekipleri");
+    expect(plan.launchChecklist[0]?.whyItMatters).toContain("new users");
+  });
+
+  it("avoids injecting single-value Turkish audience text into English fallback copy", () => {
+    const plan = buildSkillBackedFallbackPlan({
+      locale: "en",
+      name: "StackSignal",
+      description: "Async standup replacement for remote engineering teams.",
+      targetAudience: "Startup ekipleri",
+      launchStatus: "PREPARING",
+    });
+
+    expect(plan.launchChecklist[0]?.description).toContain("new users");
+    expect(plan.launchChecklist[0]?.description).not.toContain("Startup ekipleri");
+    expect(plan.launchChecklist[0]?.whyItMatters).toContain("new users");
+  });
 });

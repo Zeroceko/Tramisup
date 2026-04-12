@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/components/ui/sonner";
 
 // Severity: LEGAL/TECH blockers are CRITICAL — they carry higher launch risk
 // PRODUCT/MARKETING blockers are IMPORTANT — serious but not immediate existential risk
@@ -21,7 +22,8 @@ interface Blocker {
 interface BlockerSummaryProps {
   blockers: Blocker[];
   ignoredBlockers: Blocker[];
-  onCreateTask: (itemId: string) => Promise<void>;
+  onCreateTask: (itemId: string) => Promise<{ taskId: string; title: string; deduped: boolean }>;
+  onToggleComplete?: (itemId: string, completed: boolean) => Promise<void>;
   onIgnore: (itemId: string, ignored: boolean) => Promise<void>;
   locale?: string;
 }
@@ -74,6 +76,7 @@ export default function BlockerSummary({
   blockers,
   ignoredBlockers,
   onCreateTask,
+  onToggleComplete,
   onIgnore,
   locale = "en",
 }: BlockerSummaryProps) {
@@ -91,7 +94,32 @@ export default function BlockerSummary({
   const handleCreateTask = async (itemId: string) => {
     setLoading(itemId);
     try {
-      await onCreateTask(itemId);
+      const result = await onCreateTask(itemId);
+      toast.success(
+        result.deduped
+          ? isEn ? "Existing task linked" : "Mevcut görev bağlandı"
+          : isEn ? "Task created from blocker" : "Blokajdan görev oluşturuldu",
+        { description: result.title },
+      );
+    } catch {
+      toast.error(isEn ? "Task could not be created." : "Görev oluşturulamadı.");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleToggleComplete = async (itemId: string, completed: boolean) => {
+    if (!onToggleComplete) return;
+    setLoading(itemId);
+    try {
+      await onToggleComplete(itemId, completed);
+      toast.success(
+        completed
+          ? isEn ? "Blocker marked done" : "Blokaj tamamlandı"
+          : isEn ? "Blocker reopened" : "Blokaj yeniden açıldı",
+      );
+    } catch {
+      toast.error(isEn ? "Blocker could not be updated." : "Blokaj güncellenemedi.");
     } finally {
       setLoading(null);
     }
@@ -101,6 +129,13 @@ export default function BlockerSummary({
     setLoading(itemId);
     try {
       await onIgnore(itemId, ignored);
+      toast.success(
+        ignored
+          ? isEn ? "Risk accepted" : "Risk kabul edildi"
+          : isEn ? "Blocker restored" : "Blokaj geri alındı",
+      );
+    } catch {
+      toast.error(isEn ? "Blocker could not be updated." : "Blokaj güncellenemedi.");
     } finally {
       setLoading(null);
     }
@@ -181,6 +216,14 @@ export default function BlockerSummary({
 
                   {/* Actions */}
                   <div className="mt-3 flex items-center gap-2 pl-5">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleComplete(blocker.id, true)}
+                      disabled={loading === blocker.id}
+                      className="inline-flex h-7 items-center rounded-full bg-[#0d0d12] px-3 text-[11px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
+                    >
+                      {isEn ? "Mark done" : "Tamamlandı işaretle"}
+                    </button>
                     {blocker.linkedTaskId ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] px-2.5 py-1 text-[11px] font-medium text-[#065f46]">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -190,6 +233,7 @@ export default function BlockerSummary({
                       </span>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => handleCreateTask(blocker.id)}
                         disabled={loading === blocker.id}
                         className="inline-flex h-7 items-center rounded-full bg-[#ffd7ef] px-3 text-[11px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:opacity-50"
@@ -200,6 +244,7 @@ export default function BlockerSummary({
                       </button>
                     )}
                     <button
+                      type="button"
                       onClick={() => handleIgnore(blocker.id, true)}
                       disabled={loading === blocker.id}
                       className="inline-flex h-7 items-center rounded-full border border-[#e8e8e8] bg-white px-3 text-[11px] font-medium text-[#94a3b8] transition hover:text-[#666d80] disabled:opacity-50"
@@ -257,6 +302,7 @@ export default function BlockerSummary({
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleIgnore(blocker.id, false)}
                   disabled={loading === blocker.id}
                   className="inline-flex h-7 shrink-0 items-center rounded-full border border-[#e8e8e8] bg-white px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"

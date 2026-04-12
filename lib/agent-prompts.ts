@@ -21,6 +21,16 @@ export interface AgentAction {
   };
 }
 
+export interface AgentMessageAction {
+  type: "create_task" | "open_checklist" | "open_tracking";
+  label: string;
+  payload?: {
+    title?: string;
+    description?: string;
+    priority?: "HIGH" | "MEDIUM" | "LOW";
+  };
+}
+
 export interface AgentSuggestion {
   label: string;
   intent?: "ask" | "create_task";
@@ -34,6 +44,7 @@ export interface AgentSuggestion {
 export interface AgentResponse {
   message: string;
   actions: AgentAction[];
+  messageActions: AgentMessageAction[];
   suggestions: AgentSuggestion[];
 }
 
@@ -64,6 +75,7 @@ Your role:
 - Give honest, direct snapshots of where the product stands
 - Surface the most important things the founder should act on right now
 - Create tasks when the user asks or when an obvious next step emerges
+- Use messageActions for clickable bridges into tasks or workspace surfaces
 
 Response rules:
 - Be direct and concrete, no generic advice
@@ -78,6 +90,7 @@ You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
+  "messageActions": [],
   "suggestions": [
     { "label": "follow-up question", "intent": "ask" },
     {
@@ -89,7 +102,12 @@ You MUST respond with valid JSON in this exact format:
 }
 
 Actions shape (only include when creating a task):
-{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }`;
+{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+
+Message action shapes:
+{ "type": "create_task", "label": "...", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+{ "type": "open_checklist", "label": "..." }
+{ "type": "open_tracking", "label": "..." }`;
 }
 
 function launchSystemPrompt(ctx: AgentContext): string {
@@ -111,6 +129,7 @@ Your role:
 - Suggest strategies for ASO, store listing, legal docs, and technical readiness
 - Create tasks directly from checklist items when asked
 - Prioritize ruthlessly — focus on HIGH priority blockers first
+- Use messageActions to connect advice to the checklist or tracking surface when relevant
 
 Response rules:
 - Be specific and actionable, not generic
@@ -125,6 +144,7 @@ You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
+  "messageActions": [],
   "suggestions": [
     { "label": "follow-up question", "intent": "ask" },
     {
@@ -136,7 +156,12 @@ You MUST respond with valid JSON in this exact format:
 }
 
 Actions shape (only include when creating a task):
-{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }`;
+{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+
+Message action shapes:
+{ "type": "create_task", "label": "...", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+{ "type": "open_checklist", "label": "..." }
+{ "type": "open_tracking", "label": "..." }`;
 }
 
 function growthSystemPrompt(ctx: AgentContext): string {
@@ -158,6 +183,7 @@ Your role:
 - Help set up tracking for metrics that are missing
 - Suggest acquisition channels, retention tactics, and revenue levers
 - Create tasks for specific growth experiments when asked
+- Use messageActions to connect advice to tracking or execution surfaces when relevant
 
 Response rules:
 - Ground everything in the actual metric data — no generic "try SEO" advice
@@ -172,6 +198,7 @@ You MUST respond with valid JSON in this exact format:
 {
   "message": "your response here",
   "actions": [],
+  "messageActions": [],
   "suggestions": [
     { "label": "follow-up question", "intent": "ask" },
     {
@@ -183,7 +210,12 @@ You MUST respond with valid JSON in this exact format:
 }
 
 Actions shape (only include when creating a task):
-{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }`;
+{ "type": "create_task", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+
+Message action shapes:
+{ "type": "create_task", "label": "...", "payload": { "title": "...", "description": "...", "priority": "HIGH" | "MEDIUM" | "LOW" } }
+{ "type": "open_checklist", "label": "..." }
+{ "type": "open_tracking", "label": "..." }`;
 }
 
 export function buildAgentSystemPrompt(ctx: AgentContext): string {
@@ -233,6 +265,7 @@ export function buildFallbackResponse(agentType: string, locale = "en"): AgentRe
       ? "Something went wrong. Want to try again?"
       : "Şu an bir sorun oluştu, tekrar dener misin?"),
     actions: [],
+    messageActions: [],
     suggestions: [],
   };
 }

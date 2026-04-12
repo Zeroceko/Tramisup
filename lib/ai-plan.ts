@@ -6,6 +6,7 @@ import { mergeMobileLaunchBaseline } from "@/lib/mobile-launch-baseline";
 import { normalizeProductContext, type NormalizedProductContext } from "@/lib/normalize-product-context";
 import { tasksAreNearDuplicate } from "@/lib/task-parsing";
 import { filterValidCandidates, type Locale, type TaskCandidate } from "@/lib/task-validator";
+import { getLaunchStageLabel, isLaunchedLaunchStage } from "@/lib/launch-stage";
 
 export type AiLaunchItem = {
   category: LaunchCategory;
@@ -126,7 +127,7 @@ const PlanSchema = z.object({
 
 function inferContext(input: WizardInput) {
   const launchStage = (input.launchStatus ?? "").toLowerCase();
-  const isLaunched = ["yayında", "büyüme aşamasında"].includes(launchStage);
+  const isLaunched = isLaunchedLaunchStage(input.launchStatus);
   const platforms = Array.from(new Set(input.mobilePlatforms ?? []));
   const mobilePlatforms = platforms.filter((platform) => ["iOS", "Android"].includes(platform));
   const haystack = `${input.category ?? ""} ${input.targetAudience ?? ""} ${input.businessModel ?? ""} ${input.description ?? ""} ${input.websiteContent ?? ""}`.toLowerCase();
@@ -291,11 +292,35 @@ function pickCopy(locale: Locale, tr: string, en: string) {
   return locale === "tr" ? tr : en;
 }
 
+function getAudiencePhrase(targetAudience: string | undefined, locale: Locale) {
+  const raw = targetAudience?.trim();
+  if (!raw) return locale === "tr" ? "hedef kitlen" : "new users";
+
+  const parts = raw
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (locale === "en") {
+    const hasTurkishChars = /[ğüşöçıİĞÜŞÖÇ]/.test(raw);
+    const hasCommonTurkishWords = /\b(ekipleri|ekibi|kobi|kobiler|kurucu|kullanici|kullanıcı|musteri|müşteri|isletme|işletme)\b/i.test(raw);
+    if (hasTurkishChars || hasCommonTurkishWords) {
+      return "new users";
+    }
+  }
+
+  const looksMixedLocale = /[ğüşöçıİĞÜŞÖÇ]/.test(raw) && /[A-Za-z]/.test(raw);
+  const noisy = parts.length !== 1 || looksMixedLocale || raw.length > 32;
+  if (noisy) return locale === "tr" ? "hedef kitlen" : "new users";
+
+  return raw;
+}
+
 export function buildSkillBackedFallbackPlan(input: WizardInput): AiPlan {
   const context = inferContext(input);
   const productName = input.name;
-  const audience = input.targetAudience || "hedef kitlen";
   const locale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+  const audience = getAudiencePhrase(input.targetAudience, locale);
   const launchChecklist: AiLaunchItem[] = [];
   const growthChecklist: AiGrowthItem[] = [];
 
@@ -408,8 +433,7 @@ function extractGuidanceSection(skill: string) {
 async function loadStoreGuidance(input: WizardInput) {
   const category = (input.category ?? "").toLowerCase();
   const platforms = input.mobilePlatforms ?? [];
-  const stage = (input.launchStatus ?? "").toLowerCase();
-  const isLaunched = ["yayında", "büyüme aşamasında"].includes(stage);
+  const isLaunched = isLaunchedLaunchStage(input.launchStatus);
   const shouldLoadAppStore = platforms.includes("iOS") || /mobil uygulama|mobile app|ios|apple|app store/.test(category);
   const shouldLoadPlayStore = platforms.includes("Android") || /mobil uygulama|mobile app|android|google play|play store/.test(category);
   
@@ -422,15 +446,15 @@ async function loadStoreGuidance(input: WizardInput) {
 }
 
 async function loadLaunchAndAnalyticsGuidance(input: WizardInput) {
-  const stage = (input.launchStatus ?? "").toLowerCase();
+  const isLaunched = isLaunchedLaunchStage(input.launchStatus);
   const parts: string[] = [];
 
-  if (!["yayında", "büyüme aşamasında"].includes(stage)) {
+  if (!isLaunched) {
     const skill = await loadProjectSkill("launch-readiness-advisor");
     parts.push(`LAUNCH READINESS ADVISOR\n${extractGuidanceSection(skill)}`);
   }
 
-  if (["yayında", "büyüme aşamasında"].includes(stage)) {
+  if (isLaunched) {
     const skill = await loadProjectSkill("analytics-instrumentation-advisor");
     parts.push(`ANALYTICS INSTRUMENTATION ADVISOR\n${extractGuidanceSection(skill)}`);
   }
@@ -453,7 +477,7 @@ PRODUCT INFO:
 - Category: ${input.category || "SaaS"}
 - Target audience: ${input.targetAudience || "unspecified"}
 - Business model: ${input.businessModel || "unspecified"}
-- Current stage: ${input.launchStatus || "unspecified"}
+- Current stage: ${getLaunchStageLabel(input.launchStatus, outputLocale) || input.launchStatus || "unspecified"}
 ${input.stageContext ? `- Stage details: ${input.stageContext}` : ""}
 ${normalizedCtx ? `\nNORMALIZED CONTEXT (structured):
 - Stage: ${normalizedCtx.stage}
@@ -561,7 +585,7 @@ export async function generateAiPlan(input: WizardInput): Promise<AiPlanResult> 
     const rawGrowthCount = Array.isArray(object?.growthChecklist) ? object.growthChecklist.length : 0;
     const rawTaskCount = Array.isArray(object?.tasks) ? object.tasks.length : 0;
 
-    const isLaunchedStage = ["yayında", "büyüme aşamasında"].includes((input.launchStatus ?? "").toLowerCase());
+    const isLaunchedStage = isLaunchedLaunchStage(input.launchStatus);
     const validatorLocale: Locale = (input.locale ?? "en").toLowerCase().startsWith("tr") ? "tr" : "en";
     const sanitized = sanitizeAiPlanOutput(object, validatorLocale, isLaunchedStage);
     if (!sanitized) {

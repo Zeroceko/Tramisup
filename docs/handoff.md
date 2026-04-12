@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current live release: `eacecb50`
+- Current live release: `f8f56491`
 - Last docs refresh: `12 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
@@ -32,11 +32,42 @@
 
 ### Recent shipped commits
 
+- `f8f56491` — handoff/docs refresh on top of the current production baseline
 - `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
 - `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
 - `13ba0851` — fix overview agent: stage-aware context for launched/growing products
 - `93c8a82f` — agent panel all-task, remove ask intent
 - `470c1e58` — growth diagnosis data-driven + locale-aware, TR category labels
+
+---
+
+## Local Workspace Warning
+
+The current local workspace is **not** a clean production mirror. It contains a partial implementation of **Founder Trust Sprint 2** and should be treated as an unfinished branch state.
+
+### Started locally but not completed
+
+- Canonical launch stage migration
+- Route-scoped remounting for `/dashboard`, `/pre-launch`, `/settings`
+- Client-synced pre-launch checklist/task workspace
+- Agent message persistence scaffold and `messageActions` contract
+
+### Current compile blockers
+
+As of **12 April 2026**, `npx tsc --noEmit` fails in the local workspace because of:
+
+1. `app/api/agent/chat/route.ts` still returning the old `AgentResponse` shape without `messageActions`
+2. `components/OnboardingWizard.tsx` still referencing removed stage helper names
+3. `components/OnboardingWizard.tsx` still carrying one `string` → `LaunchStageKey | ""` typing mismatch
+4. `lib/agent-messages.ts` using the unfinished `AgentMessage` Prisma model before Prisma client regeneration / final typing cleanup
+
+### First resume steps for the next team
+
+1. Finish or back out the incomplete `AgentMessage` / agent history path
+2. Finish the `OnboardingWizard` canonical stage migration
+3. Run `npx prisma generate`
+4. Run `npx tsc --noEmit`
+5. Only then continue the remaining Trust Sprint 2 scope
 
 ---
 

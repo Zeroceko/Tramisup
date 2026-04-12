@@ -2,6 +2,11 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildLaunchStageRepairData,
+  canonicalLaunchStageFromProductStatus,
+  normalizeLaunchStageKey,
+} from "@/lib/launch-stage";
 
 export async function DELETE(
   request: NextRequest,
@@ -51,10 +56,12 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const nextLaunchStage =
+      normalizeLaunchStageKey(body.launchStageKey ?? body.launchStatus) ??
+      canonicalLaunchStageFromProductStatus(body.status);
 
-    if (!status || !["PRE_LAUNCH", "LAUNCHED", "GROWING"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    if (!nextLaunchStage) {
+      return NextResponse.json({ error: "Invalid launch stage" }, { status: 400 });
     }
 
     // Verify product belongs to user
@@ -65,9 +72,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const repairData = buildLaunchStageRepairData({
+      launchStatus: nextLaunchStage,
+      status: body.status,
+    });
+
+    if (!repairData) {
+      return NextResponse.json({ error: "Invalid launch stage" }, { status: 400 });
+    }
+
     const updated = await prisma.product.update({
       where: { id },
-      data: { status },
+      data: repairData,
     });
 
     return NextResponse.json(updated);

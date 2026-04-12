@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import type { AgentType } from "@/lib/agent-types";
 import UsageLimitModal from "@/components/UsageLimitModal";
 export type { AgentType };
@@ -9,11 +10,18 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  messageActions?: AgentMessageAction[];
 }
 
 interface AgentAction {
   type: "create_task";
   payload: { title: string; description?: string; priority?: string };
+}
+
+interface AgentMessageAction {
+  type: "create_task" | "open_checklist" | "open_tracking";
+  label: string;
+  payload?: { title?: string; description?: string; priority?: string };
 }
 
 interface AgentSuggestion {
@@ -25,6 +33,7 @@ interface AgentSuggestion {
 interface AgentApiResponse {
   message: string;
   actions: AgentAction[];
+  messageActions?: AgentMessageAction[];
   executedActions: string[];
   suggestions: AgentSuggestion[];
 }
@@ -169,6 +178,7 @@ export default function AgentChatPanel({
   locale,
   onTasksCreated,
 }: AgentChatPanelProps) {
+  const router = useRouter();
   const copy = getCopy(agentType, locale);
   const isEn = locale === "en";
   const [messages, setMessages] = useState<Message[]>([]);
@@ -204,6 +214,18 @@ export default function AgentChatPanel({
       .catch(() => {})
       .finally(() => setSuggestionsLoading(false));
 
+    fetch(
+      `/api/agent/chat?agentType=${agentType}&productId=${productId}&locale=${locale}`,
+      { signal: controller.signal }
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.messages)) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(() => {});
+
     return () => controller.abort();
   }, [agentType, locale, productId]);
 
@@ -225,11 +247,6 @@ export default function AgentChatPanel({
       setLoading(true);
 
       try {
-        const history = messages
-          .filter((m) => m.id !== "greeting")
-          .slice(-6)
-          .map((m) => ({ role: m.role, content: m.content }));
-
         const res = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -238,7 +255,6 @@ export default function AgentChatPanel({
             message: text,
             productId,
             locale,
-            conversationHistory: history,
           }),
         });
 
@@ -275,6 +291,7 @@ export default function AgentChatPanel({
             id: (Date.now() + 1).toString(),
             role: "assistant",
             content: data.message,
+            messageActions: data.messageActions ?? [],
           },
         ]);
 
@@ -302,11 +319,15 @@ export default function AgentChatPanel({
         inputRef.current?.focus();
       }
     },
-    [agentType, copy.genericError, isEn, loading, locale, messages, onTasksCreated, productId]
+    [agentType, copy.genericError, isEn, loading, locale, onTasksCreated, productId]
   );
 
-  async function createTaskFromSuggestion(suggestion: AgentSuggestion) {
-    const title = suggestion.payload?.title?.trim() || suggestion.label.trim();
+  async function createTask(inputTask: {
+    title: string;
+    description?: string;
+    priority?: string;
+  }) {
+    const title = inputTask.title.trim();
     if (!title || loading) return;
 
     setLoading(true);
@@ -317,10 +338,10 @@ export default function AgentChatPanel({
         body: JSON.stringify({
           productId,
           title,
-          description: suggestion.payload?.description ?? copy.recommendationsHint,
+          description: inputTask.description ?? copy.recommendationsHint,
           priority:
-            suggestion.payload?.priority === "HIGH" || suggestion.payload?.priority === "LOW"
-              ? suggestion.payload.priority
+            inputTask.priority === "HIGH" || inputTask.priority === "LOW"
+              ? inputTask.priority
               : "MEDIUM",
         }),
       });
@@ -338,7 +359,6 @@ export default function AgentChatPanel({
           content: copy.taskAdded(title),
         },
       ]);
-      setSuggestions((prev) => prev.filter((item) => item.label !== suggestion.label));
       onTasksCreated?.([title]);
     } catch (err) {
       setMessages((prev) => [
@@ -353,6 +373,33 @@ export default function AgentChatPanel({
       setLoading(false);
       inputRef.current?.focus();
     }
+  }
+
+  async function createTaskFromSuggestion(suggestion: AgentSuggestion) {
+    await createTask({
+      title: suggestion.payload?.title?.trim() || suggestion.label.trim(),
+      description: suggestion.payload?.description,
+      priority: suggestion.payload?.priority,
+    });
+    setSuggestions((prev) => prev.filter((item) => item.label !== suggestion.label));
+  }
+
+  async function handleMessageAction(action: AgentMessageAction) {
+    if (action.type === "create_task") {
+      await createTask({
+        title: action.payload?.title?.trim() || action.label.trim(),
+        description: action.payload?.description,
+        priority: action.payload?.priority,
+      });
+      return;
+    }
+
+    const destination =
+      action.payload?.description ||
+      (action.type === "open_checklist"
+        ? `/${locale}/pre-launch#blockers`
+        : `/${locale}/settings?section=tracking&productId=${productId}`);
+    router.push(destination);
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -414,14 +461,30 @@ export default function AgentChatPanel({
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}
           >
             {msg.role === "assistant" && <AgentAvatar agentType={agentType} />}
-            <div
-              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-[#0d0d12] text-white rounded-br-sm"
-                  : "bg-[#f0f0f0] text-[#0d0d12] rounded-bl-sm"
-              }`}
-            >
-              {msg.content}
+            <div className="max-w-[85%]">
+              <div
+                className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                  msg.role === "user"
+                    ? "bg-[#0d0d12] text-white rounded-br-sm"
+                    : "bg-[#f0f0f0] text-[#0d0d12] rounded-bl-sm"
+                }`}
+              >
+                {msg.content}
+              </div>
+              {msg.role === "assistant" && (msg.messageActions?.length ?? 0) > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {msg.messageActions?.map((action, index) => (
+                    <button
+                      key={`${msg.id}-${action.type}-${index}`}
+                      type="button"
+                      onClick={() => void handleMessageAction(action)}
+                      className="rounded-full border border-[#ddd6ce] bg-white px-3 py-1.5 text-[11px] font-medium text-[#3d4658] transition hover:border-[#c8c0b7] hover:bg-[#faf8f5]"
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         ))}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
+import { getLaunchStageLabel, getProductStatusLabel } from "@/lib/launch-stage";
 
 function displayValue(locale: string, value: string | null | undefined) {
   if (!value || locale !== "en") return value ?? "—";
@@ -173,7 +174,7 @@ export default async function ProductOverviewPage({
             <div className="rounded-[12px] bg-[#f8f8f8] px-4 py-3">
               <p className="text-[11px] text-[#666d80]">{isEn ? "Stage" : "Aşama"}</p>
               <p className="mt-0.5 text-[14px] font-semibold text-[#0d0d12]">
-                {displayValue(locale, product.launchStatus || (product.status ?? "—").replaceAll("_", " "))}
+                {getLaunchStageLabel(product.launchStatus, locale) ?? getProductStatusLabel(product.status, locale) ?? "—"}
               </p>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { seedAiPlan, seedMetricsData } from "@/lib/seed";
 import { scrapeUrl } from "@/lib/url-scraper";
 import { getFileBuffer } from "@/lib/supabase-storage";
 import { extractFileContent } from "@/lib/extract-file-content";
+import { isLaunchedLaunchStage } from "@/lib/launch-stage";
 
 type UploadedFileRef = {
   storagePath: string;
@@ -94,7 +95,7 @@ export async function POST(
   const hasMobilePlatform = normalizedPlatforms.some((p) => ["iOS", "Android"].includes(p));
   const storeContext =
     isMobileApp || hasMobilePlatform
-      ? ["Yayında", "Büyüme aşamasında"].includes(launchStatus)
+      ? isLaunchedLaunchStage(launchStatus)
         ? `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. Urun yayinda; store listing ve ASO tarafini growth sinyali gibi yorumla, submission-ready checklist'e donme.`
         : `Mobil uygulama platformlari: ${normalizedPlatforms.filter((p) => ["iOS", "Android"].includes(p)).join(", ") || "belirtilmemiş"}. App Store ve Google Play icin submission-ready checklist olustur.`
       : "";

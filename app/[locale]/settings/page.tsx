@@ -8,7 +8,8 @@ import { getMetricSetup } from "@/lib/metric-setup";
 import { checkLimit, getUserPlan, PLAN_LIMITS } from "@/lib/plan-limits";
 import { PlanTier, BillingInterval, SubStatus } from "@prisma/client";
 import { listAIConnectionsForUser } from "@/lib/ai-connections";
-import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
+import { getAvailableIntegrations } from "@/lib/integrations-catalog";
+import { getProductStatusLabel } from "@/lib/launch-stage";
 import PageHeader from "@/components/PageHeader";
 import SettingsWorkspace from "@/components/SettingsWorkspace";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
@@ -259,7 +260,7 @@ export default async function SettingsPage({
               {activeProduct?.name || copy.noProduct}
             </p>
             <p className="mt-1 text-[13px] text-[#666d80]">
-              {activeProduct?.status || "—"}
+              {getProductStatusLabel(activeProduct?.status, locale) ?? "—"}
             </p>
           </div>
 
@@ -318,7 +319,7 @@ export default async function SettingsPage({
         connectedProviders={connectedProviders}
         aiConnections={aiConnections}
         productAISettings={productAISettings}
-        availableIntegrations={AVAILABLE_INTEGRATIONS as IntegrationDef[]}
+        availableIntegrations={getAvailableIntegrations(locale) as IntegrationDef[]}
         sourceIntegrations={integrations}
         manualEntryCount={manualEntryCount}
         aiSuccess={success}

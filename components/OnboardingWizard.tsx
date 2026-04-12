@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import {
+  deriveProductStatusFromLaunchStage,
+  getLaunchStageLabel,
+  isLaunchedLaunchStage,
+  isVeryEarlyLaunchStage,
+  type LaunchStageKey,
+} from "@/lib/launch-stage";
+import {
   clearOnboardingRetryDraft,
   loadOnboardingRetryDraft,
   saveOnboardingRetryDraft,
@@ -50,7 +57,7 @@ type WizardData = {
   platforms: string[];
   targetAudiences: string[];
   targetAudienceOther: string;
-  launchStatus: string;
+  launchStatus: LaunchStageKey | "";
   timingOption: string;
   businessModels: string[];
   businessModelOther: string;
@@ -82,21 +89,21 @@ const CATEGORIES = [
 ];
 
 const STAGES = [
-  { value: "Fikir aşamasında", label: "Fikir aşamasındayım", sub: "Problemi ve çözümü netleştiriyorum" },
-  { value: "Geliştirme aşamasında", label: "Geliştiriyorum", sub: "Henüz kullanıcı yok" },
+  { value: "IDEA", label: "Fikir aşamasındayım", sub: "Problemi ve çözümü netleştiriyorum" },
+  { value: "BUILDING", label: "Geliştiriyorum", sub: "Henüz kullanıcı yok" },
   {
-    value: "Test kullanıcıları var",
+    value: "TESTING",
     label: "Test kullanıcılarım var",
     sub: "Kapalı beta devam ediyor",
   },
   {
-    value: "Yakında yayında",
+    value: "PREPARING",
     label: "Launch hazırlığındayım",
     sub: "Yakında yayına çıkıyorum",
   },
-  { value: "Yayında", label: "Yayındayım", sub: "Gerçek kullanıcılarım var" },
+  { value: "LIVE", label: "Yayındayım", sub: "Gerçek kullanıcılarım var" },
   {
-    value: "Büyüme aşamasında",
+    value: "GROWING",
     label: "Büyüme aşamasındayım",
     sub: "Ölçeklendirmeye odaklanıyorum",
   },
@@ -244,18 +251,8 @@ const STEP_TO_PHASE: Record<StepId, number> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function isLaunchedStage(s: string) {
-  return s === "Yayında" || s === "Büyüme aşamasında";
-}
-
-function isVeryEarlyStage(s: string) {
-  return s === "Fikir aşamasında" || s === "Geliştirme aşamasında" || s === "Test kullanıcıları var";
-}
-
 function deriveStatus(launchStatus: string): "PRE_LAUNCH" | "LAUNCHED" | "GROWING" {
-  if (launchStatus === "Büyüme aşamasında") return "GROWING";
-  if (launchStatus === "Yayında") return "LAUNCHED";
-  return "PRE_LAUNCH";
+  return deriveProductStatusFromLaunchStage(launchStatus);
 }
 
 function timingToDate(timing: string): string | null {
@@ -302,9 +299,9 @@ function computeAutoMetrics(
 function getActiveSteps(data: Partial<WizardData>): StepId[] {
   const ids: StepId[] = ["name", "description", "category", "platform"];
   ids.push("audience", "business", "stage", "goal");
-  if (data.launchStatus && !isLaunchedStage(data.launchStatus)) ids.push("timing");
+  if (data.launchStatus && !isLaunchedLaunchStage(data.launchStatus)) ids.push("timing");
   ids.push("sources");
-  if (data.launchStatus && !isVeryEarlyStage(data.launchStatus)) ids.push("metrics");
+  if (data.launchStatus && !isVeryEarlyLaunchStage(data.launchStatus)) ids.push("metrics");
   return ids;
 }
 
@@ -331,8 +328,9 @@ function hasOtherSelection(selected: string[] | undefined) {
   return (selected ?? []).includes(OTHER_OPTION_VALUE);
 }
 
-function getStageLabel(value: string | undefined, items: { value: string; label: string }[]) {
-  return items.find((item) => item.value === value)?.label ?? value ?? "Secilmedi";
+function getStageLabel(value: string | undefined, items: { value: string; label: string }[], locale: string) {
+  if (!value) return locale === "en" ? "Not selected" : "Seçilmedi";
+  return items.find((item) => item.value === value)?.label ?? getLaunchStageLabel(value, locale) ?? value;
 }
 
 function getConnectableSources(intendedSources: string[] | undefined) {
@@ -668,12 +666,12 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     : CATEGORIES;
   const stageOptions = isEn
     ? [
-        { value: "Fikir aşamasında", label: "Idea stage", sub: "I am clarifying the problem and solution" },
-        { value: "Geliştirme aşamasında", label: "Building", sub: "No users yet" },
-        { value: "Test kullanıcıları var", label: "I have test users", sub: "Closed beta is ongoing" },
-        { value: "Yakında yayında", label: "Preparing for launch", sub: "Going live soon" },
-        { value: "Yayında", label: "Live", sub: "I have real users" },
-        { value: "Büyüme aşamasında", label: "Growing", sub: "I am focused on scaling" },
+        { value: "IDEA", label: "Idea stage", sub: "I am clarifying the problem and solution" },
+        { value: "BUILDING", label: "Building", sub: "No users yet" },
+        { value: "TESTING", label: "I have test users", sub: "Closed beta is ongoing" },
+        { value: "PREPARING", label: "Preparing for launch", sub: "Going live soon" },
+        { value: "LIVE", label: "Live", sub: "I have real users" },
+        { value: "GROWING", label: "Growing", sub: "I am focused on scaling" },
       ]
     : STAGES;
   const timingOptions = isEn
@@ -1190,7 +1188,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                     key={item.value}
                     item={item}
                     selected={data.launchStatus === item.value}
-                    onClick={() => set("launchStatus", item.value)}
+                    onClick={() => set("launchStatus", item.value as LaunchStageKey)}
                   />
                 ))}
               </div>

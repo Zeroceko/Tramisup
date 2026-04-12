@@ -31,62 +31,61 @@ type IntegrationsWorkspaceProps = {
   } | null;
 };
 
-// Feedback from OAuth redirects
-const feedbackCopy: Record<
-  string,
-  { tone: "success" | "error"; title: string; body: string }
-> = {
-  ga4_connected: {
-    tone: "success",
-    title: "Google Analytics bağlandı",
-    body: "Son adım kaldı: hangi GA4 property'den veri çekeceğimizi seç. Bu olmadan sync çalışmaz.",
-  },
-  stripe_connected: {
-    tone: "success",
-    title: "Stripe bağlandı",
-    body: "Gelir ve churn verileri artık sync akışına hazır. İlk sync'i başlatarak veriyi içeri al.",
-  },
-  google_play_connected: {
-    tone: "success",
-    title: "Google Play bağlandı",
-    body: "Google Play hesabı hazır. Store sync ve release sinyalleri bu bağlantının üstüne gelecek.",
-  },
-  google_play_denied: {
-    tone: "error",
-    title: "Google Play izni tamamlanmadı",
-    body: "Google Play OAuth akışı yarıda kaldı. İstersen tekrar deneyebiliriz.",
-  },
-  stripe_denied: {
-    tone: "error",
-    title: "Stripe izni tamamlanmadı",
-    body: "Bağlantı ekranı yarıda kaldı. İstersen tekrar deneyebiliriz.",
-  },
-  missing_params_or_denied: {
-    tone: "error",
-    title: "Google bağlantısı tamamlanmadı",
-    body: "Google izin akışı eksik ya da yarıda kaldı. Tekrar dene.",
-  },
-  unauthorized_product: {
-    tone: "error",
-    title: "Bağlantı hedefi doğrulanamadı",
-    body: "Seçili ürünle OAuth state eşleşmedi. Sayfayı yenileyip tekrar dene.",
-  },
-  missing_env_secrets: {
-    tone: "error",
-    title: "Google OAuth ayarı eksik",
-    body: "Sunucu tarafında gerekli gizli anahtarlar eksik görünüyor.",
-  },
-  exchange_failed: {
-    tone: "error",
-    title: "Token değişimi başarısız oldu",
-    body: "Google izin verdi ama token alma aşaması tamamlanmadı.",
-  },
-  oauth_crash: {
-    tone: "error",
-    title: "OAuth callback beklenmedik şekilde durdu",
-    body: "Akış callback aşamasında bozuldu.",
-  },
-};
+function getFeedbackCopy(locale: string): Record<string, { tone: "success" | "error"; title: string; body: string }> {
+  const isEn = locale === "en";
+  return {
+    ga4_connected: {
+      tone: "success",
+      title: isEn ? "Google Analytics connected" : "Google Analytics bağlandı",
+      body: isEn ? "One step left: choose the GA4 property to sync from. Sync cannot run without it." : "Son adım kaldı: hangi GA4 property'den veri çekeceğimizi seç. Bu olmadan sync çalışmaz.",
+    },
+    stripe_connected: {
+      tone: "success",
+      title: isEn ? "Stripe connected" : "Stripe bağlandı",
+      body: isEn ? "Revenue and churn data are ready for the sync flow. Start the first sync to bring them in." : "Gelir ve churn verileri artık sync akışına hazır. İlk sync'i başlatarak veriyi içeri al.",
+    },
+    google_play_connected: {
+      tone: "success",
+      title: isEn ? "Google Play connected" : "Google Play bağlandı",
+      body: isEn ? "The Google Play account is ready. Store sync and release signals will build on this connection." : "Google Play hesabı hazır. Store sync ve release sinyalleri bu bağlantının üstüne gelecek.",
+    },
+    google_play_denied: {
+      tone: "error",
+      title: isEn ? "Google Play permission was not completed" : "Google Play izni tamamlanmadı",
+      body: isEn ? "The Google Play OAuth flow was interrupted. You can try again." : "Google Play OAuth akışı yarıda kaldı. İstersen tekrar deneyebiliriz.",
+    },
+    stripe_denied: {
+      tone: "error",
+      title: isEn ? "Stripe permission was not completed" : "Stripe izni tamamlanmadı",
+      body: isEn ? "The connection flow was interrupted. You can try again." : "Bağlantı ekranı yarıda kaldı. İstersen tekrar deneyebiliriz.",
+    },
+    missing_params_or_denied: {
+      tone: "error",
+      title: isEn ? "Google connection was not completed" : "Google bağlantısı tamamlanmadı",
+      body: isEn ? "The Google permission flow was incomplete or interrupted. Try again." : "Google izin akışı eksik ya da yarıda kaldı. Tekrar dene.",
+    },
+    unauthorized_product: {
+      tone: "error",
+      title: isEn ? "Connection target could not be verified" : "Bağlantı hedefi doğrulanamadı",
+      body: isEn ? "The OAuth state did not match the selected product. Refresh and try again." : "Seçili ürünle OAuth state eşleşmedi. Sayfayı yenileyip tekrar dene.",
+    },
+    missing_env_secrets: {
+      tone: "error",
+      title: isEn ? "Google OAuth config is missing" : "Google OAuth ayarı eksik",
+      body: isEn ? "Required server-side secrets appear to be missing." : "Sunucu tarafında gerekli gizli anahtarlar eksik görünüyor.",
+    },
+    exchange_failed: {
+      tone: "error",
+      title: isEn ? "Token exchange failed" : "Token değişimi başarısız oldu",
+      body: isEn ? "Google granted access but the token exchange did not complete." : "Google izin verdi ama token alma aşaması tamamlanmadı.",
+    },
+    oauth_crash: {
+      tone: "error",
+      title: isEn ? "OAuth callback stopped unexpectedly" : "OAuth callback beklenmedik şekilde durdu",
+      body: isEn ? "The flow broke during the callback step." : "Akış callback aşamasında bozuldu.",
+    },
+  };
+}
 
 // Trust level: what does the user's data quality look like overall?
 type TrustLevel = "TRUSTED" | "PARTIAL" | "MANUAL";
@@ -184,6 +183,7 @@ export default function IntegrationsWorkspace({
   };
 
   const syncedSources = sourceStates.filter((s) => s === "SYNCED").length;
+  const feedbackCopy = getFeedbackCopy(locale);
   const queuedProviders = (queued ?? "")
     .split(",")
     .map((value) => value.trim())
@@ -192,11 +192,15 @@ export default function IntegrationsWorkspace({
     onboarding === "1" && connect
       ? {
           tone: "success" as const,
-          title: "Onboarding tamamlandi",
+          title: isEn ? "Onboarding completed" : "Onboarding tamamlandi",
           body:
             queuedProviders.length > 0
-              ? `Sectigin kaynaklari baglamaya geciyoruz. Once ${connect}, sonra ${queuedProviders.join(", ")} kurulumu acilabilir.`
-              : `Sectigin kaynaklari baglamaya hazirsin. Once ${connect} kurulumu aciliyor.`,
+              ? isEn
+                ? `We’re moving into source setup. ${connect} opens first, then ${queuedProviders.join(", ")} can follow.`
+                : `Sectigin kaynaklari baglamaya geciyoruz. Once ${connect}, sonra ${queuedProviders.join(", ")} kurulumu acilabilir.`
+              : isEn
+                ? `Your selected sources are ready to connect. ${connect} opens first.`
+                : `Sectigin kaynaklari baglamaya hazirsin. Once ${connect} kurulumu aciliyor.`,
         }
       : null;
   const feedback = success

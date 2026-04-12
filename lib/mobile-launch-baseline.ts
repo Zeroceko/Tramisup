@@ -1,5 +1,6 @@
 import type { LaunchCategory, Priority } from "@prisma/client";
 import type { AiLaunchItem, AiPlan, WizardInput } from "@/lib/ai-plan";
+import { isLaunchedLaunchStage } from "@/lib/launch-stage";
 
 type BaselineItem = {
   category: LaunchCategory;
@@ -109,8 +110,7 @@ function mergeLaunchChecklist(
 export function mergeMobileLaunchBaseline(plan: AiPlan, input: WizardInput): AiPlan {
   const platforms = Array.from(new Set(input.mobilePlatforms ?? []));
   if (platforms.length === 0) return plan;
-  const launchStage = (input.launchStatus ?? "").toLowerCase();
-  if (["yayında", "büyüme aşamasında"].includes(launchStage)) {
+  if (isLaunchedLaunchStage(input.launchStatus)) {
     return plan;
   }
 

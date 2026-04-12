@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { toast } from "@/components/ui/sonner";
 import type { CompletionEffects } from "@/lib/task-completion-effects";
 import { parseStructuredDescription } from "@/lib/task-parsing";
+import { buildTaskDetailFallback } from "@/lib/task-detail-fallback";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
@@ -1148,35 +1149,50 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                   );
                 }
 
-                // Legacy path: plain description + heuristic tips.
+                const fallback = buildTaskDetailFallback({
+                  title: detailTask.title,
+                  category: effectiveCategory(detailTask),
+                  linkedChecklistTitle: detailTask.launchChecklistItem?.title ?? null,
+                  locale,
+                });
+
                 return (
-                  <>
-                    <p className="mt-4 text-[15px] leading-7 text-[#5e6678]">
-                      {normalizeTurkishText(
-                        detailTask.description ??
-                          (isEn
-                            ? "This task secures launch quality and reduces execution risk."
-                            : "Bu görev launch kalitesini güvenceye alır ve icra riskini azaltır."),
-                      )}
-                    </p>
-                    <div className="mt-5 rounded-[16px] bg-[#f7f7f8] p-5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
-                        {isEn ? "How to approach this" : "Bu işe nasıl yaklaş"}
-                      </p>
-                      <div className="mt-3 space-y-2.5">
-                        {getTaskTips(detailTask).map((tip) => (
-                          <div key={tip} className="flex items-start gap-2.5">
-                            <span className="mt-1 inline-flex h-4 w-4 items-center justify-center rounded-md bg-[#e6f7f4] text-[#2a7c7a]">
-                              <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                                <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </span>
-                            <p className="text-[13px] leading-6 text-[#5e6678]">{tip}</p>
-                          </div>
-                        ))}
+                  <div className="mt-5 space-y-3">
+                    {[
+                      {
+                        label: isEn ? "Why it matters" : "Neden önemli",
+                        value: fallback.why,
+                        accent: "border-l-[#ffd7ef]",
+                      },
+                      {
+                        label: isEn ? "Done when" : "Biten hali",
+                        value: fallback.doneCriteria,
+                        accent: "border-l-[#75fc96]",
+                      },
+                      {
+                        label: isEn ? "Next action" : "Sonraki adım",
+                        value: fallback.nextAction,
+                        accent: "border-l-[#95dbda]",
+                      },
+                    ].map((section) => (
+                      <div
+                        key={section.label}
+                        className={`rounded-r-[14px] border-l-[3px] bg-[#fafafa] px-4 py-3 ${section.accent}`}
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                          {section.label}
+                        </p>
+                        <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
+                          {normalizeTurkishText(section.value)}
+                        </p>
                       </div>
-                    </div>
-                  </>
+                    ))}
+                    {detailTask.description ? (
+                      <p className="text-[13px] leading-6 text-[#5e6678]">
+                        {normalizeTurkishText(detailTask.description)}
+                      </p>
+                    ) : null}
+                  </div>
                 );
               })()}
 

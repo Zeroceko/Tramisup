@@ -35,6 +35,7 @@ export type TaskSource =
   | "AI_PLAN"
   | "AGENT_CHAT"
   | "MANUAL"
+  | "CHECKLIST"
   | "COMPLETION_EFFECT"
   | "FOUNDER_COACH";
 

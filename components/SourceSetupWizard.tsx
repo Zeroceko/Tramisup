@@ -70,6 +70,13 @@ const GA4_HISTORY_OPTIONS = [
   { value: 1095, label: "Mümkün olan en geniş aralık" },
 ] as const;
 
+const GA4_HISTORY_OPTIONS_EN = [
+  { value: 30, label: "Last 30 days" },
+  { value: 90, label: "Last 90 days" },
+  { value: 365, label: "Last 12 months" },
+  { value: 1095, label: "Widest possible range" },
+] as const;
+
 // ─── Step definitions ────────────────────────────────────────────────────────
 
 function getSteps(provider: SupportedWizardProvider): SetupStep[] {
@@ -91,7 +98,7 @@ function getInitialStep(
 
 // ─── Copy ────────────────────────────────────────────────────────────────────
 
-const PROVIDER_META = {
+const PROVIDER_META_TR = {
   GA4: {
     name: "Google Analytics 4",
     shortName: "GA4",
@@ -162,7 +169,78 @@ const PROVIDER_META = {
   },
 };
 
-const ERROR_GUIDANCE: Record<string, { title: string; action: string }> = {
+const PROVIDER_META_EN: typeof PROVIDER_META_TR = {
+  GA4: {
+    name: "Google Analytics 4",
+    shortName: "GA4",
+    connectTitle: "Connect Google Analytics",
+    connectDesc: "Sign in with your Google account and grant read access to analytics data. We only request read-only permission.",
+    connectCta: "Connect with Google",
+    propertyTitle: "Which property should we sync from?",
+    propertyDesc: "Choose the GA4 property for this product. A wrong choice leads to wrong metrics, so make sure you pick the right product.",
+    validateTitle: "Validate data access",
+    validateDesc: "We are checking the connection and data access. This confirms everything is ready before trying the first sync.",
+    syncTitle: "First data sync",
+    syncDesc: "We pull GA4 data with a wide date range. By default, the last 12 months are synced and DAU, total users, and new users are saved automatically.",
+    doneTitle: "GA4 is ready",
+    doneDesc: "The Google Analytics connection is live, validated, and the first sync is complete. Metrics can now update automatically.",
+    metrics: ["DAU (daily active users)", "Total users", "New users", "Retention signals"],
+    trustExplain: "GA4 is marked as trusted. The coach can now rely on behavioral signals.",
+  },
+  STRIPE: {
+    name: "Stripe",
+    shortName: "Stripe",
+    connectTitle: "Connect your Stripe account",
+    connectDesc: "Grant read-only access through Stripe Connect. We only read subscription and payment data.",
+    connectCta: "Connect with Stripe",
+    propertyTitle: "",
+    propertyDesc: "",
+    validateTitle: "Validate account access",
+    validateDesc: "We are checking Stripe account access and whether subscription and payment data are reachable.",
+    syncTitle: "First data sync",
+    syncDesc: "Active subscriptions, MRR, and the last 30 days of churn data are pulled in.",
+    doneTitle: "Stripe is ready",
+    doneDesc: "The Stripe connection is live, validated, and the first sync is complete. Revenue metrics can now update automatically.",
+    metrics: ["MRR (monthly recurring revenue)", "Active subscriptions", "Churn (cancellations)", "Payment volume"],
+    trustExplain: "Stripe is marked as trusted. The coach can now rely on financial signals.",
+  },
+  GOOGLE_PLAY: {
+    name: "Google Play",
+    shortName: "Google Play",
+    connectTitle: "Connect your Google Play account",
+    connectDesc: "Sign in with Google and grant Android Publisher access. In this first slice we prepare the connection; the sync layer follows right after.",
+    connectCta: "Connect with Google Play",
+    propertyTitle: "",
+    propertyDesc: "",
+    validateTitle: "",
+    validateDesc: "",
+    syncTitle: "",
+    syncDesc: "",
+    doneTitle: "Google Play is ready",
+    doneDesc: "The OAuth connection is saved. This product can now be mapped to your Google Play account.",
+    metrics: ["Release operations", "Store listing prep", "Review and metadata flow"],
+    trustExplain: "The connection is ready. Google Play sync and store signals will use this account in the next slice.",
+  },
+  APP_STORE_CONNECT: {
+    name: "App Store Connect",
+    shortName: "App Store",
+    connectTitle: "Add your App Store Connect key",
+    connectDesc: "Apple uses an official key-based API instead of OAuth. We prepare iOS store access with the Issuer ID, Key ID, and private key.",
+    connectCta: "Save key",
+    propertyTitle: "",
+    propertyDesc: "",
+    validateTitle: "",
+    validateDesc: "",
+    syncTitle: "",
+    syncDesc: "",
+    doneTitle: "App Store Connect is ready",
+    doneDesc: "The key is saved. This product now has a ready connection for the iOS store side.",
+    metrics: ["Listing prep", "Release checklist", "Review account operations"],
+    trustExplain: "Apple credentials are ready. Sync and App Store signals will use this connection in the next slice.",
+  },
+};
+
+const ERROR_GUIDANCE_TR: Record<string, { title: string; action: string }> = {
   AUTH_EXPIRED: {
     title: "Yetkilendirme süresi dolmuş",
     action: "Bağlantıyı kaldır ve yeniden bağlan. OAuth token'ı yenilenemedi.",
@@ -189,6 +267,33 @@ const ERROR_GUIDANCE: Record<string, { title: string; action: string }> = {
   },
 };
 
+const ERROR_GUIDANCE_EN: typeof ERROR_GUIDANCE_TR = {
+  AUTH_EXPIRED: {
+    title: "Authorization expired",
+    action: "Disconnect and connect again. The OAuth token could not be refreshed.",
+  },
+  PERMISSION_DENIED: {
+    title: "Insufficient permission",
+    action: "Make sure this Google account can access GA4 data. Reconnect if needed.",
+  },
+  NO_DATA: {
+    title: "No data is visible yet",
+    action: "The property may be new. If access is correct, the connection is still valid and sync will start creating records as data arrives.",
+  },
+  WRONG_PROPERTY: {
+    title: "Selected property is no longer reachable",
+    action: "This property is no longer visible in your account. Choose another property.",
+  },
+  NETWORK: {
+    title: "Connection error",
+    action: "The API could not be reached. Check your internet connection and try again.",
+  },
+  MISSING_CONFIG: {
+    title: "Configuration is missing",
+    action: "Connection details were lost. Disconnect and reconnect.",
+  },
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SourceSetupWizard({
@@ -203,7 +308,9 @@ export default function SourceSetupWizard({
   onClose,
 }: WizardProps) {
   const router = useRouter();
-  const meta = PROVIDER_META[provider];
+  const isEn = locale === "en";
+  const meta = (isEn ? PROVIDER_META_EN : PROVIDER_META_TR)[provider];
+  const errorGuidance = isEn ? ERROR_GUIDANCE_EN : ERROR_GUIDANCE_TR;
   const steps = getSteps(provider);
 
   const [currentStep, setCurrentStep] = useState<SetupStep>(
@@ -219,6 +326,7 @@ export default function SourceSetupWizard({
   const [appStoreKeyId, setAppStoreKeyId] = useState("");
   const [appStorePrivateKey, setAppStorePrivateKey] = useState("");
   const [appStoreAppIdentifier, setAppStoreAppIdentifier] = useState("");
+  const ga4HistoryOptions = isEn ? GA4_HISTORY_OPTIONS_EN : GA4_HISTORY_OPTIONS;
 
   const stepIndex = steps.indexOf(currentStep);
   const progress = ((stepIndex + 1) / steps.length) * 100;
@@ -323,7 +431,7 @@ export default function SourceSetupWizard({
       if (!res.ok) throw new Error(data.error);
       setValidation(data as ValidationResult);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Doğrulama başarısız");
+      toast.error(err instanceof Error ? err.message : (isEn ? "Validation failed" : "Doğrulama başarısız"));
     } finally {
       setLoading(false);
     }
@@ -345,10 +453,10 @@ export default function SourceSetupWizard({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.details);
       setSyncResult({ recordsSynced: data.recordsSynced ?? 0 });
-      toast.success(`${data.recordsSynced ?? 0} kayıt senkronize edildi.`);
+      toast.success(isEn ? `${data.recordsSynced ?? 0} records synced.` : `${data.recordsSynced ?? 0} kayıt senkronize edildi.`);
       setCurrentStep("done");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync başarısız");
+      toast.error(err instanceof Error ? err.message : (isEn ? "Sync failed" : "Sync başarısız"));
     } finally {
       setLoading(false);
     }
@@ -434,7 +542,7 @@ export default function SourceSetupWizard({
             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandLogo provider={provider} className="h-4 w-4" />}
-            {loading ? "Kaydediliyor…" : meta.connectCta}
+            {loading ? (isEn ? "Saving…" : "Kaydediliyor…") : meta.connectCta}
           </button>
         </div>
       );
@@ -458,7 +566,7 @@ export default function SourceSetupWizard({
         {/* What you'll get */}
         <div className="rounded-[16px] bg-[#f7f9fa] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8393]">
-            Bağlandığında alacağın veriler
+            {isEn ? "What you get after connecting" : "Bağlandığında alacağın veriler"}
           </p>
           <div className="mt-3 space-y-2">
             {meta.metrics.map((m) => (
@@ -491,7 +599,7 @@ export default function SourceSetupWizard({
           ) : (
             <BrandLogo provider={provider} className="h-4 w-4" />
           )}
-          {loading ? "Yönlendiriliyor…" : meta.connectCta}
+          {loading ? (isEn ? "Redirecting…" : "Yönlendiriliyor…") : meta.connectCta}
         </button>
       </div>
     );
@@ -519,7 +627,7 @@ export default function SourceSetupWizard({
             <div className="flex items-start gap-2">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#c2410c]" />
               <div>
-                <p className="text-[13px] font-semibold text-[#c2410c]">Property bulunamadı</p>
+                <p className="text-[13px] font-semibold text-[#c2410c]">{isEn ? "No property found" : "Property bulunamadı"}</p>
                 <p className="mt-1 text-[12px] leading-5 text-[#c2410c]/80">
                   Bu Google hesabında erişilebilir GA4 property yok. Doğru hesapla bağlandığından emin ol.
                 </p>
@@ -563,7 +671,7 @@ export default function SourceSetupWizard({
               className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {loading ? "Kaydediliyor…" : "Property'yi seç ve doğrula"}
+              {loading ? (isEn ? "Saving…" : "Kaydediliyor…") : (isEn ? "Select property and validate" : "Property'yi seç ve doğrula")}
             </button>
           </>
         )}
@@ -574,7 +682,7 @@ export default function SourceSetupWizard({
   function renderValidation() {
     const isTrusted = validation?.status === "TRUSTED";
     const isUntrusted = validation?.status === "UNTRUSTED";
-    const errorInfo = validation?.errorCode ? ERROR_GUIDANCE[validation.errorCode] : null;
+    const errorInfo = validation?.errorCode ? errorGuidance[validation.errorCode] : null;
 
     return (
       <div className="space-y-5">
@@ -591,7 +699,7 @@ export default function SourceSetupWizard({
           <div className="space-y-3 py-4">
             <div className="flex items-center gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-[#95dbda]" />
-              <span className="text-[14px] text-[#666d80]">Bağlantı kontrol ediliyor…</span>
+              <span className="text-[14px] text-[#666d80]">{isEn ? "Checking the connection…" : "Bağlantı kontrol ediliyor…"}</span>
             </div>
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -621,10 +729,10 @@ export default function SourceSetupWizard({
               <div>
                 <p className="text-[14px] font-semibold text-[#0d0d12]">
                   {isTrusted
-                    ? "Kaynak güvenilir"
+                    ? (isEn ? "Source is trusted" : "Kaynak güvenilir")
                     : isUntrusted
-                    ? "Doğrulama başarısız"
-                    : "Kurulum bekliyor"}
+                    ? (isEn ? "Validation failed" : "Doğrulama başarısız")
+                    : (isEn ? "Setup is pending" : "Kurulum bekliyor")}
                 </p>
                 <p className="mt-0.5 text-[12px] text-[#666d80]">
                   {isTrusted
@@ -668,7 +776,7 @@ export default function SourceSetupWizard({
             {validation.preview && isTrusted && (
               <div className="rounded-[14px] border border-[#bbf7d0] bg-[#f0fdf4] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#15803d]">
-                  Veri önizleme
+                  {isEn ? "Data preview" : "Veri önizleme"}
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   {Object.entries(validation.preview)
@@ -710,7 +818,7 @@ export default function SourceSetupWizard({
                   onClick={() => setCurrentStep("sync")}
                   className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
                 >
-                  İlk sync&apos;i başlat
+                  {isEn ? "Start the first sync" : "İlk sync&apos;i başlat"}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               )}
@@ -726,7 +834,7 @@ export default function SourceSetupWizard({
                     className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-[#e8e8e8] bg-white text-[14px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
                   >
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                    Tekrar dene
+                    {isEn ? "Try again" : "Tekrar dene"}
                   </button>
                   {provider === "GA4" && validation.status === "UNKNOWN" && (
                     <button
@@ -737,7 +845,7 @@ export default function SourceSetupWizard({
                       }}
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#0d0d12] text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
                     >
-                      Property seç
+                      {isEn ? "Select property" : "Property seç"}
                     </button>
                   )}
                 </>
@@ -811,7 +919,7 @@ export default function SourceSetupWizard({
                     onChange={(event) => setGa4HistoryDays(Number(event.target.value))}
                     className="w-full rounded-[12px] border border-[#e8e8e8] bg-white px-4 py-3 text-[13px] text-[#0d0d12] outline-none transition focus:border-[#95dbda]"
                   >
-                    {GA4_HISTORY_OPTIONS.map((option) => (
+                    {ga4HistoryOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductId } from "@/lib/activeProduct";
 import IntegrationsWorkspace from "@/components/IntegrationsWorkspace";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
-import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations-catalog";
+import { getAvailableIntegrations } from "@/lib/integrations-catalog";
 import { getMetricSetup } from "@/lib/metric-setup";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
@@ -134,7 +134,7 @@ export default async function IntegrationsPage({
       locale={locale}
       productName={product.name}
       integrations={integrations}
-      availableIntegrations={AVAILABLE_INTEGRATIONS as IntegrationDef[]}
+      availableIntegrations={getAvailableIntegrations(locale) as IntegrationDef[]}
       productId={product.id}
       manualEntryCount={manualEntryCount}
       success={resolvedSearchParams.success}

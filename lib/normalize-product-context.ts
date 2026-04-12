@@ -8,6 +8,8 @@
  * They should consume this normalized context.
  */
 
+import { normalizeLaunchStageKey, type LaunchStageKey } from "@/lib/launch-stage";
+
 export type StageEnum =
   | "idea"
   | "development"
@@ -70,22 +72,13 @@ export interface RawProductInput {
   platforms?: string[];
 }
 
-const STAGE_MAP: Record<string, StageEnum> = {
-  "Fikir aşamasında": "idea",
-  "Idea stage": "idea",
-  Idea: "idea",
-  "Geliştirme aşamasında": "development",
-  Development: "development",
-  "Test kullanıcıları var": "testing",
-  Testing: "testing",
-  "Yakında yayında": "launch_prep",
-  "Launching soon": "launch_prep",
-  "Launch prep": "launch_prep",
-  "Yayında": "live",
-  Live: "live",
-  "Büyüme aşamasında": "early_growth",
-  Growing: "early_growth",
-  "Early growth": "early_growth",
+const STAGE_MAP: Record<LaunchStageKey, StageEnum> = {
+  IDEA: "idea",
+  BUILDING: "development",
+  TESTING: "testing",
+  PREPARING: "launch_prep",
+  LIVE: "live",
+  GROWING: "early_growth",
 };
 
 const GOAL_MAP: Record<string, GoalEnum> = {
@@ -400,9 +393,8 @@ export function normalizeProductContext(raw: RawProductInput): NormalizedProduct
   }
   if (!goalKey && !growthGoal) missing.push("primary_goal");
 
-  const stage: StageEnum = raw.launchStatus
-    ? STAGE_MAP[raw.launchStatus] ?? "development"
-    : "development";
+  const stageKey = normalizeLaunchStageKey(raw.launchStatus);
+  const stage: StageEnum = stageKey ? STAGE_MAP[stageKey] : "development";
 
   const resolvedGoalKey = goalKey ?? growthGoal ?? "";
   const primary_goal: GoalEnum = GOAL_MAP[resolvedGoalKey] ?? deriveGoalFromStage(stage);

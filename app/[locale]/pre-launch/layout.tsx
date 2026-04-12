@@ -5,6 +5,7 @@ import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
 import AgentLayoutShell from "@/components/AgentLayoutShell";
 import PlainPageShell from "@/components/PlainPageShell";
+import RouteScopedBoundary from "@/components/RouteScopedBoundary";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function PreLaunchLayout({
@@ -28,13 +29,15 @@ export default async function PreLaunchLayout({
 
   return (
     <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
-      {effectiveActiveId ? (
-        <AgentLayoutShell agentType="launch" productId={effectiveActiveId} locale={locale}>
-          {children}
-        </AgentLayoutShell>
-      ) : (
-        <PlainPageShell>{children}</PlainPageShell>
-      )}
+      <RouteScopedBoundary scope="pre-launch">
+        {effectiveActiveId ? (
+          <AgentLayoutShell agentType="launch" productId={effectiveActiveId} locale={locale}>
+            {children}
+          </AgentLayoutShell>
+        ) : (
+          <PlainPageShell>{children}</PlainPageShell>
+        )}
+      </RouteScopedBoundary>
     </AppShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import SettingsForm from "@/components/SettingsForm";
 import AISettingsPanel from "@/components/AISettingsPanel";
 import IntegrationsWorkspace from "@/components/IntegrationsWorkspace";
@@ -116,7 +117,17 @@ export default function SettingsWorkspace({
   initialSection?: WorkspaceSectionKey;
   billingData?: BillingData;
 }) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(initialSection ?? "product");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const activeSection = (() => {
+    const section = searchParams.get("section");
+    if (section === "ai" || section === "sources" || section === "tracking" || section === "billing" || section === "product") {
+      return section;
+    }
+    return initialSection ?? "product";
+  })() as WorkspaceSectionKey;
 
   const navItems = useMemo(
     () =>
@@ -130,6 +141,10 @@ export default function SettingsWorkspace({
     [copy]
   );
 
+  if (!pathname?.includes("/settings")) {
+    return null;
+  }
+
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#e8e8e8] bg-white">
       <div className="border-b border-[#f1f1f1] px-5 py-4 sm:px-6">
@@ -140,7 +155,11 @@ export default function SettingsWorkspace({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => setActiveSection(item.key)}
+                onClick={() => {
+                  const nextParams = new URLSearchParams(searchParams.toString());
+                  nextParams.set("section", item.key);
+                  router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+                }}
                 className={`inline-flex h-11 items-center rounded-full px-5 text-[14px] font-medium transition ${
                   active
                     ? "bg-[#ffd7ef] text-[#0d0d12]"
@@ -197,6 +216,26 @@ export default function SettingsWorkspace({
             locale={locale}
             connectedProviders={connectedProviders}
           />
+        ) : null}
+
+        {activeSection === "tracking" && (!activeProduct || !metricPlan) ? (
+          <div className="rounded-[20px] border border-dashed border-[#e8e8e8] bg-[#fafafa] p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+              {copy.navTracking}
+            </p>
+            <p className="mt-2 text-[16px] font-semibold text-[#0d0d12]">
+              {isEn ? "Tracking setup is not ready yet" : "Takip kurulumu henüz hazır değil"}
+            </p>
+            <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+              {activeProduct
+                ? isEn
+                  ? "This product does not have a metric plan to edit yet. Complete onboarding or reopen growth setup once the tracking model exists."
+                  : "Bu ürün için henüz düzenlenebilir bir metrik planı yok. Tracking modeli oluştuktan sonra onboarding'i tamamla veya growth setup'ı yeniden aç."
+                : isEn
+                  ? "Select an active product first to configure tracking metrics."
+                  : "Takip metriklerini kurmak için önce aktif bir ürün seç."}
+            </p>
+          </div>
         ) : null}
 
         {activeSection === "billing" && billingData ? (

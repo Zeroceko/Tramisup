@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
+import { emitTaskLifecycleEvent } from "@/lib/task-events";
 
 export async function PATCH(
   request: Request,
@@ -43,13 +44,45 @@ export async function PATCH(
       return NextResponse.json({ id, ignored });
     }
 
-    const item = await prisma.launchChecklist.update({
-      where: { id },
-      data: {
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
+    const item = await prisma.$transaction(async (tx) => {
+      const updatedChecklist = await tx.launchChecklist.update({
+        where: { id },
+        data: {
+          completed,
+          completedAt: completed ? new Date() : null,
+        },
+      });
+
+      if (existingItem.linkedTaskId) {
+        const nextTaskStatus = completed ? "DONE" : "TODO";
+        const linkedTask = await tx.task.findUnique({
+          where: { id: existingItem.linkedTaskId },
+          select: {
+            id: true,
+            productId: true,
+            status: true,
+          },
+        });
+
+        if (linkedTask && linkedTask.status !== nextTaskStatus) {
+          await tx.task.update({
+            where: { id: linkedTask.id },
+            data: { status: nextTaskStatus },
+          });
+        }
+      }
+
+      return updatedChecklist;
     });
+
+    if (existingItem.linkedTaskId) {
+      await emitTaskLifecycleEvent({
+        taskId: existingItem.linkedTaskId,
+        productId: existingItem.productId,
+        eventType: completed ? "COMPLETED" : "REOPENED",
+        metadata: { source: "CHECKLIST_SURFACE" },
+      });
+    }
 
     return NextResponse.json(item);
   } catch (error) {

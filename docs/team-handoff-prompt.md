@@ -21,7 +21,7 @@ First read, in order:
 
 What is true right now:
 - Production domain is https://tiramisup.app
-- Current live app release on main is eacecb50
+- Current live release on main is f8f56491
 - main auto-deploys to Vercel
 - Public landing is waitlist-first
 - Signup no longer uses an early access code
@@ -36,6 +36,20 @@ What is true right now:
 - Agent panel cards all create tasks when clicked — no "ask" intent remains
 - Billing is still demo / fake checkout behavior
 - English is the source-of-truth locale, Turkish is secondary
+- The current local workspace is not clean: it contains a partial, unfinished Founder Trust Sprint 2 implementation and must not be treated as release-ready
+
+If you are continuing from the current local workspace, assume these are true before doing new product work:
+- `npx tsc --noEmit` is currently failing
+- `components/OnboardingWizard.tsx` is mid-migration from localized stage values to canonical stage keys
+- `app/api/agent/chat/route.ts` has not yet been fully updated to the new `messageActions` contract
+- `prisma/schema.prisma` and `lib/agent-messages.ts` contain a partial `AgentMessage` persistence scaffold
+- `components/PreLaunchWorkspace.tsx` and `components/RouteScopedBoundary.tsx` were added but not fully verified
+
+If you continue from this workspace, first do:
+1. finish or back out the incomplete Trust Sprint 2 pieces
+2. run `npx prisma generate`
+3. run `npx tsc --noEmit`
+4. only after green checks continue feature work
 
 Local setup:
 1. npm install

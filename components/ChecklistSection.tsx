@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/components/ui/sonner";
 
 interface ChecklistItem {
   id: string;
@@ -16,7 +17,9 @@ interface ChecklistItem {
 interface ChecklistSectionProps {
   checklistsByCategory: Record<string, ChecklistItem[]>;
   productId: string;
-  onCreateTask: (itemId: string) => Promise<void>;
+  onCreateTask: (itemId: string) => Promise<{ taskId: string; title: string; deduped: boolean; pendingTaskCount?: number }>;
+  onToggleComplete?: (itemId: string, completed: boolean) => Promise<void>;
+  onIgnore?: (itemId: string, ignored: boolean) => Promise<void>;
   ignoredItems: ChecklistItem[];
   locale?: string;
 }
@@ -88,6 +91,8 @@ export default function ChecklistSection({
   checklistsByCategory,
   productId: _productId,
   onCreateTask,
+  onToggleComplete,
+  onIgnore,
   ignoredItems,
   locale = "en",
 }: ChecklistSectionProps) {
@@ -104,14 +109,26 @@ export default function ChecklistSection({
   const handleToggle = async (itemId: string, currentStatus: boolean) => {
     setLoading(itemId);
     try {
-      await fetch(`/api/checklist/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !currentStatus }),
-      });
+      if (onToggleComplete) {
+        await onToggleComplete(itemId, !currentStatus);
+      } else {
+        const response = await fetch(`/api/checklist/${itemId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: !currentStatus }),
+        });
+        if (!response.ok) {
+          throw new Error("checklist update failed");
+        }
+      }
+      toast.success(
+        !currentStatus
+          ? isEn ? "Checklist item marked done" : "Checklist maddesi tamamlandı"
+          : isEn ? "Checklist item reopened" : "Checklist maddesi yeniden açıldı",
+      );
       router.refresh();
     } catch {
-      // noop
+      toast.error(isEn ? "Checklist could not be updated." : "Checklist güncellenemedi.");
     } finally {
       setLoading(null);
     }
@@ -120,7 +137,18 @@ export default function ChecklistSection({
   const handleCreateTask = async (itemId: string) => {
     setLoading(itemId);
     try {
-      await onCreateTask(itemId);
+      const result = await onCreateTask(itemId);
+      toast.success(
+        result.deduped
+          ? isEn ? "Existing task linked" : "Mevcut görev bağlandı"
+          : isEn ? "Task created from checklist" : "Checklist maddesinden görev oluşturuldu",
+        {
+          description: result.title,
+        },
+      );
+      router.refresh();
+    } catch {
+      toast.error(isEn ? "Task could not be created." : "Görev oluşturulamadı.");
     } finally {
       setLoading(null);
     }
@@ -129,11 +157,15 @@ export default function ChecklistSection({
   const handleIgnore = async (itemId: string, ignored: boolean) => {
     setLoading(itemId);
     try {
-      await fetch(`/api/checklist/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ignored }),
-      });
+      if (onIgnore) {
+        await onIgnore(itemId, ignored);
+      } else {
+        await fetch(`/api/checklist/${itemId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ignored }),
+        });
+      }
       router.refresh();
     } finally {
       setLoading(null);
@@ -347,6 +379,7 @@ export default function ChecklistSection({
                   <div className="flex shrink-0 items-center gap-1.5">
                     {!item.completed && !item.linkedTaskId && (
                       <button
+                        type="button"
                         onClick={() => handleCreateTask(item.id)}
                         disabled={loading === item.id}
                         className="hidden h-7 items-center rounded-full bg-[#ffd7ef] px-3 text-[11px] font-medium text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:flex"
@@ -356,6 +389,7 @@ export default function ChecklistSection({
                     )}
                     {!item.completed && !item.linkedTaskId && (
                       <button
+                        type="button"
                         onClick={() => handleIgnore(item.id, true)}
                         disabled={loading === item.id}
                         className="hidden h-7 items-center rounded-full border border-[#e8e8e8] px-3 text-[11px] font-medium text-[#94a3b8] transition hover:text-[#666d80] sm:flex"
@@ -363,6 +397,20 @@ export default function ChecklistSection({
                         {isEn ? "Ignore" : "Yoksay"}
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggle(item.id, item.completed)}
+                      disabled={loading === item.id}
+                      className={`hidden h-7 items-center rounded-full px-3 text-[11px] font-medium transition sm:flex ${
+                        item.completed
+                          ? "border border-[#e8e8e8] text-[#5e6678] hover:bg-[#f6f6f6]"
+                          : "bg-[#0d0d12] text-white hover:bg-[#1a1a24]"
+                      }`}
+                    >
+                      {item.completed
+                        ? isEn ? "Reopen" : "Yeniden aç"
+                        : isEn ? "Mark done" : "Tamamlandı işaretle"}
+                    </button>
                     {item.linkedTaskId && !item.completed && (
                       <span className="inline-flex items-center gap-1 text-[11px] text-[#34d399]">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

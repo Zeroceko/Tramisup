@@ -10,6 +10,7 @@ import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import type { FunnelMetricDescriptor } from "@/lib/funnel-health";
 import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
+import { normalizeLaunchStageKey } from "@/lib/launch-stage";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
 import PrimaryAction from "@/components/today/PrimaryAction";
@@ -92,9 +93,10 @@ function buildStatusLine(
 ): string {
   const { readinessScore, blockerCount, daysUntilLaunch, selectedMetricCount, enteredToday, funnelOverall, locale } = opts;
   const isEn = locale === "en";
+  const launchStageKey = normalizeLaunchStageKey(launchStatus);
 
   if (phase === "pre-launch") {
-    if (launchStatus === "Fikir aşamasında") {
+    if (launchStageKey === "IDEA") {
       return isEn
         ? "Idea phase — validate the problem before you scale preparation."
         : "Fikir aşaması — hazırlığı büyütmeden önce problemi doğrula.";
@@ -113,12 +115,12 @@ function buildStatusLine(
       return isEn ? "All checklist items complete. Ready to launch." : "Tüm hazırlık maddeleri tamam. Launch'a hazırsın.";
     }
     // Sub-phase nuance from launchStatus
-    if (launchStatus === "Geliştirme aşamasında") {
+    if (launchStageKey === "BUILDING") {
       return isEn
         ? `Building phase — ${readinessScore}% of launch checklist done.`
         : `Geliştirme aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;
     }
-    if (launchStatus === "Test kullanıcıları var") {
+    if (launchStageKey === "TESTING") {
       return isEn
         ? `Testing phase — ${readinessScore}% of launch checklist done.`
         : `Test aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;

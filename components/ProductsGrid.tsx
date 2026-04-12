@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DeleteProductModal from "./DeleteProductModal";
+import { getProductStatusLabel } from "@/lib/launch-stage";
 
 type ProductItem = {
   id: string;
@@ -180,7 +181,7 @@ export default function ProductsGrid({
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5 mb-4">
                 <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusBadge(product.status)}`}>
-                  {(product.status ?? "—").replaceAll("_", " ")}
+                  {getProductStatusLabel(product.status, locale) ?? "—"}
                 </span>
                 {product.category && (
                   <span className="rounded-full bg-[#f0f0f0] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80]">

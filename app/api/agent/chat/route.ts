@@ -15,6 +15,11 @@ import {
 import { generateTextFallback } from "@/BrandLib/ai-client";
 import { checkLimit, recordUsageEvent } from "@/lib/plan-limits";
 import { tryCreateTaskWithGuards } from "@/lib/task-create";
+import {
+  createStoredAgentMessage,
+  listStoredAgentMessages,
+  resolveMessageActionsForClient,
+} from "@/lib/agent-messages";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
@@ -78,6 +83,7 @@ function parseAgentResponse(raw: string): AgentResponse | null {
     return {
       message: parsed.message,
       actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+      messageActions: Array.isArray(parsed.messageActions) ? parsed.messageActions : [],
       suggestions: normalizeSuggestions(parsed.suggestions),
     };
   } catch {
@@ -143,10 +149,6 @@ export async function POST(request: Request) {
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     const productId = typeof body?.productId === "string" ? body.productId : "";
     const locale = typeof body?.locale === "string" && body.locale === "tr" ? "tr" : "en";
-    const history: AgentMessage[] = Array.isArray(body?.conversationHistory)
-      ? body.conversationHistory
-      : [];
-
     if (!VALID_AGENT_TYPES.includes(agentType as AgentType)) {
       return NextResponse.json(
         { error: "Invalid agentType. Must be: overview | launch | growth" },
@@ -171,6 +173,21 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    const storedMessages = await listStoredAgentMessages(
+      prisma,
+      session.user.id,
+      productId,
+      agentType as AgentType,
+    );
+    const history: AgentMessage[] = storedMessages.length > 0
+      ? storedMessages.map((entry) => ({
+          role: entry.role,
+          content: entry.content,
+        }))
+      : Array.isArray(body?.conversationHistory)
+        ? body.conversationHistory
+        : [];
 
     const messageLimit = await checkLimit(session.user.id, "aiMessages", 1);
     if (!messageLimit.allowed) {
@@ -210,17 +227,96 @@ export async function POST(request: Request) {
       session.user.id,
       locale,
     );
+    const messageActions = resolveMessageActionsForClient(
+      agentResponse.messageActions,
+      locale,
+      productId,
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await createStoredAgentMessage(tx, {
+        userId: session.user.id,
+        productId,
+        agentType: agentType as AgentType,
+        role: "user",
+        content: message,
+      });
+      await createStoredAgentMessage(tx, {
+        userId: session.user.id,
+        productId,
+        agentType: agentType as AgentType,
+        role: "assistant",
+        content: agentResponse.message,
+        messageActions,
+      });
+    });
 
     await recordUsageEvent(session.user.id, "aiMessages");
 
     return NextResponse.json({
       message: agentResponse.message,
       actions: agentResponse.actions,
+      messageActions,
       executedActions,
       suggestions: agentResponse.suggestions,
     });
   } catch (error) {
     console.error("[agent/chat] Unexpected error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const agentType = searchParams.get("agentType")?.toLowerCase() ?? "";
+    const productId = searchParams.get("productId") ?? "";
+    const locale = searchParams.get("locale") === "tr" ? "tr" : "en";
+
+    if (!VALID_AGENT_TYPES.includes(agentType as AgentType)) {
+      return NextResponse.json(
+        { error: "Invalid agentType. Must be: overview | launch | growth" },
+        { status: 400 },
+      );
+    }
+
+    if (!productId) {
+      return NextResponse.json({ error: "productId is required" }, { status: 400 });
+    }
+
+    const product = await prisma.product.findFirst({
+      where: { id: productId, userId: session.user.id },
+      select: { id: true },
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const messages = await listStoredAgentMessages(
+      prisma,
+      session.user.id,
+      productId,
+      agentType as AgentType,
+    );
+
+    return NextResponse.json({
+      messages: messages.map((entry) => ({
+        ...entry,
+        messageActions: resolveMessageActionsForClient(
+          entry.messageActions,
+          locale,
+          productId,
+        ),
+      })),
+    });
+  } catch (error) {
+    console.error("[agent/chat] Failed to load history:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

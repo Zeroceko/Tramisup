@@ -1,6 +1,7 @@
 import type { AiPlan, WizardInput } from "@/lib/ai-plan";
 import { getMetricContext, type MetricSnapshot } from "@/lib/metric-context";
 import { tasksAreNearDuplicate } from "@/lib/task-parsing";
+import { isLaunchedLaunchStage } from "@/lib/launch-stage";
 
 export type FounderSummary = {
   headline: string;
@@ -52,7 +53,7 @@ export async function buildFounderSummary(
   const launchItems = aiPlan?.launchChecklist.slice(0, 2).map((item) => item.title) ?? [];
   const growthItems = aiPlan?.growthChecklist.slice(0, 2).map((item) => item.title) ?? [];
   const tasks = aiPlan?.tasks.slice(0, 2).map((item) => item.title) ?? [];
-  const isLaunched = ["Yayında", "Büyüme aşamasında"].includes(input.launchStatus ?? "");
+  const isLaunched = isLaunchedLaunchStage(input.launchStatus);
 
   // ── Metric injection (only when productId is available) ──────────────────
   let metricSnapshot: MetricSnapshot | null = null;

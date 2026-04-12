@@ -6,12 +6,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkLimit } from "@/lib/plan-limits";
 import { Prisma } from "@prisma/client";
-
-function deriveProductStatus(launchStatus?: string) {
-  if (launchStatus === "Büyüme aşamasında") return "GROWING" as const;
-  if (launchStatus === "Yayında") return "LAUNCHED" as const;
-  return "PRE_LAUNCH" as const;
-}
+import {
+  deriveProductStatusFromLaunchStage,
+  ensureCanonicalLaunchStageKey,
+} from "@/lib/launch-stage";
 
 async function resolveProductOwner(sessionUser: {
   id?: string | null;
@@ -239,6 +237,7 @@ export async function POST(request: Request) {
       : Array.isArray(mobilePlatforms)
         ? mobilePlatforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
         : [];
+    const canonicalLaunchStage = ensureCanonicalLaunchStageKey(launchStatus);
 
     // Phase 1: create minimal product record, plan generation happens in /generate-plan
     const createProductTx = async () =>
@@ -250,14 +249,14 @@ export async function POST(request: Request) {
         });
         if (!owner) throw new Error("SESSION_OWNER_MISSING");
 
-        const productStatus = deriveProductStatus(launchStatus);
+        const productStatus = deriveProductStatusFromLaunchStage(canonicalLaunchStage);
 
         const newProduct = await tx.product.create({
           data: {
             userId: owner.id,
             name,
             status: productStatus,
-            launchStatus,
+            launchStatus: canonicalLaunchStage,
             category,
             description,
             targetAudience,

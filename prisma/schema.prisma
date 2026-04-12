@@ -19,6 +19,7 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   products          Product[]
+  agentMessages     AgentMessage[]
   aiConnections     AIConnection[]
   subscription      Subscription?
   usageEvents       UsageEvent[]
@@ -101,6 +102,7 @@ model Product {
   timelineEvents    TimelineEvent[]
   metricSetup       MetricSetup?
   metricEntries     MetricEntry[]
+  agentMessages     AgentMessage[]
 
   @@index([userId])
 }
@@ -224,6 +226,22 @@ model TaskEvent {
 
   @@index([productId, eventType, createdAt])
   @@index([taskId, createdAt])
+}
+
+model AgentMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  productId   String
+  agentType   String
+  role        String
+  content     String
+  actionsJson String?
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, productId, agentType, createdAt])
+  @@index([productId, agentType, createdAt])
 }
 
 model Metric {

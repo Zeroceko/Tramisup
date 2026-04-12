@@ -6,6 +6,11 @@ import { format } from "date-fns";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isStrongPassword } from "@/lib/password-rules";
 import DeleteProductModal from "@/components/DeleteProductModal";
+import {
+  getLaunchStageLabel,
+  normalizeLaunchStageKey,
+  type LaunchStageKey,
+} from "@/lib/launch-stage";
 
 interface User {
   id: string;
@@ -55,6 +60,92 @@ function SectionIntro({
 }
 
 export type SettingsSectionKey = "profile" | "product" | "security";
+
+type SavedSettingsResponse = {
+  message: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    preferredLocale: string;
+  };
+  product: {
+    id: string;
+    name: string;
+    description: string | null;
+    website: string | null;
+    category: string | null;
+    targetAudience: string | null;
+    businessModel: string | null;
+    launchStatus: string | null;
+    status: string;
+    launchDate: string | Date | null;
+    launchGoals: string | null;
+  } | null;
+};
+
+function parseLaunchGoals(value?: string | null) {
+  if (!value) return {};
+  try {
+    return JSON.parse(value) as {
+      growthGoal?: string;
+      goalKey?: string;
+      contextLinks?: string[];
+    };
+  } catch {
+    return {};
+  }
+}
+
+function buildFormState(user: User | null, locale: string) {
+  const parsedLaunchGoals = parseLaunchGoals(user?.product?.launchGoals);
+
+  return {
+    productId: user?.product?.id || "",
+    name: user?.name || "",
+    productName: user?.product?.name || "",
+    description: user?.product?.description || "",
+    website: user?.product?.website || "",
+    category: user?.product?.category || "",
+    targetAudience: user?.product?.targetAudience || "",
+    businessModel: user?.product?.businessModel || "",
+    launchStageKey: normalizeLaunchStageKey(user?.product?.launchStatus) ?? "PREPARING",
+    growthGoal: parsedLaunchGoals.growthGoal || "",
+    goalKey: parsedLaunchGoals.goalKey || "",
+    contextLinks: Array.isArray(parsedLaunchGoals.contextLinks)
+      ? parsedLaunchGoals.contextLinks.join("\n")
+      : "",
+    launchDate: user?.product?.launchDate
+      ? format(new Date(user.product.launchDate), "yyyy-MM-dd")
+      : "",
+    status: user?.product?.status || "PRE_LAUNCH",
+    preferredLocale: user?.preferredLocale || locale || "en",
+  };
+}
+
+function buildUserFromSavedResponse(payload: SavedSettingsResponse): User {
+  return {
+    id: payload.user.id,
+    name: payload.user.name,
+    email: payload.user.email,
+    preferredLocale: payload.user.preferredLocale,
+    product: payload.product
+      ? {
+          id: payload.product.id,
+          name: payload.product.name,
+          launchDate: payload.product.launchDate ? new Date(payload.product.launchDate) : null,
+          status: payload.product.status,
+          description: payload.product.description,
+          category: payload.product.category,
+          targetAudience: payload.product.targetAudience,
+          businessModel: payload.product.businessModel,
+          website: payload.product.website,
+          launchStatus: payload.product.launchStatus,
+          launchGoals: payload.product.launchGoals,
+        }
+      : null,
+  };
+}
 
 export default function SettingsForm({
   user,
@@ -228,40 +319,7 @@ export default function SettingsForm({
         regeneratePlanError: "Yenileme başarısız. Tekrar dene.",
       };
 
-  const parsedLaunchGoals = (() => {
-    if (!user?.product?.launchGoals) return {};
-    try {
-      return JSON.parse(user.product.launchGoals) as {
-        growthGoal?: string;
-        goalKey?: string;
-        contextLinks?: string[];
-      };
-    } catch {
-      return {};
-    }
-  })();
-
-  const [formData, setFormData] = useState({
-    productId: user?.product?.id || "",
-    name: user?.name || "",
-    projectName: user?.product?.name || "",
-    description: user?.product?.description || "",
-    website: user?.product?.website || "",
-    category: user?.product?.category || "",
-    targetAudience: user?.product?.targetAudience || "",
-    businessModel: user?.product?.businessModel || "",
-    launchStatus: user?.product?.launchStatus || "Yakında yayında",
-    growthGoal: parsedLaunchGoals.growthGoal || "",
-    goalKey: parsedLaunchGoals.goalKey || "",
-    contextLinks: Array.isArray(parsedLaunchGoals.contextLinks)
-      ? parsedLaunchGoals.contextLinks.join("\n")
-      : "",
-    launchDate: user?.product?.launchDate
-      ? format(new Date(user.product.launchDate), "yyyy-MM-dd")
-      : "",
-    status: user?.product?.status || "PRE_LAUNCH",
-    preferredLocale: user?.preferredLocale || locale || "en",
-  });
+  const [formData, setFormData] = useState(() => buildFormState(user, locale));
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -282,11 +340,21 @@ export default function SettingsForm({
         body: JSON.stringify(formData),
       });
 
+      const payload = (await response.json().catch(() => null)) as SavedSettingsResponse | { error?: string } | null;
+
       if (!response.ok) {
-        throw new Error(isEn ? "Failed to update settings" : "Ayarlar güncellenemedi");
+        throw new Error(
+          payload && "error" in payload && payload.error
+            ? payload.error
+            : isEn
+              ? "Failed to update settings"
+              : "Ayarlar güncellenemedi",
+        );
       }
 
-      setSuccess(copy.success);
+      const saved = payload as SavedSettingsResponse;
+      setFormData(buildFormState(buildUserFromSavedResponse(saved), formData.preferredLocale));
+      setSuccess(saved.message || copy.success);
       if (formData.preferredLocale && formData.preferredLocale !== locale) {
         const localizedPath = pathname.startsWith(`/${locale}`)
           ? pathname.replace(`/${locale}`, `/${formData.preferredLocale}`)
@@ -443,18 +511,22 @@ export default function SettingsForm({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className={labelCls}>{copy.projectName}</label>
+              <label htmlFor="productName" className={labelCls}>{copy.projectName}</label>
               <input
+                id="productName"
+                name="productName"
                 type="text"
-                value={formData.projectName}
-                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                value={formData.productName}
+                onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                 className={inputCls}
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className={labelCls}>{copy.description}</label>
+              <label htmlFor="productDescription" className={labelCls}>{copy.description}</label>
               <textarea
+                id="productDescription"
+                name="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
@@ -463,8 +535,10 @@ export default function SettingsForm({
             </div>
 
             <div className="md:col-span-2">
-              <label className={labelCls}>{copy.website}</label>
+              <label htmlFor="website" className={labelCls}>{copy.website}</label>
               <input
+                id="website"
+                name="website"
                 type="url"
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
@@ -474,8 +548,10 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>{copy.category}</label>
+              <label htmlFor="category" className={labelCls}>{copy.category}</label>
               <input
+                id="category"
+                name="category"
                 type="text"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -484,8 +560,10 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>{copy.audience}</label>
+              <label htmlFor="targetAudience" className={labelCls}>{copy.audience}</label>
               <input
+                id="targetAudience"
+                name="targetAudience"
                 type="text"
                 value={formData.targetAudience}
                 onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
@@ -494,8 +572,10 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>{copy.businessModel}</label>
+              <label htmlFor="businessModel" className={labelCls}>{copy.businessModel}</label>
               <input
+                id="businessModel"
+                name="businessModel"
                 type="text"
                 value={formData.businessModel}
                 onChange={(e) => setFormData({ ...formData, businessModel: e.target.value })}
@@ -504,10 +584,12 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>
+              <label htmlFor="launchDate" className={labelCls}>
                 {copy.launchDate} <span className="font-normal text-[#9ca3af]">{copy.optional}</span>
               </label>
               <input
+                id="launchDate"
+                name="launchDate"
                 type="date"
                 value={formData.launchDate}
                 onChange={(e) => setFormData({ ...formData, launchDate: e.target.value })}
@@ -516,24 +598,36 @@ export default function SettingsForm({
             </div>
 
             <div>
-              <label className={labelCls}>{copy.launchStage}</label>
+              <label htmlFor="launchStageKey" className={labelCls}>{copy.launchStage}</label>
               <select
-                value={formData.launchStatus}
-                onChange={(e) => setFormData({ ...formData, launchStatus: e.target.value })}
+                id="launchStageKey"
+                name="launchStageKey"
+                value={formData.launchStageKey}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    launchStageKey: normalizeLaunchStageKey(e.target.value) ?? "PREPARING",
+                  })
+                }
                 className={inputCls}
               >
-                <option value="Fikir aşamasında">{copy.launchStatusOptions.IDEA}</option>
-                <option value="Geliştirme aşamasında">{copy.launchStatusOptions.BUILDING}</option>
-                <option value="Test kullanıcıları var">{copy.launchStatusOptions.TESTING}</option>
-                <option value="Yakında yayında">{copy.launchStatusOptions.PREPARING}</option>
-                <option value="Yayında">{copy.launchStatusOptions.LIVE}</option>
-                <option value="Büyüme aşamasında">{copy.launchStatusOptions.GROWING}</option>
+                <option value="IDEA">{copy.launchStatusOptions.IDEA}</option>
+                <option value="BUILDING">{copy.launchStatusOptions.BUILDING}</option>
+                <option value="TESTING">{copy.launchStatusOptions.TESTING}</option>
+                <option value="PREPARING">{copy.launchStatusOptions.PREPARING}</option>
+                <option value="LIVE">{copy.launchStatusOptions.LIVE}</option>
+                <option value="GROWING">{copy.launchStatusOptions.GROWING}</option>
               </select>
+              <p className="mt-2 text-[12px] leading-5 text-[#8a8fa0]">
+                {getLaunchStageLabel(formData.launchStageKey as LaunchStageKey, locale)}
+              </p>
             </div>
 
             <div className="md:col-span-2">
-              <label className={labelCls}>{copy.topPriority}</label>
+              <label htmlFor="growthGoal" className={labelCls}>{copy.topPriority}</label>
               <input
+                id="growthGoal"
+                name="growthGoal"
                 type="text"
                 value={formData.growthGoal}
                 onChange={(e) => setFormData({ ...formData, growthGoal: e.target.value })}
@@ -542,8 +636,10 @@ export default function SettingsForm({
             </div>
 
             <div className="md:col-span-2">
-              <label className={labelCls}>{copy.contextLinks}</label>
+              <label htmlFor="contextLinks" className={labelCls}>{copy.contextLinks}</label>
               <textarea
+                id="contextLinks"
+                name="contextLinks"
                 value={formData.contextLinks}
                 onChange={(e) => setFormData({ ...formData, contextLinks: e.target.value })}
                 rows={5}

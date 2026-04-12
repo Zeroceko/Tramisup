@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
 import PlainPageShell from "@/components/PlainPageShell";
+import RouteScopedBoundary from "@/components/RouteScopedBoundary";
 import { getShellProducts } from "@/lib/shell-products";
 
 export default async function SettingsLayout({
@@ -25,7 +26,9 @@ export default async function SettingsLayout({
 
   return (
     <AppShell products={products} activeProductId={activeProductId} userName={session.user.name ?? undefined}>
-      <PlainPageShell>{children}</PlainPageShell>
+      <RouteScopedBoundary scope="settings">
+        <PlainPageShell>{children}</PlainPageShell>
+      </RouteScopedBoundary>
     </AppShell>
   );
 }

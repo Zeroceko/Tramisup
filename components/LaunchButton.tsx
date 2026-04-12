@@ -73,7 +73,7 @@ export default function LaunchButton({
       const res = await fetch(`/api/products/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "LAUNCHED" }),
+        body: JSON.stringify({ launchStageKey: "LIVE" }),
       });
       if (res.ok) {
         setOpen(false);
