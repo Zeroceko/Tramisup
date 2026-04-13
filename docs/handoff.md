@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current live release: `27dfd71d`
-- Last docs refresh: `12 April 2026`
+- Current active main line: `53b5e694` plus recent product UX commits through `72e598ba`
+- Last docs refresh: `13 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -29,9 +29,24 @@
 - Launched/growing products without a growth check-in are gated at the dashboard and redirected to `/growth`.
 - Growth diagnosis includes actual metric values and is locale-aware.
 - Agent panel cards all create tasks — no "ask" cards remain.
+- Board is directly reachable from the authenticated header as a secondary CTA.
+- Board/task rows and agent suggestion rows now use a shared preview-first interaction model.
+- Overview / Launch / Growth keep the agent column fixed while the right content pane scrolls independently.
+- Free-form agent chat is currently unstable in production: user-typed questions can fail with the generic retry copy because `/api/agent/chat` is intermittently returning 500.
+- Secret files are no longer tracked in git, and Gemini/OpenAI production env keys were rotated on 13 April 2026 after exposed secrets were found in the public repo.
 
 ### Recent shipped commits
 
+- `53b5e694` — security cleanup: stop tracking local secrets and remove hardcoded production DB URLs from seed scripts
+- `72e598ba` — tighten free-form agent chat guidance and action defaults
+- `e3e5f79c` — make Board access visible across app surfaces
+- `beb5022e` — unify board task interactions with preview-first UX
+- `21dcae07` — improve agent suggestion quality and actions
+- `947d392c` — fix route boundary height in agent layouts
+- `e6d1954f` — fix agent shell scroll and metrics flow regressions
+- `5232e299` — fix agent layout content scrolling
+- `0f9fc76a` — fix growth goals and routing follow-ups
+- `9c3a1e58` — ship launch flow follow-up fixes
 - `27dfd71d` — allow chef admin access
 - `eded8530` — finish trust sprint 2 hardening and verification
 - `f8f56491` — handoff/docs refresh on top of the current production baseline
@@ -44,7 +59,10 @@
 
 ## Local Workspace State
 
-The local workspace is a **clean, production-aligned state**. Trust Sprint 2 has been completed and verified (`eded8530`). `npx tsc --noEmit` passes clean.
+The app workspace is a **production repo with recent follow-up work already merged**. Earlier "three local fixes" are no longer pending; they shipped alongside later board, suggestion, and security work. `npx tsc --noEmit` has recently passed. The only local dirt seen at handoff time is outside app code:
+
+- `external/streamlined-solutions` is a nested repo and intentionally ignored for app work
+- `tmp/` contains local scratch artifacts and should not be committed
 
 ---
 
@@ -112,6 +130,62 @@ The local workspace is a **clean, production-aligned state**. Trust Sprint 2 has
 - If a downstream stage value exceeds its upstream stage, a yellow non-blocking warning card is shown before the save button
 - Submit still proceeds — warning is informational only, not a gate
 
+### 10. Growth follow-up fixes shipped
+
+`app/[locale]/growth/page.tsx`, `components/GoalsSection.tsx`, `app/[locale]/growth/layout.tsx`, `app/[locale]/dashboard/layout.tsx`, `components/GrowthChecklistSection.tsx`, `components/today/MetricSparklinePanel.tsx`:
+- `/growth#goals` now lands on a real goals section
+- empty goals state opens directly into the goal form instead of a dead shell
+- Growth got its own route remount boundary to reduce cross-route subtree reuse
+- dashboard remount key was tightened again for route isolation
+- trend delta now compares recent points instead of a misleading first-entry baseline
+- creating a recommended growth task can complete the corresponding growth checklist item
+
+### 11. Agent layout shell scroll fix shipped
+
+`components/AgentLayoutShell.tsx`:
+- added `min-h-0` through the flex chain so the right content pane scrolls correctly on Overview / Launch / Growth
+
+---
+
+## Current Open Findings From Founder Simulation
+
+These are not theoretical risks. They came from using the live app with a real upgraded test account as if we were a founder.
+
+### 1. Free-form agent chat fails on user-written questions
+
+- Repro: ask a real free-form question in Overview / Launch / Growth agent chat
+- Current result: generic retry copy in the client
+- Actual shape: `components/AgentChatPanel.tsx` catch path is masking a server failure from `/api/agent/chat`
+- Suggestion cards and task creation still work; the break is specifically in the free-form chat path
+- First debugging step for the next team: inspect Vercel logs for `/api/agent/chat` and stop hiding the server error behind generic UI copy
+
+### 2. Repeated browser-side `500` resource errors
+
+- Observed while visiting `/products/new`, `/growth`, and `/dashboard`
+- Seen in console during real founder simulation
+- Root cause still unknown; next team should reproduce with network capture and trace the failing request
+
+### 3. Onboarding does not close cleanly from the AARRR recommendation step
+
+- The user flow repeatedly remained on the `Önerilen AARRR kurulumun` screen
+- Even when the product became accessible later, the onboarding exit felt unfinished and confusing
+
+### 4. Metrics setup and metrics entry feel merged together
+
+- On the tested product, metric setup cards were absent
+- Daily numeric entry inputs were already visible and savable
+- This makes the user unsure whether setup is complete, skipped, or broken
+
+### 5. First metric save does not fully propagate into Growth state
+
+- After entering and saving metric values, Growth still showed the equivalent of "metrics selected but no data yet"
+- This breaks the core loop of setup → first baseline → diagnosis
+
+### 6. Agent recommendation cards did not reliably appear in the launched-product journey
+
+- In the exercised path, the agent card count was `0`
+- The intended bridge from diagnosis to task creation still needs true end-to-end validation on a fresh product
+
 ---
 
 ## Current Operational Risks
@@ -120,8 +194,9 @@ The local workspace is a **clean, production-aligned state**. Trust Sprint 2 has
 - **i18n gaps.** Some screens still carry hardcoded strings.
 - **Roadmap integrations.** Some integration surfaces are still UI-first placeholders.
 - **`Product.launchGoals` is legacy.** Do not build new core logic on top of it.
-- **Dashboard first impression needs product work.** What a newly onboarded user sees first is not sharp enough. Known issue, not a bug.
+- **Founder continuity still needs work.** The newly created launched-product journey has gaps between onboarding, metrics, growth, and agent surfaces.
 - **Email delivery latency.** `RESEND_FROM_EMAIL` must be set in Vercel to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` which causes spam filter delays. `tiramisup.app` is already verified in Resend.
+- **Public repo secret history still matters.** Secret tracking has been stopped going forward, but previously exposed credentials must still be rotated outside the repo.
 
 ---
 
@@ -166,3 +241,9 @@ The local workspace is a **clean, production-aligned state**. Trust Sprint 2 has
 13. Navigate Settings → Pre-launch — Settings form must NOT appear in pre-launch route
 14. Pre-launch: complete a checklist item → agent panel "Launch Recommendations" banner should refresh within ~2s
 15. Metrics daily entry: enter Retention value higher than Acquisition → yellow warning card should appear; save should still work
+16. Real founder path: login with an upgraded account, create a fresh product, and finish onboarding end-to-end without getting stuck on the AARRR recommendation step
+17. Fresh launched product: verify `/metrics` shows a coherent setup state before daily entry inputs appear
+18. Save the first metric baseline and then open `/growth` — Growth must no longer say there is no data
+19. In the same founder flow, confirm agent recommendation cards appear and can create tasks
+20. Overview / Launch / Growth: confirm the right-side content pane scrolls independently of the left agent sidebar
+21. Overview / Launch / Growth: ask a free-form question and confirm `/api/agent/chat` returns a contextual answer instead of the generic retry copy

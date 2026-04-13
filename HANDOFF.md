@@ -1,10 +1,10 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 12 April 2026
+**Date:** 13 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current live release on `main`:** `f8f56491`
-**Status:** Live baseline is stable, but the local workspace currently contains an unfinished Trust Sprint 2 branch state. Do not ship the local worktree as-is.
+**Current active `main` line:** includes `53b5e694`, `72e598ba`, `e3e5f79c`, `beb5022e`, `21dcae07`, `947d392c`, `e6d1954f`, `5232e299`
+**Status:** Production baseline is live, but handoff priority has changed: the app now includes recent navigation / board / suggestion improvements, an active free-form agent chat regression, and a security cleanup after exposed secrets were discovered in the public repo history.
 
 ---
 
@@ -28,114 +28,131 @@ Core product surfaces:
 
 Everything is product-scoped. A user can have multiple products, one active at a time.
 
+See `docs/tiramisup-manifesto.md` for the product vision and decision filter.
+
 ---
 
 ## 2. Current Production Truth
 
-As of **12 April 2026**, these are true in production:
+As of **13 April 2026**, these are true in production:
 
 - `tiramisup.app` is live and serving the current `main` line.
 - Public landing is still **waitlist-first**.
 - Signup no longer requires an early access code.
 - Signup and waitlist both use **email verification**.
 - Onboarding supports **file upload**, **Google Drive / URL context**, and **async plan generation**.
-- Locale preference is persisted to both DB and cookie, and settings-side language switching redirects to the correct localized route.
-- Billing is still **fake checkout / demo activation**, not real Stripe payments.
+- Locale preference is persisted to both DB and cookie. Settings-side language switching redirects to the correct localized route.
+- Billing is still **fake checkout / demo activation** — not real Stripe payments.
 - AI guidance remains **stage-aware** and must not invent advice when evidence is weak.
-- **Nav is now stage-aware**: pre-launch products see Overview + Launch; launched/growing products see Overview + Metrics + Growth.
+- **Nav is stage-aware**: pre-launch products see Overview + Launch; launched/growing products see Overview + Metrics + Growth.
 - **Growth intake gate**: launched/growing products without a completed growth check-in are redirected to `/growth` before seeing the dashboard.
 - **Growth diagnosis is data-driven**: includes actual metric values (current, baseline, rate) and is locale-aware (EN/TR).
-- **Agent panel cards are all task-creation**: no more "ask"-intent cards that sent text to chat. Every card creates a task when clicked.
+- **Agent panel cards are all task-creation**: every card creates a task when clicked. No "ask"-intent cards remain.
+- **Board access is now directly visible in the authenticated header** as a secondary CTA.
+- **Board rows and agent suggestion rows now share the same preview-first interaction model**: compact row, preview surface, explicit create/action control.
+- **Overview / Launch / Growth shell scrolling is fixed**: left agent column stays fixed-height while right content pane scrolls independently.
+- **Free-form agent chat is currently unstable in production**: user-written messages can fail with the generic UI copy "Bir sorun oluştu, tekrar dener misin?" because `/api/agent/chat` is intermittently returning 500. This is the top unresolved product bug at handoff time.
+- **Security cleanup shipped on 13 April 2026**: local secret files were removed from git tracking, and Gemini/OpenAI production env keys were rotated in Vercel after exposed keys were found in the public repo.
 
-Recent shipped commits on the live line:
-- `f8f56491` — handoff/docs refresh on top of the current production baseline
-- `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
-- `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
-- `13ba0851` — fix overview agent: stage-aware context for launched/growing products
-- `93c8a82f` — agent panel all-task fix, remove ask intent
-- `470c1e58` — growth diagnosis data-driven + locale-aware, category labels translated
-
----
-
-## 2.5 Current Local Workspace Handoff
-
-The current checked-out workspace is **mid-implementation for Founder Trust Sprint 2**. It is not finished, not verified, and should be treated as a partial branch state rather than a candidate release.
-
-### Important distinction
-
-- **Production baseline**: the app behavior described in this document and currently live on `main`
-- **Local workspace**: partially implemented Trust Sprint 2 work intended to address Session 2 founder test findings
-
-### What has already been started locally
-
-- **Canonical launch-stage migration (partial)**
-  - `lib/launch-stage.ts` has been expanded around canonical keys
-  - `components/OnboardingWizard.tsx` has started moving stage option values from localized labels to canonical keys
-  - `app/api/products/route.ts`, `lib/ai-plan.ts`, and `lib/mobile-launch-baseline.ts` have partial updates to consume canonical stage keys
-- **Route/render isolation (partial)**
-  - `components/RouteScopedBoundary.tsx` was added
-  - `app/[locale]/dashboard/layout.tsx`, `app/[locale]/pre-launch/layout.tsx`, and `app/[locale]/settings/layout.tsx` were started on route-scoped remounting
-  - `components/SettingsWorkspace.tsx` now has a pathname guard
-- **Pre-launch consistency work (partial)**
-  - `components/PreLaunchWorkspace.tsx` was added as a client-synced wrapper for pending task count / blockers / checklist state
-  - `app/[locale]/pre-launch/page.tsx` server actions were started on normalized mutation payloads
-  - `components/ChecklistSection.tsx` was partially adapted to receive parent-driven completion / ignore callbacks
-- **Agent history bridge (partial)**
-  - `prisma/schema.prisma` now includes an `AgentMessage` model
-  - `lib/agent-prompts.ts` has started adding `messageActions`
-  - `lib/agent-messages.ts` was added as an unfinished persistence helper
-  - `app/api/agent/chat/route.ts` has **not** yet been fully updated to the new contract
-
-### Current workspace blockers before anyone continues
-
-`npx tsc --noEmit` currently fails in this workspace. As of **12 April 2026**, the failing points are:
-
-1. `app/api/agent/chat/route.ts`
-   Missing `messageActions` in the parsed `AgentResponse` object after the prompt contract changed.
-2. `components/OnboardingWizard.tsx`
-   Old helper references `isLaunchedStage` / `isVeryEarlyStage` remain after moving to canonical stage helpers.
-3. `components/OnboardingWizard.tsx`
-   One stage selection path still passes a generic `string` where `LaunchStageKey | ""` is now expected.
-4. `lib/agent-messages.ts`
-   The new Prisma model is referenced before the generated Prisma client has been updated, and typing is incomplete.
-
-### Files touched in the local Trust Sprint 2 workspace
-
-High-signal touched files:
-
-- `components/OnboardingWizard.tsx`
-- `lib/launch-stage.ts`
-- `app/api/products/route.ts`
-- `lib/ai-plan.ts`
-- `lib/mobile-launch-baseline.ts`
-- `components/SettingsWorkspace.tsx`
-- `app/[locale]/dashboard/layout.tsx`
-- `app/[locale]/pre-launch/layout.tsx`
-- `app/[locale]/settings/layout.tsx`
-- `app/[locale]/pre-launch/page.tsx`
-- `components/ChecklistSection.tsx`
-- `components/PreLaunchWorkspace.tsx`
-- `prisma/schema.prisma`
-- `lib/agent-prompts.ts`
-- `lib/agent-messages.ts`
-
-### Recommended resume order for the next team
-
-1. Get the workspace back to green:
-   - finish the `OnboardingWizard` canonical stage migration
-   - finish `app/api/agent/chat/route.ts` so it satisfies the new `messageActions` contract
-   - either finish the `AgentMessage` Prisma integration and run `npx prisma generate`, or back the model out before continuing
-2. Re-run:
-   - `npx prisma generate`
-   - `npx tsc --noEmit`
-   - focused tests for settings, checklist, and agent chat
-3. Only after the workspace is green:
-   - continue the remaining Trust Sprint 2 product work
-   - verify it against Session 2 founder findings
+Recent shipped commits on the active line:
+- `53b5e694` — stop tracking local secrets (`.env.prod`, OAuth client secret JSON, e2e auth artifact, supabase temp file) and remove hardcoded production DB URLs from seed scripts
+- `72e598ba` — tighten free-form agent chat guidance and action defaults
+- `e3e5f79c` — make Board access visible across authenticated app surfaces
+- `beb5022e` — unify board task interactions with preview-first UX
+- `21dcae07` — improve agent suggestion quality and add preview/create split
+- `947d392c` — fix route boundary height so agent layouts keep independent scroll behavior
+- `e6d1954f` — fix agent shell scroll and metrics flow regressions
+- `5232e299` — fix right-side content scrolling in Overview / Launch / Growth shell
+- `0f9fc76a` — fix growth goals render, growth route isolation, launched dashboard status copy, trend delta calculation, growth checklist completion bridge
+- `9c3a1e58` — ship launch flow follow-up fixes: launch modal hint/pulse, route boundary remount keys, agent suggestion refresh, metric funnel warning
+- `27dfd71d` — allow `chef@tiramisup.app` admin access for `/[locale]/admin/waitlist`
+- `eded8530` — finish Trust Sprint 2 hardening and verification
 
 ---
 
-## 3. First-Day Setup
+## 2.5 Current Workspace State
+
+The workspace is no longer "ahead by three uncommitted fixes". Those fixes and several follow-up UI changes have already shipped. The current workspace should be treated as a **production repo with live follow-up work already merged**.
+
+What is now true:
+- the metric setup / growth transition fixes are in the active line
+- board discoverability and task-preview UX changes are in the active line
+- hybrid agent suggestions are in the active line
+- the security cleanup that stops tracking local secret files is in the active line
+
+What is still open:
+- free-form agent chat is returning 500s intermittently in production
+- the generic client copy hides the real server error, so the next team must inspect `/api/agent/chat` and Vercel logs first
+
+### Pre-existing test failures
+8 tests in `__tests__/api/waitlist/admin.test.ts` fail with 401. This remains a pre-existing auth mock issue unrelated to the current handoff-critical bugs. All other tests are expected to pass.
+
+---
+
+## 3. Open Founder-Simulation Findings
+
+These came from using the live app as a real founder with an upgraded account — not narrow code-path tests.
+
+### 1. AARRR onboarding exit feels broken
+- Wizard can remain on `Önerilen AARRR kurulumun` step after submission
+- Fix 2 above addresses the race condition
+- Needs end-to-end testing: create product → AARRR step → accept → loading screen → overview
+
+### 2. Metrics setup vs daily entry state is confusing
+- On `/metrics`, setup cards can be absent while daily numeric entry inputs are already visible
+- User cannot tell if setup is complete, skipped, or broken
+- Files: `app/[locale]/metrics/page.tsx`, `components/MetricSetupSelector.tsx`
+
+### 3. First metric save does not propagate cleanly into Growth
+- After entering and saving metric values, Growth can still show "no data yet"
+- Fix 1 and Fix 3 partially address this — needs full propagation validation
+
+### 4. Agent recommendation cards did not appear in launched-product journey
+- In the founder simulation, agent card count was 0 for a launched product
+- Fix 1 corrects the `has_setup` bug that caused this — needs end-to-end re-validation
+
+### 5. Repeated browser-side 500 resource errors
+- Observed on `/products/new`, `/growth`, `/dashboard` during production simulation
+- Root cause not isolated — next team should reproduce with network capture and trace the failing request
+
+### 6. Free-form agent chat currently fails on user-written questions
+- Repro: open Overview / Launch / Growth agent panel, type a real question, submit
+- Current user-visible result: generic retry copy (`Bir sorun oluştu, tekrar dener misin?`)
+- Actual shape: client catch path is masking a server-side failure from `/api/agent/chat`
+- Important: suggestion cards and board/task creation are still working; this is specifically the free-form chat path
+- Likely starting points: `app/api/agent/chat/route.ts`, `components/AgentChatPanel.tsx`, Vercel logs for `/api/agent/chat`
+
+---
+
+## 4. Unvalidated Product Risks
+
+These are the things the founding team does not yet know. They are the highest-priority questions for the new team.
+
+**1. Does the AI actually help?**
+The agent recommendations have not been tested with a real founder on a real product outside the founding team. It is unknown whether the output is meaningfully better than generic startup advice.
+
+**2. Is the core loop sticky?**
+The intended loop is: create product → enter metrics → receive diagnosis → create tasks → repeat.
+Whether users return after the first session is unknown.
+
+**3. Does the onboarding-to-value path work end-to-end?**
+A fresh user creating a product → finishing onboarding → reaching a useful Growth diagnosis has not been cleanly validated. Several breakpoints exist between these steps.
+
+---
+
+## 5. Recommended First Sprint for New Team
+
+1. Commit the three local fixes and deploy to production
+2. Do a full founder simulation with a fresh account — document every point of confusion
+3. Fix the onboarding exit and the metrics setup/entry state confusion (Issues 1 and 2 above)
+4. Re-run simulation: onboarding exits cleanly → metrics setup state is clear → first save propagates to Growth → agent cards appear
+5. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
+6. Run 5 external users through the product — observe, do not explain
+7. Decide: is the AI recommendation quality good enough to charge for?
+
+---
+
+## 6. First-Day Setup
 
 ```bash
 git clone <repo-url> && cd Tiramisup
@@ -149,14 +166,14 @@ Verify:
 ```bash
 npx tsc --noEmit
 npx next build
-OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
+QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run
 ```
 
 **Local dev runs on port `3002`** — Google and Stripe OAuth redirect settings are aligned to this port.
 
 ---
 
-## 4. Tech Stack
+## 7. Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -167,7 +184,7 @@ OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 | ORM | Prisma 6 |
 | Auth | NextAuth 4 (Credentials + JWT) |
 | i18n | next-intl (`en`, `tr`, default `en`) |
-| AI | Qwen -> DeepSeek -> Gemini -> Gemini backup -> static fallback |
+| AI | Qwen → DeepSeek → Gemini → Gemini backup → static fallback |
 | Email | Resend |
 | Storage | Supabase Storage |
 | Hosting | Vercel |
@@ -175,7 +192,7 @@ OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 
 ---
 
-## 5. Architecture Overview
+## 8. Architecture Overview
 
 ### Layout shells
 
@@ -192,10 +209,6 @@ OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run
 
 Key file: `components/DashboardNav.tsx`
 
-### Growth intake gate
-
-Launched/growing products that have not completed the growth check-in are redirected from `/dashboard` to `/growth`, which shows the intake form. The gate is in `app/[locale]/dashboard/page.tsx`.
-
 ### Growth workspace modes
 
 ```
@@ -209,15 +222,13 @@ Intake answers stored in `Product.additionalContext.growthCheckin`.
 `lib/funnel-health.ts` builds the funnel health summary:
 - Locale-aware (EN/TR) — accepts `locale` parameter
 - Data-driven: `nextFocus` text includes actual metric values, direction, and rate vs target
-- Called from both `app/[locale]/growth/page.tsx` and `app/[locale]/dashboard/page.tsx`
 
 ### Agent panel (left sidebar)
 
 `components/AgentChatPanel.tsx` — all suggestion cards use `createTaskFromSuggestion`:
 - Clicking any card creates a task immediately via `POST /api/actions`
-- No "ask"-intent cards remain — the panel is an "AI-suggested next actions" list
+- No "ask"-intent cards remain
 - Suggestion content is product-specific and generated deterministically in `app/api/agent/suggestions/route.ts`
-- Chat input at the bottom is for free-form questions to the AI
 
 ### Product creation (two-phase)
 
@@ -235,14 +246,14 @@ Intake answers stored in `Product.additionalContext.growthCheckin`.
 
 ---
 
-## 6. Rules That Must Not Break
+## 9. Rules That Must Not Break
 
 1. **No fake product on signup.** Product data begins only after onboarding.
 2. **Launched products must not get pre-launch language or nav.**
 3. **Growth must stay diagnosis-led, not generic startup advice.**
 4. **Metric entry must stay tied to configured metrics.**
 5. **AI must not speculate without evidence.**
-6. **User-written product description remains central context.**
+6. **User-written product description remains central context for all AI calls.**
 7. **English is the master locale.** Default is `en`.
 8. **`HIGH` priority means a true blocker only.**
 9. **Agent panel cards create tasks — they do not open chat.**
@@ -251,18 +262,20 @@ Intake answers stored in `Product.additionalContext.growthCheckin`.
 
 ---
 
-## 7. Known Debt
+## 10. Known Debt
 
 - **Billing**: still fake checkout / demo activation
 - **i18n gaps**: some authenticated copy still has hardcoded strings
 - **Roadmap integrations**: RevenueCat, App Store Connect, Google Play Console, ads connectors are UI-first only
 - **`Product.launchGoals`**: legacy field, do not build new logic on it
-- **Dashboard first impression**: what a user sees on first login after onboarding is still not sharp enough. Needs product work.
-- **Email delivery latency**: `RESEND_FROM_EMAIL` must be set in Vercel env to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` (shared Resend domain — causes spam filter delays). Domain `tiramisup.app` is already verified in Resend.
+- **Dashboard first impression**: what a user sees on first login after onboarding is not sharp enough
+- **Email delivery**: `RESEND_FROM_EMAIL` must be set in Vercel env to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` — causes spam filter delays. Domain `tiramisup.app` is already verified in Resend.
+- **Free-form agent chat reliability**: the compact chat/policy work landed, but `/api/agent/chat` is still intermittently failing in production and must be stabilized before more AI UX work ships
+- **Public repo secret history**: tracking of local secret files has been stopped, but any previously exposed keys must still be treated as compromised and rotated outside the repo
 
 ---
 
-## 8. Database and Schema
+## 11. Database and Schema
 
 Current schema includes live support for:
 - `Product.additionalContext` — including `growthCheckin` envelope
@@ -281,7 +294,7 @@ npx prisma db push
 
 ---
 
-## 9. Environment Variables
+## 12. Environment Variables
 
 ```bash
 # AI
@@ -289,6 +302,8 @@ QWEN_API_KEY
 DEEPSEEK_API_KEY
 GEMINI_API_KEY
 GEMINI_API_KEY_2
+GOOGLE_GENERATIVE_AI_API_KEY
+OPENAI_API_KEY
 
 # Auth / app
 NEXTAUTH_SECRET
@@ -301,7 +316,7 @@ DIRECT_URL          # Direct Postgres — port 5432
 
 # Email
 RESEND_API_KEY
-RESEND_FROM_EMAIL
+RESEND_FROM_EMAIL   # Must be: Tiramisup <hello@tiramisup.app>
 
 # Supabase
 SUPABASE_URL
@@ -325,29 +340,40 @@ NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 RECAPTCHA_SECRET_KEY
 ```
 
+Important environment notes:
+- Vercel env is the source of truth for production
+- `.env.prod` must not be recommitted; it was intentionally removed from git tracking on 13 April 2026
+- Gemini and OpenAI keys were rotated on 13 April 2026 after exposed secrets were found in the public repo
+- Other previously exposed secrets should be assumed compromised until rotated
+
 ---
 
-## 10. Pre-Release Smoke Checklist
+## 13. Pre-Release Smoke Checklist
 
 Before shipping any meaningful change:
 
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npx next build` passes
-- [ ] `OPENAI_API_KEY=dummy QWEN_API_KEY=dummy npx vitest run` — all pass
+- [ ] `QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run` — all pass (8 admin waitlist tests are pre-existing failures, acceptable)
 - [ ] `/en` and `/tr` both load
 - [ ] Signup → email verify → login flow works
 - [ ] Waitlist join → email verify flow works
 - [ ] Onboarding creates product, file upload works, async plan generates
+- [ ] Onboarding exits cleanly after the AARRR recommendation step
 - [ ] Pre-launch product sees Overview + Launch in nav (not Metrics/Growth)
 - [ ] Launched/growing product sees Overview + Metrics + Growth in nav (not Launch)
 - [ ] Launched product without growth check-in redirects from dashboard to `/growth`
 - [ ] Settings/account language change moves to the correct locale route
-- [ ] Non-mobile web products do not get App Store / Google Play guidance
 - [ ] Agent panel cards create tasks when clicked — not chat messages
+- [ ] Free-form agent chat in Overview / Launch / Growth answers a user-written question without returning the generic retry copy
+- [ ] Right content pane scrolls correctly on Overview / Launch / Growth
+- [ ] Metrics shows a coherent setup state before daily entry for a fresh launched product
+- [ ] First metric save is reflected by Growth — Growth no longer says "no data"
+- [ ] Agent recommendation cards appear for a launched product with metrics
 
 ---
 
-## 11. Access Transfer Checklist
+## 14. Access Transfer Checklist
 
 - GitHub repo access
 - Vercel project access (`zerocekos-projects/tramisup`)
