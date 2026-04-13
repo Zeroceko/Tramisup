@@ -250,7 +250,11 @@ export async function buildAgentContext(
   });
 
   if (!product) throw new Error(`Product ${productId} not found`);
-  await normalizeStoredLaunchChecklistPriorities(productId);
+
+  // Only normalize launch checklist priorities when actually relevant
+  if (agentType === "launch" || product.status === "PRE_LAUNCH") {
+    await normalizeStoredLaunchChecklistPriorities(productId);
+  }
 
   let contextSummary: string;
   switch (agentType) {

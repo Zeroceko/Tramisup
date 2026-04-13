@@ -401,25 +401,33 @@ export async function POST(request: Request) {
       productId,
     );
 
-    await prisma.$transaction(async (tx) => {
-      await createStoredAgentMessage(tx, {
-        userId: session.user.id,
-        productId,
-        agentType: agentType as AgentType,
-        role: "user",
-        content: message,
+    try {
+      await prisma.$transaction(async (tx) => {
+        await createStoredAgentMessage(tx, {
+          userId: session.user.id,
+          productId,
+          agentType: agentType as AgentType,
+          role: "user",
+          content: message,
+        });
+        await createStoredAgentMessage(tx, {
+          userId: session.user.id,
+          productId,
+          agentType: agentType as AgentType,
+          role: "assistant",
+          content: agentResponse.message,
+          messageActions,
+        });
       });
-      await createStoredAgentMessage(tx, {
-        userId: session.user.id,
-        productId,
-        agentType: agentType as AgentType,
-        role: "assistant",
-        content: agentResponse.message,
-        messageActions,
-      });
-    });
+    } catch (storeErr) {
+      console.error("[agent/chat] Failed to persist messages (non-fatal):", storeErr instanceof Error ? storeErr.message : storeErr);
+    }
 
-    await recordUsageEvent(session.user.id, "aiMessages");
+    try {
+      await recordUsageEvent(session.user.id, "aiMessages");
+    } catch (usageErr) {
+      console.error("[agent/chat] Failed to record usage event (non-fatal):", usageErr instanceof Error ? usageErr.message : usageErr);
+    }
 
     return NextResponse.json({
       message: agentResponse.message,
@@ -429,8 +437,10 @@ export async function POST(request: Request) {
       suggestions: agentResponse.suggestions,
     });
   } catch (error) {
-    console.error("[agent/chat] Unexpected error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error("[agent/chat] Unexpected error:", { message: errMsg, stack: errStack });
+    return NextResponse.json({ error: "Internal server error", detail: errMsg }, { status: 500 });
   }
 }
 
