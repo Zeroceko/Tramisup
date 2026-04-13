@@ -15,6 +15,8 @@ import {
 import { createTaskWithGuards } from "@/lib/task-create";
 import { parseStructuredDescription } from "@/lib/task-parsing";
 import { normalizeLaunchStageKey } from "@/lib/launch-stage";
+import { emitTaskLifecycleEvent } from "@/lib/task-events";
+import { buildTaskStatusTransition } from "@/lib/task-status-transition";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(locale: string, itemId: string) {
@@ -158,11 +160,38 @@ async function setChecklistItemCompleted(locale: string, itemId: string, complet
       });
 
       if (checklistItem.linkedTaskId) {
-        await tx.task.update({
+        const linkedTask = await tx.task.findUnique({
           where: { id: checklistItem.linkedTaskId },
-          data: { status: completed ? "DONE" : "TODO" },
+          select: {
+            id: true,
+            productId: true,
+            status: true,
+            startedAt: true,
+            completedAt: true,
+          },
         });
+
+        if (linkedTask) {
+          const transition = buildTaskStatusTransition(
+            linkedTask,
+            completed ? "DONE" : "TODO",
+          );
+          await tx.task.update({
+            where: { id: checklistItem.linkedTaskId },
+            data: transition.data,
+          });
+
+          if (transition.eventType) {
+            await emitTaskLifecycleEvent({
+              taskId: linkedTask.id,
+              productId: linkedTask.productId,
+              eventType: transition.eventType,
+              metadata: { source: "CHECKLIST_SURFACE" },
+            });
+          }
+        }
       }
+
       const pendingTaskCount = await tx.task.count({
         where: {
           productId: checklistItem.productId,

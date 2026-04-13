@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PlanTier } from "@prisma/client";
 import PricingCard from "@/components/PricingCard";
-import { PLAN_CONFIG, getPlanFeatureList } from "@/lib/plan-config";
+import { PLAN_CONFIG, getPlanFeatureList, getPlanMarketingCopy } from "@/lib/plan-config";
 
 interface PricingContentProps {
   locale: string;
@@ -20,6 +20,9 @@ export default function PricingContent({ locale, next }: PricingContentProps) {
     starter: PLAN_CONFIG[PlanTier.STARTER].prices[interval],
     pro: PLAN_CONFIG[PlanTier.PRO].prices[interval],
   };
+  const free = getPlanMarketingCopy(PlanTier.FREE, locale);
+  const starter = getPlanMarketingCopy(PlanTier.STARTER, locale);
+  const pro = getPlanMarketingCopy(PlanTier.PRO, locale);
 
   return (
     <div className="py-8">
@@ -29,12 +32,12 @@ export default function PricingContent({ locale, next }: PricingContentProps) {
           {isEn ? "Pricing" : "Fiyatlandırma"}
         </p>
         <h1 className="mt-2 text-[30px] font-bold tracking-[-0.03em] text-[#0d0d12]">
-          {isEn ? "Simple, honest pricing" : "Sade, dürüst fiyatlandırma"}
+          {isEn ? "Choose the right operating layer" : "Doğru çalışma katmanını seç"}
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-[14px] leading-6 text-[#5e6678]">
           {isEn
-            ? "Start free. Upgrade when you need more room to build."
-            : "Ücretsiz başla. Daha fazla alana ihtiyaç duyduğunda yükselt."}
+            ? "Free is for proving the workflow. Starter is for one serious product. Pro is for multi-product teams."
+            : "Free akışı kanıtlamak içindir. Starter tek ciddi ürün içindir. Pro ise çok ürünlü ekipler içindir."}
         </p>
       </div>
 
@@ -71,7 +74,9 @@ export default function PricingContent({ locale, next }: PricingContentProps) {
           name={isEn ? "Free" : "Ücretsiz"}
           price={0}
           interval={interval}
-          description={isEn ? "Everything you need to get started and explore the platform." : "Başlamak ve platformu keşfetmek için gereken her şey."}
+          description={free.summary}
+          bestFor={free.bestFor}
+          upgradeNote={free.upgradeNote}
           features={getPlanFeatureList(PlanTier.FREE, locale)}
           cta={isEn ? "Get started" : "Başla"}
           ctaHref={`/${locale}/signup`}
@@ -81,7 +86,9 @@ export default function PricingContent({ locale, next }: PricingContentProps) {
           name="Starter"
           price={prices.starter}
           interval={interval}
-          description={isEn ? "For founders actively building and tracking a real product." : "Gerçek bir ürün inşa eden ve takip eden kurucular için."}
+          description={starter.summary}
+          bestFor={starter.bestFor}
+          upgradeNote={starter.upgradeNote}
           features={getPlanFeatureList(PlanTier.STARTER, locale)}
           cta={isEn ? "Choose Starter" : "Starter'ı seç"}
           ctaHref={`/api/billing/checkout?plan=STARTER&interval=${interval === "yearly" ? "YEARLY" : "MONTHLY"}&locale=${locale}${nextParam}`}
@@ -92,7 +99,9 @@ export default function PricingContent({ locale, next }: PricingContentProps) {
           name="Pro"
           price={prices.pro}
           interval={interval}
-          description={isEn ? "For teams managing multiple products and needing full access." : "Birden fazla ürün yöneten ve tam erişim isteyen ekipler için."}
+          description={pro.summary}
+          bestFor={pro.bestFor}
+          upgradeNote={pro.upgradeNote}
           features={getPlanFeatureList(PlanTier.PRO, locale)}
           cta={isEn ? "Choose Pro" : "Pro'yu seç"}
           ctaHref={`/api/billing/checkout?plan=PRO&interval=${interval === "yearly" ? "YEARLY" : "MONTHLY"}&locale=${locale}${nextParam}`}

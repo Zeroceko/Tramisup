@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateIgnoredChecklistIds } from "@/lib/metric-setup";
 import { emitTaskLifecycleEvent } from "@/lib/task-events";
+import { buildTaskStatusTransition } from "@/lib/task-status-transition";
 
 export async function PATCH(
   request: Request,
@@ -61,30 +62,40 @@ export async function PATCH(
             id: true,
             productId: true,
             status: true,
+            startedAt: true,
+            completedAt: true,
           },
         });
 
         if (linkedTask && linkedTask.status !== nextTaskStatus) {
+          const transition = buildTaskStatusTransition(linkedTask, nextTaskStatus);
           await tx.task.update({
             where: { id: linkedTask.id },
-            data: { status: nextTaskStatus },
+            data: transition.data,
           });
+          return {
+            updatedChecklist,
+            taskLifecycleEvent: transition.eventType,
+          };
         }
       }
 
-      return updatedChecklist;
+      return {
+        updatedChecklist,
+        taskLifecycleEvent: null,
+      };
     });
 
-    if (existingItem.linkedTaskId) {
+    if (existingItem.linkedTaskId && item.taskLifecycleEvent) {
       await emitTaskLifecycleEvent({
         taskId: existingItem.linkedTaskId,
         productId: existingItem.productId,
-        eventType: completed ? "COMPLETED" : "REOPENED",
+        eventType: item.taskLifecycleEvent,
         metadata: { source: "CHECKLIST_SURFACE" },
       });
     }
 
-    return NextResponse.json(item);
+    return NextResponse.json(item.updatedChecklist);
   } catch (error) {
     console.error("Error updating checklist item:", error);
     return NextResponse.json(

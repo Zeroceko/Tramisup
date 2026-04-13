@@ -15,11 +15,27 @@ type PlanFeatures = {
   prioritySupport: boolean;
 };
 
+type LocalizedCopy = {
+  en: string;
+  tr: string;
+};
+
+type PlanMarketing = {
+  summary: LocalizedCopy;
+  bestFor: LocalizedCopy;
+  upgradeNote: LocalizedCopy;
+};
+
 type PlanDefinition = {
   prices: PlanPrice;
   limits: Record<LimitKey, number>;
   features: PlanFeatures;
+  marketing: PlanMarketing;
 };
+
+function pick(locale: string, copy: LocalizedCopy) {
+  return locale === "en" ? copy.en : copy.tr;
+}
 
 // Adjust plan packaging from this single object.
 export const PLAN_CONFIG: Record<PlanTier, PlanDefinition> = {
@@ -39,6 +55,20 @@ export const PLAN_CONFIG: Record<PlanTier, PlanDefinition> = {
       csvExport: false,
       prioritySupport: false,
     },
+    marketing: {
+      summary: {
+        en: "Validate one product with structure before you pay.",
+        tr: "Tek bir ürünü ödeme yapmadan önce düzenli biçimde doğrula.",
+      },
+      bestFor: {
+        en: "First-time founders or early-stage products still proving the loop.",
+        tr: "İlk ürününü doğrulayan kurucular veya henüz çekirdeği kanıtlamayan erken aşama ürünler.",
+      },
+      upgradeNote: {
+        en: "Move up once one real product needs more tasks, more AI usage, or source integrations.",
+        tr: "Gerçek bir ürün daha fazla görev, daha fazla AI kullanımı veya kaynak entegrasyonu istediğinde yükselt.",
+      },
+    },
   },
   STARTER: {
     prices: { monthly: 9, yearly: 6.75 },
@@ -56,6 +86,20 @@ export const PLAN_CONFIG: Record<PlanTier, PlanDefinition> = {
       csvExport: false,
       prioritySupport: false,
     },
+    marketing: {
+      summary: {
+        en: "Operate one serious product with enough room for weekly metrics and execution.",
+        tr: "Haftalık metrik ve execution ritmi kurmak için tek ciddi ürünü rahatça işlet.",
+      },
+      bestFor: {
+        en: "Solo founders or tiny teams actively running one real product.",
+        tr: "Tek gerçek ürünü aktif yöneten solo kurucular veya çok küçük ekipler.",
+      },
+      upgradeNote: {
+        en: "Go Pro when you manage multiple products or need export and support layers.",
+        tr: "Birden fazla ürün yönetmeye ya da export ve destek katmanına ihtiyaç duyduğunda Pro'ya geç.",
+      },
+    },
   },
   PRO: {
     prices: { monthly: 19, yearly: 14.25 },
@@ -72,6 +116,20 @@ export const PLAN_CONFIG: Record<PlanTier, PlanDefinition> = {
       growthTactics: true,
       csvExport: true,
       prioritySupport: true,
+    },
+    marketing: {
+      summary: {
+        en: "Run multiple products with higher usage ceilings and operational extras.",
+        tr: "Daha yüksek kullanım limitleri ve operasyonel eklerle birden fazla ürünü yönet.",
+      },
+      bestFor: {
+        en: "Studios, multi-product founders, or small teams who need more operating headroom.",
+        tr: "Daha geniş operasyon alanına ihtiyaç duyan stüdyolar, çok ürünlü kurucular veya küçük ekipler.",
+      },
+      upgradeNote: {
+        en: "Best when Tiramisup is becoming part of your weekly operating system, not just a trial workspace.",
+        tr: "Tiramisup sadece deneme alanı değil, haftalık işletim sisteminin parçası olmaya başladığında en doğru katman.",
+      },
     },
   },
 };
@@ -127,42 +185,62 @@ export function getPlanFeatureList(plan: PlanTier, locale: string) {
   const features = PLAN_CONFIG[plan].features;
 
   return [
-    ...getLimitFeatureCopy(plan, locale),
     {
-      text: "Launch checklist",
+      text: isEn ? "Stage-aware launch workspace" : "Aşamaya göre uyarlanan launch workspace",
       included: features.launchChecklist,
     },
     {
       text:
-        features.integrations === "all"
+        features.integrations === "none"
           ? isEn
-            ? "All integrations"
-            : "Tüm entegrasyonlar"
-          : isEn
-            ? "Core integrations (GA4, Stripe)"
-            : "Temel entegrasyonlar (GA4, Stripe)",
-      included: features.integrations !== "none",
+            ? "No source integrations yet"
+            : "Henüz kaynak entegrasyonu yok"
+          : features.integrations === "all"
+            ? isEn
+              ? "Core integrations + future integration access"
+              : "Temel entegrasyonlar + geldikçe yeni entegrasyon erişimi"
+            : isEn
+              ? "Core integrations (GA4, Stripe)"
+              : "Temel entegrasyonlar (GA4, Stripe)",
+      included: true,
     },
     {
-      text: isEn ? "Growth tactics" : "Growth taktikleri",
+      text: isEn ? "Growth tactics layer" : "Growth tactics katmanı",
       included: features.growthTactics,
     },
     {
-      text: features.prioritySupport
-        ? isEn
-          ? "CSV export + priority support"
-          : "CSV export + öncelikli destek"
-        : "CSV export",
+      text: isEn ? "CSV export" : "CSV export",
       included: features.csvExport,
+    },
+    {
+      text: isEn ? "Priority support" : "Öncelikli destek",
+      included: features.prioritySupport,
+    },
+    ...getLimitFeatureCopy(plan, locale),
+    {
+      text:
+        features.integrations === "all"
+          ? isEn
+            ? "Built for multi-product operating cadence"
+            : "Çok ürünlü operasyon ritmi için uygun"
+          : isEn
+            ? "Built for one real product"
+            : "Tek gerçek ürün odağı için uygun",
+      included: true,
     },
   ];
 }
 
-export function getPlanUpsellSummary(plan: PlanTier, locale: string) {
-  const isEn = locale === "en";
-  const limits = PLAN_CONFIG[plan].limits;
+export function getPlanMarketingCopy(plan: PlanTier, locale: string) {
+  const marketing = PLAN_CONFIG[plan].marketing;
+  return {
+    summary: pick(locale, marketing.summary),
+    bestFor: pick(locale, marketing.bestFor),
+    upgradeNote: pick(locale, marketing.upgradeNote),
+  };
+}
 
-  return isEn
-    ? `${plan === PlanTier.STARTER ? "Starter" : "Pro"} gives you ${limits.tasks} tasks, ${limits.aiMessages} AI messages, and ${limits.products} products.`
-    : `${plan === PlanTier.STARTER ? "Starter" : "Pro"} ile ${limits.tasks} görev, ${limits.aiMessages} AI mesajı ve ${limits.products} ürün alırsın.`;
+export function getPlanUpsellSummary(plan: PlanTier, locale: string) {
+  const marketing = getPlanMarketingCopy(plan, locale);
+  return marketing.summary;
 }

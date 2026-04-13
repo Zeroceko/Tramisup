@@ -197,6 +197,8 @@ model Task {
   /// (no OTHER bucket — tasks without a category are rejected at save time)
   category            String?
   status              TaskStatus       @default(TODO)
+  startedAt           DateTime?
+  completedAt         DateTime?
   priority            Priority         @default(MEDIUM)
   dueDate             DateTime?
   order               Int              @default(0)

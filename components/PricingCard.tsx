@@ -9,6 +9,8 @@ type PricingCardProps = {
   price: number;
   interval: "monthly" | "yearly";
   description: string;
+  bestFor: string;
+  upgradeNote: string;
   features: Feature[];
   cta: string;
   ctaHref: string;
@@ -23,6 +25,8 @@ export default function PricingCard({
   price,
   interval,
   description,
+  bestFor,
+  upgradeNote,
   features,
   cta,
   ctaHref,
@@ -87,6 +91,15 @@ export default function PricingCard({
         {description}
       </p>
 
+      <div className={`mt-4 rounded-[16px] border px-4 py-3 ${highlighted ? "border-white/10 bg-white/5" : "border-[#ececec] bg-[#fafafa]"}`}>
+        <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${highlighted ? "text-[#95dbda]" : "text-[#8a8fa0]"}`}>
+          {isEn ? "Best for" : "En uygun"}
+        </p>
+        <p className={`mt-1 text-[12px] leading-5 ${highlighted ? "text-[#d1d5db]" : "text-[#485062]"}`}>
+          {bestFor}
+        </p>
+      </div>
+
       {ctaDisabled ? (
         <button
           type="button"
@@ -138,6 +151,10 @@ export default function PricingCard({
           </div>
         ))}
       </div>
+
+      <p className={`mt-6 text-[12px] leading-5 ${highlighted ? "text-[#9ca3af]" : "text-[#667085]"}`}>
+        {upgradeNote}
+      </p>
     </div>
   );
 }

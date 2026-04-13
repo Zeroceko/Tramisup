@@ -40,6 +40,8 @@ interface Task {
   dueDate: Date | null;
   status: TaskStatus;
   priority: Priority;
+  startedAt?: Date | string | null;
+  completedAt?: Date | string | null;
   launchChecklistItem?: LinkedChecklist | null;
 }
 
@@ -131,6 +133,29 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     if (!d) return false;
     const dd = new Date(d);
     return dd >= todayStart && dd < tomorrowStart;
+  }
+
+  function formatTimestamp(value?: Date | string | null) {
+    if (!value) return null;
+
+    return new Intl.DateTimeFormat(isEn ? "en-US" : "tr-TR", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  }
+
+  function getLifecycleMeta(task: Task) {
+    if (task.status === "IN_PROGRESS" && task.startedAt) {
+      return `${isEn ? "Started" : "Başladı"} ${formatTimestamp(task.startedAt)}`;
+    }
+
+    if (task.status === "DONE" && task.completedAt) {
+      return `${isEn ? "Completed" : "Tamamlandı"} ${formatTimestamp(task.completedAt)}`;
+    }
+
+    return null;
   }
 
   // Category filter application — uses effectiveCategory so the new
@@ -530,6 +555,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     const done = task.status === "DONE";
     const structured = resolveStructured(task);
     const summary = structured.nextAction || structured.why || task.description || null;
+    const lifecycleMeta = getLifecycleMeta(task);
 
     return (
       <div
@@ -606,6 +632,12 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
             {summary && (
               <p className={`mt-1 line-clamp-2 text-[13px] leading-5 ${done ? "text-[#b0b7c3]" : "text-[#666d80]"}`}>
                 {normalizeTurkishText(summary)}
+              </p>
+            )}
+
+            {lifecycleMeta && (
+              <p className={`mt-2 text-[11px] font-medium ${done ? "text-[#9ea6b4]" : "text-[#7b8393]"}`}>
+                {lifecycleMeta}
               </p>
             )}
           </div>
@@ -987,6 +1019,8 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                   const cat = effectiveCategory(detailTask);
                   const catCfg = cat ? CATEGORY_CONFIG[cat] : null;
                   const priCfg = PRIORITY_CONFIG[detailTask.priority];
+                  const startedLabel = formatTimestamp(detailTask.startedAt);
+                  const completedLabel = formatTimestamp(detailTask.completedAt);
                   const sections: Array<{ label: string; value: string | null; accent: string }> = [
                     {
                       label: isEn ? "Why it matters" : "Neden önemli",
@@ -1030,6 +1064,31 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
                           </span>
                         ) : null}
                       </div>
+
+                      {(startedLabel || completedLabel) && (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {startedLabel ? (
+                            <div className="rounded-[14px] border border-[#ece8df] bg-[#fcfbf8] px-4 py-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                                {isEn ? "Started" : "Başladı"}
+                              </p>
+                              <p className="mt-1 text-[14px] font-medium text-[#0d0d12]">
+                                {startedLabel}
+                              </p>
+                            </div>
+                          ) : null}
+                          {completedLabel ? (
+                            <div className="rounded-[14px] border border-[#ece8df] bg-[#fcfbf8] px-4 py-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b8393]">
+                                {isEn ? "Completed" : "Tamamlandı"}
+                              </p>
+                              <p className="mt-1 text-[14px] font-medium text-[#0d0d12]">
+                                {completedLabel}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
 
                       {sections.map((section) =>
                         section.value ? (

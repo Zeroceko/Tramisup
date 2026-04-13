@@ -7,6 +7,7 @@ import {
   reverseCompletionEffects,
 } from "@/lib/task-completion-effects";
 import { emitTaskLifecycleEvent } from "@/lib/task-events";
+import { buildTaskStatusTransition } from "@/lib/task-status-transition";
 
 export async function PATCH(
   request: Request,
@@ -24,7 +25,12 @@ export async function PATCH(
     // Verify ownership; include linked checklist with full metadata
     const existing = await prisma.task.findFirst({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        productId: true,
+        status: true,
+        startedAt: true,
+        completedAt: true,
         product: { select: { userId: true } },
         launchChecklistItem: {
           select: {
@@ -42,18 +48,24 @@ export async function PATCH(
     }
 
     const wasDone = existing.status === "DONE";
-    const wasInProgress = existing.status === "IN_PROGRESS";
+    const transition = buildTaskStatusTransition(
+      {
+        status: existing.status,
+        startedAt: existing.startedAt,
+        completedAt: existing.completedAt,
+      },
+      body.status,
+    );
     const isNowDone = body.status === "DONE";
-    const isNowInProgress = body.status === "IN_PROGRESS";
 
     const task = await prisma.task.update({
       where: { id },
-      data: { status: body.status },
+      data: transition.data,
     });
 
-    // ── Lifecycle instrumentation ──
-    // STARTED: anything → IN_PROGRESS (excluding the redundant IN_PROGRESS→IN_PROGRESS)
-    if (isNowInProgress && !wasInProgress) {
+    // Lifecycle instrumentation stays explicit so STARTED/REOPENED do not fire twice
+    // when completion cascades also run below.
+    if (transition.eventType === "STARTED") {
       await emitTaskLifecycleEvent({
         taskId: task.id,
         productId: task.productId,
@@ -61,16 +73,17 @@ export async function PATCH(
         metadata: { from: existing.status },
       });
     }
-    // COMPLETED / REOPENED handled below alongside the cascade.
 
     // ── Forward cascade: task completed ──
     if (isNowDone && !wasDone) {
-      await emitTaskLifecycleEvent({
-        taskId: task.id,
-        productId: task.productId,
-        eventType: "COMPLETED",
-        metadata: { from: existing.status, hadChecklistLink: !!existing.launchChecklistItem },
-      });
+      if (transition.eventType === "COMPLETED") {
+        await emitTaskLifecycleEvent({
+          taskId: task.id,
+          productId: task.productId,
+          eventType: "COMPLETED",
+          metadata: { from: existing.status, hadChecklistLink: !!existing.launchChecklistItem },
+        });
+      }
       const effects = await computeCompletionEffects(
         existing.productId,
         existing.launchChecklistItem
@@ -80,12 +93,14 @@ export async function PATCH(
 
     // ── Reverse cascade: task un-completed ──
     if (!isNowDone && wasDone) {
-      await emitTaskLifecycleEvent({
-        taskId: task.id,
-        productId: task.productId,
-        eventType: "REOPENED",
-        metadata: { to: body.status },
-      });
+      if (transition.eventType === "REOPENED") {
+        await emitTaskLifecycleEvent({
+          taskId: task.id,
+          productId: task.productId,
+          eventType: "REOPENED",
+          metadata: { to: body.status },
+        });
+      }
       const checklistReverted = await reverseCompletionEffects(
         existing.launchChecklistItem
       );
