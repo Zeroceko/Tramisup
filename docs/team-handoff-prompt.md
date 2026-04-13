@@ -25,10 +25,10 @@ FIRST: Read these documents in order before touching any code.
 
 ---
 
-PRODUCTION STATE (as of 13 April 2026)
+PRODUCTION STATE (as of 13 April 2026, evening)
 
 - Production domain: https://tiramisup.app
-- Current active main line includes: 53b5e694, 72e598ba, e3e5f79c, beb5022e, 21dcae07, 947d392c, e6d1954f, 5232e299
+- Current active main line includes all commits through e40b9cab
 - main auto-deploys to Vercel
 - Public landing: waitlist-first (intentional — do not change without explicit product decision)
 - Signup: no access code required, email verification required
@@ -36,7 +36,8 @@ PRODUCTION STATE (as of 13 April 2026)
 - Default locale: English. Turkish is secondary.
 - Board is directly reachable from the authenticated header as a secondary CTA.
 - Board rows and agent suggestion rows now use a shared preview-first UX.
-- Free-form agent chat is currently unstable in production: user-written questions can fail with generic retry copy because `/api/agent/chat` is intermittently returning 500.
+- Free-form agent chat is now working. Root cause was a missing AgentMessage table in the production DB (schema updated but prisma db push was not run). Table has been pushed and the route is hardened.
+- Plan upgrade from the product limit gate now returns the user to the product creation flow (not settings).
 - Secret files were removed from git tracking on 13 April 2026, and Gemini/OpenAI Vercel env keys were rotated after exposed secrets were found in the public repo.
 
 ---
@@ -46,9 +47,9 @@ LOCAL WORKSPACE STATE
 The local workspace is no longer "ahead by three uncommitted fixes". Those fixes already shipped, together with later board, suggestion, navigation, and security changes.
 
 Treat the current workspace as:
-  - production code with recent follow-up UX changes already merged
+  - production code with all critical bugs fixed and deployed
   - a live repo where local secret files must not be recommitted
-  - a codebase whose top unresolved bug is free-form agent chat failing in production
+  - a codebase ready for product validation and real user testing
 
 Before doing new feature work, run:
   npx tsc --noEmit
@@ -102,11 +103,7 @@ OPEN PRODUCT ISSUES (from founder simulation)
 
 These are not hypothetical. They came from using the live app as a real founder with an upgraded account.
 
-1. Free-form agent chat is failing
-   - User-written questions in Overview / Launch / Growth can show the generic retry copy
-   - This is masking a server-side failure in /api/agent/chat
-   - Suggestion cards and task creation still work; the break is specifically in free-form chat
-   - First action for the new team: inspect Vercel logs for /api/agent/chat and stop hiding the true server error in the client
+1. ~~Free-form agent chat is failing~~ FIXED (missing AgentMessage table pushed to production + route hardened)
 
 2. AARRR onboarding exit feels broken
    - Wizard can remain on "Önerilen AARRR kurulumun" step after submission
@@ -155,13 +152,12 @@ The new team should treat product validation as the first sprint, not the second
 
 RECOMMENDED FIRST SPRINT FOR NEW TEAM
 
-1. Commit the three local fixes and deploy to production
-2. Do a full founder simulation with a fresh account — document every point of confusion
-3. Fix the onboarding exit and the metrics setup/entry state confusion
-4. Re-run the simulation and validate: onboarding exits cleanly → metrics setup state is clear → first save propagates to Growth → agent cards appear
-5. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
-6. Run 5 external users through the product — observe, do not explain
-7. Decide: is the AI recommendation quality good enough to charge for?
+1. Do a full founder simulation with a fresh account — document every point of confusion
+2. Fix the onboarding exit and the metrics setup/entry state confusion
+3. Re-run the simulation and validate: onboarding exits cleanly → metrics setup state is clear → first save propagates to Growth → agent cards appear
+4. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
+5. Run 5 external users through the product — observe, do not explain
+6. Decide: is the AI recommendation quality good enough to charge for?
 
 ---
 

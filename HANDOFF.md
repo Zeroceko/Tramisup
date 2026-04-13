@@ -1,10 +1,10 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 13 April 2026
+**Date:** 13 April 2026 (updated late 13 April)
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current active `main` line:** includes `53b5e694`, `72e598ba`, `e3e5f79c`, `beb5022e`, `21dcae07`, `947d392c`, `e6d1954f`, `5232e299`
-**Status:** Production baseline is live, but handoff priority has changed: the app now includes recent navigation / board / suggestion improvements, an active free-form agent chat regression, and a security cleanup after exposed secrets were discovered in the public repo history.
+**Current active `main` line:** includes all commits through `e40b9cab`
+**Status:** Production is live. The agent chat 500 bug has been fixed (missing `AgentMessage` table pushed to production DB + route hardened). Plan upgrade now returns the user to the product creation flow instead of settings. All previously listed security cleanup is in place.
 
 ---
 
@@ -51,11 +51,15 @@ As of **13 April 2026**, these are true in production:
 - **Board access is now directly visible in the authenticated header** as a secondary CTA.
 - **Board rows and agent suggestion rows now share the same preview-first interaction model**: compact row, preview surface, explicit create/action control.
 - **Overview / Launch / Growth shell scrolling is fixed**: left agent column stays fixed-height while right content pane scrolls independently.
-- **Free-form agent chat is currently unstable in production**: user-written messages can fail with the generic UI copy "Bir sorun oluştu, tekrar dener misin?" because `/api/agent/chat` is intermittently returning 500. This is the top unresolved product bug at handoff time.
+- **Free-form agent chat is fixed**: the root cause was a missing `AgentMessage` table in the production DB (schema updated but `prisma db push` was not run). The table has been pushed and the `/api/agent/chat` route is now fully hardened — every non-critical DB operation (message history, limit check, context build, action execution, message persistence, usage recording) is wrapped in independent try/catch so a single DB failure never aborts the response.
+- **Plan upgrade → product creation flow is fixed**: when a user hits the product limit on `/products/new`, upgrades their plan, and returns, they are now correctly redirected to onboarding instead of landing on the settings page. The `next` param flows through pricing → checkout → back to `/products/new` → onboarding.
 - **Security cleanup shipped on 13 April 2026**: local secret files were removed from git tracking, and Gemini/OpenAI production env keys were rotated in Vercel after exposed keys were found in the public repo.
 
 Recent shipped commits on the active line:
-- `53b5e694` — stop tracking local secrets (`.env.prod`, OAuth client secret JSON, e2e auth artifact, supabase temp file) and remove hardcoded production DB URLs from seed scripts
+- `e40b9cab` — harden agent/chat against missing AgentMessage table and DB timeouts
+- `a49a57ce` — return to onboarding after upgrade from products/new limit gate
+- `f87af053` — fix agent chat intermittent 500s by isolating non-critical DB writes
+- `53b5e694` — stop tracking local secrets and remove hardcoded production DB URLs from seed scripts
 - `72e598ba` — tighten free-form agent chat guidance and action defaults
 - `e3e5f79c` — make Board access visible across authenticated app surfaces
 - `beb5022e` — unify board task interactions with preview-first UX
@@ -65,8 +69,6 @@ Recent shipped commits on the active line:
 - `5232e299` — fix right-side content scrolling in Overview / Launch / Growth shell
 - `0f9fc76a` — fix growth goals render, growth route isolation, launched dashboard status copy, trend delta calculation, growth checklist completion bridge
 - `9c3a1e58` — ship launch flow follow-up fixes: launch modal hint/pulse, route boundary remount keys, agent suggestion refresh, metric funnel warning
-- `27dfd71d` — allow `chef@tiramisup.app` admin access for `/[locale]/admin/waitlist`
-- `eded8530` — finish Trust Sprint 2 hardening and verification
 
 ---
 
@@ -80,9 +82,10 @@ What is now true:
 - hybrid agent suggestions are in the active line
 - the security cleanup that stops tracking local secret files is in the active line
 
-What is still open:
-- free-form agent chat is returning 500s intermittently in production
-- the generic client copy hides the real server error, so the next team must inspect `/api/agent/chat` and Vercel logs first
+What was fixed on 13 April (late):
+- free-form agent chat 500 → root cause was missing `AgentMessage` table in production DB; table pushed, route fully hardened
+- plan upgrade dead-end → checkout now returns user to the flow that triggered the upgrade via `next` param
+- `normalizeStoredLaunchChecklistPriorities` was running unnecessarily on every agent context build regardless of stage → now only runs for launch agent or PRE_LAUNCH products
 
 ### Pre-existing test failures
 8 tests in `__tests__/api/waitlist/admin.test.ts` fail with 401. This remains a pre-existing auth mock issue unrelated to the current handoff-critical bugs. All other tests are expected to pass.
@@ -115,12 +118,10 @@ These came from using the live app as a real founder with an upgraded account �
 - Observed on `/products/new`, `/growth`, `/dashboard` during production simulation
 - Root cause not isolated — next team should reproduce with network capture and trace the failing request
 
-### 6. Free-form agent chat currently fails on user-written questions
-- Repro: open Overview / Launch / Growth agent panel, type a real question, submit
-- Current user-visible result: generic retry copy (`Bir sorun oluştu, tekrar dener misin?`)
-- Actual shape: client catch path is masking a server-side failure from `/api/agent/chat`
-- Important: suggestion cards and board/task creation are still working; this is specifically the free-form chat path
-- Likely starting points: `app/api/agent/chat/route.ts`, `components/AgentChatPanel.tsx`, Vercel logs for `/api/agent/chat`
+### 6. ~~Free-form agent chat currently fails on user-written questions~~ FIXED
+- Root cause: `AgentMessage` table existed in the Prisma schema but had never been pushed to the production Supabase DB. Every `listStoredAgentMessages` call threw "table does not exist", which was caught only by the outer 500 handler.
+- Fix: `prisma db push` run against production on 13 April, plus route hardened so every non-critical DB operation has its own try/catch and never aborts the AI response.
+- Relevant commits: `f87af053`, `e40b9cab`
 
 ---
 
@@ -142,13 +143,12 @@ A fresh user creating a product → finishing onboarding → reaching a useful G
 
 ## 5. Recommended First Sprint for New Team
 
-1. Commit the three local fixes and deploy to production
-2. Do a full founder simulation with a fresh account — document every point of confusion
-3. Fix the onboarding exit and the metrics setup/entry state confusion (Issues 1 and 2 above)
-4. Re-run simulation: onboarding exits cleanly → metrics setup state is clear → first save propagates to Growth → agent cards appear
-5. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
-6. Run 5 external users through the product — observe, do not explain
-7. Decide: is the AI recommendation quality good enough to charge for?
+1. Do a full founder simulation with a fresh account — document every point of confusion
+2. Fix the onboarding exit and the metrics setup/entry state confusion (Issues 1 and 2 above)
+3. Re-run simulation: onboarding exits cleanly → metrics setup state is clear → first save propagates to Growth → agent cards appear
+4. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
+5. Run 5 external users through the product — observe, do not explain
+6. Decide: is the AI recommendation quality good enough to charge for?
 
 ---
 
@@ -270,7 +270,7 @@ Intake answers stored in `Product.additionalContext.growthCheckin`.
 - **`Product.launchGoals`**: legacy field, do not build new logic on it
 - **Dashboard first impression**: what a user sees on first login after onboarding is not sharp enough
 - **Email delivery**: `RESEND_FROM_EMAIL` must be set in Vercel env to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` — causes spam filter delays. Domain `tiramisup.app` is already verified in Resend.
-- **Free-form agent chat reliability**: the compact chat/policy work landed, but `/api/agent/chat` is still intermittently failing in production and must be stabilized before more AI UX work ships
+- **Free-form agent chat**: fixed — but AI response quality with the current Gemini→Qwen fallback chain in `BrandLib/ai-client.ts` has not been validated with real founders. The provider priority in `BrandLib/ai-client.ts` (Gemini first) differs from the canonical chain in `lib/founder-coach.ts` (Qwen first) — unify if this becomes a quality issue
 - **Public repo secret history**: tracking of local secret files has been stopped, but any previously exposed keys must still be treated as compromised and rotated outside the repo
 
 ---
@@ -284,6 +284,8 @@ Current schema includes live support for:
 - `User.emailVerified` / `User.verificationToken`
 - `Waitlist.emailVerifiedAt` / `Waitlist.verificationToken`
 - `MetricSetup` / `MetricEntry` tables
+- `AgentMessage` table (chat history persistence — pushed to production 13 April)
+- `Subscription` / `UsageEvent` tables (plan limits and usage tracking)
 - Structured task columns and `TaskEvent`
 
 For a new environment:
@@ -366,6 +368,7 @@ Before shipping any meaningful change:
 - [ ] Settings/account language change moves to the correct locale route
 - [ ] Agent panel cards create tasks when clicked — not chat messages
 - [ ] Free-form agent chat in Overview / Launch / Growth answers a user-written question without returning the generic retry copy
+- [ ] Hit product limit → upgrade plan → returned to onboarding (not settings)
 - [ ] Right content pane scrolls correctly on Overview / Launch / Growth
 - [ ] Metrics shows a coherent setup state before daily entry for a fresh launched product
 - [ ] First metric save is reflected by Growth — Growth no longer says "no data"

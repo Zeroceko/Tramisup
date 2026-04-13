@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current active main line: `53b5e694` plus recent product UX commits through `72e598ba`
-- Last docs refresh: `13 April 2026`
+- Current active main line: through `e40b9cab` (late 13 April agent chat fix + upgrade flow fix)
+- Last docs refresh: `13 April 2026` (evening)
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -32,11 +32,15 @@
 - Board is directly reachable from the authenticated header as a secondary CTA.
 - Board/task rows and agent suggestion rows now use a shared preview-first interaction model.
 - Overview / Launch / Growth keep the agent column fixed while the right content pane scrolls independently.
-- Free-form agent chat is currently unstable in production: user-typed questions can fail with the generic retry copy because `/api/agent/chat` is intermittently returning 500.
+- Free-form agent chat is now working: the root cause (missing `AgentMessage` table in production DB) was fixed on 13 April. The route is also hardened so every non-critical DB operation is independently try/caught.
+- Plan upgrade from product limit gate now returns the user to the product creation flow (not settings) via a `next` query param through pricing → checkout.
 - Secret files are no longer tracked in git, and Gemini/OpenAI production env keys were rotated on 13 April 2026 after exposed secrets were found in the public repo.
 
 ### Recent shipped commits
 
+- `e40b9cab` — harden agent/chat against missing AgentMessage table and DB timeouts
+- `a49a57ce` — return to onboarding after upgrade from products/new limit gate
+- `f87af053` — fix agent chat intermittent 500s by isolating non-critical DB writes
 - `53b5e694` — security cleanup: stop tracking local secrets and remove hardcoded production DB URLs from seed scripts
 - `72e598ba` — tighten free-form agent chat guidance and action defaults
 - `e3e5f79c` — make Board access visible across app surfaces
@@ -151,13 +155,11 @@ The app workspace is a **production repo with recent follow-up work already merg
 
 These are not theoretical risks. They came from using the live app with a real upgraded test account as if we were a founder.
 
-### 1. Free-form agent chat fails on user-written questions
+### 1. ~~Free-form agent chat fails on user-written questions~~ FIXED
 
-- Repro: ask a real free-form question in Overview / Launch / Growth agent chat
-- Current result: generic retry copy in the client
-- Actual shape: `components/AgentChatPanel.tsx` catch path is masking a server failure from `/api/agent/chat`
-- Suggestion cards and task creation still work; the break is specifically in the free-form chat path
-- First debugging step for the next team: inspect Vercel logs for `/api/agent/chat` and stop hiding the server error behind generic UI copy
+- Root cause: `AgentMessage` table was in the Prisma schema but had no migration and was never pushed to production DB. Every `listStoredAgentMessages` call threw "table does not exist".
+- Fix: `prisma db push` run against production + route hardened with independent try/catch around every non-critical DB operation.
+- Commits: `f87af053`, `e40b9cab`
 
 ### 2. Repeated browser-side `500` resource errors
 
