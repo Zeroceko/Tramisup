@@ -339,21 +339,13 @@ export default function AgentChatPanel({
             .map((a) => a.replace("task_created:", ""));
           if (taskTitles.length > 0) onTasksCreated(taskTitles);
         }
-      } catch (error) {
-        const rawMessage = error instanceof Error ? error.message.trim() : "";
-        const message = !rawMessage
-          ? copy.genericError
-          : /failed to fetch|networkerror|load failed/i.test(rawMessage)
-            ? (isEn
-                ? "The agent could not be reached right now. Try again in a few seconds."
-                : "Agent'a şu an ulaşılamadı. Birkaç saniye sonra tekrar dene.")
-            : rawMessage;
+      } catch {
         setMessages((prev) => [
           ...prev,
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: message,
+            content: copy.genericError,
           },
         ]);
       } finally {
