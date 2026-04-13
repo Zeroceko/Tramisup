@@ -24,6 +24,132 @@ import {
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
+function parseContextSummary(summary: string): Record<string, unknown> {
+  try {
+    return JSON.parse(summary) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function compactMessage(message: string): string {
+  const normalized = message.replace(/\s+/g, " ").trim();
+  if (!normalized) return normalized;
+
+  const sentences = normalized
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (sentences.length <= 3 && normalized.length <= 320) {
+    return normalized;
+  }
+
+  const compact = sentences.slice(0, 3).join(" ").trim();
+  if (compact.length <= 320) return compact;
+  return `${compact.slice(0, 317).trimEnd()}...`;
+}
+
+function detectWeakEvidence(agentType: AgentType, contextSummary: string, productStage: string): boolean {
+  const context = parseContextSummary(contextSummary);
+
+  if (agentType === "growth") {
+    const metricSetup = context.metric_setup as { has_setup?: boolean } | undefined;
+    const entries =
+      typeof context.data_entries_last_14_days === "number" ? context.data_entries_last_14_days : 0;
+    return metricSetup?.has_setup !== true || entries < 3;
+  }
+
+  if (agentType === "overview" && productStage !== "PRE_LAUNCH") {
+    const metricSetup = context.metric_setup as { has_setup?: boolean } | undefined;
+    const entries =
+      typeof context.data_entries_last_7_days === "number" ? context.data_entries_last_7_days : 0;
+    return metricSetup?.has_setup !== true || entries < 3;
+  }
+
+  return false;
+}
+
+function buildDefaultMessageActions(
+  response: AgentResponse,
+  agentType: AgentType,
+  locale: "en" | "tr",
+  contextSummary: string,
+  productStage: string,
+): AgentResponse["messageActions"] {
+  if (response.messageActions.length > 0) return response.messageActions;
+
+  const weakEvidence = detectWeakEvidence(agentType, contextSummary, productStage);
+
+  if (weakEvidence) {
+    if (agentType === "growth" || productStage !== "PRE_LAUNCH") {
+      return [{
+        type: "open_tracking",
+        label: locale === "en" ? "Open tracking setup" : "Tracking kurulumunu aç",
+      }];
+    }
+
+    return [{
+      type: "open_checklist",
+      label: locale === "en" ? "Open launch checklist" : "Launch checklist'ini aç",
+    }];
+  }
+
+  const createTaskAction = response.actions.find((action) => action.type === "create_task");
+  if (createTaskAction) {
+    return [{
+      type: "create_task",
+      label: locale === "en" ? "Create this task" : "Bu görevi oluştur",
+      payload: createTaskAction.payload,
+    }];
+  }
+
+  const actionableSuggestion = response.suggestions.find((suggestion) => {
+    if (typeof suggestion === "string") return false;
+    if (!suggestion || typeof suggestion !== "object") return false;
+    if (suggestion.intent && suggestion.intent !== "create_task") return false;
+    return Boolean(suggestion.payload?.title || suggestion.label);
+  });
+
+  if (actionableSuggestion && typeof actionableSuggestion === "object") {
+    return [{
+      type: "create_task",
+      label: locale === "en" ? "Create suggested task" : "Önerilen görevi oluştur",
+      payload: actionableSuggestion.payload ?? {
+        title: actionableSuggestion.label,
+        description: actionableSuggestion.description ?? undefined,
+        priority: actionableSuggestion.priority,
+      },
+    }];
+  }
+
+  if (agentType === "launch" || productStage === "PRE_LAUNCH") {
+    return [{
+      type: "open_checklist",
+      label: locale === "en" ? "Open launch checklist" : "Launch checklist'ini aç",
+    }];
+  }
+
+  return [];
+}
+
+function normalizeAgentResponse(
+  response: AgentResponse,
+  agentType: AgentType,
+  locale: "en" | "tr",
+  contextSummary: string,
+  productStage: string,
+): AgentResponse {
+  return {
+    ...response,
+    message: compactMessage(response.message),
+    messageActions: buildDefaultMessageActions(response, agentType, locale, contextSummary, productStage),
+    suggestions: normalizeSuggestions(response.suggestions, locale)
+      .filter((suggestion) => suggestion.intent !== "ask")
+      .slice(0, 3),
+  };
+}
+
 function normalizeSuggestions(rawSuggestions: unknown, locale: "en" | "tr"): AgentSuggestion[] {
   if (!Array.isArray(rawSuggestions)) return [];
 
@@ -244,12 +370,22 @@ export async function POST(request: Request) {
     try {
       const raw = await generateTextFallback(systemPrompt, userPrompt, `agent:${agentType}`);
       const parsed = parseAgentResponse(raw);
-      agentResponse = parsed
-        ? { ...parsed, suggestions: normalizeSuggestions(parsed.suggestions, locale) }
-        : buildFallbackResponse(agentType, locale);
+      agentResponse = normalizeAgentResponse(
+        parsed ?? buildFallbackResponse(agentType, locale),
+        agentType as AgentType,
+        locale,
+        agentContext.contextSummary,
+        agentContext.productStage,
+      );
     } catch (err) {
       console.error("[agent/chat] AI call failed:", err);
-      agentResponse = buildFallbackResponse(agentType, locale);
+      agentResponse = normalizeAgentResponse(
+        buildFallbackResponse(agentType, locale),
+        agentType as AgentType,
+        locale,
+        agentContext.contextSummary,
+        agentContext.productStage,
+      );
     }
 
     // Execute any actions (e.g. create_task)
