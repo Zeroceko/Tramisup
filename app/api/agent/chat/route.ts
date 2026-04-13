@@ -330,12 +330,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const storedMessages = await listStoredAgentMessages(
-      prisma,
-      session.user.id,
-      productId,
-      agentType as AgentType,
-    );
+    let storedMessages: Awaited<ReturnType<typeof listStoredAgentMessages>> = [];
+    try {
+      storedMessages = await listStoredAgentMessages(
+        prisma,
+        session.user.id,
+        productId,
+        agentType as AgentType,
+      );
+    } catch (histErr) {
+      console.error("[agent/chat] Failed to load message history (non-fatal):", histErr instanceof Error ? histErr.message : histErr);
+    }
     const history: AgentMessage[] = storedMessages.length > 0
       ? storedMessages.map((entry) => ({
           role: entry.role,
@@ -345,23 +350,40 @@ export async function POST(request: Request) {
         ? body.conversationHistory
         : [];
 
-    const messageLimit = await checkLimit(session.user.id, "aiMessages", 1);
-    if (!messageLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: `Agent chat limit reached (${messageLimit.used}/${messageLimit.limit}). Upgrade to continue chatting.`,
-          code: "AI_MESSAGE_LIMIT_REACHED",
-          resource: "aiMessages",
-          used: messageLimit.used,
-          limit: messageLimit.limit,
-          upgradeUrl: `/${locale}/pricing`,
-        },
-        { status: 403 }
-      );
+    try {
+      const messageLimit = await checkLimit(session.user.id, "aiMessages", 1);
+      if (!messageLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Agent chat limit reached (${messageLimit.used}/${messageLimit.limit}). Upgrade to continue chatting.`,
+            code: "AI_MESSAGE_LIMIT_REACHED",
+            resource: "aiMessages",
+            used: messageLimit.used,
+            limit: messageLimit.limit,
+            upgradeUrl: `/${locale}/pricing`,
+          },
+          { status: 403 }
+        );
+      }
+    } catch (limitErr) {
+      console.error("[agent/chat] Failed to check message limit (non-fatal):", limitErr instanceof Error ? limitErr.message : limitErr);
     }
 
     // Build context and prompts
-    const agentContext = await buildAgentContext(agentType as AgentType, productId, locale);
+    let agentContext: Awaited<ReturnType<typeof buildAgentContext>>;
+    try {
+      agentContext = await buildAgentContext(agentType as AgentType, productId, locale);
+    } catch (ctxErr) {
+      console.error("[agent/chat] Failed to build agent context:", ctxErr instanceof Error ? ctxErr.message : ctxErr);
+      agentContext = {
+        agentType: agentType as AgentType,
+        productName: "your product",
+        productDescription: "",
+        productStage: "PRE_LAUNCH",
+        contextSummary: "{}",
+        locale,
+      };
+    }
     const systemPrompt = buildAgentSystemPrompt(agentContext);
     const userPrompt = buildAgentUserPrompt(history, message);
 
@@ -389,12 +411,18 @@ export async function POST(request: Request) {
     }
 
     // Execute any actions (e.g. create_task)
-    const { executedActions } = await executeActions(
-      agentResponse.actions,
-      productId,
-      session.user.id,
-      locale,
-    );
+    let executedActions: string[] = [];
+    try {
+      const result = await executeActions(
+        agentResponse.actions,
+        productId,
+        session.user.id,
+        locale,
+      );
+      executedActions = result.executedActions;
+    } catch (actErr) {
+      console.error("[agent/chat] Failed to execute actions (non-fatal):", actErr instanceof Error ? actErr.message : actErr);
+    }
     const messageActions = resolveMessageActionsForClient(
       agentResponse.messageActions,
       locale,
