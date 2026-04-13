@@ -2,11 +2,15 @@ import { PrismaClient, LaunchCategory, GrowthCategory, Priority, TaskStatus, Met
 import bcrypt from "bcryptjs";
 
 async function main() {
-  const PROD_URL = "postgresql://postgres.ojecebxxcbxrofnbkaae:IxK8QJnDQNjc7Zpf@aws-1-eu-west-3.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
+  const databaseUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  if (!databaseUrl) {
+    throw new Error("Set DATABASE_URL or DIRECT_URL before running this script.");
+  }
+
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: PROD_URL,
+        url: databaseUrl,
       },
     },
   });
