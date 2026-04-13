@@ -70,7 +70,7 @@ export default async function ProductsNewPage({
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
-              href={`/${locale}/pricing`}
+              href={`/${locale}/pricing?next=${encodeURIComponent(`/${locale}/products/new`)}`}
               className="inline-flex h-11 items-center justify-center rounded-full bg-[#0d0d12] px-6 text-[14px] font-semibold text-white transition hover:bg-[#23232b]"
             >
               {isEn ? "See plans" : "Paketleri gör"}

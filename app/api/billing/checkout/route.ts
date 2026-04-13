@@ -55,7 +55,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(
-    new URL(`/${locale}/settings?section=billing&checkout=success`, req.url),
-  );
+  const next = searchParams.get("next") ?? "";
+  // Only allow relative same-site paths
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : null;
+  const redirectPath = safeNext ?? `/${locale}/settings?section=billing&checkout=success`;
+
+  return NextResponse.redirect(new URL(redirectPath, req.url));
 }
