@@ -28,6 +28,7 @@
       <button class="nav-tab active" onclick="show('invite', event)">Davet</button>
       <button class="nav-tab" onclick="show('verify', event)">Doğrulama</button>
       <button class="nav-tab" onclick="show('waitlist', event)">Waitlist</button>
+      <button class="nav-tab" onclick="show('reset', event)">Şifre Sıfırlama</button>
     </div>
   </div>
 
@@ -46,6 +47,11 @@
     <div class="template" id="tpl-waitlist">
       <p class="label">sendWaitlistVerificationEmail — lib/email-verification.ts</p>
       <iframe class="email-frame" id="frame-waitlist" srcdoc="" style="height:560px;"></iframe>
+    </div>
+
+    <div class="template" id="tpl-reset">
+      <p class="label">sendPasswordResetEmail — lib/password-reset.ts</p>
+      <iframe class="email-frame" id="frame-reset" srcdoc="" style="height:560px;"></iframe>
     </div>
 
   </div>
@@ -151,6 +157,15 @@ ${COPYRIGHT}
       VERIFY_URL,
       'Buton çalışmıyor mu? Bu bağlantıyı kopyala:',
       'Tiramisup hesabı oluşturmadıysan bu e-postayı yoksay.'
+    );
+
+    document.getElementById('frame-reset').srcdoc = makeTpl(
+      'Şifreni sıfırla',
+      'Şifreni sıfırlamak için aşağıdaki butona tıkla. Bu bağlantı 1 saat boyunca geçerli olacak.',
+      'Şifremi sıfırla →',
+      BASE + '/tr/reset-password?token=abc123demo',
+      'Buton çalışmıyor mu? Bu bağlantıyı kopyala:',
+      "Bu isteği sen yapmadıysan bu email'i güvenle görmezden gelebilirsin."
     );
 
     document.getElementById('frame-waitlist').srcdoc = makeTpl(
