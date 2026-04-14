@@ -56,6 +56,13 @@ function statusBadge(status: string | null) {
   return "bg-[#fff3d7] text-[#8a6400]";
 }
 
+function stageAccent(status: string | null) {
+  const normalized = (status ?? "").toUpperCase();
+  if (normalized === "GROWING") return "from-[#e8fff1] to-[#f8fffb] border-[#ccefd8]";
+  if (normalized === "LAUNCHED") return "from-[#effcfc] to-[#fbffff] border-[#cceceb]";
+  return "from-[#fff8fb] to-[#fffdfd] border-[#f0dbe7]";
+}
+
 export default function ProductsGrid({
   products,
   locale,
@@ -94,10 +101,23 @@ export default function ProductsGrid({
         {/* New product card */}
         <Link
           href={`/${locale}/products/new`}
-          className="flex min-h-[180px] items-center justify-center rounded-[15px] border-2 border-dashed border-[#ffd7ef] bg-white transition hover:border-[#f5c8e4] hover:bg-[#fff8fc]"
+          className="group flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[26px] border border-dashed border-[#f2bfd9] bg-[radial-gradient(circle_at_top,_rgba(255,215,239,0.7),_transparent_35%),linear-gradient(180deg,_#fff9fc_0%,_#ffffff_100%)] p-6 transition hover:-translate-y-0.5 hover:border-[#e6a8cb] hover:shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#ffd7ef] text-[22px] font-light text-[#c8a0b8]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#f0bfd8] bg-white text-[28px] font-light text-[#c581a8] shadow-[0_10px_24px_rgba(23,20,31,0.06)]">
             +
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
+              {locale === "en" ? "New workspace" : "Yeni workspace"}
+            </p>
+            <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
+              {locale === "en" ? "Create another product" : "Yeni bir ürün oluştur"}
+            </p>
+            <p className="mt-2 text-[14px] leading-6 text-[#5e6678]">
+              {locale === "en"
+                ? "Open a fresh founder workspace for a new idea, launch, or growth bet."
+                : "Yeni bir fikir, launch ya da growth denemesi için temiz bir founder workspace aç."}
+            </p>
           </div>
         </Link>
 
@@ -108,17 +128,24 @@ export default function ProductsGrid({
           return (
             <div
               key={product.id}
-              className={`relative rounded-[15px] border bg-white p-5 transition ${
-                isActive ? "border-[#95dbda] shadow-sm" : "border-[#e8e8e8] hover:border-[#d0d0d0]"
+              className={`relative overflow-hidden rounded-[26px] border bg-white p-5 transition ${
+                isActive
+                  ? "border-[#95dbda] shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
+                  : "border-[#e8e8e8] hover:-translate-y-0.5 hover:border-[#d9d2c8] hover:shadow-[0_18px_40px_rgba(23,20,31,0.06)]"
               }`}
             >
+              <div
+                className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${stageAccent(product.status)}`}
+                aria-hidden="true"
+              />
+
               {/* Header row */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="relative mb-4 flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-semibold text-[#0d0d12] truncate">
+                  <p className="text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12] truncate">
                     {product.name}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-[#666d80] line-clamp-2">
+                  <p className="mt-2 text-[13px] leading-6 text-[#5e6678] line-clamp-3">
                     {product.description || product.category || "—"}
                   </p>
                 </div>
@@ -179,36 +206,54 @@ export default function ProductsGrid({
               </div>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusBadge(product.status)}`}>
+              <div className="relative mb-5 flex flex-wrap gap-1.5">
+                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusBadge(product.status)}`}>
                   {getProductStatusLabel(product.status, locale) ?? "—"}
                 </span>
                 {product.category && (
-                  <span className="rounded-full bg-[#f0f0f0] px-2.5 py-0.5 text-[11px] font-medium text-[#666d80]">
+                  <span className="rounded-full bg-[#f3f4f7] px-3 py-1 text-[11px] font-medium text-[#666d80]">
                     {product.category}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="rounded-full bg-[#0d0d12] px-3 py-1 text-[11px] font-semibold text-white">
+                    {locale === "en" ? "Active now" : "Şu an aktif"}
                   </span>
                 )}
               </div>
 
               {/* Circular progress row */}
-              <div className="flex items-center gap-4 pt-3 border-t border-[#f0f0f0]">
-                <div className="flex items-center gap-2">
+              <div className="relative rounded-[20px] border border-[#f1eee8] bg-[#fcfbf9] p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+                    {locale === "en" ? "Execution readiness" : "Execution hazırlığı"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-5">
                   <div className="relative">
                     <CircleProgress value={product.launchPct} color="#ffd7ef" />
                     <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
                       {product.launchPct}%
                     </span>
                   </div>
-                  <span className="text-[12px] font-medium text-[#666d80]">Launch</span>
-                </div>
-                <div className="flex items-center gap-2">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#0d0d12]">Launch</p>
+                    <p className="text-[11px] text-[#8a8fa0]">
+                      {locale === "en" ? "Preparation depth" : "Hazırlık derinliği"}
+                    </p>
+                  </div>
                   <div className="relative">
                     <CircleProgress value={product.growthPct} color="#95dbda" />
                     <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
                       {product.growthPct}%
                     </span>
                   </div>
-                  <span className="text-[12px] font-medium text-[#666d80]">Growth</span>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#0d0d12]">Growth</p>
+                    <p className="text-[11px] text-[#8a8fa0]">
+                      {locale === "en" ? "Operating rhythm" : "İşletim ritmi"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -216,13 +261,19 @@ export default function ProductsGrid({
               <button
                 type="button"
                 onClick={() => handleActivate(product.id)}
-                className={`mt-4 w-full h-8 rounded-full text-[12px] font-semibold transition ${
+                className={`mt-4 h-11 w-full rounded-full text-[13px] font-semibold transition ${
                   isActive
                     ? "bg-[#95dbda] text-[#0d0d12]"
-                    : "bg-[#f6f6f6] text-[#666d80] hover:bg-[#ffd7ef] hover:text-[#0d0d12]"
+                    : "bg-[#f6f6f6] text-[#4f5668] hover:bg-[#ffd7ef] hover:text-[#0d0d12]"
                 }`}
               >
-                {isActive ? "Aktif ürün ✓" : "Aktif yap →"}
+                {isActive
+                  ? locale === "en"
+                    ? "Active product"
+                    : "Aktif ürün"
+                  : locale === "en"
+                    ? "Make active and open overview"
+                    : "Aktif yap ve overview aç"}
               </button>
             </div>
           );

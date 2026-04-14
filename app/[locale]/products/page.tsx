@@ -11,6 +11,7 @@ export default async function ProductsPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const isEn = locale === "en";
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
 
@@ -68,13 +69,105 @@ export default async function ProductsPage({
     };
   });
 
+  const liveCount = productItems.filter((product) => product.status === "LAUNCHED").length;
+  const growingCount = productItems.filter((product) => product.status === "GROWING").length;
+  const preLaunchCount = productItems.filter((product) => product.status === "PRE_LAUNCH").length;
+  const activeProduct = productItems.find((product) => product.id === activeProductId) ?? null;
+  const averageLaunchReadiness =
+    productItems.length > 0
+      ? Math.round(
+          productItems.reduce((sum, product) => sum + product.launchPct, 0) / productItems.length
+        )
+      : 0;
+  const averageGrowthReadiness =
+    productItems.length > 0
+      ? Math.round(
+          productItems.reduce((sum, product) => sum + product.growthPct, 0) / productItems.length
+        )
+      : 0;
+
   return (
-    <div>
-      <div className="mb-8">
-        <p className="text-[13px] text-[#666d80]">Ürünün büyümeyi destekleyecek kadar hazır mı?</p>
-        <h1 className="mt-0.5 text-[32px] font-bold text-[#0d0d12] tracking-[-0.03em]">
-          Your Products
-        </h1>
+    <div className="space-y-7">
+      <section className="overflow-hidden rounded-[30px] border border-[#eadfe6] bg-[radial-gradient(circle_at_top_left,_rgba(255,214,233,0.85),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(149,219,218,0.46),_transparent_30%),linear-gradient(135deg,_#fffafc_0%,_#fffdfb_52%,_#f6fbfb_100%)] p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d6a7b]">
+              {isEn ? "Product portfolio" : "Ürün portföyü"}
+            </p>
+            <h1 className="mt-3 text-[34px] font-bold tracking-[-0.04em] text-[#0d0d12] sm:text-[42px]">
+              {isEn ? "All your products, one operating view" : "Tüm ürünlerin, tek çalışma görünümünde"}
+            </h1>
+            <p className="mt-3 max-w-xl text-[15px] leading-7 text-[#5e6678]">
+              {isEn
+                ? "See which product is active, which one is launch-ready, and where growth execution still feels fragile."
+                : "Hangi ürünün aktif olduğunu, hangisinin launch'a yakın olduğunu ve hangi üründe growth execution tarafının hâlâ kırılgan kaldığını tek bakışta gör."}
+            </p>
+          </div>
+
+          <div className="rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-[0_18px_40px_rgba(23,20,31,0.06)] backdrop-blur-sm sm:min-w-[280px]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+              {isEn ? "Active focus" : "Aktif odak"}
+            </p>
+            <p className="mt-2 text-[18px] font-semibold text-[#0d0d12]">
+              {activeProduct?.name ?? (isEn ? "No active product yet" : "Henüz aktif ürün yok")}
+            </p>
+            <p className="mt-1 text-[13px] leading-6 text-[#666d80]">
+              {activeProduct
+                ? isEn
+                  ? `Launch readiness ${activeProduct.launchPct}%. Growth readiness ${activeProduct.growthPct}%.`
+                  : `Launch hazırlığı %${activeProduct.launchPct}. Growth hazırlığı %${activeProduct.growthPct}.`
+                : isEn
+                  ? "Pick one product as the active workspace so navigation and AI stay focused."
+                  : "Navigasyon ve AI odağı net kalsın diye bir ürünü aktif workspace olarak seç."}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-[22px] border border-[#ebe7df] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(23,20,31,0.04)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Total products" : "Toplam ürün"}
+          </p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">{productItems.length}</p>
+        </div>
+        <div className="rounded-[22px] border border-[#ebe7df] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(23,20,31,0.04)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Preparing" : "Hazırlanıyor"}
+          </p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">{preLaunchCount}</p>
+        </div>
+        <div className="rounded-[22px] border border-[#ebe7df] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(23,20,31,0.04)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Live" : "Yayında"}
+          </p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">{liveCount}</p>
+        </div>
+        <div className="rounded-[22px] border border-[#ebe7df] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(23,20,31,0.04)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Growing" : "Büyümede"}
+          </p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">{growingCount}</p>
+        </div>
+        <div className="rounded-[22px] border border-[#ebe7df] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(23,20,31,0.04)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Average readiness" : "Ortalama hazırlık"}
+          </p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
+            {Math.round((averageLaunchReadiness + averageGrowthReadiness) / 2)}%
+          </p>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+            {isEn ? "Workspace grid" : "Workspace görünümü"}
+          </p>
+          <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
+            {isEn ? "Switch focus or add a new product" : "Odağı değiştir ya da yeni bir ürün ekle"}
+          </h2>
+        </div>
       </div>
 
       <ProductsGrid

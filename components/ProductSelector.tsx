@@ -27,11 +27,13 @@ export default function ProductSelector({ products, activeProductId }: ProductSe
         empty: "Select product",
         none: "No products found",
         add: "Add product",
+        viewAll: "View all products",
       }
     : {
         empty: "Ürün seç",
         none: "Ürün bulunamadı",
         add: "Yeni ürün ekle",
+        viewAll: "Tümünü gör",
       };
 
   useEffect(() => {
@@ -97,6 +99,16 @@ export default function ProductSelector({ products, activeProductId }: ProductSe
           </div>
 
           <div className="border-t border-[#edf0f4] p-2">
+            <Link
+              href={`/${locale}/products`}
+              onClick={() => setIsOpen(false)}
+              className="mb-1 flex items-center gap-2 rounded-[14px] px-3 py-2.5 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f7f7fa]"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f3f4f7] text-[11px] leading-none text-[#666d80]">
+                ≡
+              </span>
+              {labels.viewAll}
+            </Link>
             <Link
               href={`/${locale}/products/new`}
               onClick={() => setIsOpen(false)}
