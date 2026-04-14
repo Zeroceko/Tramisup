@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Şablon Önizlemeleri — Tiramisup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Manrope', -apple-system, sans-serif; background: #e8e4e0; }
+    .nav { background: #0d0d12; padding: 14px 28px; display: flex; align-items: center; gap: 20px; }
+    .nav-brand { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.5); font-size: 13px; font-family: inherit; padding: 5px 14px; border-radius: 100px; cursor: pointer; transition: all 0.15s; }
+    .nav-tab:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+    .nav-tab.active { background: #fff; color: #0d0d12; font-weight: 600; border-color: #fff; }
+    .viewport { padding: 32px; max-width: 680px; margin: 0 auto; }
+    .email-frame { border: none; width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: block; }
+    .template { display: none; }
+    .template.active { display: block; }
+    .label { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8a8fa0; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <span class="nav-brand">tiramisup</span>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="show('invite', event)">Davet</button>
+      <button class="nav-tab" onclick="show('verify', event)">Doğrulama</button>
+      <button class="nav-tab" onclick="show('waitlist', event)">Waitlist</button>
+    </div>
+  </div>
+
+  <div class="viewport">
+
+    <div class="template active" id="tpl-invite">
+      <p class="label">sendInviteEmail — lib/email.ts</p>
+      <iframe class="email-frame" id="frame-invite" srcdoc="" style="height:700px;"></iframe>
+    </div>
+
+    <div class="template" id="tpl-verify">
+      <p class="label">sendUserVerificationEmail — lib/email-verification.ts</p>
+      <iframe class="email-frame" id="frame-verify" srcdoc="" style="height:560px;"></iframe>
+    </div>
+
+    <div class="template" id="tpl-waitlist">
+      <p class="label">sendWaitlistVerificationEmail — lib/email-verification.ts</p>
+      <iframe class="email-frame" id="frame-waitlist" srcdoc="" style="height:560px;"></iframe>
+    </div>
+
+  </div>
+
+  <script>
+    function show(id, e) {
+      document.querySelectorAll('.template').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById('tpl-' + id).classList.add('active');
+      e.target.classList.add('active');
+    }
+
+    const BASE = 'https://tiramisup.app';
+    const VERIFY_URL = BASE + '/api/auth/verify-email?token=abc123demo&type=user&locale=tr';
+    const WAITLIST_URL = BASE + '/api/auth/verify-email?token=abc123demo&type=waitlist&locale=tr';
+
+    const FONT = "'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif";
+    const GF = '<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">';
+
+    const LOGO = `<table cellpadding="0" cellspacing="0" border="0"><tr><td style="vertical-align:middle;padding-right:8px;"><img src="https://tiramisup.app/assets/illus-tiramisu-slice.png" width="32" height="32" alt="Tiramisup" style="display:block;width:32px;height:32px;object-fit:contain;"></td><td style="vertical-align:middle;"><span style="font-size:16px;font-weight:800;color:#0d0d12;letter-spacing:-0.02em;">Tiramisup</span></td></tr></table>`;
+
+    const TEAL_BAR = `<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:linear-gradient(90deg,#95dbda 0%,#b8e8e7 60%,#d4f0ef 100%);height:3px;font-size:0;line-height:0;">&nbsp;</td></tr></table>`;
+
+    const COPYRIGHT = `<tr><td align="center" style="padding-top:24px;"><p style="margin:0;font-size:12px;color:#8a8fa0;">&copy; 2026 Tiramisup &mdash; <a href="${BASE}" target="_blank" style="color:#8a8fa0;text-decoration:underline;">tiramisup.app</a></p></td></tr>`;
+
+    // ── Invite ──────────────────────────────────────────────────────────────
+    document.getElementById('frame-invite').srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${GF}</head>
+<body style="margin:0;padding:0;background:#f8f5f1;font-family:${FONT};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8f5f1;"><tr><td align="center" style="padding:40px 16px 48px 16px;">
+<table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+<tr><td align="center" style="padding-bottom:28px;">${LOGO}</td></tr>
+<tr><td style="background:#fff;border-radius:20px;border:1px solid #e8e8e8;overflow:hidden;box-shadow:0 2px 12px rgba(13,13,18,0.06);">
+${TEAL_BAR}
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:40px 40px 0 40px;">
+<p style="margin:0 0 18px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;color:#8a8fa0;text-transform:uppercase;">Erken Erişim</p>
+<h1 style="margin:0 0 14px 0;font-size:26px;font-weight:700;color:#0d0d12;letter-spacing:-0.02em;line-height:1.25;">Merhaba Özer,</h1>
+<p style="margin:0 0 28px 0;font-size:14px;line-height:1.7;color:#666d80;">Tiramisup erken erişim listenize alındınız. Aşağıdaki kodu kullanarak kayıt olabilir ve ürününüzü kurmaya başlayabilirsiniz.</p>
+</td></tr>
+<tr><td style="padding:0 40px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#f8f5f1;border-radius:14px;border:1px solid #e8e8e8;padding:24px;text-align:center;">
+<p style="margin:0 0 10px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;color:#8a8fa0;text-transform:uppercase;">Erişim Kodunuz</p>
+<p style="margin:0;font-size:30px;font-weight:700;letter-spacing:5px;color:#0d0d12;">TT31623SEN</p>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:28px 40px 0 40px;">
+<p style="margin:0 0 12px 0;font-size:13px;font-weight:600;color:#0d0d12;letter-spacing:-0.01em;">Neler sizi bekliyor:</p>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr><td style="padding:3px 0;font-size:14px;line-height:1.6;color:#666d80;">&bull;&nbsp;&nbsp;Lansman hazırlığı — checklist ve görev takibi</td></tr>
+<tr><td style="padding:3px 0;font-size:14px;line-height:1.6;color:#666d80;">&bull;&nbsp;&nbsp;AARRR metrik takibi ve büyüme kurulumu</td></tr>
+<tr><td style="padding:3px 0;font-size:14px;line-height:1.6;color:#666d80;">&bull;&nbsp;&nbsp;AI destekli Founder Coach — kanıta dayalı öneriler</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:28px 40px 36px 40px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="background:#0d0d12;border-radius:100px;">
+<a href="${BASE}/tr/signup" target="_blank" style="display:block;padding:15px 32px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;letter-spacing:-0.01em;">Hesabınızı oluşturun &rarr;</a>
+</td></tr></table>
+</td></tr></table>
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid #e8e8e8;padding:20px 40px 28px 40px;">
+<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8fa0;">Bu davetiyeyi siz talep ettiniz. Hesap oluşturmak istemiyorsanız bu e-postayı görmezden gelebilirsiniz.</p>
+</td></tr></table>
+</td></tr>
+${COPYRIGHT}
+</table></td></tr></table>
+</body></html>`;
+
+    // ── Shared transactional template ────────────────────────────────────────
+    function makeTpl(heading, body, cta, url, linkLabel, note) {
+      return `<!DOCTYPE html><html><head><meta charset="UTF-8">${GF}</head>
+<body style="margin:0;padding:0;background:#f8f5f1;font-family:${FONT};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8f5f1;"><tr><td align="center" style="padding:40px 16px 48px 16px;">
+<table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+<tr><td align="center" style="padding-bottom:28px;">${LOGO}</td></tr>
+<tr><td style="background:#fff;border-radius:20px;border:1px solid #e8e8e8;overflow:hidden;box-shadow:0 2px 12px rgba(13,13,18,0.06);">
+${TEAL_BAR}
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:40px 40px 32px 40px;">
+<p style="margin:0 0 6px 0;font-size:13px;color:#8a8fa0;">Merhaba Özer,</p>
+<h1 style="margin:0 0 14px 0;font-size:26px;font-weight:700;color:#0d0d12;letter-spacing:-0.02em;line-height:1.25;">${heading}</h1>
+<p style="margin:0 0 28px 0;font-size:14px;line-height:1.7;color:#666d80;">${body}</p>
+<table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#0d0d12;border-radius:100px;">
+<a href="${url}" target="_blank" style="display:block;padding:15px 32px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;letter-spacing:-0.01em;">${cta}</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 32px 40px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#f8f5f1;border-radius:12px;border:1px solid #e8e8e8;padding:14px 16px;">
+<p style="margin:0 0 5px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;color:#8a8fa0;text-transform:uppercase;">${linkLabel}</p>
+<a href="${url}" style="font-size:12px;color:#666d80;word-break:break-all;text-decoration:underline;">${url}</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="border-top:1px solid #e8e8e8;padding:20px 40px 28px 40px;">
+<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8fa0;">${note}</p>
+</td></tr>
+</table>
+</td></tr>
+${COPYRIGHT}
+</table></td></tr></table>
+</body></html>`;
+    }
+
+    document.getElementById('frame-verify').srcdoc = makeTpl(
+      'Son bir adım',
+      'Tiramisup hesabını etkinleştirmek için e-posta adresini doğrula.',
+      'E-postamı doğrula →',
+      VERIFY_URL,
+      'Buton çalışmıyor mu? Bu bağlantıyı kopyala:',
+      'Tiramisup hesabı oluşturmadıysan bu e-postayı yoksay.'
+    );
+
+    document.getElementById('frame-waitlist').srcdoc = makeTpl(
+      'E-postanı onayla',
+      "Tiramisup waitlist'indesin. E-postanı onaylamak ve yerini garantilemek için aşağıya tıkla.",
+      'Kaydımı onayla →',
+      WAITLIST_URL,
+      'Buton çalışmıyor mu? Bu bağlantıyı kopyala:',
+      "Tiramisup waitlist'ine kaydolmadıysan bu e-postayı yoksay."
+    );
+  </script>
+</body>
+</html>
