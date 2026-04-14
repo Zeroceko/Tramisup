@@ -64,7 +64,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
   // Empty state
   if (visibleTasks.length === 0 && totalPending === 0) {
     return (
-      <div className="rounded-[26px] border border-dashed border-[#dfe4eb] bg-white/72 px-5 py-7 text-center shadow-[0_14px_44px_rgba(23,20,31,0.05)] backdrop-blur">
+      <div className="rounded-[26px] border border-dashed border-[#dfe4eb] bg-white px-5 py-7 text-center shadow-[0_10px_28px_rgba(23,20,31,0.04)]">
         <p className="text-[13px] font-medium text-[#94a3b8]">
           {locale === "en"
             ? "No tasks yet. They appear as you work through your checklist."
@@ -92,7 +92,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
   }
 
   return (
-    <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur sm:p-6">
+    <div className="rounded-[28px] border border-[#ece7df] bg-white p-5 shadow-[0_12px_34px_rgba(23,20,31,0.05)] sm:p-6">
       {/* Section header */}
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6f7482]">

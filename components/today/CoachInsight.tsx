@@ -248,7 +248,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="group w-full rounded-[26px] border border-dashed border-[#eadde6] bg-white/76 px-5 py-5 text-left shadow-[0_14px_44px_rgba(23,20,31,0.05)] backdrop-blur transition hover:border-[#c45d97]/40 hover:bg-[#fff8fb]"
+        className="group w-full rounded-[26px] border border-dashed border-[#eadde6] bg-white px-5 py-5 text-left shadow-[0_10px_28px_rgba(23,20,31,0.04)] transition hover:border-[#c45d97]/40 hover:bg-[#fff8fb]"
       >
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdf2f8] text-[#c45d97] transition group-hover:bg-[#fce7f3]">
@@ -273,7 +273,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
   }
 
   return (
-    <div className="rounded-[28px] border border-[#f3e8ef] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_transparent_26%),linear-gradient(135deg,#fefbfc_0%,#fdf7fa_55%,#fdf2f8_100%)] p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)]">
+    <div className="rounded-[28px] border border-[#f3e8ef] bg-[#fef7fb] p-5 shadow-[0_12px_34px_rgba(23,20,31,0.05)]">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">

@@ -56,7 +56,7 @@ export default function TodayHero({
   const phaseLabel = locale === "en" ? phaseConfig.labelEn : phaseConfig.label;
 
   return (
-    <div className="mb-7 rounded-[28px] border border-white/65 bg-white/76 px-6 py-6 shadow-[0_18px_60px_rgba(26,24,35,0.08)] backdrop-blur sm:px-7 sm:py-7">
+    <div className="mb-7 rounded-[28px] border border-[#ece7df] bg-white px-6 py-6 shadow-[0_12px_34px_rgba(26,24,35,0.05)] sm:px-7 sm:py-7">
       {/* Greeting */}
       <p className="text-[13px] font-medium text-[#6f7482]">
         {greeting}

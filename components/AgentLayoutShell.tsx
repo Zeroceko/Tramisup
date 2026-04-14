@@ -1,9 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import AgentChatPanel from "@/components/AgentChatPanel";
 import type { AgentType } from "@/lib/agent-types";
+
+const LazyAgentChatPanel = dynamic(() => import("@/components/AgentChatPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full min-h-0 flex-col gap-3 p-4">
+      <div className="h-4 w-28 animate-pulse rounded bg-[#ece7df]" />
+      <div className="h-24 animate-pulse rounded-[18px] bg-[#f6f3ee]" />
+      <div className="h-24 animate-pulse rounded-[18px] bg-[#f6f3ee]" />
+      <div className="mt-auto h-10 animate-pulse rounded-[14px] bg-[#f1ede6]" />
+    </div>
+  ),
+});
 
 const AGENT_COLORS: Record<AgentType, { bg: string; text: string; initials: string }> = {
   overview: { bg: "#ffeb69", text: "#0d0d12", initials: "OA" },
@@ -29,10 +40,9 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
   const [open, setOpen] = useState(true);
   const { bg } = AGENT_COLORS[agentType];
   const label = getAgentLabel(agentType, locale);
-  const router = useRouter();
   const handleTasksCreated = useCallback((_titles: string[]) => {
-    router.refresh();
-  }, [router]);
+    window.dispatchEvent(new CustomEvent("tiramisup:tasks-updated"));
+  }, []);
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden gap-3 p-3">
@@ -74,7 +84,12 @@ export default function AgentLayoutShell({ agentType, productId, locale, childre
 
           {/* Chat */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <AgentChatPanel agentType={agentType} productId={productId} locale={locale} onTasksCreated={handleTasksCreated} />
+            <LazyAgentChatPanel
+              agentType={agentType}
+              productId={productId}
+              locale={locale}
+              onTasksCreated={handleTasksCreated}
+            />
           </div>
         </div>
       ) : (

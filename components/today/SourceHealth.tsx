@@ -26,7 +26,7 @@ export default function SourceHealth({
   if (totalMetrics === 0) return null;
 
   return (
-    <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_18px_60px_rgba(23,20,31,0.07)] backdrop-blur">
+    <div className="rounded-[28px] border border-[#ece7df] bg-white p-5 shadow-[0_12px_34px_rgba(23,20,31,0.05)]">
       <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
         {isEn ? "Data sources" : "Veri kaynakları"}
       </h3>
