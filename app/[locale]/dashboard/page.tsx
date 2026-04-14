@@ -576,11 +576,21 @@ export default async function DashboardPage({
     return hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
   })();
 
-  const phaseLabel = isEn
-    ? (phase === "launched" ? "Launched" : "Pre-launch")
-    : (phase === "launched" ? "Yayında" : "Launch hazırlığı");
-  const phaseDot = phase === "launched" ? "bg-[#34d399]" : "bg-[#f6c342]";
-  const phaseBg = phase === "launched" ? "bg-[#e8faf4]" : "bg-[#fff8e1]";
+  const phaseLabel = product.status === ProductStatus.GROWING
+    ? (isEn ? "Growing" : "Büyüyor")
+    : isEn
+      ? (phase === "launched" ? "Launched" : "Pre-launch")
+      : (phase === "launched" ? "Yayında" : "Launch hazırlığı");
+  const phaseDot = product.status === ProductStatus.GROWING
+    ? "bg-[#10b981]"
+    : phase === "launched"
+      ? "bg-[#34d399]"
+      : "bg-[#f6c342]";
+  const phaseBg = product.status === ProductStatus.GROWING
+    ? "bg-[#e7fff4]"
+    : phase === "launched"
+      ? "bg-[#e8faf4]"
+      : "bg-[#fff8e1]";
 
   // ---- Render ----
   return (

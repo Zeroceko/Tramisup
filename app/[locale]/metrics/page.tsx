@@ -38,10 +38,13 @@ const STATUS_STYLES = {
 
 export default async function MetricsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ setup?: string; entry?: string }>;
 }) {
   const { locale } = await params;
+  const resolvedSearch = (await searchParams) ?? {};
   const isEn = locale === "en";
   const numberLocale = isEn ? "en-US" : "tr-TR";
   const session = await getServerSession(authOptions);
@@ -215,6 +218,8 @@ export default async function MetricsPage({
       : dataState === "building"
       ? "border-[#efe6d7] bg-[#fffbf5]"
       : "border-[#d7efdf] bg-[#f5fcf7]";
+  const setupJustSaved = resolvedSearch.setup === "ready";
+  const entryJustSaved = resolvedSearch.entry === "saved";
 
 
   return (
@@ -228,6 +233,32 @@ export default async function MetricsPage({
           {headerTitle}
         </h1>
       </div>
+
+      {setupJustSaved ? (
+        <div className="rounded-[18px] border border-[#d7efef] bg-[#f0fafa] px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1f6f6e]">
+            {isEn ? "Setup saved" : "Kurulum kaydedildi"}
+          </p>
+          <p className="mt-2 text-[14px] leading-6 text-[#0d0d12]">
+            {isEn
+              ? `Your measurement system is locked in. Enter today's ${selectedMetrics.length} numbers once so Growth can start from a real baseline.`
+              : `Ölçüm sistemi kaydedildi. Growth'ün gerçek bir baz çizgisinden başlaması için şimdi bugünkü ${selectedMetrics.length} sayıyı bir kez gir.`}
+          </p>
+        </div>
+      ) : null}
+
+      {entryJustSaved ? (
+        <div className="rounded-[18px] border border-[#d7efdf] bg-[#f5fcf7] px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#166534]">
+            {isEn ? "Entry saved" : "Giriş kaydedildi"}
+          </p>
+          <p className="mt-2 text-[14px] leading-6 text-[#0d0d12]">
+            {isEn
+              ? "The latest numbers are in. Keep feeding Metrics here or jump into Growth for the next decision."
+              : "Son sayılar işlendi. Buradan Metrics'i beslemeye devam edebilir ya da sıradaki kararı görmek için Growth'e geçebilirsin."}
+          </p>
+        </div>
+      ) : null}
 
       {/* 2. Stat cards — numbers first */}
       <div className="grid grid-cols-3 gap-3">

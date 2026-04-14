@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { GrowthMetricPlan, FunnelSection, FunnelMetricRecommendation } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
 import { getStageAutomationGuides } from "@/lib/integration-recommendations";
@@ -362,7 +361,6 @@ export default function MetricSetupSelector({
   connectedProviders: string[];
   setupContext?: GrowthCheckinSetupContext | null;
 }) {
-  const router = useRouter();
   const isEn = locale === "en";
 
   const automationGuides = useMemo(
@@ -434,9 +432,9 @@ export default function MetricSetupSelector({
         body: JSON.stringify({ setup }),
       });
       if (!res.ok) throw new Error("save failed");
-      setEditing(false);
-      router.push(`/${locale}/metrics`);
-      router.refresh();
+      // Force a fresh server render so the founder always lands on the
+      // entry step instead of staying in a stale local "saving" state.
+      window.location.assign(`/${locale}/metrics?setup=ready`);
     } catch {
       setError(isEn ? "Metric preferences could not be saved. Try again." : "Metrik tercihleri kaydedilemedi. Tekrar dene.");
     } finally {

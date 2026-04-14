@@ -54,10 +54,13 @@ function mapStageToGrowthCategory(stage?: string | null) {
 
 export default async function GrowthPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ baseline?: string }>;
 }) {
   const { locale } = await params;
+  const resolvedSearch = (await searchParams) ?? {};
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("growth");
@@ -298,6 +301,7 @@ export default async function GrowthPage({
         : isEn
           ? "This is the diagnosis, priority, and execution surface. Metrics decides what you track; Growth decides what to act on next."
           : "Burası teşhis, öncelik ve execution yüzeyi. Metrics neyi takip ettiğini netleştirir; Growth ise sıradaki doğru hamleyi seçtirir.";
+  const baselineJustSaved = resolvedSearch.baseline === "ready";
   const workspaceStages = [
     {
       key: "intake",
@@ -386,6 +390,19 @@ export default async function GrowthPage({
       />
 
       <div className="space-y-4">
+        {baselineJustSaved ? (
+          <div className="rounded-[18px] border border-[#d7efdf] bg-[#f5fcf7] px-5 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#166534]">
+              {isEn ? "Baseline saved" : "Baz çizgisi kaydedildi"}
+            </p>
+            <p className="mt-2 text-[14px] leading-6 text-[#0d0d12]">
+              {isEn
+                ? "Growth is now reading real numbers instead of guesses. The next move is to turn that signal into a target and a concrete weekly action."
+                : "Growth artık tahmin yerine gerçek sayıları okuyor. Sıradaki adım, bu sinyali hedefe ve somut bir haftalık aksiyona çevirmek."}
+            </p>
+          </div>
+        ) : null}
+
         {/* PRIMARY: one card that changes by workspace mode */}
         <div id="coach" className="rounded-[18px] border border-[#e8e8e8] bg-white p-7">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">

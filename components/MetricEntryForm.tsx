@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import type { FunnelStageKey, MetricEntryRow } from "@/lib/metric-setup";
 
@@ -83,8 +82,8 @@ export default function MetricEntryForm({
   compact?: boolean;
   entryCount?: number;
 }) {
-  const router = useRouter();
   const isEn = locale === "en";
+  const resolvedLocale = locale === "en" ? "en" : "tr";
   const nf = new Intl.NumberFormat(isEn ? "en-US" : "tr-TR", { maximumFractionDigits: 1 });
   const intFormatter = new Intl.NumberFormat(isEn ? "en-US" : "tr-TR");
   const stageActionHints: Partial<Record<FunnelStageKey, string>> = {
@@ -186,14 +185,16 @@ export default function MetricEntryForm({
       const isJustActivated = entryCount + 1 >= 5 && entryCount < 5;
       if (isJustActivated) {
         setBuildingDashboard(true);
-        await router.refresh();
-        setTimeout(() => setBuildingDashboard(false), 2200);
+        setTimeout(() => {
+          window.location.assign(`/${resolvedLocale}/dashboard?metrics=activated`);
+        }, 900);
       } else {
-        // Compute post-save interpretation
-        const deltas = computeDeltas(formData.values, latestEntry, selectedMetrics);
-        const droppedStage = findDroppedStage(deltas);
-        setPostSave({ deltas, droppedStage });
-        router.refresh();
+        const isFirstBaseline = entryCount === 0;
+        window.location.assign(
+          isFirstBaseline
+            ? `/${resolvedLocale}/growth?baseline=ready`
+            : `/${resolvedLocale}/metrics?entry=saved`
+        );
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : isEn ? "Something went wrong." : "Bir hata oluştu");

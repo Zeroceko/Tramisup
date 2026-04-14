@@ -416,6 +416,7 @@ export function buildDeterministicSuggestionFallback(input: SuggestionGeneration
     const inProgressTask = input.openTasks.find((task) => task.status === "IN_PROGRESS");
     const doneCount = Number((contextData.tasks as { done?: number } | undefined)?.done ?? 0);
     const setup = (contextData.metric_setup ?? {}) as { has_setup?: boolean };
+    const dataEntryCount = Number((contextData as { data_entries_last_7_days?: number }).data_entries_last_7_days ?? 0);
 
     if (inProgressTask) {
       suggestions.push(
@@ -436,6 +437,42 @@ export function buildDeterministicSuggestionFallback(input: SuggestionGeneration
           "MEASUREMENT",
           input.locale,
           "HIGH",
+        ),
+      );
+    }
+    if (setup.has_setup && dataEntryCount === 0) {
+      suggestions.push(
+        fallbackCandidate(
+          isEn
+            ? `Enter the first baseline numbers for ${product.name}`
+            : `${product.name} için ilk baz çizgisi sayılarını gir`,
+          "MEASUREMENT",
+          input.locale,
+          "HIGH",
+        ),
+      );
+    }
+    if (input.openTasks.length === 0) {
+      suggestions.push(
+        fallbackCandidate(
+          isEn
+            ? `Turn this week's focus in ${product.name} into one concrete task`
+            : `${product.name} için bu haftanın odağını tek bir somut göreve çevir`,
+          "PRODUCT",
+          input.locale,
+          "MEDIUM",
+        ),
+      );
+    }
+    if (setup.has_setup && dataEntryCount > 0) {
+      suggestions.push(
+        fallbackCandidate(
+          isEn
+            ? `Set the weekly target for the metric you track in ${product.name}`
+            : `${product.name} içinde takip ettiğin sayı için haftalık hedefi netleştir`,
+          "MEASUREMENT",
+          input.locale,
+          "MEDIUM",
         ),
       );
     }

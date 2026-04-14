@@ -227,9 +227,12 @@ export default function AgentChatPanel({
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+        const liveSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : copy.initialSuggestions);
       })
-      .catch(() => {})
+      .catch(() => {
+        setSuggestions(copy.initialSuggestions);
+      })
       .finally(() => setSuggestionsLoading(false));
 
     fetch(
@@ -245,18 +248,21 @@ export default function AgentChatPanel({
       .catch(() => {});
 
     return () => controller.abort();
-  }, [agentType, locale, productId]);
+  }, [agentType, copy.initialSuggestions, locale, productId]);
 
   const refetchSuggestions = useCallback(() => {
     setSuggestionsLoading(true);
     fetch(`/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+        const liveSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : copy.initialSuggestions);
       })
-      .catch(() => {})
+      .catch(() => {
+        setSuggestions(copy.initialSuggestions);
+      })
       .finally(() => setSuggestionsLoading(false));
-  }, [agentType, locale, productId]);
+  }, [agentType, copy.initialSuggestions, locale, productId]);
 
   useEffect(() => {
     window.addEventListener("tiramisup:checklist-updated", refetchSuggestions);
