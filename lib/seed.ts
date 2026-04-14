@@ -27,6 +27,25 @@ function dedupeSeedItems<T extends { title: string }>(items: T[], limit: number)
   return kept;
 }
 
+export function filterSeedItemsAgainstExisting<T extends { title: string }>(
+  items: T[],
+  existingTitles: string[],
+  limit: number,
+): T[] {
+  const normalizedExisting = existingTitles
+    .map((title) => title?.trim())
+    .filter((title): title is string => Boolean(title));
+  const kept: T[] = [];
+
+  for (const item of dedupeSeedItems(items, limit)) {
+    if (normalizedExisting.some((title) => tasksAreNearDuplicate(title, item.title))) continue;
+    kept.push(item);
+    normalizedExisting.push(item.title);
+  }
+
+  return kept;
+}
+
 /** Build a description string for checklists from structured fields, since
  * those tables don't yet carry whyItMatters/doneCriteria/nextAction columns. */
 function buildChecklistDescription(item: {
@@ -53,7 +72,30 @@ export async function seedAiPlan(
 ) {
   const db = tx || prisma;
 
-  for (const item of dedupeSeedItems(plan.launchChecklist, MAX_LAUNCH_ITEMS)) {
+  const [existingLaunchItems, existingGrowthItems] = await Promise.all([
+    db.launchChecklist.findMany({
+      where: { productId },
+      select: { title: true },
+    }),
+    db.growthChecklist.findMany({
+      where: { productId },
+      select: { title: true },
+    }),
+  ]);
+
+  const launchItemsToCreate = filterSeedItemsAgainstExisting(
+    plan.launchChecklist,
+    existingLaunchItems.map((item: { title: string }) => item.title),
+    MAX_LAUNCH_ITEMS,
+  );
+  const growthItemsToCreate = filterSeedItemsAgainstExisting(
+    plan.growthChecklist,
+    existingGrowthItems.map((item: { title: string }) => item.title),
+    MAX_GROWTH_ITEMS,
+  );
+  let createdTaskCount = 0;
+
+  for (const item of launchItemsToCreate) {
     await db.launchChecklist.create({
       data: {
         productId,
@@ -67,7 +109,7 @@ export async function seedAiPlan(
     });
   }
 
-  for (const item of dedupeSeedItems(plan.growthChecklist, MAX_GROWTH_ITEMS)) {
+  for (const item of growthItemsToCreate) {
     await db.growthChecklist.create({
       data: {
         productId,
@@ -83,7 +125,7 @@ export async function seedAiPlan(
   // Tasks go through the canonical guarded creator: validation, dedupe,
   // structured columns, source tagging, and CREATED instrumentation events.
   for (const task of dedupeSeedItems(plan.tasks, MAX_TASK_ITEMS)) {
-    await tryCreateTaskWithGuards(
+    const result = await tryCreateTaskWithGuards(
       {
         productId,
         title: task.title,
@@ -98,6 +140,9 @@ export async function seedAiPlan(
       },
       db,
     );
+    if (result && !result.deduped) {
+      createdTaskCount += 1;
+    }
   }
 
   // Persist plan generation metadata for observability and repair tooling
@@ -112,6 +157,12 @@ export async function seedAiPlan(
     where: { id: productId },
     data: { planMeta },
   });
+
+  return {
+    addedLaunchCount: launchItemsToCreate.length,
+    addedGrowthCount: growthItemsToCreate.length,
+    addedTaskCount: createdTaskCount,
+  };
 }
 
 // Intentionally do not fabricate fallback workspace data when AI is unavailable.

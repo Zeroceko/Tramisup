@@ -26,10 +26,10 @@ export function computePreLaunchReadiness(
   const stageBonus = getStageBonus(launchStageKey);
   if (items.length === 0) {
     return {
-      score: stageBonus,
+      score: 0,
       checklistPercent: 0,
       executionPercent: 0,
-      stageBonus,
+      stageBonus: 0,
     };
   }
 
@@ -40,6 +40,7 @@ export function computePreLaunchReadiness(
   const coveredWeight = items
     .filter((item) => !item.completed && item.linkedTaskId)
     .reduce((sum, item) => sum + getWeight(item.priority), 0);
+  const appliedStageBonus = completedWeight > 0 || coveredWeight > 0 ? stageBonus : 0;
 
   const checklistPercent = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
   const executionPercent = totalWeight > 0 ? Math.round((coveredWeight / totalWeight) * 100) : 0;
@@ -48,19 +49,19 @@ export function computePreLaunchReadiness(
       score: 100,
       checklistPercent,
       executionPercent,
-      stageBonus,
+      stageBonus: appliedStageBonus,
     };
   }
 
   const score = Math.min(
     100,
-    Math.round(checklistPercent * 0.75 + executionPercent * 0.13 + stageBonus),
+    Math.round(checklistPercent * 0.75 + executionPercent * 0.13 + appliedStageBonus),
   );
 
   return {
     score,
     checklistPercent,
     executionPercent,
-    stageBonus,
+    stageBonus: appliedStageBonus,
   };
 }
