@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { verifySignupBypassToken } from "./signup-bypass";
+import { verifyVerificationAutoLoginToken } from "./verification-autologin";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -19,14 +20,26 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         captchaToken: { label: "reCAPTCHA", type: "text" },
         signupBypassToken: { label: "Signup bypass", type: "text" },
+        verificationLoginToken: { label: "Verification auto-login", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials) {
           throw new Error("Invalid credentials");
         }
 
+        const hasPasswordLogin = Boolean(credentials.email && credentials.password);
+        const hasVerificationAutoLogin = Boolean(
+          credentials.email && credentials.verificationLoginToken,
+        );
+
+        if (!hasPasswordLogin && !hasVerificationAutoLogin) {
+          throw new Error("Invalid credentials");
+        }
+
+        const email = String(credentials.email).trim().toLowerCase();
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
           select: {
             id: true,
             email: true,
@@ -39,6 +52,29 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.passwordHash) {
           throw new Error("Invalid credentials");
+        }
+
+        if (hasVerificationAutoLogin) {
+          if (!user.emailVerified) {
+            throw new Error("Invalid credentials");
+          }
+
+          const tokenValid = verifyVerificationAutoLoginToken(
+            credentials.verificationLoginToken,
+            user.email,
+            user.id,
+          );
+
+          if (!tokenValid) {
+            throw new Error("invalid_verification_login");
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            preferredLocale: user.preferredLocale,
+          };
         }
 
         const isCorrectPassword = await bcrypt.compare(
@@ -55,7 +91,7 @@ export const authOptions: NextAuthOptions = {
         if (!user.emailVerified) {
           const bypassValid = verifySignupBypassToken(
             credentials.signupBypassToken,
-            credentials.email,
+            email,
           );
           if (!bypassValid) {
             throw new Error("email_not_verified");

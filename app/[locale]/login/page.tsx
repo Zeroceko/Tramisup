@@ -5,7 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const inputCls =
   "w-full rounded-xl border border-[#E8DED7] bg-[#FFF8F2] px-4 py-3 text-sm font-medium text-[#21231D] outline-none transition-all placeholder:text-[#21231D]/30 focus:border-[#C45D97] focus:ring-2 focus:ring-[#C45D97]/20";
@@ -18,15 +18,46 @@ export default function LoginPage() {
   const callbackUrl = searchParams.get("callbackUrl");
   const resetStatus = searchParams.get("reset");
   const verified = searchParams.get("verified") === "1";
+  const verificationLoginToken = searchParams.get("verificationLoginToken");
 
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [autoLoggingIn, setAutoLoggingIn] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [verificationRequired, setVerificationRequired] = useState(false);
+  const autoLoginAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (autoLoginAttemptedRef.current) return;
+    if (!verified || !email || !verificationLoginToken) return;
+
+    autoLoginAttemptedRef.current = true;
+    setAutoLoggingIn(true);
+    setError("");
+
+    void signIn("credentials", {
+      email,
+      verificationLoginToken,
+      redirect: false,
+    })
+      .then((result) => {
+        if (result?.error) {
+          setAutoLoggingIn(false);
+          setError(t("errors.autoLoginFailed"));
+          return;
+        }
+
+        router.push(callbackUrl || `/${locale}/dashboard`);
+      })
+      .catch(() => {
+        setAutoLoggingIn(false);
+        setError(t("errors.autoLoginFailed"));
+      });
+  }, [callbackUrl, email, locale, router, t, verificationLoginToken, verified]);
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -131,7 +162,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => void handleGoogleLogin()}
-            disabled={googleLoading || loading}
+            disabled={googleLoading || loading || autoLoggingIn}
             className="mb-4 inline-flex w-full items-center justify-center gap-3 rounded-xl border border-[#E8DED7] bg-white py-3.5 text-sm font-bold text-[#21231D] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,35,29,0.10)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
@@ -157,7 +188,7 @@ export default function LoginPage() {
             ) : null}
             {verified ? (
               <p className="rounded-xl border border-[#BFE3C8] bg-[#EDF8F0] px-4 py-3 text-sm font-medium text-[#27623A]">
-                {t("verifiedSuccess")}
+                {autoLoggingIn ? t("verifiedAutoLogin") : t("verifiedSuccess")}
               </p>
             ) : null}
             <div>
@@ -171,7 +202,7 @@ export default function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder={t("emailPlaceholder")}
                 className={inputCls}
-                autoFocus
+                autoFocus={!autoLoggingIn}
                 required
               />
             </div>
@@ -187,6 +218,7 @@ export default function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder={t("passwordPlaceholder")}
                 className={inputCls}
+                disabled={autoLoggingIn}
                 required
               />
             </div>
@@ -212,16 +244,16 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || autoLoggingIn}
               className="relative w-full rounded-xl border-none bg-[#21231D] py-3.5 text-sm font-black text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,35,29,0.18)] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loading ? (
+              {loading || autoLoggingIn ? (
                 <span className="inline-flex items-center justify-center gap-2">
                   <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                   </svg>
-                  {t("loggingIn")}
+                  {autoLoggingIn ? t("verification.loggingYouIn") : t("loggingIn")}
                 </span>
               ) : `${t("loginButton")} →`}
             </button>

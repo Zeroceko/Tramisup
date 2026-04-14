@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAppBaseUrl } from "@/lib/app-urls";
+import { createVerificationAutoLoginToken } from "@/lib/verification-autologin";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   if (type !== "waitlist") {
     const user = await prisma.user.findUnique({
       where: { verificationToken: token },
-      select: { id: true, preferredLocale: true },
+      select: { id: true, email: true, preferredLocale: true },
     });
 
     if (user) {
@@ -27,7 +28,18 @@ export async function GET(request: Request) {
         data: { emailVerified: new Date(), verificationToken: null },
       });
       const locale = user.preferredLocale === "tr" ? "tr" : "en";
-      return NextResponse.redirect(`${base}/${locale}/login?verified=1`);
+      const verificationLoginToken = createVerificationAutoLoginToken(user.email, user.id);
+      const nextSearch = new URLSearchParams({
+        verified: "1",
+        email: user.email,
+      });
+
+      if (verificationLoginToken) {
+        nextSearch.set("verificationLoginToken", verificationLoginToken);
+        nextSearch.set("callbackUrl", `/${locale}/dashboard`);
+      }
+
+      return NextResponse.redirect(`${base}/${locale}/login?${nextSearch.toString()}`);
     }
   }
 
