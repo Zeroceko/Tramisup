@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { AgentType } from "@/lib/agent-types";
 import UsageLimitModal from "@/components/UsageLimitModal";
@@ -191,7 +191,11 @@ export default function AgentChatPanel({
   onTasksCreated,
 }: AgentChatPanelProps) {
   const router = useRouter();
-  const copy = getCopy(agentType, locale);
+  const copy = useMemo(() => getCopy(agentType, locale), [agentType, locale]);
+  const fallbackSuggestions = useMemo(
+    () => sanitizeAgentSuggestions(copy.initialSuggestions),
+    [copy]
+  );
   const isEn = locale === "en";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -221,11 +225,10 @@ export default function AgentChatPanel({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const liveSuggestions = sanitizeAgentSuggestions(data?.suggestions);
-        const fallbackSuggestions = sanitizeAgentSuggestions(copy.initialSuggestions);
         setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions);
       })
       .catch(() => {
-        setSuggestions(sanitizeAgentSuggestions(copy.initialSuggestions));
+        setSuggestions(fallbackSuggestions);
       })
       .finally(() => setSuggestionsLoading(false));
 
@@ -242,7 +245,7 @@ export default function AgentChatPanel({
       .catch(() => {});
 
     return () => controller.abort();
-  }, [agentType, copy.initialSuggestions, locale, productId]);
+  }, [agentType, fallbackSuggestions, locale, productId]);
 
   const refetchSuggestions = useCallback(() => {
     setSuggestionsLoading(true);
@@ -250,14 +253,13 @@ export default function AgentChatPanel({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const liveSuggestions = sanitizeAgentSuggestions(data?.suggestions);
-        const fallbackSuggestions = sanitizeAgentSuggestions(copy.initialSuggestions);
         setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions);
       })
       .catch(() => {
-        setSuggestions(sanitizeAgentSuggestions(copy.initialSuggestions));
+        setSuggestions(fallbackSuggestions);
       })
       .finally(() => setSuggestionsLoading(false));
-  }, [agentType, copy.initialSuggestions, locale, productId]);
+  }, [agentType, fallbackSuggestions, locale, productId]);
 
   useEffect(() => {
     window.addEventListener(APP_EVENT_CHECKLIST_UPDATED, refetchSuggestions);
@@ -334,8 +336,9 @@ export default function AgentChatPanel({
           },
         ]);
 
-        if (data.suggestions?.length > 0) {
-          setSuggestions(data.suggestions.slice(0, 4));
+        const nextSuggestions = sanitizeAgentSuggestions(data.suggestions).slice(0, 4);
+        if (nextSuggestions.length > 0) {
+          setSuggestions(nextSuggestions);
         }
 
         if (data.executedActions?.length > 0 && onTasksCreated) {
