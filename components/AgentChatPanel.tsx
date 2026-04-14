@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import type { AgentType } from "@/lib/agent-types";
 import UsageLimitModal from "@/components/UsageLimitModal";
 import {
+  APP_EVENT_CHECKLIST_UPDATED,
+  APP_EVENT_TASKS_UPDATED,
+} from "@/lib/browser-events";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -265,8 +269,12 @@ export default function AgentChatPanel({
   }, [agentType, copy.initialSuggestions, locale, productId]);
 
   useEffect(() => {
-    window.addEventListener("tiramisup:checklist-updated", refetchSuggestions);
-    return () => window.removeEventListener("tiramisup:checklist-updated", refetchSuggestions);
+    window.addEventListener(APP_EVENT_CHECKLIST_UPDATED, refetchSuggestions);
+    window.addEventListener(APP_EVENT_TASKS_UPDATED, refetchSuggestions);
+    return () => {
+      window.removeEventListener(APP_EVENT_CHECKLIST_UPDATED, refetchSuggestions);
+      window.removeEventListener(APP_EVENT_TASKS_UPDATED, refetchSuggestions);
+    };
   }, [refetchSuggestions]);
 
   useEffect(() => {

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Routine {
   id: string;
@@ -22,13 +21,13 @@ export default function GrowthRoutines({
   productId: string;
   locale: string;
 }) {
-  const router = useRouter();
   const isEn = locale === "en";
   const freqLabel: Record<string, string> = {
     WEEKLY: isEn ? "Weekly" : "Haftalık",
     MONTHLY: isEn ? "Monthly" : "Aylık",
   };
   const [loading, setLoading] = useState<string | null>(null);
+  const [routineItems, setRoutineItems] = useState(routines);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRoutine, setNewRoutine] = useState({
     title: "",
@@ -36,11 +35,20 @@ export default function GrowthRoutines({
     frequency: "WEEKLY" as "WEEKLY" | "MONTHLY",
   });
 
+  useEffect(() => {
+    setRoutineItems(routines);
+  }, [routines]);
+
   const completeRoutine = async (routineId: string) => {
     setLoading(routineId);
     try {
-      await fetch(`/api/routines/${routineId}/complete`, { method: "POST" });
-      router.refresh();
+      const response = await fetch(`/api/routines/${routineId}/complete`, { method: "POST" });
+      const updatedRoutine = (await response.json().catch(() => null)) as Routine | null;
+      if (response.ok && updatedRoutine) {
+        setRoutineItems((current) =>
+          current.map((routine) => (routine.id === routineId ? updatedRoutine : routine))
+        );
+      }
     } catch (error) {
       console.error("Failed to complete routine:", error);
     } finally {
@@ -52,14 +60,17 @@ export default function GrowthRoutines({
     e.preventDefault();
     setLoading("new");
     try {
-      await fetch("/api/routines", {
+      const response = await fetch("/api/routines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newRoutine, productId }),
       });
+      const createdRoutine = (await response.json().catch(() => null)) as Routine | null;
+      if (response.ok && createdRoutine) {
+        setRoutineItems((current) => [createdRoutine, ...current]);
+      }
       setNewRoutine({ title: "", description: "", frequency: "WEEKLY" });
       setShowAddForm(false);
-      router.refresh();
     } catch (error) {
       console.error("Failed to add routine:", error);
     } finally {
@@ -117,11 +128,11 @@ export default function GrowthRoutines({
         </form>
       )}
 
-      {routines.length === 0 && !showAddForm ? (
+      {routineItems.length === 0 && !showAddForm ? (
         <p className="text-center text-[13px] text-[#9ca3af] py-8">{isEn ? "No routines yet. Add your first one." : "Henüz rutin yok. Bir tane ekle!"}</p>
       ) : (
         <div className="space-y-2">
-          {routines.map((routine) => (
+          {routineItems.map((routine) => (
             <div
               key={routine.id}
               className="flex items-start gap-3 p-4 border border-[#e8e8e8] rounded-[12px] hover:bg-[#fafafa] transition"

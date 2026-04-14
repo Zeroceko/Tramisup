@@ -9,6 +9,7 @@ import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist
 import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
 import { normalizeLaunchStageKey } from "@/lib/launch-stage";
 import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
+import { startServerTiming } from "@/lib/server-perf";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
 import PrimaryAction from "@/components/today/PrimaryAction";
@@ -281,6 +282,7 @@ export default async function DashboardPage({
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ justLaunched?: string }>;
 }) {
+  const perf = startServerTiming("dashboard-page");
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const justLaunched = resolvedSearch.justLaunched === "1";
@@ -290,6 +292,9 @@ export default async function DashboardPage({
   ]);
   const uiLocale = locale;
   const isEn = uiLocale === "en";
+  let perfProductId: string | null = null;
+
+  try {
 
   // ---- Product resolution ----
   const productInclude = {
@@ -333,6 +338,7 @@ export default async function DashboardPage({
       </div>
     );
   }
+  perfProductId = product.id;
 
   const isLaunchedProduct = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
 
@@ -706,6 +712,12 @@ export default async function DashboardPage({
       </div>
     </div>
   );
+  } finally {
+    perf.end({
+      userId: session?.user?.id ?? null,
+      productId: perfProductId,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

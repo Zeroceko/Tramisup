@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { notifyChecklistUpdated, notifyTasksUpdated } from "@/lib/browser-events";
 
 type GrowthItem = {
   id: string;
@@ -120,7 +120,6 @@ export default function GrowthChecklistSection({
   initialCategory,
   focusNote = null,
 }: GrowthChecklistSectionProps) {
-  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -154,6 +153,8 @@ export default function GrowthChecklistSection({
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, completed: current } : item))
       );
+    } else {
+      notifyChecklistUpdated();
     }
     setLoadingItemId(null);
   }
@@ -194,10 +195,10 @@ export default function GrowthChecklistSection({
               entry.id === item.id ? { ...entry, completed: true } : entry,
             ),
           );
+          notifyChecklistUpdated();
         }
       }
-
-      router.refresh();
+      notifyTasksUpdated();
     } finally {
       setLoadingItemId(null);
     }

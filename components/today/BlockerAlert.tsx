@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { notifyTasksUpdated } from "@/lib/browser-events";
 
 type Blocker = {
   id: string;
@@ -22,16 +22,20 @@ type BlockerAlertProps = {
 };
 
 export default function BlockerAlert({ blockers, locale, productId }: BlockerAlertProps) {
-  const router = useRouter();
   const storageKey = `blocker_dismissed_${productId}`;
   const [dismissed, setDismissed] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [blockerItems, setBlockerItems] = useState(blockers);
 
   useEffect(() => {
     setDismissed(sessionStorage.getItem(storageKey) === "1");
   }, [storageKey]);
 
-  if (blockers.length === 0 || dismissed) return null;
+  useEffect(() => {
+    setBlockerItems(blockers);
+  }, [blockers]);
+
+  if (blockerItems.length === 0 || dismissed) return null;
 
   function dismiss() {
     sessionStorage.setItem(storageKey, "1");
@@ -46,7 +50,10 @@ export default function BlockerAlert({ blockers, locale, productId }: BlockerAle
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "DONE" }),
       });
-      router.refresh();
+      setBlockerItems((current) =>
+        current.filter((blocker) => blocker.taskId !== taskId)
+      );
+      notifyTasksUpdated();
     } finally {
       setCompletingId(null);
     }
@@ -54,8 +61,8 @@ export default function BlockerAlert({ blockers, locale, productId }: BlockerAle
 
   const countLabel =
     locale === "en"
-      ? `${blockers.length} blocker${blockers.length > 1 ? "s" : ""} need${blockers.length === 1 ? "s" : ""} attention`
-      : `${blockers.length} kritik blokaj dikkatini bekliyor`;
+      ? `${blockerItems.length} blocker${blockerItems.length > 1 ? "s" : ""} need${blockerItems.length === 1 ? "s" : ""} attention`
+      : `${blockerItems.length} kritik blokaj dikkatini bekliyor`;
 
   return (
     <div className="rounded-[26px] border border-[#f6df9c] bg-[#fff9e8] px-5 py-4 shadow-[0_10px_28px_rgba(23,20,31,0.05)]">
@@ -95,7 +102,7 @@ export default function BlockerAlert({ blockers, locale, productId }: BlockerAle
 
       {/* Blocker list */}
       <ul className="mt-3 space-y-2">
-        {blockers.map((b) => (
+        {blockerItems.map((b) => (
           <li key={b.id}>
             <div className="group flex items-start gap-2.5 rounded-[10px] px-3 py-2 transition hover:bg-[#fef3c7]/50">
               {b.taskId ? (

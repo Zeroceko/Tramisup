@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { notifyTasksUpdated } from "@/lib/browser-events";
 
 type CoachInsightProps = {
   productId: string;
@@ -117,7 +117,6 @@ function buildTaskCandidates(
 }
 
 export default function CoachInsight({ productId, stage, locale }: CoachInsightProps) {
-  const router = useRouter();
   const isEn = locale === "en";
   const uiLocale = isEn ? "en" : "tr";
   const [expanded, setExpanded] = useState(false);
@@ -227,7 +226,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
       setSelectedTaskIds((current) =>
         current.filter((taskId) => !selectedTasks.some((task) => task.id === taskId))
       );
-      router.refresh();
+      notifyTasksUpdated();
     } catch (err: unknown) {
       setError(parseSuggestionError(err, uiLocale));
     } finally {

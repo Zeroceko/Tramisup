@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CheckCircle2, Circle, Eye, Play, RotateCcw } from "lucide-react";
 import {
@@ -15,6 +14,7 @@ import { toast } from "@/components/ui/sonner";
 import type { CompletionEffects } from "@/lib/task-completion-effects";
 import { parseStructuredDescription } from "@/lib/task-parsing";
 import { buildTaskDetailFallback } from "@/lib/task-detail-fallback";
+import { notifyTasksUpdated } from "@/lib/browser-events";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
@@ -85,7 +85,6 @@ const inputCls =
   "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition bg-white";
 
 export default function TasksList({ tasks, productId, locale, taskLimit }: TasksListProps) {
-  const router = useRouter();
   const isEn = locale === "en";
 
   type CategoryFilter =
@@ -94,6 +93,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     | "NONE" | null;
 
   const [loading, setLoading] = useState<string | null>(null);
+  const [taskItems, setTaskItems] = useState(tasks);
   const [showAdd, setShowAdd] = useState(false);
   const [showLater, setShowLater] = useState(false);
   const [showDone, setShowDone] = useState(false);
@@ -120,6 +120,10 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   });
   const taskLimitReached = Boolean(taskLimit?.isAtLimit);
   const showTaskWarning = Boolean(taskLimit && (taskLimit.isNearLimit || taskLimit.isAtLimit));
+
+  useEffect(() => {
+    setTaskItems(tasks);
+  }, [tasks]);
 
   // Date helpers
   const now = new Date();
@@ -162,10 +166,10 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
   // task.category column is the primary source of truth, with launchChecklist
   // category as legacy fallback.
   const filteredTasks = activeCategory === null
-    ? tasks
+    ? taskItems
     : activeCategory === "NONE"
-    ? tasks.filter((t) => !effectiveCategory(t))
-    : tasks.filter((t) => effectiveCategory(t) === activeCategory);
+    ? taskItems.filter((t) => !effectiveCategory(t))
+    : taskItems.filter((t) => effectiveCategory(t) === activeCategory);
 
   // Categories that have at least one task
   const KNOWN_CATEGORIES = [
@@ -173,14 +177,14 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
     "ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE", "MEASUREMENT",
   ] as const;
   const presentCategories = KNOWN_CATEGORIES.filter((cat) =>
-    tasks.some((t) => effectiveCategory(t) === cat)
+    taskItems.some((t) => effectiveCategory(t) === cat)
   );
-  const hasUnlinked = tasks.some((t) => !effectiveCategory(t));
+  const hasUnlinked = taskItems.some((t) => !effectiveCategory(t));
 
   // Section assignment
   const activeTasks = filteredTasks.filter((t) => t.status !== "DONE");
   const doneTasks = filteredTasks.filter((t) => t.status === "DONE");
-  const detailTask = detailTaskId ? tasks.find((task) => task.id === detailTaskId) ?? null : null;
+  const detailTask = detailTaskId ? taskItems.find((task) => task.id === detailTaskId) ?? null : null;
 
   // NOW eligibility: IN_PROGRESS OR (HIGH + overdue/today)
   // Hard cap to 3 to keep founder's working memory clear.
@@ -242,9 +246,9 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
       return 0;
     });
 
-  const allDone = tasks.filter((t) => t.status === "DONE").length;
+  const allDone = taskItems.filter((t) => t.status === "DONE").length;
   const completionRate =
-    tasks.length > 0 ? Math.round((allDone / tasks.length) * 100) : 0;
+    taskItems.length > 0 ? Math.round((allDone / taskItems.length) * 100) : 0;
 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setLoading(taskId);
@@ -257,6 +261,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
       const data = await res.json().catch(() => null) as {
         effects?: CompletionEffects | null;
         reversed?: boolean;
+        task?: Partial<Task>;
       } | null;
 
       // Show feedback based on effects
@@ -285,8 +290,12 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
       } else if (data?.reversed) {
         toast(isEn ? "Linked checklist item also reopened" : "Bağlı checklist maddesi de geri açıldı");
       }
-
-      router.refresh();
+      if (data?.task) {
+        setTaskItems((current) =>
+          current.map((task) => (task.id === taskId ? { ...task, ...data.task } : task))
+        );
+      }
+      notifyTasksUpdated();
     } finally {
       setLoading(null);
     }
@@ -308,7 +317,9 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           priority: newTask.priority,
         }),
       });
-      const payload = await res.json().catch(() => null) as { error?: string } | null;
+      const payload = await res.json().catch(() => null) as
+        | ({ error?: string } & Partial<Task> & { deduped?: boolean })
+        | null;
       if (!res.ok) {
         setFormError(
           payload?.error ??
@@ -316,9 +327,35 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
         );
         return;
       }
+      if (payload?.id) {
+        const payloadId = payload.id;
+        setTaskItems((current) => {
+          const existingIndex = current.findIndex((task) => task.id === payloadId);
+          if (existingIndex >= 0) return current;
+          return [
+            {
+              id: payloadId,
+              title: payload.title ?? newTask.title,
+              description: payload.description ?? newTask.description ?? null,
+              whyItMatters: payload.whyItMatters ?? null,
+              doneCriteria: payload.doneCriteria ?? null,
+              nextAction: payload.nextAction ?? null,
+              category: payload.category ?? null,
+              source: payload.source ?? "MANUAL",
+              dueDate: payload.dueDate ? new Date(payload.dueDate) : newTask.dueDate ? new Date(newTask.dueDate) : null,
+              status: payload.status ?? "TODO",
+              priority: payload.priority ?? newTask.priority,
+              startedAt: payload.startedAt ?? null,
+              completedAt: payload.completedAt ?? null,
+              launchChecklistItem: payload.launchChecklistItem ?? null,
+            },
+            ...current,
+          ];
+        });
+        notifyTasksUpdated();
+      }
       setNewTask({ title: "", description: "", dueDate: "", priority: "MEDIUM" });
       setShowAdd(false);
-      router.refresh();
     } finally {
       setLoading(null);
     }

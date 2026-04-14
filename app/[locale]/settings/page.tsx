@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getMetricSetup } from "@/lib/metric-setup";
@@ -11,6 +12,7 @@ import PageHeader from "@/components/PageHeader";
 import SettingsWorkspace from "@/components/SettingsWorkspace";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
 import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
+import { startServerTiming } from "@/lib/server-perf";
 
 function parseConfig(value: string | null) {
   if (!value) return null;
@@ -28,6 +30,7 @@ export default async function SettingsPage({
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ section?: string; success?: string; error?: string }>;
 }) {
+  const perf = startServerTiming("settings-page");
   const { locale } = await params;
   const { section, success, error } = await searchParams;
   const [session, t, activeProductId] = await Promise.all([
@@ -35,85 +38,134 @@ export default async function SettingsPage({
     getTranslations("settings"),
     getRequestActiveProductId(),
   ]);
-
-  const userWithProducts = await prisma.user.findUnique({
-    where: { id: session?.user?.id },
-    include: { products: true },
-  });
-
-  const user = userWithProducts
-    ? {
-        ...userWithProducts,
-        product:
-          userWithProducts.products.find((product) => product.id === activeProductId) ||
-          userWithProducts.products[0] ||
-          null,
-      }
-    : null;
-
-  const activeProduct = user?.product;
-  const isEn = locale === "en";
-
-  const existingIntegrations = activeProduct
-    ? await prisma.integration.findMany({
-        where: { productId: activeProduct.id },
-        orderBy: { updatedAt: "desc" },
-      })
-    : [];
-  const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
-    const config = parseConfig(integration.config);
-    return {
-      id: integration.id,
-      provider: integration.provider,
-      status: integration.status,
-      lastSyncAt: integration.lastSyncAt?.toISOString() ?? null,
-      selectedPropertyId:
-        typeof config?.propertyId === "string" ? config.propertyId : null,
-      selectedPropertyDisplayName:
-        typeof config?.propertyDisplayName === "string"
-          ? config.propertyDisplayName
-          : null,
-      accountDisplayName:
-        typeof config?.accountDisplayName === "string"
-          ? config.accountDisplayName
-          : null,
-    };
-  });
-  const manualEntryCount = activeProduct
-    ? await prisma.metricEntry.count({ where: { productId: activeProduct.id } })
-    : 0;
-
-  const connectedProviders = integrations
-    .filter((i) => i.status === "CONNECTED")
-    .map((i) => i.provider);
-
-  const metricPlan = activeProduct
-    ? getGrowthMetricRecommendations({
-        name: activeProduct.name,
-        status: activeProduct.status,
-        category: activeProduct.category ?? undefined,
-        description: activeProduct.description ?? undefined,
-        targetAudience: activeProduct.targetAudience ?? undefined,
-        businessModel: activeProduct.businessModel ?? undefined,
-        website: activeProduct.website ?? undefined,
-        locale,
-      })
-    : null;
-
-  const savedMetricSetup = activeProduct ? await getMetricSetup(activeProduct.id) : null;
-  const aiConnections = session?.user?.id
-    ? await listAIConnectionsForUser(session.user.id)
-    : [];
-  const productAISettings = activeProduct
-    ? await prisma.productAISettings.findUnique({
-        where: { productId: activeProduct.id },
+  if (!session?.user?.id) redirect(`/${locale}/login`);
+  const userId = session.user.id;
+  let perfProductId: string | null = null;
+  try {
+    const [userRecord, aiConnections, currentPlan, subscription] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
         select: {
-          mode: true,
-          selectedConnectionId: true,
+          id: true,
+          name: true,
+          email: true,
+          preferredLocale: true,
         },
-      })
-    : null;
-  const connectedAIConnectionCount = aiConnections.filter((item) => item.status === "CONNECTED").length;
+      }),
+      listAIConnectionsForUser(userId),
+      getUserPlan(userId),
+      prisma.subscription.findUnique({
+        where: { userId },
+        select: { interval: true, status: true, currentPeriodEnd: true },
+      }),
+    ]);
+
+    let activeProduct = await prisma.product.findFirst({
+      where: {
+        userId,
+        ...(activeProductId ? { id: activeProductId } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        launchDate: true,
+        category: true,
+        description: true,
+        targetAudience: true,
+        businessModel: true,
+        website: true,
+      },
+    });
+
+    if (!activeProduct && activeProductId) {
+      activeProduct = await prisma.product.findFirst({
+        where: { userId },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          launchDate: true,
+          category: true,
+          description: true,
+          targetAudience: true,
+          businessModel: true,
+          website: true,
+        },
+      });
+    }
+
+    perfProductId = activeProduct?.id ?? null;
+    const user = userRecord
+      ? {
+          ...userRecord,
+          product: activeProduct
+            ? {
+                id: activeProduct.id,
+                name: activeProduct.name,
+                launchDate: activeProduct.launchDate,
+                status: activeProduct.status,
+              }
+            : null,
+        }
+      : null;
+    const isEn = locale === "en";
+
+    const [existingIntegrations, manualEntryCount, savedMetricSetup, productAISettings] = activeProduct
+      ? await Promise.all([
+          prisma.integration.findMany({
+            where: { productId: activeProduct.id },
+            orderBy: { updatedAt: "desc" },
+          }),
+          prisma.metricEntry.count({ where: { productId: activeProduct.id } }),
+          getMetricSetup(activeProduct.id),
+          prisma.productAISettings.findUnique({
+            where: { productId: activeProduct.id },
+            select: {
+              mode: true,
+              selectedConnectionId: true,
+            },
+          }),
+        ])
+      : [[], 0, null, null] as const;
+    const integrations: ExistingIntegration[] = existingIntegrations.map((integration) => {
+      const config = parseConfig(integration.config);
+      return {
+        id: integration.id,
+        provider: integration.provider,
+        status: integration.status,
+        lastSyncAt: integration.lastSyncAt?.toISOString() ?? null,
+        selectedPropertyId:
+          typeof config?.propertyId === "string" ? config.propertyId : null,
+        selectedPropertyDisplayName:
+          typeof config?.propertyDisplayName === "string"
+            ? config.propertyDisplayName
+            : null,
+        accountDisplayName:
+          typeof config?.accountDisplayName === "string"
+            ? config.accountDisplayName
+            : null,
+      };
+    });
+
+    const connectedProviders = integrations
+      .filter((i) => i.status === "CONNECTED")
+      .map((i) => i.provider);
+
+    const metricPlan = activeProduct
+      ? getGrowthMetricRecommendations({
+          name: activeProduct.name,
+          status: activeProduct.status,
+          category: activeProduct.category ?? undefined,
+          description: activeProduct.description ?? undefined,
+          targetAudience: activeProduct.targetAudience ?? undefined,
+          businessModel: activeProduct.businessModel ?? undefined,
+          website: activeProduct.website ?? undefined,
+          locale,
+        })
+      : null;
+
+    const connectedAIConnectionCount = aiConnections.filter((item) => item.status === "CONNECTED").length;
 
   const connectedCount = integrations.filter((i) => i.status === "CONNECTED").length;
   const latestSync = integrations
@@ -201,14 +253,6 @@ export default async function SettingsPage({
     : copy.noSyncYet;
 
   // Billing data
-  const userId = session?.user?.id ?? "";
-  const [currentPlan, subscription] = await Promise.all([
-    getUserPlan(userId),
-    prisma.subscription.findUnique({
-      where: { userId },
-      select: { interval: true, status: true, currentPeriodEnd: true },
-    }),
-  ]);
   const limits = PLAN_LIMITS[currentPlan];
   const [productUsage, taskUsage, aiMessageUsage, metricUsage] = await Promise.all([
     checkLimit(userId, "products", 0),
@@ -341,4 +385,10 @@ export default async function SettingsPage({
       />
     </div>
   );
+  } finally {
+    perf.end({
+      userId,
+      productId: perfProductId,
+    });
+  }
 }

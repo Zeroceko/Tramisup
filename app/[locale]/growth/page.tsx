@@ -20,6 +20,7 @@ import {
   selectGrowthCheckinQuestions,
 } from "@/lib/growth-transition-checkin";
 import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
+import { startServerTiming } from "@/lib/server-perf";
 
 type GrowthWorkspaceMode =
   | "intake_needed"
@@ -57,6 +58,7 @@ export default async function GrowthPage({
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ baseline?: string }>;
 }) {
+  const perf = startServerTiming("growth-page");
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const [session, t, activeId] = await Promise.all([
@@ -66,6 +68,8 @@ export default async function GrowthPage({
   ]);
   if (!session?.user?.id) redirect(`/${locale}/login`);
   const isEn = locale === "en";
+  let perfProductId: string | null = null;
+  try {
   const growthActionHints = {
     Awareness: isEn
       ? "Choose the one move that strengthens distribution and traffic quality."
@@ -89,8 +93,20 @@ export default async function GrowthPage({
 
   const product = await prisma.product.findFirst({
     where: {
-      userId: session?.user?.id,
+      userId: session.user.id,
       ...(activeId ? { id: activeId } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      category: true,
+      description: true,
+      targetAudience: true,
+      businessModel: true,
+      website: true,
+      additionalContext: true,
+      launchGoals: true,
     },
   });
 
@@ -99,6 +115,7 @@ export default async function GrowthPage({
       <div className="py-20 text-center text-[#666d80]">{isEn ? "Product not found" : "Ürün bulunamadı"}</div>
     );
   }
+  perfProductId = product.id;
 
   const [growthChecklists, routines, goals, integrations, timelineEvents, savedMetricSetup] =
     await Promise.all([
@@ -632,4 +649,10 @@ export default async function GrowthPage({
       </div>
     </div>
   );
+  } finally {
+    perf.end({
+      userId: session.user.id,
+      productId: perfProductId,
+    });
+  }
 }

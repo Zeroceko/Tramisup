@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
 interface Task {
@@ -29,8 +28,8 @@ export default function ActionsSection({
   tasks: Task[];
   productId: string;
 }) {
-  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [taskItems, setTaskItems] = useState(tasks);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAction, setNewAction] = useState({
     title: "",
@@ -40,15 +39,24 @@ export default function ActionsSection({
 
   const inputCls = "w-full px-3 py-2 rounded-[10px] border border-[#e8e8e8] text-[13px] text-[#0d0d12] placeholder-[#9ca3af] outline-none focus:border-[#95dbda] transition";
 
+  useEffect(() => {
+    setTaskItems(tasks);
+  }, [tasks]);
+
   const toggleTask = async (taskId: string, currentStatus: string) => {
     setLoading(taskId);
     try {
-      await fetch(`/api/actions/${taskId}`, {
+      const response = await fetch(`/api/actions/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: currentStatus === "DONE" ? "TODO" : "DONE" }),
       });
-      router.refresh();
+      const payload = (await response.json().catch(() => null)) as { task?: Task } | null;
+      if (response.ok && payload?.task) {
+        setTaskItems((current) =>
+          current.map((task) => (task.id === taskId ? payload.task! : task))
+        );
+      }
     } catch (error) {
       console.error("Failed to update task:", error);
     } finally {
@@ -60,14 +68,17 @@ export default function ActionsSection({
     e.preventDefault();
     setLoading("new");
     try {
-      await fetch("/api/actions", {
+      const response = await fetch("/api/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newAction, productId, dueDate: newAction.dueDate || null }),
       });
+      const createdTask = (await response.json().catch(() => null)) as Task | null;
+      if (response.ok && createdTask?.id) {
+        setTaskItems((current) => [createdTask, ...current]);
+      }
       setNewAction({ title: "", dueDate: "", priority: "MEDIUM" });
       setShowAddForm(false);
-      router.refresh();
     } catch (error) {
       console.error("Failed to add task:", error);
     } finally {
@@ -82,7 +93,7 @@ export default function ActionsSection({
   };
 
   const getPendingTasks = () => {
-    const pending = tasks.filter(a => a.status !== "DONE");
+    const pending = taskItems.filter(a => a.status !== "DONE");
     // Sort: overdue+priority first, then by priority
     return pending.sort((a, b) => {
       const aOverdue = isOverdue(a.dueDate);
@@ -97,7 +108,7 @@ export default function ActionsSection({
   };
 
   const pendingTasks = getPendingTasks();
-  const completedTasks = tasks.filter(a => a.status === "DONE");
+  const completedTasks = taskItems.filter(a => a.status === "DONE");
 
   const getTaskBorderStyle = (task: Task) => {
     if (isOverdue(task.dueDate)) {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { notifyTasksUpdated } from "@/lib/browser-events";
 
 type TaskItem = {
   id: string;
@@ -51,6 +52,7 @@ export default function TodayTasks({ tasks, totalPending, locale }: TodayTasksPr
       });
       if (res.ok) {
         setRemovedIds((prev) => new Set(prev).add(taskId));
+        notifyTasksUpdated();
       }
     } catch {
       // silently fail — task stays visible

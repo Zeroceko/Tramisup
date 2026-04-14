@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { AgentType } from "@/lib/agent-types";
+import { notifyTasksUpdated } from "@/lib/browser-events";
 
 const LazyAgentChatPanel = dynamic(() => import("@/components/AgentChatPanel"), {
   ssr: false,
@@ -37,12 +38,27 @@ function getAgentLabel(agentType: AgentType, locale: string) {
 }
 
 export default function AgentLayoutShell({ agentType, productId, locale, children }: Props) {
-  const [open, setOpen] = useState(true);
+  const storageKey = `tiramisup:agent-panel:${agentType}:${productId}`;
+  const [open, setOpen] = useState(false);
   const { bg } = AGENT_COLORS[agentType];
   const label = getAgentLabel(agentType, locale);
   const handleTasksCreated = useCallback((_titles: string[]) => {
-    window.dispatchEvent(new CustomEvent("tiramisup:tasks-updated"));
+    notifyTasksUpdated();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setOpen(window.sessionStorage.getItem(storageKey) === "open");
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (open) {
+      window.sessionStorage.setItem(storageKey, "open");
+      return;
+    }
+    window.sessionStorage.removeItem(storageKey);
+  }, [open, storageKey]);
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden gap-3 p-3">

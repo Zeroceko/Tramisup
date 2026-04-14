@@ -160,6 +160,7 @@ model LaunchChecklist {
   product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([productId, completed, priority])
 }
 
 model GrowthChecklist {
@@ -176,6 +177,7 @@ model GrowthChecklist {
   product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([productId, completed])
 }
 
 model Task {
@@ -211,6 +213,8 @@ model Task {
   @@index([productId])
   @@index([productId, status])
   @@index([productId, category])
+  @@index([productId, status, dueDate])
+  @@index([productId, status, updatedAt])
 }
 
 /// Lifecycle instrumentation for tasks. Sprint-3 measurement layer:
@@ -326,6 +330,7 @@ model Goal {
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([productId, completed])
 }
 
 model TimelineEvent {
@@ -355,6 +360,7 @@ model Integration {
 
   @@unique([productId, provider])
   @@index([productId])
+  @@index([productId, status])
 }
 
 model SyncJob {

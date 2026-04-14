@@ -14,6 +14,7 @@ import {
   summarizeGrowthCheckinForSetup,
 } from "@/lib/growth-transition-checkin";
 import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
+import { startServerTiming } from "@/lib/server-perf";
 
 function formatMetricValue(value: number | null | undefined, locale: string) {
   if (value == null) return "—";
@@ -41,6 +42,7 @@ export default async function MetricsPage({
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ setup?: string; entry?: string }>;
 }) {
+  const perf = startServerTiming("metrics-page");
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const isEn = locale === "en";
@@ -50,14 +52,16 @@ export default async function MetricsPage({
     getRequestActiveProductId(),
   ]);
   if (!session?.user?.id) redirect(`/${locale}/login`);
+  let perfProductId: string | null = null;
 
-  const statusLabels = {
+  try {
+    const statusLabels = {
     AHEAD: isEn ? "Ahead" : "Hızlı gidiyor",
     ON_TRACK: isEn ? "On track" : "Takipte",
     AT_RISK: isEn ? "Weak link" : "Zayıf halka",
     NEEDS_BASELINE: isEn ? "Baseline" : "Baz çizgisi",
-  } as const;
-  const stageActionHints: Partial<Record<FunnelStageKey, string>> = {
+    } as const;
+    const stageActionHints: Partial<Record<FunnelStageKey, string>> = {
     Awareness: isEn ? "Diversify traffic sources or increase content output." : "Trafik kaynağını çeşitlendir veya içerik üretimini artır.",
     Acquisition: isEn ? "Test landing-page conversion and reduce signup friction." : "Landing page dönüşümünü test et. Signup adımlarını azalt.",
     Activation: isEn ? "Review onboarding and shorten the path to the aha moment." : "Onboarding akışını gözden geçir. Aha moment'a giden adımları kısalt.",
@@ -65,31 +69,43 @@ export default async function MetricsPage({
     Referral: isEn ? "Make the referral flow visible and reduce invite friction." : "Referral mekanizması yeterince görünür mü? Davet sürtüşmesini azalt.",
     Revenue: isEn ? "Find the main blocker in the paid conversion step." : "Trial süresi yeterli mi? Ücretli geçişin önündeki engeli bul.",
   };
-  const product = await prisma.product.findFirst({
-    where: {
-      userId: session?.user?.id,
-      ...(activeId ? { id: activeId } : {}),
-    },
-  });
-
-  if (!product) {
-    return (
-      <div className="py-20 text-center text-[14px] text-[#666d80]">{isEn ? "Product not found" : "Ürün bulunamadı"}</div>
-    );
-  }
-
-  const [connectedIntegrations, savedSetup] = await Promise.all([
-    prisma.integration.findMany({
+    const product = await prisma.product.findFirst({
       where: {
-        productId: product.id,
-        status: "CONNECTED",
+        userId: session.user.id,
+        ...(activeId ? { id: activeId } : {}),
       },
       select: {
-        provider: true,
+        id: true,
+        name: true,
+        status: true,
+        category: true,
+        description: true,
+        targetAudience: true,
+        businessModel: true,
+        website: true,
+        additionalContext: true,
       },
-    }),
-    getMetricSetup(product.id),
-  ]);
+    });
+
+    if (!product) {
+      return (
+        <div className="py-20 text-center text-[14px] text-[#666d80]">{isEn ? "Product not found" : "Ürün bulunamadı"}</div>
+      );
+    }
+    perfProductId = product.id;
+
+    const [connectedIntegrations, savedSetup] = await Promise.all([
+      prisma.integration.findMany({
+        where: {
+          productId: product.id,
+          status: "CONNECTED",
+        },
+        select: {
+          provider: true,
+        },
+      }),
+      getMetricSetup(product.id),
+    ]);
   const connectedSourceCount = connectedIntegrations.length;
   const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
   const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
@@ -224,8 +240,8 @@ export default async function MetricsPage({
   const entryJustSaved = resolvedSearch.entry === "saved";
 
 
-  return (
-    <div className="space-y-5">
+    return (
+      <div className="space-y-5">
       {/* 1. Compact header */}
       <div>
         <p className="text-[13px] font-medium text-[#6f7482]">
@@ -623,6 +639,12 @@ export default async function MetricsPage({
           </div>
         </div>
       )}
-    </div>
-  );
+      </div>
+    );
+  } finally {
+    perf.end({
+      userId: session.user.id,
+      productId: perfProductId,
+    });
+  }
 }

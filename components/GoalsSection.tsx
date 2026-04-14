@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
 interface Goal {
@@ -35,9 +34,9 @@ export default function GoalsSection({
   metricSetup?: MetricSetupLike | null;
   locale: string;
 }) {
-  const router = useRouter();
   const isEn = locale === "en";
   const [loading, setLoading] = useState<string | null>(null);
+  const [goalItems, setGoalItems] = useState(goals);
   const [showAddForm, setShowAddForm] = useState(goals.length === 0);
   const [newGoal, setNewGoal] = useState({
     title: "",
@@ -47,15 +46,24 @@ export default function GoalsSection({
     endDate: "",
   });
 
+  useEffect(() => {
+    setGoalItems(goals);
+  }, [goals]);
+
   const updateProgress = async (goalId: string, currentValue: number) => {
     setLoading(goalId);
     try {
-      await fetch(`/api/goals/${goalId}`, {
+      const response = await fetch(`/api/goals/${goalId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentValue }),
       });
-      router.refresh();
+      const updatedGoal = (await response.json().catch(() => null)) as Goal | null;
+      if (response.ok && updatedGoal) {
+        setGoalItems((current) =>
+          current.map((goal) => (goal.id === goalId ? updatedGoal : goal))
+        );
+      }
     } catch (error) {
       console.error("Failed to update goal:", error);
     } finally {
@@ -67,14 +75,17 @@ export default function GoalsSection({
     e.preventDefault();
     setLoading("new");
     try {
-      await fetch("/api/goals", {
+      const response = await fetch("/api/goals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newGoal, productId, targetValue: parseFloat(newGoal.targetValue) }),
       });
+      const createdGoal = (await response.json().catch(() => null)) as Goal | null;
+      if (response.ok && createdGoal) {
+        setGoalItems((current) => [createdGoal, ...current]);
+      }
       setNewGoal({ title: "", targetValue: "", unit: "", startDate: format(new Date(), "yyyy-MM-dd"), endDate: "" });
       setShowAddForm(false);
-      router.refresh();
     } catch (error) {
       console.error("Failed to add goal:", error);
     } finally {
@@ -82,8 +93,8 @@ export default function GoalsSection({
     }
   };
 
-  const activeGoals = goals.filter((g) => !g.completed);
-  const completedGoals = goals.filter((g) => g.completed);
+  const activeGoals = goalItems.filter((g) => !g.completed);
+  const completedGoals = goalItems.filter((g) => g.completed);
   const trackedStages = metricSetup?.selections
     .filter((item) => item.selectedMetricKeys.length > 0)
     .map((item) => item.stage) ?? [];
