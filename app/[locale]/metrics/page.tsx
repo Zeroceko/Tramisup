@@ -1,8 +1,5 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getActiveProductId } from "@/lib/activeProduct";
 import MetricEntryForm from "@/components/MetricEntryForm";
 import MetricsTrendChart from "@/components/MetricsTrendChart";
 import MetricSetupSelector from "@/components/MetricSetupSelector";
@@ -16,6 +13,7 @@ import {
   readGrowthCheckinFromAdditionalContext,
   summarizeGrowthCheckinForSetup,
 } from "@/lib/growth-transition-checkin";
+import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
 
 function formatMetricValue(value: number | null | undefined, locale: string) {
   if (value == null) return "—";
@@ -47,10 +45,12 @@ export default async function MetricsPage({
   const resolvedSearch = (await searchParams) ?? {};
   const isEn = locale === "en";
   const numberLocale = isEn ? "en-US" : "tr-TR";
-  const session = await getServerSession(authOptions);
+  const [session, activeId] = await Promise.all([
+    getRequestSession(),
+    getRequestActiveProductId(),
+  ]);
   if (!session?.user?.id) redirect(`/${locale}/login`);
 
-  const activeId = await getActiveProductId();
   const statusLabels = {
     AHEAD: isEn ? "Ahead" : "Hızlı gidiyor",
     ON_TRACK: isEn ? "On track" : "Takipte",
@@ -78,15 +78,18 @@ export default async function MetricsPage({
     );
   }
 
-  const connectedIntegrations = await prisma.integration.findMany({
-    where: {
-      productId: product.id,
-      status: "CONNECTED",
-    },
-    select: {
-      provider: true,
-    },
-  });
+  const [connectedIntegrations, savedSetup] = await Promise.all([
+    prisma.integration.findMany({
+      where: {
+        productId: product.id,
+        status: "CONNECTED",
+      },
+      select: {
+        provider: true,
+      },
+    }),
+    getMetricSetup(product.id),
+  ]);
   const connectedSourceCount = connectedIntegrations.length;
   const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
   const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
@@ -107,7 +110,6 @@ export default async function MetricsPage({
     growthCheckinAnswers,
   });
 
-  const savedSetup = await getMetricSetup(product.id);
   const selectedMetrics = metricPlan.sections.flatMap((section) => {
     const selectedKeys =
       savedSetup?.selections.find((item) => item.stage === section.stage)?.selectedMetricKeys ?? [];

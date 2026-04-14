@@ -121,7 +121,6 @@ export default function SignupPage() {
         email: data.email || email,
       });
       router.push(`/${locale}/verify-email?${nextParams.toString()}`);
-      router.refresh();
     } catch {
       setError(t("errors.generic"));
     } finally {

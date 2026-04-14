@@ -114,7 +114,9 @@ export async function getFounderCoachContext(
   ]);
 
   if (!product) throw new Error("Product not found");
-  await normalizeStoredLaunchChecklistPriorities(productId);
+  if (product.status === "PRE_LAUNCH") {
+    await normalizeStoredLaunchChecklistPriorities(productId);
+  }
 
   const selections = (metricSetup?.selections as FunnelMetricSelection[] | null) ?? [];
   const ignoredLaunchChecklistIds = metricSetup?.ignoredChecklistIds ?? [];

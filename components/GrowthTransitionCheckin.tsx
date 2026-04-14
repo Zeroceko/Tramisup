@@ -51,7 +51,6 @@ export default function GrowthTransitionCheckin({
       });
       if (!res.ok) throw new Error("save_failed");
       router.push(nextHref);
-      router.refresh();
     } catch {
       setError(
         isEn

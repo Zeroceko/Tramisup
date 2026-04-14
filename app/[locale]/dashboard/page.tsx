@@ -1,9 +1,6 @@
-import { getServerSession } from "next-auth";
 import { ProductStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getActiveProductId } from "@/lib/activeProduct";
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
@@ -11,6 +8,7 @@ import type { FunnelMetricDescriptor } from "@/lib/funnel-health";
 import { normalizeStoredLaunchChecklistPriorities } from "@/lib/launch-checklist-priority";
 import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
 import { normalizeLaunchStageKey } from "@/lib/launch-stage";
+import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
 import FirstRunOnboarding from "@/components/FirstRunOnboarding";
 import PendingOnboardingRetryCard from "@/components/PendingOnboardingRetryCard";
 import PrimaryAction from "@/components/today/PrimaryAction";
@@ -286,12 +284,14 @@ export default async function DashboardPage({
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const justLaunched = resolvedSearch.justLaunched === "1";
-  const session = await getServerSession(authOptions);
+  const [session, activeId] = await Promise.all([
+    getRequestSession(),
+    getRequestActiveProductId(),
+  ]);
   const uiLocale = locale;
   const isEn = uiLocale === "en";
 
   // ---- Product resolution ----
-  const activeId = await getActiveProductId();
   const productInclude = {
     _count: {
       select: {
@@ -334,8 +334,7 @@ export default async function DashboardPage({
     );
   }
 
-  await normalizeStoredLaunchChecklistPriorities(product.id);
-  await ensureHighPriorityBlockersAreTasks(product.id);
+  const isLaunchedProduct = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
 
   // ---- Data fetching (parallel) ----
   const today = new Date();
@@ -345,8 +344,6 @@ export default async function DashboardPage({
   const fourteenDaysAgo = new Date(today);
   fourteenDaysAgo.setDate(today.getDate() - 13);
 
-  const isLaunchedProduct = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
-
   // Growth intake gate: launched/growing products must complete the check-in
   // before seeing the dashboard. Redirect to growth page which shows the intake.
   if (isLaunchedProduct && !justLaunched) {
@@ -355,6 +352,11 @@ export default async function DashboardPage({
     if (!hasGrowthCheckin) {
       redirect(`/${locale}/growth`);
     }
+  }
+
+  if (!isLaunchedProduct) {
+    await normalizeStoredLaunchChecklistPriorities(product.id);
+    await ensureHighPriorityBlockersAreTasks(product.id);
   }
 
   const [

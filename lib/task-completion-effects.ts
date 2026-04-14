@@ -32,7 +32,9 @@ export async function computeCompletionEffects(
   productId: string,
   checklist: LinkedChecklist | null
 ): Promise<CompletionEffects> {
-  await normalizeStoredLaunchChecklistPriorities(productId);
+  if (checklist) {
+    await normalizeStoredLaunchChecklistPriorities(productId);
+  }
 
   const effects: CompletionEffects = {
     checklistCompleted: null,

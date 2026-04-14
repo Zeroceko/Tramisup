@@ -1,11 +1,8 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { getActiveProductId } from "@/lib/activeProduct";
 import AppShell from "@/components/AppShell";
 import AgentLayoutShell from "@/components/AgentLayoutShell";
 import RouteScopedBoundary from "@/components/RouteScopedBoundary";
-import { getShellProducts } from "@/lib/shell-products";
+import { getRequestSession, getRequestShellContext } from "@/lib/request-cache";
 
 export default async function GrowthLayout({
   children,
@@ -15,22 +12,23 @@ export default async function GrowthLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getRequestSession();
 
   if (!session?.user?.id) {
     redirect(`/${locale}/login`);
   }
 
-  const products = await getShellProducts(session.user.id);
-  const activeProductId = await getActiveProductId();
-  const effectiveActiveId =
-    products.find((p) => p.id === activeProductId)?.id ?? products[0]?.id;
+  const { products, effectiveActiveProductId } = await getRequestShellContext(session.user.id);
 
   return (
-    <AppShell products={products} activeProductId={effectiveActiveId} userName={session.user.name ?? undefined}>
+    <AppShell
+      products={products}
+      activeProductId={effectiveActiveProductId}
+      userName={session.user.name ?? undefined}
+    >
       <RouteScopedBoundary key="growth" scope="growth">
-        {effectiveActiveId ? (
-          <AgentLayoutShell agentType="growth" productId={effectiveActiveId} locale={locale}>
+        {effectiveActiveProductId ? (
+          <AgentLayoutShell agentType="growth" productId={effectiveActiveProductId} locale={locale}>
             {children}
           </AgentLayoutShell>
         ) : (

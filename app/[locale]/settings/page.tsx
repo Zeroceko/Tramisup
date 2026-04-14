@@ -1,8 +1,5 @@
-import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getActiveProductId } from "@/lib/activeProduct";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getMetricSetup } from "@/lib/metric-setup";
 import { checkLimit, getUserPlan, PLAN_LIMITS } from "@/lib/plan-limits";
@@ -13,6 +10,7 @@ import { getProductStatusLabel } from "@/lib/launch-stage";
 import PageHeader from "@/components/PageHeader";
 import SettingsWorkspace from "@/components/SettingsWorkspace";
 import type { ExistingIntegration, IntegrationDef } from "@/components/IntegrationCard";
+import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
 
 function parseConfig(value: string | null) {
   if (!value) return null;
@@ -32,9 +30,11 @@ export default async function SettingsPage({
 }) {
   const { locale } = await params;
   const { section, success, error } = await searchParams;
-  const session = await getServerSession(authOptions);
-  const t = await getTranslations("settings");
-  const activeProductId = await getActiveProductId();
+  const [session, t, activeProductId] = await Promise.all([
+    getRequestSession(),
+    getTranslations("settings"),
+    getRequestActiveProductId(),
+  ]);
 
   const userWithProducts = await prisma.user.findUnique({
     where: { id: session?.user?.id },

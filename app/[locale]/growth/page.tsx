@@ -1,10 +1,7 @@
-import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
-import { getActiveProductId } from "@/lib/activeProduct";
 import GrowthRoutines from "@/components/GrowthRoutines";
 import GoalsSection from "@/components/GoalsSection";
 import TimelineFeed from "@/components/TimelineFeed";
@@ -22,6 +19,7 @@ import {
   readGrowthCheckinFromAdditionalContext,
   selectGrowthCheckinQuestions,
 } from "@/lib/growth-transition-checkin";
+import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
 
 type GrowthWorkspaceMode =
   | "intake_needed"
@@ -61,9 +59,12 @@ export default async function GrowthPage({
 }) {
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
-  const session = await getServerSession(authOptions);
+  const [session, t, activeId] = await Promise.all([
+    getRequestSession(),
+    getTranslations("growth"),
+    getRequestActiveProductId(),
+  ]);
   if (!session?.user?.id) redirect(`/${locale}/login`);
-  const t = await getTranslations("growth");
   const isEn = locale === "en";
   const growthActionHints = {
     Awareness: isEn
@@ -86,7 +87,6 @@ export default async function GrowthPage({
       : "Ücretliye geçişteki ana friksiyonu bul ve tek noktaya odaklan.",
   } as const;
 
-  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
     where: {
       userId: session?.user?.id,
@@ -100,31 +100,32 @@ export default async function GrowthPage({
     );
   }
 
-  const growthChecklists = await prisma.growthChecklist.findMany({
-    where: { productId: product.id },
-    orderBy: [{ category: "asc" }, { order: "asc" }],
-  });
-
-  const routines = await prisma.growthRoutine.findMany({
-    where: { productId: product.id },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const goals = await prisma.goal.findMany({
-    where: { productId: product.id },
-    orderBy: { endDate: "asc" },
-  });
-  const integrations = await prisma.integration.findMany({
-    where: { productId: product.id, status: "CONNECTED" },
-    select: { provider: true },
-  });
+  const [growthChecklists, routines, goals, integrations, timelineEvents, savedMetricSetup] =
+    await Promise.all([
+      prisma.growthChecklist.findMany({
+        where: { productId: product.id },
+        orderBy: [{ category: "asc" }, { order: "asc" }],
+      }),
+      prisma.growthRoutine.findMany({
+        where: { productId: product.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.goal.findMany({
+        where: { productId: product.id },
+        orderBy: { endDate: "asc" },
+      }),
+      prisma.integration.findMany({
+        where: { productId: product.id, status: "CONNECTED" },
+        select: { provider: true },
+      }),
+      prisma.timelineEvent.findMany({
+        where: { productId: product.id },
+        orderBy: { date: "desc" },
+        take: 20,
+      }),
+      getMetricSetup(product.id),
+    ]);
   const connectedSourceCount = integrations.length;
-
-  const timelineEvents = await prisma.timelineEvent.findMany({
-    where: { productId: product.id },
-    orderBy: { date: "desc" },
-    take: 20,
-  });
 
   const metricPlan = getGrowthMetricRecommendations({
     name: product.name,
@@ -136,7 +137,6 @@ export default async function GrowthPage({
     website: product.website,
     locale,
   });
-  const savedMetricSetup = await getMetricSetup(product.id);
   const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
   const hasGrowthCheckin = Boolean(storedAdditionalContext.growthCheckin?.completedAt);
   const hasSetup = !!savedMetricSetup?.selections?.length;

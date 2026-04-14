@@ -996,7 +996,6 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
           if (step === "ready") {
             clearInterval(interval);
             router.push(destination);
-            router.refresh();
           }
         } catch {
           // ignore transient polling errors

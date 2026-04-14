@@ -1,11 +1,9 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getActiveProductId } from "@/lib/activeProduct";
 import { checkLimit } from "@/lib/plan-limits";
 import StatCard from "@/components/StatCard";
 import TasksList from "@/components/TasksList";
+import { getRequestActiveProductId, getRequestSession } from "@/lib/request-cache";
 
 export default async function TasksPage({
   params,
@@ -13,12 +11,14 @@ export default async function TasksPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const session = await getServerSession(authOptions);
+  const [session, activeId] = await Promise.all([
+    getRequestSession(),
+    getRequestActiveProductId(),
+  ]);
   if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const isEn = locale === "en";
 
-  const activeId = await getActiveProductId();
   const product = await prisma.product.findFirst({
     where: {
       userId: session?.user?.id,
@@ -44,15 +44,18 @@ export default async function TasksPage({
     );
   }
 
-  const tasks = await prisma.task.findMany({
-    where: { productId: product.id },
-    include: {
-      launchChecklistItem: {
-        select: { id: true, title: true, category: true, completed: true },
+  const [tasks, taskLimit] = await Promise.all([
+    prisma.task.findMany({
+      where: { productId: product.id },
+      include: {
+        launchChecklistItem: {
+          select: { id: true, title: true, category: true, completed: true },
+        },
       },
-    },
-    orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { createdAt: "desc" }],
-  });
+      orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    }),
+    checkLimit(session.user.id, "tasks", 0),
+  ]);
 
   const total = tasks.length;
   const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
@@ -61,8 +64,6 @@ export default async function TasksPage({
     (t) => t.priority === "HIGH" && t.status !== "DONE"
   ).length;
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
-  const taskLimit = await checkLimit(session.user.id, "tasks", 0);
-
   return (
     <div>
       <div className="grid grid-cols-4 gap-3 px-5 pt-5 pb-4">

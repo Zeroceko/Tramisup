@@ -62,7 +62,6 @@ export default function LoginPage() {
         }
       } else {
         router.push(callbackUrl || `/${locale}/dashboard`);
-        router.refresh();
       }
     } catch {
       setError(t("errors.generic"));

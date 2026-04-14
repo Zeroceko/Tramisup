@@ -1,10 +1,9 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { authOptions } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin-access";
 import AdminNav from "@/components/admin/AdminNav";
 import AdminUnauthorized from "@/components/admin/AdminUnauthorized";
+import { getRequestSession } from "@/lib/request-cache";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -27,7 +26,7 @@ export default async function AdminLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getRequestSession();
   const isEn = locale === "en";
 
   if (!session?.user?.email) {
