@@ -201,7 +201,7 @@ export default function PreLaunchWorkspace({
           {isEn ? "How ready is your product?" : "Ürünün ne kadar hazır?"}
         </p>
         <h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em] text-[#0d0d12]">
-          Launch Readiness
+          {isEn ? "Launch Readiness" : "Launch Hazırlığı"}
         </h1>
       </div>
 

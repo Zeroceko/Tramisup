@@ -97,23 +97,23 @@ export default function ProductsGrid({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {/* New product card */}
         <Link
           href={`/${locale}/products/new`}
-          className="group flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[26px] border border-dashed border-[#f2bfd9] bg-[radial-gradient(circle_at_top,_rgba(255,215,239,0.7),_transparent_35%),linear-gradient(180deg,_#fff9fc_0%,_#ffffff_100%)] p-6 transition hover:-translate-y-0.5 hover:border-[#e6a8cb] hover:shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
+          className="group flex min-h-[318px] flex-col justify-between overflow-hidden rounded-[26px] border border-dashed border-[#f2bfd9] bg-[radial-gradient(circle_at_top,_rgba(255,215,239,0.7),_transparent_35%),linear-gradient(180deg,_#fff9fc_0%,_#ffffff_100%)] p-6 transition hover:-translate-y-0.5 hover:border-[#e6a8cb] hover:shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#f0bfd8] bg-white text-[28px] font-light text-[#c581a8] shadow-[0_10px_24px_rgba(23,20,31,0.06)]">
             +
           </div>
-          <div>
+          <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
               {locale === "en" ? "New workspace" : "Yeni workspace"}
             </p>
-            <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
+            <p className="text-[22px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
               {locale === "en" ? "Create another product" : "Yeni bir ürün oluştur"}
             </p>
-            <p className="mt-2 text-[14px] leading-6 text-[#5e6678]">
+            <p className="text-[14px] leading-6 text-[#5e6678]">
               {locale === "en"
                 ? "Open a fresh founder workspace for a new idea, launch, or growth bet."
                 : "Yeni bir fikir, launch ya da growth denemesi için temiz bir founder workspace aç."}
@@ -128,7 +128,7 @@ export default function ProductsGrid({
           return (
             <div
               key={product.id}
-              className={`relative overflow-hidden rounded-[26px] border bg-white p-5 transition ${
+              className={`relative flex min-h-[318px] flex-col overflow-hidden rounded-[26px] border bg-white p-5 transition ${
                 isActive
                   ? "border-[#95dbda] shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
                   : "border-[#e8e8e8] hover:-translate-y-0.5 hover:border-[#d9d2c8] hover:shadow-[0_18px_40px_rgba(23,20,31,0.06)]"
@@ -140,7 +140,7 @@ export default function ProductsGrid({
               />
 
               {/* Header row */}
-              <div className="relative mb-4 flex items-start justify-between">
+              <div className="relative mb-4 flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12] truncate">
                     {product.name}
@@ -223,36 +223,40 @@ export default function ProductsGrid({
               </div>
 
               {/* Circular progress row */}
-              <div className="relative rounded-[20px] border border-[#f1eee8] bg-[#fcfbf9] p-4">
+              <div className="relative mt-auto rounded-[20px] border border-[#f1eee8] bg-[#fcfbf9] p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
                     {locale === "en" ? "Execution readiness" : "Execution hazırlığı"}
                   </p>
                 </div>
-                <div className="flex items-center gap-5">
-                  <div className="relative">
-                    <CircleProgress value={product.launchPct} color="#ffd7ef" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
-                      {product.launchPct}%
-                    </span>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-center gap-3 rounded-[16px] bg-white/80 px-3 py-3">
+                    <div className="relative shrink-0">
+                      <CircleProgress value={product.launchPct} color="#ffd7ef" />
+                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
+                        {product.launchPct}%
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold text-[#0d0d12]">Launch</p>
+                      <p className="text-[11px] leading-5 text-[#8a8fa0]">
+                        {locale === "en" ? "Preparation depth" : "Hazırlık derinliği"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#0d0d12]">Launch</p>
-                    <p className="text-[11px] text-[#8a8fa0]">
-                      {locale === "en" ? "Preparation depth" : "Hazırlık derinliği"}
-                    </p>
-                  </div>
-                  <div className="relative">
-                    <CircleProgress value={product.growthPct} color="#95dbda" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
-                      {product.growthPct}%
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#0d0d12]">Growth</p>
-                    <p className="text-[11px] text-[#8a8fa0]">
-                      {locale === "en" ? "Operating rhythm" : "İşletim ritmi"}
-                    </p>
+                  <div className="flex items-center gap-3 rounded-[16px] bg-white/80 px-3 py-3">
+                    <div className="relative shrink-0">
+                      <CircleProgress value={product.growthPct} color="#95dbda" />
+                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
+                        {product.growthPct}%
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold text-[#0d0d12]">Growth</p>
+                      <p className="text-[11px] leading-5 text-[#8a8fa0]">
+                        {locale === "en" ? "Operating rhythm" : "İşletim ritmi"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

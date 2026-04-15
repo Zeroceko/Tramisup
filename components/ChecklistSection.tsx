@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
+import { parseStructuredDescription } from "@/lib/task-parsing";
 
 interface ChecklistItem {
   id: string;
@@ -324,11 +325,10 @@ export default function ChecklistSection({
                       {item.title}
                     </p>
                     {item.description && !item.completed && (() => {
-                      // Parse structured rationale from description
-                      const lines = item.description.split("\n").filter(Boolean);
-                      const why = lines.find((l) => l.startsWith("Why:"))?.replace("Why:", "").trim();
-                      const done = lines.find((l) => l.startsWith("Done when:"))?.replace("Done when:", "").trim();
-                      const next = lines.find((l) => l.startsWith("Next action:"))?.replace("Next action:", "").trim();
+                      const parsed = parseStructuredDescription(item.description);
+                      const why = parsed.why;
+                      const done = parsed.doneCriteria;
+                      const next = parsed.nextAction;
                       const hasStructured = why || done || next;
 
                       if (hasStructured) {
@@ -348,7 +348,14 @@ export default function ChecklistSection({
                             </button>
                             {isExpanded && (
                               <p className="mt-1.5 rounded-[8px] bg-[#f6f6f6] px-3 py-2 text-[12px] leading-5 text-[#5e6678]">
-                                {item.description}
+                                {[
+                                  why ? `${isEn ? "Why" : "Neden"}: ${why}` : null,
+                                  done ? `${isEn ? "Done when" : "Biten hali"}: ${done}` : null,
+                                  next ? `${isEn ? "Next action" : "Sonraki adım"}: ${next}` : null,
+                                  parsed.leftover,
+                                ]
+                                  .filter(Boolean)
+                                  .join("\n")}
                               </p>
                             )}
                           </>
