@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current active main line: through `58b950f6`
-- Last docs refresh: `14 April 2026`
+- Current active main line: through `2dc2f428`
+- Last docs refresh: `16 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -42,9 +42,20 @@
 - Plan upgrade from the product limit gate now returns the user to the product creation flow.
 - Security cleanup from 13 April remains in place: local secret files are not tracked, and exposed Gemini/OpenAI production keys were rotated.
 - Transactional email templates were redesigned on 14 April and are already live.
+- GROWING-stage onboarding now includes a real inline AARRR setup instead of a lightweight preview.
+- After a GROWING onboarding, the founder lands in a richer Growth kickoff instead of a generic overview.
+- If onboarding starts GA4/Stripe setup for a GROWING founder, the integrations detour now returns to Growth kickoff.
+- Pre-launch checklist locale handling and checklist-item task creation edge cases were fixed.
+- Agent suggestion preview is hardened against malformed payloads.
+- Agent panel refetch loop was removed to reduce browser churn when the panel is open.
 
 ### Recent shipped commits
 
+- `2dc2f428` — strengthen GROWING-stage onboarding kickoff with inline AARRR setup and Growth-first landing
+- `9f00908d` — fix checklist locale handling, checklist task creation edge cases, and products spacing
+- `e4f8c87a` — stop agent panel refetch loop
+- `8287d451` — harden agent suggestion preview against malformed payloads
+- `f2f3c6bf` — protect existing work during plan refresh
 - `58b950f6` — auto-login after email verification
 - `9fe09d82` — redesign password reset email to match the live brand system
 - `35c47500` — redesign transactional email templates to match tiramisup.app
@@ -127,14 +138,23 @@ Local dirt seen at handoff time is outside app code:
 - Preserve the current HTML structure and brand system unless there is a deliberate email-design change
 - `process.env.RESEND_FROM_EMAIL` remains the required sender source
 
+### 8. GROWING-stage onboarding got a new first-run path
+
+- Selecting `GROWING` in onboarding now requires one metric choice for each AARRR stage
+- The founder’s exact onboarding metric choices are persisted and saved into `MetricSetup`
+- The first landing target for that founder is now `/{locale}/growth?onboarding=1`
+- Growth kickoff explains what is already done, shows the chosen AARRR signals, and keeps the short check-in requirement
+- After that check-in, the founder should move naturally toward the first baseline instead of being bounced back through setup confusion
+
 ---
 
 ## Current Open Findings
 
-### 1. Onboarding still needs one clean founder re-validation
+### 1. Fresh product creation is still the biggest product risk
 
-- The AARRR exit race was addressed, but the full fresh-account path still needs a clean end-to-end validation
-- Required path: create product → finish onboarding → land in the app without stale or confusing intermediate UI
+- A portfolio-based production persona run succeeded across five founder personas on existing products
+- Earlier fresh-product attempts saw onboarding stall around the AARRR step and a `generate-plan` timeout at roughly 50 seconds
+- Because the `GROWING` onboarding flow changed again on 16 April, the full fresh-account path must be re-validated from zero
 
 ### 2. Metrics setup clarity still needs verification on fresh launched products
 
@@ -150,6 +170,13 @@ Local dirt seen at handoff time is outside app code:
 
 - Previously seen on `/products/new`, `/growth`, and `/dashboard`
 - Root cause still unknown; reproduce with network capture before changing behavior blindly
+
+### 5. New Growth kickoff still needs a clean end-to-end proof
+
+- The new kickoff is live, but it still needs explicit validation that:
+  - integrations return to Growth kickoff correctly
+  - check-in completion flows into baseline cleanly
+  - no stale metric-setup confusion appears after onboarding
 
 ---
 
@@ -174,6 +201,7 @@ Local dirt seen at handoff time is outside app code:
 - `SUPABASE_SERVICE_ROLE_KEY` is required for file upload flow
 - Production DB is aligned with current code
 - `external/streamlined-solutions` is a nested repo; ignore for app work
+- If `npx tsc --noEmit` complains about missing `.next/types/*` files after route churn, regenerate `.next` first with `npx next build --no-lint` or clear `.next` and rerun
 
 ---
 
@@ -198,16 +226,19 @@ Local dirt seen at handoff time is outside app code:
 4. Sign up → verify email → auto-login → dashboard
 5. Waitlist join → verify email flow
 6. Create a product through onboarding with file upload and a context URL
-7. Confirm async plan generation completes
-8. Verify nav shows the right items for the product stage
-9. Confirm launched product without growth check-in redirects to `/growth`
-10. Complete growth check-in and confirm dashboard loads
-11. Click an agent panel card and confirm it creates a task
-12. Open `/{locale}/products` from the product selector `Tümünü gör / View all products` link
-13. Verify board/task detail shows `Started` / `Completed` timestamps
-14. Confirm allowlisted admin can open `/admin/overview`, non-admin cannot, and the admin tree is not indexed
-15. Metrics daily entry on a fresh launched product should clearly distinguish setup vs first baseline
-16. Save the first metric baseline and then open `/growth` — Growth should not claim there is no data
-17. Overview / Launch / Growth: confirm the right content pane scrolls independently of the left agent sidebar
-18. Overview / Launch / Growth: ask a free-form question and confirm `/api/agent/chat` returns a contextual answer
-19. If users still report lag: profile `/dashboard` and `/tasks` first
+7. For `GROWING`, confirm onboarding requires 6 AARRR selections
+8. Confirm async plan generation completes
+9. Verify nav shows the right items for the product stage
+10. Confirm a fresh `GROWING` founder lands on Growth kickoff
+11. If onboarding selected GA4/Stripe, confirm integrations returns to Growth kickoff
+12. Confirm launched product without growth check-in redirects to `/growth`
+13. Complete growth check-in and confirm the founder moves toward baseline instead of setup confusion
+14. Click an agent panel card and confirm it creates a task
+15. Open `/{locale}/products` from the product selector `Tümünü gör / View all products` link
+16. Verify board/task detail shows `Started` / `Completed` timestamps
+17. Confirm allowlisted admin can open `/admin/overview`, non-admin cannot, and the admin tree is not indexed
+18. Metrics daily entry on a fresh launched product should clearly distinguish setup vs first baseline
+19. Save the first metric baseline and then open `/growth` — Growth should not claim there is no data
+20. Overview / Launch / Growth: confirm the right content pane scrolls independently of the left agent sidebar
+21. Overview / Launch / Growth: ask a free-form question and confirm `/api/agent/chat` returns a contextual answer
+22. If users still report lag: profile `/dashboard` and `/tasks` first

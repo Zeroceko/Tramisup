@@ -25,10 +25,10 @@ FIRST: Read these documents in order before touching any code.
 
 ---
 
-PRODUCTION STATE (as of 14 April 2026)
+PRODUCTION STATE (as of 16 April 2026)
 
 - Production domain: https://tiramisup.app
-- Current active main line includes all commits through 58b950f6
+- Current active main line includes all commits through 2dc2f428
 - main auto-deploys to Vercel
 - Public landing remains waitlist-first unless explicitly changed by product decision
 - Signup requires email verification, but no early access code
@@ -49,6 +49,11 @@ PRODUCTION STATE (as of 14 April 2026)
 - Products page has been redesigned, and the product selector routes "View all products" to /{locale}/products
 - Authenticated app performance work has shipped: request-level caching, fewer refreshes, lazy/closed initial agent panel, lighter app surfaces, loading skeletons, and DB indexes
 - Transactional email templates were redesigned on 14 April and are already live
+- GROWING-stage onboarding now includes a real inline AARRR setup instead of a lightweight preview
+- After a GROWING onboarding, the founder lands in a richer Growth kickoff instead of a generic overview
+- If onboarding selected GA4/Stripe for a GROWING founder, the integrations detour now returns to Growth kickoff
+- Pre-launch checklist locale/task-creation fixes are live
+- Agent suggestion preview hardening and the agent-panel refetch-loop fix are live
 
 ---
 
@@ -91,6 +96,7 @@ Important:
   - DATABASE_URL must point to PgBouncer (port 6543)
   - DIRECT_URL must point to direct Postgres (port 5432)
   - SUPABASE_SERVICE_ROLE_KEY is required for uploads
+  - If `npx tsc --noEmit` complains about missing `.next/types/*`, regenerate `.next` with `npx next build --no-lint` or clear `.next` and rerun
 
 ---
 
@@ -105,6 +111,7 @@ ARCHITECTURE TRUTHS
 - Growth workspace modes:
     intake_needed → metric_setup_needed → baseline_needed → diagnosis_ready
 - Growth intake answers live in Product.additionalContext.growthCheckin
+- For GROWING onboarding specifically, metric setup now happens inline before the workspace opens
 - lib/funnel-health.ts builds data-driven diagnosis and accepts locale
 - Agent suggestion cards are all intent: "create_task"
 - AI provider chain must not change:
@@ -120,7 +127,7 @@ OPEN PRODUCT / ENGINEERING QUESTIONS
    The product still needs validation with real non-founder users. This is the most important product question.
 
 2. Is the onboarding → metrics → growth loop truly clean now?
-   Several fixes shipped on 14 April, but the loop still needs a fresh-account end-to-end validation.
+   Several fixes shipped on 14–16 April, including a new GROWING-stage onboarding path. The loop still needs a fresh-account end-to-end validation.
 
 3. Are dashboard and tasks now fast enough for daily use?
    Performance is materially better, but those remain the heaviest authenticated surfaces and need continued profiling if users still feel lag.
@@ -128,16 +135,20 @@ OPEN PRODUCT / ENGINEERING QUESTIONS
 4. What caused the browser-side 500 resource errors seen in founder simulation?
    This still needs reproduction with network capture and tracing.
 
+5. Is async plan generation reliable enough in production?
+   Earlier founder simulation attempts saw /api/products/[id]/generate-plan time out around 50 seconds. Reproduce and isolate if it still happens.
+
 ---
 
 RECOMMENDED FIRST SPRINT FOR THE NEW TEAM
 
-1. Do a full founder simulation with a fresh account and document every confusion point
-2. Re-validate the onboarding → metrics → growth path on a fresh launched product
-3. If lag is still reported, profile /dashboard and /tasks first
-4. Wire real Stripe billing
-5. Run 5 external users through the product and observe silently
-6. Decide whether the AI quality is good enough to charge for
+1. Re-run the full fresh-account founder path, especially the new GROWING onboarding flow
+2. Validate async plan generation reliability in production
+3. Re-validate the onboarding → metrics → growth path on a fresh launched/growing product
+4. If lag is still reported, profile /dashboard and /tasks first
+5. Wire real Stripe billing
+6. Run 5 external users through the product and observe silently
+7. Decide whether the AI quality is good enough to charge for
 
 ---
 
@@ -170,6 +181,7 @@ RULES THAT MUST NOT REGRESS
 9. Billing must not be presented as complete Stripe commerce
 10. HIGH priority means a true blocker only
 11. Do not casually rewrite the live email templates
+12. Do not regress the new GROWING onboarding path back into a vague AARRR preview
 
 ---
 
