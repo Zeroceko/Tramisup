@@ -134,7 +134,7 @@ export default function IntegrationCard({
   existingIntegration?: ExistingIntegration;
   productId: string;
   locale?: string;
-  returnTo?: "integrations" | "settings" | "onboarding_overview";
+  returnTo?: "integrations" | "settings" | "onboarding_overview" | "onboarding_growth";
   manualEntryCount?: number;
   autoOpenPropertySelector?: boolean;
 }) {

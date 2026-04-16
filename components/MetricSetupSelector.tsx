@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GrowthMetricPlan, FunnelSection, FunnelMetricRecommendation } from "@/lib/growth-metric-recommendations";
 import type { SavedMetricSetup } from "@/lib/metric-setup";
 import { getStageAutomationGuides } from "@/lib/integration-recommendations";
@@ -8,7 +8,7 @@ import type { GrowthCheckinSetupContext } from "@/lib/growth-transition-checkin"
 
 // --- Types ---
 
-type Selected = Record<string, string>;
+export type MetricSelectionMap = Record<string, string>;
 
 // --- Summary panel ---
 
@@ -18,7 +18,7 @@ function SummaryPanel({
   locale,
 }: {
   plan: GrowthMetricPlan;
-  selected: Selected;
+  selected: MetricSelectionMap;
   locale: string;
 }) {
   const isEn = locale === "en";
@@ -353,15 +353,24 @@ export default function MetricSetupSelector({
   locale,
   connectedProviders,
   setupContext,
+  mode = "default",
+  initialSelections,
+  onSelectionChange,
+  onSave,
 }: {
-  productId: string;
+  productId?: string;
   plan: GrowthMetricPlan;
   initialSetup: SavedMetricSetup | null;
   locale: string;
   connectedProviders: string[];
   setupContext?: GrowthCheckinSetupContext | null;
+  mode?: "default" | "onboarding";
+  initialSelections?: Partial<Record<string, string>> | null;
+  onSelectionChange?: (selected: MetricSelectionMap) => void;
+  onSave?: (setup: SavedMetricSetup) => Promise<void> | void;
 }) {
   const isEn = locale === "en";
+  const isOnboardingMode = mode === "onboarding";
 
   const automationGuides = useMemo(
     () => getStageAutomationGuides({ plan, connectedProviders }),
@@ -372,8 +381,14 @@ export default function MetricSetupSelector({
     [automationGuides],
   );
 
-  const initialMap = useMemo<Selected>(() => {
-    const map: Selected = {};
+  const initialMap = useMemo<MetricSelectionMap>(() => {
+    const map: MetricSelectionMap = {};
+    const hasExplicitInitialSelections = Object.keys(initialSelections ?? {}).length > 0;
+    if (hasExplicitInitialSelections) {
+      Object.assign(map, initialSelections);
+      return map;
+    }
+
     const hasSavedSelections = (initialSetup?.selections?.length ?? 0) > 0;
     if (hasSavedSelections) {
       for (const s of initialSetup?.selections ?? []) {
@@ -388,12 +403,22 @@ export default function MetricSetupSelector({
       }
     }
     return map;
-  }, [automationGuides, initialSetup]);
+  }, [automationGuides, initialSelections, initialSetup]);
 
-  const [selected, setSelected] = useState<Selected>(initialMap);
+  const [selected, setSelected] = useState<MetricSelectionMap>(initialMap);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(!initialSetup?.selections?.length);
+  const [editing, setEditing] = useState(isOnboardingMode || !initialSetup?.selections?.length);
+
+  useEffect(() => {
+    if (!isOnboardingMode) return;
+    setSelected(initialMap);
+  }, [initialMap, isOnboardingMode]);
+
+  useEffect(() => {
+    if (!isOnboardingMode || !onSelectionChange) return;
+    onSelectionChange(selected);
+  }, [isOnboardingMode, onSelectionChange, selected]);
 
   const completedStages = plan.sections.filter((s) => !!selected[s.stage]).length;
   const allReady = completedStages === plan.sections.length;
@@ -426,14 +451,17 @@ export default function MetricSetupSelector({
         })),
         entries: initialSetup?.entries ?? [],
       };
+      if (onSave) {
+        await onSave(setup);
+        return;
+      }
+      if (!productId) throw new Error("missing_product_id");
       const res = await fetch(`/api/products/${productId}/metric-setup`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ setup }),
       });
       if (!res.ok) throw new Error("save failed");
-      // Force a fresh server render so the founder always lands on the
-      // entry step instead of staying in a stale local "saving" state.
       window.location.assign(`/${locale}/metrics?setup=ready`);
     } catch {
       setError(isEn ? "Metric preferences could not be saved. Try again." : "Metrik tercihleri kaydedilemedi. Tekrar dene.");
@@ -443,7 +471,7 @@ export default function MetricSetupSelector({
   }
 
   // --- Summary view (not editing) ---
-  if (!editing && initialSetup?.selections?.length) {
+  if (!isOnboardingMode && !editing && initialSetup?.selections?.length) {
     const summary = plan.sections.map((s) => {
       const key = selected[s.stage];
       const metric = s.metrics.find((m) => m.key === key);
@@ -517,15 +545,23 @@ export default function MetricSetupSelector({
       {/* Header */}
       <div className="mb-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-          {isEn ? "Growth = what will we track?" : "Growth için neyi takip edeceğiz?"}
+          {isOnboardingMode
+            ? isEn ? "Growth kickoff" : "Growth başlangıcı"
+            : isEn ? "Growth = what will we track?" : "Growth için neyi takip edeceğiz?"}
         </p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          {isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
+          {isOnboardingMode
+            ? isEn ? "Choose the six signals Growth should start with" : "Growth'ün başlayacağı 6 sinyali seç"
+            : isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
         </h2>
         <p className="mt-1.5 text-[13px] leading-5 text-[#666d80]">
-          {isEn
-            ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
-            : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.</>}
+          {isOnboardingMode
+            ? isEn
+              ? <>You chose the <strong>Growing</strong> stage. Before the workspace opens, set one primary metric for every AARRR stage so Growth starts with a real measurement system.</>
+              : <>Ürünün için <strong>Büyüme</strong> aşamasını seçtin. Workspace açılmadan önce her AARRR aşaması için bir ana metrik belirle; böylece Growth gerçek bir ölçüm sistemiyle başlasın.</>
+            : isEn
+              ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
+              : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.</>}
         </p>
         <p className="mt-2 max-w-3xl text-[12px] leading-6 text-[#7a8192]">
           {plan.summary}
@@ -613,7 +649,7 @@ export default function MetricSetupSelector({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {initialSetup?.selections?.length ? (
+            {!isOnboardingMode && initialSetup?.selections?.length ? (
               <button
                 type="button"
                 onClick={() => setEditing(false)}
@@ -629,7 +665,13 @@ export default function MetricSetupSelector({
               disabled={saving || !allReady}
               className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? (isEn ? "Saving…" : "Kaydediliyor…") : isEn ? "Save and continue to metric entry" : "Kaydet ve metrik girişine geç"}
+              {saving
+                ? (isEn ? "Saving…" : "Kaydediliyor…")
+                : isOnboardingMode
+                  ? (isEn ? "Use this setup and continue" : "Bu kurulumu kullan ve devam et")
+                  : isEn
+                    ? "Save and continue to metric entry"
+                    : "Kaydet ve metrik girişine geç"}
             </button>
           </div>
         </div>

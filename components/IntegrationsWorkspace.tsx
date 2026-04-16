@@ -24,6 +24,7 @@ type IntegrationsWorkspaceProps = {
   onboarding?: string;
   connect?: string;
   queued?: string;
+  returnTo?: string;
   sourceContext?: {
     title: string;
     body: string;
@@ -143,6 +144,7 @@ export default function IntegrationsWorkspace({
   onboarding,
   connect,
   queued,
+  returnTo,
   sourceContext,
 }: IntegrationsWorkspaceProps) {
   const isEn = locale === "en";
@@ -227,7 +229,14 @@ export default function IntegrationsWorkspace({
     ? integrationMap.get(autoOpenProvider)
     : null;
   const [wizardAutoOpen, setWizardAutoOpen] = useState(!!autoOpenProvider);
-  const callbackReturnTo = onboarding === "1" ? "onboarding_overview" : embedded ? "settings" : "integrations";
+  const callbackReturnTo =
+    onboarding === "1"
+      ? returnTo === "onboarding_growth"
+        ? "onboarding_growth"
+        : "onboarding_overview"
+      : embedded
+        ? "settings"
+        : "integrations";
 
   return (
     <div className="space-y-4">

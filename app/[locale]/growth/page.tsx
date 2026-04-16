@@ -56,7 +56,7 @@ export default async function GrowthPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ baseline?: string }>;
+  searchParams?: Promise<{ baseline?: string; onboarding?: string; sourceSetup?: string }>;
 }) {
   const perf = startServerTiming("growth-page");
   const { locale } = await params;
@@ -302,8 +302,19 @@ export default async function GrowthPage({
       : workspaceMode === "baseline_needed"
         ? isEn ? "Record the baseline" : "Baz çizgisini kaydet"
         : isEn ? "Growth focus" : "Growth odağı";
+  const baselineJustSaved = resolvedSearch.baseline === "ready";
+  const onboardingKickoff = resolvedSearch.onboarding === "1";
+  const sourceSetupJustFinished = resolvedSearch.sourceSetup === "1";
+  const selectedMetricSummary = selectedMetrics.map((metric) => ({
+    stage: metric.stage,
+    metricName: metric.metricName,
+  }));
   const pageHeaderDescription =
-    workspaceMode === "intake_needed"
+    workspaceMode === "intake_needed" && onboardingKickoff && hasSetup
+      ? isEn
+        ? "Your AARRR setup is already in place. Finish the short check-in so Growth can interpret those signals and open the baseline step."
+        : "AARRR setup'ın zaten hazır. Growth'ün bu sinyalleri doğru yorumlaması ve baseline adımını açması için kısa check-in'i tamamla."
+      : workspaceMode === "intake_needed"
       ? isEn
         ? "Before setup begins, answer a few focused questions so Growth can fit this product instead of falling back to a generic template."
         : "Setup başlamadan önce birkaç odaklı soruyu cevapla; böylece Growth genel bir şablona değil, bu ürünün gerçek bağlamına göre çalışsın."
@@ -318,7 +329,6 @@ export default async function GrowthPage({
         : isEn
           ? "This is the diagnosis, priority, and execution surface. Metrics decides what you track; Growth decides what to act on next."
           : "Burası teşhis, öncelik ve execution yüzeyi. Metrics neyi takip ettiğini netleştirir; Growth ise sıradaki doğru hamleyi seçtirir.";
-  const baselineJustSaved = resolvedSearch.baseline === "ready";
   const workspaceStages = [
     {
       key: "intake",
@@ -326,10 +336,7 @@ export default async function GrowthPage({
       description: isEn
         ? "Answer a few product-specific questions so setup fits the real growth motion."
         : "Setup'ın gerçek growth hareketine uyması için ürüne özel birkaç soruyu cevapla.",
-      state:
-        workspaceMode === "intake_needed"
-          ? "active"
-          : "done",
+      state: hasGrowthCheckin ? "done" : "active",
     },
     {
       key: "setup",
@@ -337,12 +344,7 @@ export default async function GrowthPage({
       description: isEn
         ? "Choose the metrics that define healthy progress for this product."
         : "Bu ürün için sağlıklı ilerlemeyi tanımlayan metrikleri seç.",
-      state:
-        workspaceMode === "intake_needed"
-          ? "locked"
-          : workspaceMode === "metric_setup_needed"
-          ? "active"
-          : "done",
+      state: hasSetup ? "done" : hasGrowthCheckin ? "active" : "locked",
     },
     {
       key: "baseline",
@@ -350,12 +352,7 @@ export default async function GrowthPage({
       description: isEn
         ? "Enter the first real values so the product has a starting point."
         : "Ürünün referans noktası olması için ilk gerçek değerleri gir.",
-      state:
-        workspaceMode === "intake_needed" || workspaceMode === "metric_setup_needed"
-          ? "locked"
-          : workspaceMode === "baseline_needed"
-            ? "active"
-            : "done",
+      state: hasMetricEntries ? "done" : hasGrowthCheckin && hasSetup ? "active" : "locked",
     },
     {
       key: "diagnosis",
@@ -363,10 +360,7 @@ export default async function GrowthPage({
       description: isEn
         ? "See the weak link, open the checklist, and turn insight into work."
         : "Zayıf halkayı gör, checklist'i aç ve içgörüyü işe çevir.",
-      state:
-        workspaceMode === "diagnosis_ready"
-          ? "active"
-          : "locked",
+      state: hasGrowthCheckin && hasSetup && hasMetricEntries ? "active" : "locked",
     },
   ] as const;
 
@@ -452,13 +446,105 @@ export default async function GrowthPage({
 
         {workspaceMode === "intake_needed" ? (
           <>
+            {onboardingKickoff && hasSetup ? (
+              <div className="rounded-[18px] border border-[#d7efef] bg-[#f4fcfc] p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-3xl">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1f6f6e]">
+                      {isEn ? "Growth kickoff" : "Growth başlangıcı"}
+                    </p>
+                    <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                      {isEn
+                        ? "Your growth workspace is almost ready"
+                        : "Growth workspace'in neredeyse hazır"}
+                    </h2>
+                    <p className="mt-2 text-[14px] leading-6 text-[#35596a]">
+                      {isEn
+                        ? "You already chose the six AARRR signals Growth will read. Finish this short check-in so Tiramisup can interpret those metrics in the right product context, then move directly into your first baseline."
+                        : "Growth'ün okuyacağı altı AARRR sinyalini zaten seçtin. Şimdi bu kısa değerlendirmeyi tamamla; Tiramisup metrikleri doğru ürün bağlamında yorumlasın ve seni doğrudan ilk baseline adımına taşısın."}
+                    </p>
+                  </div>
+                  <div className="rounded-[16px] border border-[#d9efee] bg-white px-4 py-3 text-left lg:max-w-[260px]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
+                      {isEn ? "Already done" : "Tamamlananlar"}
+                    </p>
+                    <ul className="mt-2 space-y-1.5 text-[12px] leading-5 text-[#0d0d12]">
+                      <li>{isEn ? "Product workspace created" : "Ürün workspace'i oluşturuldu"}</li>
+                      <li>{isEn ? "Growth-stage path selected" : "Growth aşaması seçildi"}</li>
+                      <li>{isEn ? "AARRR setup completed" : "AARRR kurulumu tamamlandı"}</li>
+                      {sourceSetupJustFinished || integrations.length > 0 ? (
+                        <li>{isEn ? "At least one source setup started" : "En az bir kaynak kurulumu başlatıldı"}</li>
+                      ) : null}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-[16px] border border-[#d9efee] bg-white p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
+                      {isEn ? "Selected AARRR signals" : "Seçilen AARRR sinyalleri"}
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {selectedMetricSummary.map((item) => (
+                        <div key={item.stage} className="rounded-[14px] border border-[#edf2f7] bg-[#fafcfd] p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#7b8393]">
+                            {item.stage}
+                          </p>
+                          <p className="mt-1 text-[13px] font-semibold text-[#0d0d12]">
+                            {item.metricName}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[16px] border border-[#d9efee] bg-white p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
+                      {isEn ? "What happens next?" : "Sıradaki net adım"}
+                    </p>
+                    <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+                      {isEn ? "Finish the short check-in, then record your first baseline" : "Kısa check-in'i bitir, sonra ilk baseline'ı kaydet"}
+                    </h3>
+                    <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
+                      {isEn
+                        ? "You will not have to choose metrics again. The next screen after this check-in is your first real Growth baseline."
+                        : "Metrikleri yeniden seçmeyeceksin. Bu değerlendirmeden sonraki ekran doğrudan ilk gerçek Growth baseline adımın olacak."}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <a
+                        href="#growth-intake"
+                        className="inline-flex h-10 items-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#23252b]"
+                      >
+                        {isEn ? "Start the check-in" : "Check-in'i başlat"}
+                      </a>
+                      {(sourceSetupJustFinished || integrations.length > 0) ? (
+                        <a
+                          href={`/${locale}/integrations`}
+                          className="inline-flex h-10 items-center rounded-full border border-[#e5e7eb] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-white"
+                        >
+                          {isEn ? "Review sources" : "Kaynakları gözden geçir"}
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div id="growth-intake">
               <GrowthTransitionCheckin
                 productId={product.id}
                 locale={locale}
                 questions={growthCheckinQuestions}
                 initialAnswers={storedAdditionalContext.growthCheckin?.answers ?? {}}
-                nextHref={hasSetup && hasMetricEntries ? `/${locale}/growth` : `/${locale}/metrics`}
+                nextHref={
+                  hasSetup
+                    ? onboardingKickoff
+                      ? `/${locale}/growth?onboarding=1`
+                      : `/${locale}/growth`
+                    : `/${locale}/metrics`
+                }
+                setupAlreadyComplete={hasSetup}
               />
             </div>
 

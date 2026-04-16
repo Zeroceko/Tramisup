@@ -13,12 +13,14 @@ export default function GrowthTransitionCheckin({
   questions,
   initialAnswers,
   nextHref,
+  setupAlreadyComplete = false,
 }: {
   productId: string;
   locale: string;
   questions: GrowthCheckinQuestion[];
   initialAnswers: GrowthCheckinAnswers;
   nextHref: string;
+  setupAlreadyComplete?: boolean;
 }) {
   const router = useRouter();
   const isEn = locale === "en";
@@ -68,12 +70,18 @@ export default function GrowthTransitionCheckin({
         {isEn ? "Growth check-in" : "Growth değerlendirmesi"}
       </p>
       <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-        {isEn ? "Answer a few questions before metric setup" : "Metric setup öncesi birkaç noktayı netleştir"}
+        {setupAlreadyComplete
+          ? isEn ? "Add product context before diagnosis starts" : "Teşhis başlamadan önce ürün bağlamını netleştir"
+          : isEn ? "Answer a few questions before metric setup" : "Metric setup öncesi birkaç noktayı netleştir"}
       </h2>
       <p className="mt-2 max-w-3xl text-[13px] leading-6 text-[#5e6678]">
-        {isEn
-          ? "This is not a second onboarding. It gives Tiramisup just enough product-specific context to choose a cleaner measurement system before Growth starts making diagnosis claims."
-          : "Bu ikinci bir onboarding değil. Tiramisup'ın Growth tarafında erken teşhis üretmeden önce bu ürün için daha temiz bir ölçüm sistemi kurmasına yardımcı olur."}
+        {setupAlreadyComplete
+          ? isEn
+            ? "Your measurement system is already selected. This short check-in gives Tiramisup the context it needs to interpret those numbers correctly and open the right Growth workspace."
+            : "Ölçüm sistemin zaten seçili. Bu kısa değerlendirme, Tiramisup'ın bu sayıları doğru yorumlaması ve doğru Growth workspace'ini açması için gerekli bağlamı verir."
+          : isEn
+            ? "This is not a second onboarding. It gives Tiramisup just enough product-specific context to choose a cleaner measurement system before Growth starts making diagnosis claims."
+            : "Bu ikinci bir onboarding değil. Tiramisup'ın Growth tarafında erken teşhis üretmeden önce bu ürün için daha temiz bir ölçüm sistemi kurmasına yardımcı olur."}
       </p>
 
       <div className="mt-5 space-y-4">
@@ -133,9 +141,13 @@ export default function GrowthTransitionCheckin({
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[12px] text-[#667085]">
-          {isEn
-            ? "After this, we move straight into metric setup."
-            : "Bundan sonra doğrudan Metrics tarafındaki metric setup akışına geçeceğiz."}
+          {setupAlreadyComplete
+            ? isEn
+              ? "After this, Growth will open your baseline step instead of sending you back through setup."
+              : "Bundan sonra seni yeniden setup'a göndermeden doğrudan baseline adımına geçeceğiz."
+            : isEn
+              ? "After this, we move straight into metric setup."
+              : "Bundan sonra doğrudan Metrics tarafındaki metric setup akışına geçeceğiz."}
         </p>
         <button
           type="button"
@@ -146,8 +158,12 @@ export default function GrowthTransitionCheckin({
           {saving
             ? "..."
             : isEn
-              ? "Save and continue to Metrics"
-              : "Kaydet ve Metrics'e geç"}
+              ? setupAlreadyComplete
+                ? "Save and continue to Growth"
+                : "Save and continue to Metrics"
+              : setupAlreadyComplete
+                ? "Kaydet ve Growth'e geç"
+                : "Kaydet ve Metrics'e geç"}
         </button>
       </div>
     </div>
