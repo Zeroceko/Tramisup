@@ -155,6 +155,11 @@ Local dirt seen at handoff time is outside app code:
 - A portfolio-based production persona run succeeded across five founder personas on existing products
 - Earlier fresh-product attempts saw onboarding stall around the AARRR step and a `generate-plan` timeout at roughly 50 seconds
 - Because the `GROWING` onboarding flow changed again on 16 April, the full fresh-account path must be re-validated from zero
+- A late-16-April live run added a new hard blocker before that path can be trusted:
+  - browser signup stayed on `Hesap oluşturuluyor…`
+  - the signup page showed no visible reCAPTCHA iframe/widget in the run
+  - a separate direct probe to live `POST /api/auth/signup` returned `400` with `Lütfen reCAPTCHA doğrulamasını tamamla.`
+- Until a human/manual run proves otherwise, treat **signup reCAPTCHA behavior** as the first production blocker in founder continuity
 
 ### 2. Metrics setup clarity still needs verification on fresh launched products
 
@@ -170,6 +175,9 @@ Local dirt seen at handoff time is outside app code:
 
 - Previously seen on `/products/new`, `/growth`, and `/dashboard`
 - Root cause still unknown; reproduce with network capture before changing behavior blindly
+- A newer late-16-April `/products/new` run with an existing real account did **not** reproduce server `500` responses
+- That run only showed several route-transition `net::ERR_ABORTED` requests on `_rsc` / navigation fetches
+- So this issue remains open, but the evidence is now mixed and should be revalidated carefully before code changes
 
 ### 5. New Growth kickoff still needs a clean end-to-end proof
 
@@ -177,6 +185,17 @@ Local dirt seen at handoff time is outside app code:
   - integrations return to Growth kickoff correctly
   - check-in completion flows into baseline cleanly
   - no stale metric-setup confusion appears after onboarding
+- A new-product wizard run on a real existing account reached:
+  - product name
+  - description
+  - category
+  - platform
+  - audience
+  - business model
+  - stage
+- That run intentionally used `/{locale}/products/new` so it would create a **new product** instead of advancing an existing one
+- It did not complete end-to-end yet because the temporary automation harness still needed wider option matching at later steps
+- This is useful evidence for the takeover team: new-product flow is traversable partway on a real account, but still not yet fully proven
 
 ---
 
@@ -218,27 +237,33 @@ Local dirt seen at handoff time is outside app code:
 
 ---
 
-## What To Test First
+## Suggested Reading Order For Takeover
 
-1. Local setup: `npm install && npx prisma generate && npx prisma db push`
-2. `npx tsc --noEmit` and `npx next build` pass clean
-3. `QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run` — non-waitlist tests pass
-4. Sign up → verify email → auto-login → dashboard
-5. Waitlist join → verify email flow
-6. Create a product through onboarding with file upload and a context URL
-7. For `GROWING`, confirm onboarding requires 6 AARRR selections
-8. Confirm async plan generation completes
-9. Verify nav shows the right items for the product stage
-10. Confirm a fresh `GROWING` founder lands on Growth kickoff
-11. If onboarding selected GA4/Stripe, confirm integrations returns to Growth kickoff
-12. Confirm launched product without growth check-in redirects to `/growth`
-13. Complete growth check-in and confirm the founder moves toward baseline instead of setup confusion
-14. Click an agent panel card and confirm it creates a task
-15. Open `/{locale}/products` from the product selector `Tümünü gör / View all products` link
-16. Verify board/task detail shows `Started` / `Completed` timestamps
-17. Confirm allowlisted admin can open `/admin/overview`, non-admin cannot, and the admin tree is not indexed
-18. Metrics daily entry on a fresh launched product should clearly distinguish setup vs first baseline
-19. Save the first metric baseline and then open `/growth` — Growth should not claim there is no data
-20. Overview / Launch / Growth: confirm the right content pane scrolls independently of the left agent sidebar
-21. Overview / Launch / Growth: ask a free-form question and confirm `/api/agent/chat` returns a contextual answer
-22. If users still report lag: profile `/dashboard` and `/tasks` first
+1. Read `HANDOFF.md` for the production truth and current product contract
+2. Read this file as the engineering delta and open-findings layer
+3. Inspect the signup / verification / auto-login flow in code and note the reCAPTCHA mismatch evidence
+4. Inspect the `GROWING` onboarding, Growth kickoff, Metrics bridge, and task-creation path in code
+5. Review fake billing, admin ops, and authenticated-app performance work as the current baseline
+6. After the team shares the same mental model, decide what to validate or change next
+
+### Current production harness
+
+The latest handoff run used:
+
+```bash
+E2E_BASE_URL="https://tiramisup.app" \
+E2E_LOCALE="tr" \
+E2E_EMAIL="<verified-test-user-email>" \
+E2E_PASSWORD="<verified-test-user-password>" \
+node --env-file=.env.prod tmp/prod-new-founder-flow.mjs
+```
+
+Current behavior of this helper:
+
+- logs in with an existing verified user
+- opens `/{locale}/products/new`
+- attempts a truly new product flow instead of progressing the active product
+- saves screenshots and notes into `tmp/prod-new-founder-*`
+- continues into Growth / Metrics / task continuity only if product creation finishes
+
+This helper is recorded here for continuity only. It is not an instruction for the takeover team to run immediately.

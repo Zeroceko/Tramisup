@@ -6,7 +6,7 @@ export type SafeAgentSuggestion = {
   id?: string;
   label: string;
   title?: string;
-  intent?: "ask" | "create_task";
+  intent?: "create_task";
   payload?: { title: string; description?: string; priority?: string };
   description?: string | null;
   whyItMatters?: string;
@@ -59,7 +59,7 @@ export function sanitizeAgentSuggestion(raw: unknown): SafeAgentSuggestion | nul
     id: asString(source.id),
     label,
     title: asString(source.title),
-    intent: source.intent === "ask" || source.intent === "create_task" ? source.intent : undefined,
+    intent: "create_task",
     payload: payload && asString(payload.title)
       ? {
           title: asString(payload.title)!,

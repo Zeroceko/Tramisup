@@ -1,4 +1,5 @@
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { isLaunchedLaunchStage } from "@/lib/launch-stage";
 
 export const ONBOARDING_GROWTH_STAGES = [
   "Awareness",
@@ -14,10 +15,6 @@ export type OnboardingGrowthStageKey = (typeof ONBOARDING_GROWTH_STAGES)[number]
 export type OnboardingMetricSelectionMap = Partial<
   Record<OnboardingGrowthStageKey, string>
 >;
-
-export function isGrowingOnboardingStage(launchStatus?: string | null) {
-  return launchStatus === "GROWING";
-}
 
 export function mergeRecommendedMetricSelections(
   current: OnboardingMetricSelectionMap | null | undefined,
@@ -66,7 +63,7 @@ export function getOnboardingPostCreateDestination(args: {
       onboarding: "1",
       connect: connectableSources[0],
     });
-    if (isGrowingOnboardingStage(launchStatus)) {
+    if (isLaunchedLaunchStage(launchStatus)) {
       params.set("returnTo", "onboarding_growth");
     }
     if (connectableSources.length > 1) {
@@ -75,7 +72,7 @@ export function getOnboardingPostCreateDestination(args: {
     return `/${locale}/integrations?${params.toString()}`;
   }
 
-  if (isGrowingOnboardingStage(launchStatus) && useMetrics) {
+  if (isLaunchedLaunchStage(launchStatus) && useMetrics) {
     return `/${locale}/growth?onboarding=1`;
   }
 

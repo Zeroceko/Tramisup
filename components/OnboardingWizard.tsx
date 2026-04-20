@@ -20,7 +20,6 @@ import {
   buildMetricSelectionsFromMap,
   getOnboardingPostCreateDestination,
   hasCompleteMetricSelections,
-  isGrowingOnboardingStage,
   mergeRecommendedMetricSelections,
   type OnboardingMetricSelectionMap,
 } from "@/lib/onboarding-growth";
@@ -311,7 +310,7 @@ function getActiveSteps(data: Partial<WizardData>): StepId[] {
   ids.push("audience", "business", "stage", "goal");
   if (data.launchStatus && !isLaunchedLaunchStage(data.launchStatus)) ids.push("timing");
   ids.push("sources");
-  if (data.launchStatus && !isVeryEarlyLaunchStage(data.launchStatus)) ids.push("metrics");
+  if (data.launchStatus && isLaunchedLaunchStage(data.launchStatus)) ids.push("metrics");
   return ids;
 }
 
@@ -813,7 +812,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     ]
   );
   useEffect(() => {
-    if (!isGrowingOnboardingStage(data.launchStatus)) return;
+    if (!isLaunchedLaunchStage(data.launchStatus)) return;
     setData((prev) => {
       const merged = mergeRecommendedMetricSelections(
         prev.metricSelections,
@@ -920,7 +919,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       case "sources":
         return true;
       case "metrics":
-        return isGrowingOnboardingStage(data.launchStatus)
+        return isLaunchedLaunchStage(data.launchStatus)
           ? hasCompleteMetricSelections(data.metricSelections)
           : true;
       default:
@@ -964,6 +963,14 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       growthGoal: data.growthGoal,
       goalKey: data.goalKey,
       stageContext: stageContext || undefined,
+      metricSetupSelections:
+        useMetrics && Object.keys(autoMetrics).length > 0
+          ? buildMetricSelectionsFromMap(
+              isLaunchedLaunchStage(data.launchStatus)
+                ? data.metricSelections
+                : (autoMetrics as OnboardingMetricSelectionMap)
+            )
+          : undefined,
     };
 
     try {
@@ -991,20 +998,6 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
 
       const { id: productId } = (await productRes.json()) as { id: string };
       clearOnboardingRetryDraft();
-
-      // Save metric selections before showing loading screen — must complete before /metrics loads
-      if (useMetrics && Object.keys(autoMetrics).length > 0) {
-        const selections = buildMetricSelectionsFromMap(
-          isGrowingOnboardingStage(data.launchStatus)
-            ? data.metricSelections
-            : (autoMetrics as OnboardingMetricSelectionMap)
-        );
-        await fetch(`/api/products/${productId}/metric-setup`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ setup: { selections } }),
-        }).catch(() => {});
-      }
 
       // Show loading screen immediately
       setIsCreating(true);
@@ -1386,7 +1379,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                 locale={locale}
                 hasConnectableSources={connectableSources.length > 0}
                 isSubmitting={isSubmitting}
-                editable={isGrowingOnboardingStage(data.launchStatus)}
+                editable={isLaunchedLaunchStage(data.launchStatus)}
                 selectedMetrics={data.metricSelections}
                 onMetricSelectionChange={(selected) =>
                   setData((current) => ({

@@ -13,6 +13,10 @@ import CollapsibleSection from "@/components/CollapsibleSection";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
+import {
+  hasAnyMetricEntries,
+  hasGrowthDiagnosisData,
+} from "@/lib/growth-readiness";
 import { getMetricSetup } from "@/lib/metric-setup";
 import { buildFunnelHealthSummary } from "@/lib/funnel-health";
 import {
@@ -31,15 +35,15 @@ type GrowthWorkspaceMode =
 function getGrowthWorkspaceMode({
   hasIntake,
   hasSetup,
-  hasMetricEntries,
+  hasDiagnosisData,
 }: {
   hasIntake: boolean;
   hasSetup: boolean;
-  hasMetricEntries: boolean;
+  hasDiagnosisData: boolean;
 }): GrowthWorkspaceMode {
   if (!hasIntake) return "intake_needed";
   if (!hasSetup) return "metric_setup_needed";
-  if (!hasMetricEntries) return "baseline_needed";
+  if (!hasDiagnosisData) return "baseline_needed";
   return "diagnosis_ready";
 }
 
@@ -157,11 +161,13 @@ export default async function GrowthPage({
   const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
   const hasGrowthCheckin = Boolean(storedAdditionalContext.growthCheckin?.completedAt);
   const hasSetup = !!savedMetricSetup?.selections?.length;
-  const hasMetricEntries = (savedMetricSetup?.entries?.length ?? 0) > 0;
+  const metricEntryCount = savedMetricSetup?.entries?.length ?? 0;
+  const hasMetricEntries = hasAnyMetricEntries(metricEntryCount);
+  const hasDiagnosisData = hasGrowthDiagnosisData(metricEntryCount);
   const workspaceMode = getGrowthWorkspaceMode({
     hasIntake: hasGrowthCheckin,
     hasSetup,
-    hasMetricEntries,
+    hasDiagnosisData,
   });
   const hasGoals = goals.length > 0;
   const completedGrowthItems = growthChecklists.filter((item) => item.completed).length;
@@ -173,7 +179,7 @@ export default async function GrowthPage({
   });
   const nextStep = getGrowthWorkspaceStep({
     hasSetup,
-    hasMetricEntries,
+    hasMetricEntries: hasDiagnosisData,
     hasGoals,
     completedGrowthItems,
     totalGrowthItems: growthChecklists.length,
@@ -191,7 +197,7 @@ export default async function GrowthPage({
       }));
   });
   const funnelHealth =
-    hasSetup && hasMetricEntries
+    hasSetup && hasDiagnosisData
       ? buildFunnelHealthSummary({
           product: {
             category: product.category,
@@ -225,6 +231,8 @@ export default async function GrowthPage({
       : isEn ? "Set up your measurement system first" : "Önce ölçüm sistemini kur"
     : !hasMetricEntries
         ? isEn ? "Create the first baseline" : "İlk baz çizgisini oluştur"
+      : !hasDiagnosisData
+        ? isEn ? "Keep building the baseline" : "Baz çizgisini büyütmeye devam et"
       : atRiskStage
         ? isEn ? `${atRiskStage.stageLabel} is the weak link right now` : `${atRiskStage.stageLabel} şu an en zayıf halka`
         : !hasGoals
@@ -244,6 +252,10 @@ export default async function GrowthPage({
       ? isEn
         ? "Your metrics are selected, but there is no real data flow yet. Before the first entries land, Growth can only guess."
         : "Metrikler seçili ama henüz gerçek veri akışı yok. İlk girişler gelmeden growth tarafı sadece varsayım üretir."
+      : !hasDiagnosisData
+        ? isEn
+          ? `The first ${metricEntryCount} ${metricEntryCount === 1 ? "entry is" : "entries are"} in. Keep feeding the same signals until Growth has enough history to compare trend instead of guessing.`
+          : `İlk ${metricEntryCount} veri girişi geldi. Growth'ün tahmin yerine trend kıyası yapabilmesi için aynı sinyalleri girmeye devam et.`
       : atRiskStage
         ? `${funnelHealth?.nextFocus ?? ""} ${growthActionHints[atRiskStage.stage] ?? ""}`.trim()
         : !hasGoals
@@ -259,7 +271,7 @@ export default async function GrowthPage({
               : "Temel kurulum oturdu. Şimdi haftalık ritimde zayıf halkayı izleyip yeni problem belirdiğinde hızlı aksiyon almak önemli.";
   const primaryGrowthHref = !hasGrowthCheckin
     ? "#growth-intake"
-    : !hasSetup || !hasMetricEntries
+    : !hasSetup || !hasDiagnosisData
       ? `/${locale}/metrics`
       : nextStep.href;
   const primaryGrowthCta = !hasGrowthCheckin
@@ -268,6 +280,8 @@ export default async function GrowthPage({
       ? isEn ? "Go to Metrics" : "Ölçüm sistemine git"
     : !hasMetricEntries
       ? isEn ? "Enter the first metrics" : "İlk metriği gir"
+    : !hasDiagnosisData
+      ? isEn ? "Keep entering metrics" : "Metrik girmeye devam et"
       : nextStep.cta;
   const goalKey = (() => {
     try {
@@ -289,7 +303,7 @@ export default async function GrowthPage({
       goalKey,
     },
     hasMetricSetup: hasSetup,
-    hasMetricEntries,
+    hasMetricEntries: hasDiagnosisData,
     connectedSourceCount: integrations.length,
     funnelHealth,
     locale,
@@ -300,7 +314,9 @@ export default async function GrowthPage({
       : workspaceMode === "metric_setup_needed"
       ? isEn ? "Growth setup" : "Growth kurulumu"
       : workspaceMode === "baseline_needed"
-        ? isEn ? "Record the baseline" : "Baz çizgisini kaydet"
+        ? hasMetricEntries
+          ? isEn ? "Build the baseline" : "Baz çizgisini büyüt"
+          : isEn ? "Record the baseline" : "Baz çizgisini kaydet"
         : isEn ? "Growth focus" : "Growth odağı";
   const baselineJustSaved = resolvedSearch.baseline === "ready";
   const onboardingKickoff = resolvedSearch.onboarding === "1";
@@ -323,9 +339,13 @@ export default async function GrowthPage({
         ? "Growth should not start with guesswork. First define the signals you will trust, then move into diagnosis and execution."
         : "Growth tahminle başlamamalı. Önce güveneceğin sinyalleri tanımla, sonra teşhis ve execution tarafına geç."
       : workspaceMode === "baseline_needed"
-        ? isEn
-          ? "Your metric setup exists now. The next job is giving it the first real numbers so Growth can stop guessing."
-          : "Metrik setup artık var. Sıradaki iş, Growth'ün tahmin etmeyi bırakması için ilk gerçek sayıları girmek."
+        ? hasMetricEntries
+          ? isEn
+            ? "The first real numbers are in. Keep the same rhythm for a few more entries so Growth can compare trend instead of treating the signal as a one-off snapshot."
+            : "İlk gerçek sayılar geldi. Growth'ün tek seferlik anlık görüntü yerine trend kıyası yapabilmesi için birkaç giriş daha aynı ritimde devam et."
+          : isEn
+            ? "Your metric setup exists now. The next job is giving it the first real numbers so Growth can stop guessing."
+            : "Metrik setup artık var. Sıradaki iş, Growth'ün tahmin etmeyi bırakması için ilk gerçek sayıları girmek."
         : isEn
           ? "This is the diagnosis, priority, and execution surface. Metrics decides what you track; Growth decides what to act on next."
           : "Burası teşhis, öncelik ve execution yüzeyi. Metrics neyi takip ettiğini netleştirir; Growth ise sıradaki doğru hamleyi seçtirir.";
@@ -352,7 +372,7 @@ export default async function GrowthPage({
       description: isEn
         ? "Enter the first real values so the product has a starting point."
         : "Ürünün referans noktası olması için ilk gerçek değerleri gir.",
-      state: hasMetricEntries ? "done" : hasGrowthCheckin && hasSetup ? "active" : "locked",
+      state: hasDiagnosisData ? "done" : hasGrowthCheckin && hasSetup ? "active" : "locked",
     },
     {
       key: "diagnosis",
@@ -360,7 +380,7 @@ export default async function GrowthPage({
       description: isEn
         ? "See the weak link, open the checklist, and turn insight into work."
         : "Zayıf halkayı gör, checklist'i aç ve içgörüyü işe çevir.",
-      state: hasGrowthCheckin && hasSetup && hasMetricEntries ? "active" : "locked",
+      state: hasGrowthCheckin && hasSetup && hasDiagnosisData ? "active" : "locked",
     },
   ] as const;
 
@@ -408,8 +428,8 @@ export default async function GrowthPage({
             </p>
             <p className="mt-2 text-[14px] leading-6 text-[#0d0d12]">
               {isEn
-                ? "Growth is now reading real numbers instead of guesses. The next move is to turn that signal into a target and a concrete weekly action."
-                : "Growth artık tahmin yerine gerçek sayıları okuyor. Sıradaki adım, bu sinyali hedefe ve somut bir haftalık aksiyona çevirmek."}
+                ? "The first real snapshot is in. Keep adding the same signals for a few more days so Growth can compare trend with confidence."
+                : "İlk gerçek görüntü kaydedildi. Growth'ün trendi güvenle kıyaslayabilmesi için birkaç gün daha aynı sinyalleri girmeye devam et."}
             </p>
           </div>
         ) : null}
@@ -632,9 +652,13 @@ export default async function GrowthPage({
                     ? isEn
                       ? "Right now the safest next move is deciding what to measure. The checklist and tactics surface unlock after the tracking system is real."
                       : "Şu anda en güvenli sonraki adım neyi ölçeceğine karar vermek. Checklist ve tactics yüzeyi, takip sistemi gerçek anlamda kurulduktan sonra açılmalı."
-                    : isEn
-                      ? "The setup exists now. Entering the first baseline is what turns Growth from a planning surface into a real diagnosis surface."
-                      : "Setup artık var. İlk baz çizgisini girmek, Growth'ü planlama ekranından gerçek teşhis yüzeyine dönüştüren şey."}
+                    : hasMetricEntries
+                      ? isEn
+                        ? "The first baseline snapshot is in. Keep adding entries until Growth can compare trend with enough confidence to diagnose the weak link."
+                        : "İlk baseline görüntüsü kaydedildi. Growth'ün zayıf halkayı güvenle teşhis edebilmesi için birkaç giriş daha eklemeye devam et."
+                      : isEn
+                        ? "The setup exists now. Entering the first baseline is what turns Growth from a planning surface into a real diagnosis surface."
+                        : "Setup artık var. İlk baz çizgisini girmek, Growth'ü planlama ekranından gerçek teşhis yüzeyine dönüştüren şey."}
                 </p>
               </div>
               <div className="hidden shrink-0 rounded-[16px] border border-[#edf0f3] bg-[#fafbfc] px-4 py-3 text-right lg:block">
@@ -644,7 +668,9 @@ export default async function GrowthPage({
                 <p className="mt-1 text-[14px] font-semibold text-[#0d0d12]">
                   {workspaceMode === "metric_setup_needed"
                     ? isEn ? "Setup first" : "Önce setup"
-                    : isEn ? "Baseline first" : "Önce baz çizgisi"}
+                    : hasMetricEntries
+                      ? isEn ? "Baseline building" : "Baz çizgisi kuruluyor"
+                      : isEn ? "Baseline first" : "Önce baz çizgisi"}
                 </p>
               </div>
             </div>

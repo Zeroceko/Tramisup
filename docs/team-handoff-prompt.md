@@ -34,6 +34,7 @@ PRODUCTION STATE (as of 16 April 2026)
 - Signup requires email verification, but no early access code
 - Waitlist join also requires email verification
 - Verification links now auto-log the user into the app after successful verification
+- Late-16-April live evidence shows a new signup blocker: browser signup did not complete, no visible reCAPTCHA widget appeared in the run, and a separate direct probe to POST /api/auth/signup returned 400 with "Lütfen reCAPTCHA doğrulamasını tamamla."
 - Billing is still fake/demo checkout — not real Stripe commerce
 - Default locale is English; Turkish is secondary
 - Nav is stage-aware:
@@ -69,9 +70,7 @@ Non-app dirt may exist locally:
   - .claude/worktrees/ contains local workspace artifacts and should not be committed
   - tmp/ contains scratch artifacts and should not be committed
 
-Before doing feature work, run:
-  npx tsc --noEmit
-  npx next build
+Before changing production behavior, understand the current baseline in code and docs first.
 
 Note:
   8 tests in __tests__/api/waitlist/admin.test.ts fail with 401. This is a pre-existing auth mock issue, not the current work.
@@ -129,26 +128,27 @@ OPEN PRODUCT / ENGINEERING QUESTIONS
 2. Is the onboarding → metrics → growth loop truly clean now?
    Several fixes shipped on 14–16 April, including a new GROWING-stage onboarding path. The loop still needs a fresh-account end-to-end validation.
 
-3. Are dashboard and tasks now fast enough for daily use?
+3. Is signup currently blocked by a reCAPTCHA mismatch?
+   Late 16 April live evidence says yes, but this still needs careful confirmation by the takeover team after they understand the auth flow and current production wiring.
+
+4. Are dashboard and tasks now fast enough for daily use?
    Performance is materially better, but those remain the heaviest authenticated surfaces and need continued profiling if users still feel lag.
 
-4. What caused the browser-side 500 resource errors seen in founder simulation?
+5. What caused the browser-side 500 resource errors seen in founder simulation?
    This still needs reproduction with network capture and tracing.
 
-5. Is async plan generation reliable enough in production?
+6. Is async plan generation reliable enough in production?
    Earlier founder simulation attempts saw /api/products/[id]/generate-plan time out around 50 seconds. Reproduce and isolate if it still happens.
 
 ---
 
-RECOMMENDED FIRST SPRINT FOR THE NEW TEAM
+RECOMMENDED FIRST FOCUS FOR THE NEW TEAM
 
-1. Re-run the full fresh-account founder path, especially the new GROWING onboarding flow
-2. Validate async plan generation reliability in production
-3. Re-validate the onboarding → metrics → growth path on a fresh launched/growing product
-4. If lag is still reported, profile /dashboard and /tasks first
-5. Wire real Stripe billing
-6. Run 5 external users through the product and observe silently
-7. Decide whether the AI quality is good enough to charge for
+1. Read the codebase and docs until the team shares the same understanding of the live production contract
+2. Understand the auth flow, GROWING onboarding path, Growth kickoff, Metrics bridge, and task-creation surfaces before proposing changes
+3. Treat the current open findings as active unknowns, not as settled facts
+4. Preserve the current production baseline while deciding what to validate next
+5. Only after the system is understood, choose the next validation and product workstream deliberately
 
 ---
 

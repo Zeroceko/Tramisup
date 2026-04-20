@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -28,6 +29,28 @@ const COLORS = [
   { stroke: "#6366f1", fill: "#e0e7ff" },
   { stroke: "#ef4444", fill: "#fee2e2" },
 ];
+
+function normalizeToPercentChange(entries: ChartEntry[], stages: string[]): ChartEntry[] {
+  if (entries.length === 0) return entries;
+  const baselines: Record<string, number> = {};
+  for (const s of stages) {
+    const first = entries.find((e) => typeof e[s] === "number" && (e[s] as number) !== 0);
+    baselines[s] = typeof first?.[s] === "number" ? (first[s] as number) : 0;
+  }
+  return entries.map((entry) => {
+    const normalized: ChartEntry = { date: entry.date };
+    for (const s of stages) {
+      const base = baselines[s];
+      const val = entry[s];
+      if (typeof val === "number" && base !== 0) {
+        normalized[s] = Math.round(((val - base) / Math.abs(base)) * 100 * 10) / 10;
+      } else {
+        normalized[s] = 0;
+      }
+    }
+    return normalized;
+  });
+}
 
 function Sparkline({ data, dataKey, color }: { data: ChartEntry[]; dataKey: string; color: typeof COLORS[0] }) {
   return (
@@ -81,66 +104,84 @@ export default function MetricsTrendChart({
 }) {
   if (entries.length < 2) return null;
 
+  const stages = series.map((s) => s.stage);
+  const normalizedEntries = normalizeToPercentChange(entries, stages);
+
   return (
     <div className="space-y-5">
-      {/* Main combined chart */}
-      <div className="h-[260px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={entries} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-            <defs>
+      {/* Main combined chart — normalized to % change from first entry */}
+      <div>
+        <p className="mb-1 text-[11px] text-[#8a8fa0]">% change from first entry</p>
+        <div className="h-[260px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={normalizedEntries} margin={{ top: 8, right: 8, left: -4, bottom: 0 }}>
+              <defs>
+                {series.map((metric, i) => {
+                  const color = COLORS[i % COLORS.length];
+                  return (
+                    <linearGradient key={metric.stage} id={`area-${metric.stage}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={color.fill} stopOpacity={0.4} />
+                      <stop offset="100%" stopColor={color.fill} stopOpacity={0} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+              <CartesianGrid stroke="#f1f3f5" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="date"
+                stroke="#8a8fa0"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#8a8fa0"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                width={44}
+                tickFormatter={(v: number) => `${v}%`}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 16,
+                  border: "1px solid #e8e8e8",
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0 12px 40px rgba(13,13,18,0.1)",
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "#0d0d12", fontWeight: 600, marginBottom: 4 }}
+                formatter={(value: unknown) => {
+                  const v = typeof value === "number" ? value : 0;
+                  return [`${v >= 0 ? "+" : ""}${v}%`];
+                }}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value: string) => (
+                  <span style={{ color: "#5e6678", fontSize: 11 }}>{value}</span>
+                )}
+              />
               {series.map((metric, i) => {
                 const color = COLORS[i % COLORS.length];
                 return (
-                  <linearGradient key={metric.stage} id={`area-${metric.stage}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color.fill} stopOpacity={0.6} />
-                    <stop offset="100%" stopColor={color.fill} stopOpacity={0} />
-                  </linearGradient>
+                  <Area
+                    key={metric.stage}
+                    type="monotone"
+                    dataKey={metric.stage}
+                    name={metric.metricName}
+                    stroke={color.stroke}
+                    strokeWidth={2}
+                    fill={`url(#area-${metric.stage})`}
+                    dot={{ r: 2.5, fill: color.stroke, strokeWidth: 0 }}
+                    activeDot={{ r: 4, fill: color.stroke, strokeWidth: 2, stroke: "#fff" }}
+                  />
                 );
               })}
-            </defs>
-            <CartesianGrid stroke="#f1f3f5" strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="date"
-              stroke="#8a8fa0"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="#8a8fa0"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              width={40}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: 16,
-                border: "1px solid #e8e8e8",
-                backgroundColor: "#ffffff",
-                boxShadow: "0 12px 40px rgba(13,13,18,0.1)",
-                fontSize: 13,
-              }}
-              labelStyle={{ color: "#0d0d12", fontWeight: 600, marginBottom: 4 }}
-            />
-            {series.map((metric, i) => {
-              const color = COLORS[i % COLORS.length];
-              return (
-                <Area
-                  key={metric.stage}
-                  type="monotone"
-                  dataKey={metric.stage}
-                  name={metric.metricName}
-                  stroke={color.stroke}
-                  strokeWidth={2}
-                  fill={`url(#area-${metric.stage})`}
-                  dot={{ r: 2.5, fill: color.stroke, strokeWidth: 0 }}
-                  activeDot={{ r: 4, fill: color.stroke, strokeWidth: 2, stroke: "#fff" }}
-                />
-              );
-            })}
-          </AreaChart>
-        </ResponsiveContainer>
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Per-stage sparkline cards */}

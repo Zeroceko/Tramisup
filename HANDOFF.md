@@ -6,6 +6,8 @@
 **Current active `main` line:** includes all commits through `2dc2f428`
 **Status:** Production is live. The 13 April critical bugs remain fixed, the 14 April follow-up line is shipped, and the 15–16 April line is now also live: checklist locale/task fixes, agent preview hardening, agent-panel refetch fix, and GROWING-stage onboarding with inline AARRR setup plus a stronger first Growth kickoff are all in production.
 
+**Newest live validation note (16 April, late):** a fresh production signup attempted through a real browser automation run did **not** complete. The signup page rendered with **no visible reCAPTCHA iframe/widget**, while the live `POST /api/auth/signup` endpoint separately returned `400` with `Lütfen reCAPTCHA doğrulamasını tamamla.` when called without a captcha token. This is now the clearest newly-verified founder-continuity blocker.
+
 ---
 
 ## 1. What Tiramisup Is
@@ -146,6 +148,13 @@ These came from using the live app as a real founder with an upgraded account �
 - A production call to `POST /api/products/[id]/generate-plan` also timed out at roughly 50 seconds during that testing window
 - Because the onboarding flow has changed again on 16 April for `GROWING` users, the full fresh-user path now needs a new clean re-validation:
   signup → verify email → onboarding → inline AARRR setup → async plan generation → Growth kickoff
+- A late-16-April live browser run confirmed that **fresh signup itself is currently not provable through automation**:
+  - browser landed on `/tr/signup` step 2 and stayed on `Hesap oluşturuluyor…`
+  - no browser-side 500 was emitted in that run
+  - no signup API response was observed returning to the browser
+  - a direct live API probe to `POST /api/auth/signup` returned `400` with `Lütfen reCAPTCHA doğrulamasını tamamla.`
+  - the signup screen in the browser run showed **zero** visible reCAPTCHA iframes/widgets
+- Treat this as an evidence-backed production blocker until a human/manual verification proves otherwise.
 
 ### 3. Dashboard and tasks are improved, but still the slowest authenticated surfaces
 - TTFB and browser load improved materially on 14 April, but `/dashboard` and `/tasks` remain the highest-friction authenticated pages
@@ -157,6 +166,19 @@ These came from using the live app as a real founder with an upgraded account �
   - no stale metric state
   - integrations detour returns to Growth kickoff correctly
   - check-in completion moves naturally to baseline entry
+- A second live run using an existing real account and **`/products/new` instead of advancing the current product** reached:
+  - product name
+  - description
+  - category
+  - platform
+  - audience
+  - business model
+  - stage
+  - then stalled only because the automation harness was still being widened for option-label variations at the goal step
+- In that `/products/new` run:
+  - no browser-side 500 responses were seen
+  - only some route-transition `net::ERR_ABORTED` entries appeared on `_rsc` / navigation requests
+  - this is evidence that the new-product wizard is at least partially traversable on a real account, but still **not yet fully proven end-to-end**
 
 ### 6. ~~Free-form agent chat currently fails on user-written questions~~ FIXED
 - Root cause: `AgentMessage` table existed in the Prisma schema but had never been pushed to the production Supabase DB. Every `listStoredAgentMessages` call threw "table does not exist", which was caught only by the outer 500 handler.
@@ -183,12 +205,11 @@ A fresh user creating a product → finishing onboarding → reaching a useful G
 
 ## 5. Recommended First Sprint for New Team
 
-1. Re-run the full fresh-account founder path on the new `GROWING` onboarding flow
-2. Validate plan-generation reliability and isolate the earlier `generate-plan` timeout if it still reproduces
-3. Profile `/dashboard` and `/tasks` with real authenticated timings if users still report lag
-4. Wire real Stripe billing (fake checkout is the only thing blocking paid users)
-5. Run 5 external users through the product — observe, do not explain
-6. Decide: is the AI recommendation quality good enough to charge for?
+1. Understand the live product loop and the production constraints before changing behavior
+2. Read the open founder-simulation findings and treat them as active unknowns, not as resolved assumptions
+3. Inspect the `GROWING` onboarding and Growth kickoff line end-to-end in code before judging it from docs alone
+4. Review the fake-billing boundary, admin ops surface, and authenticated-app performance work as the current operating baseline
+5. Once product understanding is shared, decide what to validate next and in what order
 
 ---
 
@@ -208,6 +229,24 @@ npx tsc --noEmit
 npx next build
 QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run
 ```
+
+Production smoke helper used during this handoff:
+```bash
+E2E_BASE_URL="https://tiramisup.app" \
+E2E_LOCALE="tr" \
+E2E_EMAIL="<verified-test-user-email>" \
+E2E_PASSWORD="<verified-test-user-password>" \
+node --env-file=.env.prod tmp/prod-new-founder-flow.mjs
+```
+
+What this helper currently does:
+- logs in with an existing verified user
+- opens `/{locale}/products/new`
+- attempts a brand-new product creation flow (does **not** advance the active product)
+- captures screenshots and notes in `tmp/prod-new-founder-*`
+- verifies downstream Growth / Metrics / task-continuity only if product creation completes
+
+This helper is documented here for continuity only. It is not an instruction for the takeover team to run immediately.
 
 **Local dev runs on port `3002`** — Google and Stripe OAuth redirect settings are aligned to this port.
 

@@ -52,7 +52,20 @@ describe("admin insights helpers", () => {
           growthCheckin: { version: 1, completedAt: "2026-04-13T10:00:00.000Z", answers: {} },
         }),
         selections: [{ stage: "Activation", selectedMetricKeys: ["activation-rate"] }],
-        metricEntryCount: 2,
+        metricEntryCount: 1,
+      }),
+    ).toBe("missing_baseline");
+
+    expect(
+      getGrowthReadinessState({
+        status: ProductStatus.GROWING,
+        additionalContext: JSON.stringify({
+          version: 1,
+          legacyText: null,
+          growthCheckin: { version: 1, completedAt: "2026-04-13T10:00:00.000Z", answers: {} },
+        }),
+        selections: [{ stage: "Activation", selectedMetricKeys: ["activation-rate"] }],
+        metricEntryCount: 5,
       }),
     ).toBe("diagnosis_ready");
   });

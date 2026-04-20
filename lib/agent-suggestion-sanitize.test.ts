@@ -44,6 +44,15 @@ describe("sanitizeAgentSuggestion", () => {
     expect(result?.priority).toBe("MEDIUM");
     expect(result?.confidence).toBeUndefined();
   });
+
+  it("forces suggestion cards into create-task intent even if upstream sends ask intent", () => {
+    const result = sanitizeAgentSuggestion({
+      label: "Clarify the next metric decision",
+      intent: "ask",
+    });
+
+    expect(result?.intent).toBe("create_task");
+  });
 });
 
 describe("sanitizeAgentSuggestions", () => {
