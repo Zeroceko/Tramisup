@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes step-enter-forward {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes step-enter-backward {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.step-enter-forward  { animation: step-enter-forward  0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.step-enter-backward { animation: step-enter-backward 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 @layer base {
   :root {
     --background: 50 30% 96%;

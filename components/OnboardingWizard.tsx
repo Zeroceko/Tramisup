@@ -654,6 +654,8 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   const resumeRequested = searchParams.get("resume") === "1";
   const isEn = locale === "en";
   const [stepIndex, setStepIndex] = useState(0);
+  const [stepDirection, setStepDirection] = useState<"forward" | "backward">("forward");
+  const [animKey, setAnimKey] = useState(0);
   const [data, setData] = useState<Partial<WizardData>>({
     categories: [],
     categoryOther: "",
@@ -835,10 +837,18 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
   );
 
   function goNext() {
-    if (stepIndex < stepIds.length - 1) setStepIndex((i) => i + 1);
+    if (stepIndex < stepIds.length - 1) {
+      setStepDirection("forward");
+      setAnimKey((k) => k + 1);
+      setStepIndex((i) => i + 1);
+    }
   }
   function goBack() {
-    if (stepIndex > 0) setStepIndex((i) => i - 1);
+    if (stepIndex > 0) {
+      setStepDirection("backward");
+      setAnimKey((k) => k + 1);
+      setStepIndex((i) => i - 1);
+    }
   }
 
   function set<K extends keyof WizardData>(key: K, value: WizardData[K]) {
@@ -1107,7 +1117,10 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
         </div>
 
         <div className="rounded-[18px] bg-[#f9f9fb] px-4 py-8 sm:px-8 sm:py-10">
-          <div className="mx-auto w-full max-w-2xl">
+          <div
+            key={animKey}
+            className={`mx-auto w-full max-w-2xl ${stepDirection === "forward" ? "step-enter-forward" : "step-enter-backward"}`}
+          >
           {/* Step: name */}
           {currentId === "name" && (
             <StepWrapper
