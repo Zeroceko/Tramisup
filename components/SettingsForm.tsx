@@ -165,6 +165,7 @@ export default function SettingsForm({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateStatus, setRegenerateStatus] = useState<"idle" | "done" | "error">("idle");
+  const [regenerateMessage, setRegenerateMessage] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
@@ -240,12 +241,16 @@ export default function SettingsForm({
         dangerZone: "Danger zone",
         deleteProduct: "Delete product",
         deleteProductDesc: "Permanently delete this product and all of its data. This cannot be undone.",
-        regeneratePlan: "Regenerate launch plan",
-        regeneratePlanDesc: "Re-run AI plan generation using current product data. Incomplete checklist items and unstarted tasks will be replaced. Completed items are preserved.",
-        regeneratePlanBtn: "Regenerate plan",
+        regeneratePlan: "Refresh plan with latest product context",
+        regeneratePlanDesc: "Use your latest product description, links, and stage to add better next suggestions without wiping existing work.",
+        regeneratePlanKeepsCompleted: "Completed checklist items stay exactly as they are.",
+        regeneratePlanKeepsTasks: "Existing tasks stay on the board; new suggestions are merged in only if they are not duplicates.",
+        regeneratePlanUsesDraft: "If you changed the product description above, Tiramisup saves it first and then refreshes the plan.",
+        regeneratePlanBtn: "Save and refresh plan",
         regeneratePlanRunning: "Regenerating…",
-        regeneratePlanDone: "Plan regenerated.",
+        regeneratePlanDone: "Plan refreshed.",
         regeneratePlanError: "Failed to regenerate. Try again.",
+        regeneratePlanSavedFirst: "Latest product edits saved.",
       }
     : {
         errorGeneric: "Bir hata oluştu.",
@@ -311,12 +316,16 @@ export default function SettingsForm({
         dangerZone: "Tehlikeli bölge",
         deleteProduct: "Ürünü sil",
         deleteProductDesc: "Bu ürünü ve tüm verilerini kalıcı olarak sil. Bu işlem geri alınamaz.",
-        regeneratePlan: "Launch planını yenile",
-        regeneratePlanDesc: "Mevcut ürün verilerinle AI plan üretimini yeniden çalıştır. Tamamlanmamış checklist maddeleri ve başlanmamış görevler değiştirilir. Tamamlananlar korunur.",
-        regeneratePlanBtn: "Planı yenile",
+        regeneratePlan: "Planı güncel ürün bağlamıyla tazele",
+        regeneratePlanDesc: "Ürün açıklaması, linkler ve aşama bilgisinin en güncel halini kullanarak yeni öneriler ekle. Mevcut emeği silme.",
+        regeneratePlanKeepsCompleted: "Tamamladığın checklist maddeleri aynen korunur.",
+        regeneratePlanKeepsTasks: "Mevcut görevler board'da kalır; yalnızca duplicate olmayan yeni öneriler eklenir.",
+        regeneratePlanUsesDraft: "Yukarıda ürün tanımını değiştirdiysen, Tiramisup önce onu kaydeder sonra planı tazeler.",
+        regeneratePlanBtn: "Kaydet ve planı tazele",
         regeneratePlanRunning: "Yenileniyor…",
-        regeneratePlanDone: "Plan yenilendi.",
+        regeneratePlanDone: "Plan tazelendi.",
         regeneratePlanError: "Yenileme başarısız. Tekrar dene.",
+        regeneratePlanSavedFirst: "Son ürün değişiklikleri önce kaydedildi.",
       };
 
   const [formData, setFormData] = useState(() => buildFormState(user, locale));
@@ -327,12 +336,14 @@ export default function SettingsForm({
     confirmNewPassword: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function saveSettings(options?: { silent?: boolean; refresh?: boolean }) {
+    const silent = options?.silent ?? false;
+    const refresh = options?.refresh ?? true;
     setLoading(true);
-    setError("");
-    setSuccess("");
-
+    if (!silent) {
+      setError("");
+      setSuccess("");
+    }
     try {
       const response = await fetch("/api/settings", {
         method: "PATCH",
@@ -354,32 +365,97 @@ export default function SettingsForm({
 
       const saved = payload as SavedSettingsResponse;
       setFormData(buildFormState(buildUserFromSavedResponse(saved), formData.preferredLocale));
-      setSuccess(saved.message || copy.success);
+      if (!silent) {
+        setSuccess(saved.message || copy.success);
+      }
       if (formData.preferredLocale && formData.preferredLocale !== locale) {
         const localizedPath = pathname.startsWith(`/${locale}`)
           ? pathname.replace(`/${locale}`, `/${formData.preferredLocale}`)
           : `/${formData.preferredLocale}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
         const query = searchParams.toString();
         window.location.assign(query ? `${localizedPath}?${query}` : localizedPath);
-        return;
+        return saved;
       }
-      router.refresh();
+      if (refresh) {
+        router.refresh();
+      }
+      return saved;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : copy.errorGeneric);
+      const message = err instanceof Error ? err.message : copy.errorGeneric;
+      if (!silent) {
+        setError(message);
+      }
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await saveSettings();
+    } catch {
+      // saveSettings already surfaced the error state
+    }
   };
+
+  const productFormBaseline = buildFormState(user, locale);
+  const hasUnsavedProductChanges =
+    formData.productName !== productFormBaseline.productName ||
+    formData.description !== productFormBaseline.description ||
+    formData.website !== productFormBaseline.website ||
+    formData.category !== productFormBaseline.category ||
+    formData.targetAudience !== productFormBaseline.targetAudience ||
+    formData.businessModel !== productFormBaseline.businessModel ||
+    formData.launchStageKey !== productFormBaseline.launchStageKey ||
+    formData.growthGoal !== productFormBaseline.growthGoal ||
+    formData.goalKey !== productFormBaseline.goalKey ||
+    formData.contextLinks !== productFormBaseline.contextLinks ||
+    formData.launchDate !== productFormBaseline.launchDate;
 
   const handleRegenerate = async () => {
     if (!user?.product?.id) return;
     setRegenerating(true);
     setRegenerateStatus("idle");
+    setRegenerateMessage("");
     try {
+      if (hasUnsavedProductChanges) {
+        await saveSettings({ silent: true, refresh: false });
+      }
       const res = await fetch(`/api/products/${user.product.id}/regenerate`, { method: "POST" });
-      setRegenerateStatus(res.ok ? "done" : "error");
+      const payload = await res.json().catch(() => null) as
+        | {
+            summary?: {
+              kept: { launch: number; growth: number; tasks: number };
+              added: { launch: number; growth: number; tasks: number };
+            };
+          }
+        | { error?: string }
+        | null;
+
+      if (!res.ok) {
+        throw new Error(
+          payload && "error" in payload && payload.error
+            ? payload.error
+            : copy.regeneratePlanError,
+        );
+      }
+
+      const summary = payload && "summary" in payload ? payload.summary : null;
+      const prefix = hasUnsavedProductChanges ? `${copy.regeneratePlanSavedFirst} ` : "";
+      const summaryText = summary
+        ? isEn
+          ? `${prefix}Kept ${summary.kept.launch} launch items, ${summary.kept.growth} growth items, and ${summary.kept.tasks} tasks. Added ${summary.added.launch} new launch items, ${summary.added.growth} growth items, and ${summary.added.tasks} tasks.`
+          : `${prefix}${summary.kept.launch} launch maddesi, ${summary.kept.growth} growth maddesi ve ${summary.kept.tasks} görev korundu. ${summary.added.launch} yeni launch maddesi, ${summary.added.growth} growth maddesi ve ${summary.added.tasks} görev eklendi.`
+        : prefix + copy.regeneratePlanDone;
+
+      setRegenerateStatus("done");
+      setRegenerateMessage(summaryText);
+      router.refresh();
     } catch {
       setRegenerateStatus("error");
+      setRegenerateMessage(copy.regeneratePlanError);
     } finally {
       setRegenerating(false);
     }
@@ -744,24 +820,62 @@ export default function SettingsForm({
 
       {/* Regenerate plan — only on product tab */}
       {activeSection === "product" && user?.product && (
-        <div className="rounded-[20px] border border-[#e8e8e8] bg-white px-5 py-5 sm:px-6">
+        <div className="overflow-hidden rounded-[24px] border border-[#eadfe6] bg-[linear-gradient(180deg,_#fffefe_0%,_#fff7fa_100%)] px-5 py-5 sm:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
             {copy.regeneratePlan}
           </p>
+          <h3 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
+            {isEn ? "Refresh the plan without losing previous work" : "Önceki emeği kaybetmeden planı tazele"}
+          </h3>
           <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
             {copy.regeneratePlanDesc}
           </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded-[16px] border border-[#ebe7df] bg-white/80 px-4 py-3">
+              <p className="text-[12px] font-semibold text-[#0d0d12]">
+                {isEn ? "Completed work stays" : "Tamamlanan iş korunur"}
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+                {copy.regeneratePlanKeepsCompleted}
+              </p>
+            </div>
+            <div className="rounded-[16px] border border-[#ebe7df] bg-white/80 px-4 py-3">
+              <p className="text-[12px] font-semibold text-[#0d0d12]">
+                {isEn ? "Board stays stable" : "Board düzeni korunur"}
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+                {copy.regeneratePlanKeepsTasks}
+              </p>
+            </div>
+            <div className="rounded-[16px] border border-[#ebe7df] bg-white/80 px-4 py-3">
+              <p className="text-[12px] font-semibold text-[#0d0d12]">
+                {isEn ? "Latest description is used" : "En güncel açıklama kullanılır"}
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+                {copy.regeneratePlanUsesDraft}
+              </p>
+            </div>
+          </div>
+          {hasUnsavedProductChanges ? (
+            <div className="mt-4 rounded-[14px] border border-[#dceff0] bg-[#f2fbfb] px-4 py-3 text-[12px] leading-5 text-[#38666a]">
+              {copy.regeneratePlanUsesDraft}
+            </div>
+          ) : null}
           {regenerateStatus === "done" && (
-            <p className="mt-2 text-[13px] font-medium text-emerald-600">{copy.regeneratePlanDone}</p>
+            <p className="mt-4 rounded-[14px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-medium leading-6 text-emerald-700">
+              {regenerateMessage || copy.regeneratePlanDone}
+            </p>
           )}
           {regenerateStatus === "error" && (
-            <p className="mt-2 text-[13px] font-medium text-red-500">{copy.regeneratePlanError}</p>
+            <p className="mt-4 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium leading-6 text-red-600">
+              {regenerateMessage || copy.regeneratePlanError}
+            </p>
           )}
           <button
             type="button"
             onClick={handleRegenerate}
-            disabled={regenerating}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] bg-white px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
+            disabled={regenerating || loading}
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-full border border-[#d8d8dc] bg-white px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
           >
             {regenerating ? copy.regeneratePlanRunning : copy.regeneratePlanBtn}
           </button>

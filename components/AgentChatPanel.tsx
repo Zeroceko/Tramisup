@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { AgentType } from "@/lib/agent-types";
 import UsageLimitModal from "@/components/UsageLimitModal";
@@ -15,6 +15,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  sanitizeAgentSuggestion,
+  sanitizeAgentSuggestions,
+  type SafeAgentSuggestion,
+} from "@/lib/agent-suggestion-sanitize";
 export type { AgentType };
 
 interface Message {
@@ -35,23 +40,7 @@ interface AgentMessageAction {
   payload?: { title?: string; description?: string; priority?: string };
 }
 
-interface AgentSuggestion {
-  id?: string;
-  label: string;
-  title?: string;
-  intent?: "ask" | "create_task";
-  payload?: { title: string; description?: string; priority?: string };
-  description?: string | null;
-  whyItMatters?: string;
-  doneCriteria?: string;
-  nextAction?: string;
-  category?: string;
-  priority?: "HIGH" | "MEDIUM" | "LOW";
-  source?: "ai" | "fallback";
-  confidence?: "high" | "medium" | "low";
-  existingTaskId?: string;
-  existingTaskTitle?: string;
-}
+type AgentSuggestion = SafeAgentSuggestion;
 
 interface AgentApiResponse {
   message: string;
@@ -202,7 +191,11 @@ export default function AgentChatPanel({
   onTasksCreated,
 }: AgentChatPanelProps) {
   const router = useRouter();
-  const copy = getCopy(agentType, locale);
+  const copy = useMemo(() => getCopy(agentType, locale), [agentType, locale]);
+  const fallbackSuggestions = useMemo(
+    () => sanitizeAgentSuggestions(copy.initialSuggestions),
+    [copy]
+  );
   const isEn = locale === "en";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -231,11 +224,11 @@ export default function AgentChatPanel({
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const liveSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
-        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : copy.initialSuggestions);
+        const liveSuggestions = sanitizeAgentSuggestions(data?.suggestions);
+        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions);
       })
       .catch(() => {
-        setSuggestions(copy.initialSuggestions);
+        setSuggestions(fallbackSuggestions);
       })
       .finally(() => setSuggestionsLoading(false));
 
@@ -252,21 +245,21 @@ export default function AgentChatPanel({
       .catch(() => {});
 
     return () => controller.abort();
-  }, [agentType, copy.initialSuggestions, locale, productId]);
+  }, [agentType, fallbackSuggestions, locale, productId]);
 
   const refetchSuggestions = useCallback(() => {
     setSuggestionsLoading(true);
     fetch(`/api/agent/suggestions?agentType=${agentType}&productId=${productId}&locale=${locale}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const liveSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
-        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : copy.initialSuggestions);
+        const liveSuggestions = sanitizeAgentSuggestions(data?.suggestions);
+        setSuggestions(liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions);
       })
       .catch(() => {
-        setSuggestions(copy.initialSuggestions);
+        setSuggestions(fallbackSuggestions);
       })
       .finally(() => setSuggestionsLoading(false));
-  }, [agentType, copy.initialSuggestions, locale, productId]);
+  }, [agentType, fallbackSuggestions, locale, productId]);
 
   useEffect(() => {
     window.addEventListener(APP_EVENT_CHECKLIST_UPDATED, refetchSuggestions);
@@ -343,8 +336,9 @@ export default function AgentChatPanel({
           },
         ]);
 
-        if (data.suggestions?.length > 0) {
-          setSuggestions(data.suggestions.slice(0, 4));
+        const nextSuggestions = sanitizeAgentSuggestions(data.suggestions).slice(0, 4);
+        if (nextSuggestions.length > 0) {
+          setSuggestions(nextSuggestions);
         }
 
         if (data.executedActions?.length > 0 && onTasksCreated) {
@@ -640,7 +634,7 @@ export default function AgentChatPanel({
                       {section.label}
                     </p>
                     <p className="mt-1 text-[14px] leading-6 text-[#0d0d12]">
-                      {section.value}
+                      {section.value ?? (isEn ? "No detail yet." : "Henüz detay yok.")}
                     </p>
                   </div>
                 ))}
@@ -692,7 +686,11 @@ export default function AgentChatPanel({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPreviewSuggestion(suggestion)}
+                  onClick={() => {
+                    const safeSuggestion = sanitizeAgentSuggestion(suggestion);
+                    if (!safeSuggestion) return;
+                    setPreviewSuggestion(safeSuggestion);
+                  }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#ddd6ce] bg-white text-[#5e6678] transition hover:border-[#c8c0b7] hover:bg-[#faf8f5]"
                   aria-label={isEn ? "Preview suggestion" : "Öneri detayını aç"}
                   title={isEn ? "Preview" : "Önizle"}

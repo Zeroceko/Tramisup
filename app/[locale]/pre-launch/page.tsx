@@ -12,17 +12,20 @@ import {
   normalizeLaunchChecklistPriority,
   normalizeStoredLaunchChecklistPriorities,
 } from "@/lib/launch-checklist-priority";
-import { createTaskWithGuards } from "@/lib/task-create";
+import { createTaskWithGuards, TaskCreationError } from "@/lib/task-create";
 import { parseStructuredDescription } from "@/lib/task-parsing";
 import { normalizeLaunchStageKey } from "@/lib/launch-stage";
 import { emitTaskLifecycleEvent } from "@/lib/task-events";
 import { buildTaskStatusTransition } from "@/lib/task-status-transition";
+import { localizeChecklistContent } from "@/lib/checklist-localization";
+import type { Locale } from "@/lib/task-validator";
 
 // Server action: Create task from checklist item
 async function createTaskFromChecklistItem(locale: string, itemId: string) {
   "use server";
 
   try {
+    const taskLocale: Locale = locale === "tr" ? "tr" : "en";
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       throw new Error("Unauthorized");
@@ -37,28 +40,39 @@ async function createTaskFromChecklistItem(locale: string, itemId: string) {
       throw new Error("Item not found or unauthorized");
     }
 
-    const structured = parseStructuredDescription(checklistItem.description);
+    const localizedChecklist = localizeChecklistContent(
+      { title: checklistItem.title, description: checklistItem.description },
+      taskLocale,
+    );
+    const structured = parseStructuredDescription(localizedChecklist.description);
     const result = await prisma.$transaction(async (tx) => {
       const hasStructuredChecklistFields = Boolean(
         structured.why || structured.doneCriteria || structured.nextAction,
       );
-      const taskResult = await createTaskWithGuards(
-        {
-          productId: checklistItem.productId,
-          title: checklistItem.title,
-          description: hasStructuredChecklistFields
-            ? structured.leftover ?? null
-            : checklistItem.description ?? checklistItem.title,
-          whyItMatters: structured.why ?? undefined,
-          doneCriteria: structured.doneCriteria ?? undefined,
-          nextAction: structured.nextAction ?? undefined,
-          priority: normalizeLaunchChecklistPriority(checklistItem),
-          category: checklistItem.category,
-          source: "CHECKLIST",
-          locale: locale === "tr" ? "tr" : "en",
-        },
-        tx,
-      );
+      const taskInput = {
+        productId: checklistItem.productId,
+        title: localizedChecklist.title,
+        description: hasStructuredChecklistFields
+          ? structured.leftover ?? null
+          : localizedChecklist.description ?? localizedChecklist.title,
+        whyItMatters: structured.why ?? undefined,
+        doneCriteria: structured.doneCriteria ?? undefined,
+        nextAction: structured.nextAction ?? undefined,
+        priority: normalizeLaunchChecklistPriority(checklistItem),
+        category: checklistItem.category,
+        source: "CHECKLIST" as const,
+        locale: taskLocale,
+      };
+      let taskResult;
+      try {
+        taskResult = await createTaskWithGuards(taskInput, tx);
+      } catch (error) {
+        if (error instanceof TaskCreationError && error.reason === "wrong_locale") {
+          taskResult = await createTaskWithGuards({ ...taskInput, skipValidation: true }, tx);
+        } else {
+          throw error;
+        }
+      }
 
       if (!checklistItem.linkedTaskId || checklistItem.linkedTaskId !== taskResult.task.id) {
         await tx.launchChecklist.update({
@@ -252,6 +266,28 @@ export default async function PreLaunchPage({
 
   const createChecklistTask = createTaskFromChecklistItem.bind(null, locale);
   const toggleChecklistComplete = setChecklistItemCompleted.bind(null, locale);
+  const localizedActiveChecklists = activeChecklists.map((item) => {
+    const localized = localizeChecklistContent(
+      { title: item.title, description: item.description },
+      locale === "tr" ? "tr" : "en",
+    );
+    return {
+      ...item,
+      title: localized.title,
+      description: localized.description,
+    };
+  });
+  const localizedIgnoredChecklists = ignoredChecklistItems.map((item) => {
+    const localized = localizeChecklistContent(
+      { title: item.title, description: item.description },
+      locale === "tr" ? "tr" : "en",
+    );
+    return {
+      ...item,
+      title: localized.title,
+      description: localized.description,
+    };
+  });
 
   return (
     <PreLaunchWorkspace
@@ -259,7 +295,7 @@ export default async function PreLaunchPage({
       productId={product?.id || ""}
       productStatus={product?.status ?? ProductStatus.PRE_LAUNCH}
       launchStageKey={normalizeLaunchStageKey(product?.launchStatus) ?? "PREPARING"}
-      initialActiveChecklists={activeChecklists.map((item) => ({
+      initialActiveChecklists={localizedActiveChecklists.map((item) => ({
         id: item.id,
         title: item.title,
         description: item.description,
@@ -268,7 +304,7 @@ export default async function PreLaunchPage({
         priority: item.priority,
         linkedTaskId: item.linkedTaskId,
       }))}
-      initialIgnoredItems={ignoredChecklistItems.map((item) => ({
+      initialIgnoredItems={localizedIgnoredChecklists.map((item) => ({
         id: item.id,
         title: item.title,
         description: item.description,

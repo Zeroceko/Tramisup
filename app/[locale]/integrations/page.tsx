@@ -27,7 +27,14 @@ export default async function IntegrationsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ success?: string; error?: string; onboarding?: string; connect?: string; queued?: string }>;
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+    onboarding?: string;
+    connect?: string;
+    queued?: string;
+    returnTo?: string;
+  }>;
 }) {
   const { locale } = await params;
   const session = await getServerSession(authOptions);
@@ -142,6 +149,7 @@ export default async function IntegrationsPage({
       onboarding={resolvedSearchParams.onboarding}
       connect={resolvedSearchParams.connect}
       queued={resolvedSearchParams.queued}
+      returnTo={resolvedSearchParams.returnTo}
       sourceContext={sourceContext}
     />
   );

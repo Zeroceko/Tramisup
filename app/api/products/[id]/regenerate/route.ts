@@ -5,8 +5,8 @@
  * for a single product owned by the authenticated user.
  *
  * Safety rules:
- * - Only deletes INCOMPLETE checklist items — completed items represent real work done.
- * - Only deletes AI_PLAN tasks that are not DONE.
+ * - Never deletes existing checklist items or tasks during regenerate.
+ * - Existing work stays intact; regenerate only merges in new non-duplicate suggestions.
  * - Regenerates using current product data from the DB (not stale onboarding cache).
  * - Updates planMeta with source + counts + timestamp.
  * - Does NOT touch metric setup, metric entries, goals, routines, or integrations.
@@ -39,7 +39,7 @@ export async function POST(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Snapshot before counts for the response diff
+    // Snapshot counts for the response summary
     const beforeLaunch = await prisma.launchChecklist.count({ where: { productId } });
     const beforeGrowth = await prisma.growthChecklist.count({ where: { productId } });
     const beforeTasks = await prisma.task.count({ where: { productId } });
@@ -56,28 +56,10 @@ export async function POST(
       launchStatus: product.launchStatus ?? undefined,
     });
 
-    // Apply in a transaction: delete incomplete items, seed fresh plan
+    // Apply in a transaction: merge new suggestions without deleting existing work
+    let addedCounts = { addedLaunchCount: 0, addedGrowthCount: 0, addedTaskCount: 0 };
     await prisma.$transaction(async (tx) => {
-      // Delete incomplete launch checklist items only
-      await tx.launchChecklist.deleteMany({
-        where: { productId, completed: false },
-      });
-
-      // Delete incomplete growth checklist items only
-      await tx.growthChecklist.deleteMany({
-        where: { productId, completed: false },
-      });
-
-      // Delete non-DONE AI_PLAN tasks only
-      await tx.task.deleteMany({
-        where: {
-          productId,
-          source: "AI_PLAN",
-          status: { not: "DONE" },
-        },
-      });
-
-      await seedAiPlan(productId, newPlan, tx, locale, source);
+      addedCounts = await seedAiPlan(productId, newPlan, tx, locale, source);
     });
 
     const afterLaunch = await prisma.launchChecklist.count({ where: { productId } });
@@ -92,10 +74,22 @@ export async function POST(
     return NextResponse.json({
       success: true,
       source,
-      diff: {
-        launch: { before: beforeLaunch, after: afterLaunch },
-        growth: { before: beforeGrowth, after: afterGrowth },
-        tasks: { before: beforeTasks, after: afterTasks },
+      summary: {
+        kept: {
+          launch: beforeLaunch,
+          growth: beforeGrowth,
+          tasks: beforeTasks,
+        },
+        added: {
+          launch: addedCounts.addedLaunchCount,
+          growth: addedCounts.addedGrowthCount,
+          tasks: addedCounts.addedTaskCount,
+        },
+        totals: {
+          launch: afterLaunch,
+          growth: afterGrowth,
+          tasks: afterTasks,
+        },
       },
     });
   } catch (error) {

@@ -10,6 +10,7 @@ import {
   deriveProductStatusFromLaunchStage,
   ensureCanonicalLaunchStageKey,
 } from "@/lib/launch-stage";
+import type { FunnelMetricSelection } from "@/lib/metric-setup";
 
 async function resolveProductOwner(sessionUser: {
   id?: string | null;
@@ -130,6 +131,21 @@ async function forceEnsureOwner(
   });
 }
 
+function isValidMetricSelections(input: unknown): input is FunnelMetricSelection[] {
+  if (!Array.isArray(input)) return false;
+
+  return input.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const stage = (item as { stage?: unknown }).stage;
+    const selectedMetricKeys = (item as { selectedMetricKeys?: unknown }).selectedMetricKeys;
+    return (
+      typeof stage === "string" &&
+      Array.isArray(selectedMetricKeys) &&
+      selectedMetricKeys.every((value) => typeof value === "string")
+    );
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -208,6 +224,7 @@ export async function POST(request: Request) {
       growthGoal,
       goalKey,
       locale,
+      metricSetupSelections,
     } = body;
 
     if (!name || !category || !targetAudience || !businessModel) {
@@ -237,6 +254,9 @@ export async function POST(request: Request) {
       : Array.isArray(mobilePlatforms)
         ? mobilePlatforms.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
         : [];
+    const initialMetricSetupSelections = isValidMetricSelections(metricSetupSelections)
+      ? metricSetupSelections
+      : [];
     const canonicalLaunchStage = ensureCanonicalLaunchStageKey(launchStatus);
 
     // Phase 1: create minimal product record, plan generation happens in /generate-plan
@@ -276,7 +296,7 @@ export async function POST(request: Request) {
         await tx.metricSetup.create({
           data: {
             productId: newProduct.id,
-            selections: [],
+            selections: initialMetricSetupSelections,
             platforms: normalizedPlatforms,
           },
         });
@@ -303,7 +323,13 @@ export async function POST(request: Request) {
       }
     }
 
-    const response = NextResponse.json({ id: product.id }, { status: 201 });
+    const response = NextResponse.json(
+      {
+        id: product.id,
+        metricSetupSaved: initialMetricSetupSelections.length > 0,
+      },
+      { status: 201 },
+    );
     response.cookies.set("activeProductId", product.id, {
       path: "/",
       sameSite: "lax",

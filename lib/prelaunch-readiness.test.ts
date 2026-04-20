@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { computePreLaunchReadiness } from "@/lib/prelaunch-readiness";
 
 describe("computePreLaunchReadiness", () => {
+  it("starts at zero when nothing is completed or linked yet", () => {
+    const result = computePreLaunchReadiness([
+      { completed: false, priority: "HIGH", linkedTaskId: null },
+      { completed: false, priority: "MEDIUM", linkedTaskId: null },
+    ], "PREPARING");
+
+    expect(result.score).toBe(0);
+    expect(result.stageBonus).toBe(0);
+  });
+
   it("increases when a checklist item is linked to a task", () => {
     const base = computePreLaunchReadiness([
       { completed: false, priority: "HIGH", linkedTaskId: null },
@@ -16,13 +26,13 @@ describe("computePreLaunchReadiness", () => {
     expect(withTask.score).toBeGreaterThan(base.score);
   });
 
-  it("increases when stage maturity advances", () => {
+  it("increases when stage maturity advances after work has started", () => {
     const building = computePreLaunchReadiness([
-      { completed: false, priority: "HIGH", linkedTaskId: null },
+      { completed: false, priority: "HIGH", linkedTaskId: "task_1" },
     ], "BUILDING");
 
     const preparing = computePreLaunchReadiness([
-      { completed: false, priority: "HIGH", linkedTaskId: null },
+      { completed: false, priority: "HIGH", linkedTaskId: "task_1" },
     ], "PREPARING");
 
     expect(preparing.score).toBeGreaterThan(building.score);

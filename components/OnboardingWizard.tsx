@@ -16,7 +16,15 @@ import {
   loadOnboardingRetryDraft,
   saveOnboardingRetryDraft,
 } from "@/lib/onboarding-retry-storage";
+import {
+  buildMetricSelectionsFromMap,
+  getOnboardingPostCreateDestination,
+  hasCompleteMetricSelections,
+  mergeRecommendedMetricSelections,
+  type OnboardingMetricSelectionMap,
+} from "@/lib/onboarding-growth";
 import { CheckSquare, Link2, Paperclip, Plus, Sparkles, X } from "lucide-react";
+import MetricSetupSelector from "@/components/MetricSetupSelector";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +72,7 @@ type WizardData = {
   growthGoal: string;
   goalKey: string;
   intendedSources: string[];
+  metricSelections: OnboardingMetricSelectionMap;
 };
 
 type UpgradePrompt = {
@@ -301,7 +310,7 @@ function getActiveSteps(data: Partial<WizardData>): StepId[] {
   ids.push("audience", "business", "stage", "goal");
   if (data.launchStatus && !isLaunchedLaunchStage(data.launchStatus)) ids.push("timing");
   ids.push("sources");
-  if (data.launchStatus && !isVeryEarlyLaunchStage(data.launchStatus)) ids.push("metrics");
+  if (data.launchStatus && isLaunchedLaunchStage(data.launchStatus)) ids.push("metrics");
   return ids;
 }
 
@@ -437,6 +446,9 @@ function MetricsStep({
   isSubmitting,
   onAccept,
   onSkip,
+  editable = false,
+  selectedMetrics,
+  onMetricSelectionChange,
 }: {
   autoMetrics: Partial<Record<FunnelStageKey, string>>;
   data: Partial<WizardData>;
@@ -445,6 +457,9 @@ function MetricsStep({
   isSubmitting: boolean;
   onAccept: () => void;
   onSkip: () => void;
+  editable?: boolean;
+  selectedMetrics?: OnboardingMetricSelectionMap;
+  onMetricSelectionChange?: (selected: Record<string, string>) => void;
 }) {
   const isEn = locale === "en";
   const plan = getGrowthMetricRecommendations({
@@ -469,6 +484,21 @@ function MetricsStep({
   }
 
   const entries = STAGE_ORDER.filter((s) => metricNames[s]);
+
+  if (editable) {
+    return (
+      <MetricSetupSelector
+        mode="onboarding"
+        plan={plan}
+        initialSetup={null}
+        initialSelections={selectedMetrics ?? autoMetrics}
+        locale={locale}
+        connectedProviders={[]}
+        onSelectionChange={onMetricSelectionChange}
+        onSave={() => onAccept()}
+      />
+    );
+  }
 
   return (
     <div>
@@ -633,6 +663,7 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
     businessModels: [],
     businessModelOther: "",
     intendedSources: [],
+    metricSelections: {},
   });
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -780,6 +811,24 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       locale,
     ]
   );
+  useEffect(() => {
+    if (!isLaunchedLaunchStage(data.launchStatus)) return;
+    setData((prev) => {
+      const merged = mergeRecommendedMetricSelections(
+        prev.metricSelections,
+        autoMetrics as OnboardingMetricSelectionMap
+      );
+      const prevSelections = prev.metricSelections ?? {};
+      const changed =
+        Object.keys(merged).length !== Object.keys(prevSelections).length ||
+        Object.keys(merged).some(
+          (key) =>
+            merged[key as FunnelStageKey] !== prevSelections[key as FunnelStageKey]
+        );
+
+      return changed ? { ...prev, metricSelections: merged } : prev;
+    });
+  }, [autoMetrics, data.launchStatus]);
   const connectableSources = useMemo(
     () => getConnectableSources(data.intendedSources),
     [data.intendedSources],
@@ -870,7 +919,9 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       case "sources":
         return true;
       case "metrics":
-        return true;
+        return isLaunchedLaunchStage(data.launchStatus)
+          ? hasCompleteMetricSelections(data.metricSelections)
+          : true;
       default:
         return false;
     }
@@ -912,6 +963,14 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       growthGoal: data.growthGoal,
       goalKey: data.goalKey,
       stageContext: stageContext || undefined,
+      metricSetupSelections:
+        useMetrics && Object.keys(autoMetrics).length > 0
+          ? buildMetricSelectionsFromMap(
+              isLaunchedLaunchStage(data.launchStatus)
+                ? data.metricSelections
+                : (autoMetrics as OnboardingMetricSelectionMap)
+            )
+          : undefined,
     };
 
     try {
@@ -940,19 +999,6 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       const { id: productId } = (await productRes.json()) as { id: string };
       clearOnboardingRetryDraft();
 
-      // Save metric selections before showing loading screen — must complete before /metrics loads
-      if (useMetrics && Object.keys(autoMetrics).length > 0) {
-        const selections = Object.entries(autoMetrics).map(([stage, key]) => ({
-          stage,
-          selectedMetricKeys: [key],
-        }));
-        await fetch(`/api/products/${productId}/metric-setup`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ setup: { selections } }),
-        }).catch(() => {});
-      }
-
       // Show loading screen immediately
       setIsCreating(true);
       setPlanStep("pending");
@@ -969,22 +1015,13 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
       }).catch(() => {});
 
       // Determine post-loading destination
-      const destination = (() => {
-        if (useMetrics && connectableSources.length > 0) {
-          const params = new URLSearchParams({
-            onboarding: "1",
-            connect: toIntegrationProvider(connectableSources[0]),
-          });
-          if (connectableSources.length > 1) {
-            params.set(
-              "queued",
-              connectableSources.slice(1).map((s) => toIntegrationProvider(s)).join(","),
-            );
-          }
-          return `/${locale}/integrations?${params.toString()}`;
-        }
-        return `/${locale}/products/${productId}/overview?onboarding=continue`;
-      })();
+      const destination = getOnboardingPostCreateDestination({
+        locale,
+        useMetrics,
+        connectableSources: connectableSources.map((source) => toIntegrationProvider(source)),
+        launchStatus: data.launchStatus,
+        productId,
+      });
 
       // Poll plan-status
       const interval = setInterval(async () => {
@@ -1336,15 +1373,23 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
 
           {/* Step: metrics — optional, submit step */}
           {currentId === "metrics" && (
-            <MetricsStep
-              autoMetrics={autoMetrics}
-              data={data}
-              locale={locale}
-              hasConnectableSources={connectableSources.length > 0}
-              isSubmitting={isSubmitting}
-              onAccept={() => submit(true)}
-              onSkip={() => submit(false)}
-            />
+              <MetricsStep
+                autoMetrics={autoMetrics}
+                data={data}
+                locale={locale}
+                hasConnectableSources={connectableSources.length > 0}
+                isSubmitting={isSubmitting}
+                editable={isLaunchedLaunchStage(data.launchStatus)}
+                selectedMetrics={data.metricSelections}
+                onMetricSelectionChange={(selected) =>
+                  setData((current) => ({
+                    ...current,
+                    metricSelections: selected as OnboardingMetricSelectionMap,
+                  }))
+                }
+                onAccept={() => submit(true)}
+                onSkip={() => submit(false)}
+              />
           )}
 
           {/* ── Navigation (not shown on metrics step — it has its own CTAs) ── */}

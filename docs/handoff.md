@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current active main line: through `e40b9cab` (late 13 April agent chat fix + upgrade flow fix)
-- Last docs refresh: `13 April 2026` (evening)
+- Current active main line: through `2dc2f428`
+- Last docs refresh: `16 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -17,188 +17,198 @@
 
 ### Production behavior
 
-- `main` is live on Vercel, auto-deploys on push.
+- `main` is live on Vercel and auto-deploys on push.
 - Signup no longer uses an early access code.
 - Signup and waitlist both require email verification.
-- Credentials login blocks unverified users.
-- Onboarding supports file uploads and richer source/context ingestion.
-- Product creation is two-phase and async-plan based.
+- Clicking the verification link now auto-logs the user into the app; re-entering credentials is no longer required after verification.
+- Credentials login still blocks unverified users.
+- Onboarding supports file uploads, Google Drive / URL context, and async plan generation.
+- Product creation remains two-phase and async-plan based.
 - Settings/account language switching redirects to the chosen locale route.
 - Billing remains demo/fake checkout behavior.
 - Nav is stage-aware: pre-launch shows Launch, launched/growing shows Metrics + Growth.
 - Launched/growing products without a growth check-in are gated at the dashboard and redirected to `/growth`.
 - Growth diagnosis includes actual metric values and is locale-aware.
-- Agent panel cards all create tasks — no "ask" cards remain.
-- Board is directly reachable from the authenticated header as a secondary CTA.
-- Board/task rows and agent suggestion rows now use a shared preview-first interaction model.
+- Agent panel cards all create tasks; no "ask" cards remain.
+- Board is directly reachable from the authenticated header.
+- Board rows and agent suggestion rows use a shared preview-first interaction model.
 - Overview / Launch / Growth keep the agent column fixed while the right content pane scrolls independently.
-- Free-form agent chat is now working: the root cause (missing `AgentMessage` table in production DB) was fixed on 13 April. The route is also hardened so every non-critical DB operation is independently try/caught.
-- Plan upgrade from product limit gate now returns the user to the product creation flow (not settings) via a `next` query param through pricing → checkout.
-- Secret files are no longer tracked in git, and Gemini/OpenAI production env keys were rotated on 13 April 2026 after exposed secrets were found in the public repo.
+- Admin ops panel is live under `/{locale}/admin/*` with overview, users, products, billing, AI usage, and waitlist views.
+- Admin routes are protected by allowlisted email access and are excluded from indexing.
+- Task lifecycle timestamps are now first-class data on the `Task` row: `startedAt` and `completedAt`.
+- The products page has been redesigned, and the product selector now routes `Tümünü gör / View all products` to `/{locale}/products`.
+- Authenticated app performance work is shipped: request-level caching, less route refresh churn, lazy/closed initial agent panel, lighter app surfaces, loading skeletons, and DB indexes.
+- Free-form agent chat remains fixed after the 13 April production DB sync and route hardening.
+- Plan upgrade from the product limit gate now returns the user to the product creation flow.
+- Security cleanup from 13 April remains in place: local secret files are not tracked, and exposed Gemini/OpenAI production keys were rotated.
+- Transactional email templates were redesigned on 14 April and are already live.
+- GROWING-stage onboarding now includes a real inline AARRR setup instead of a lightweight preview.
+- After a GROWING onboarding, the founder lands in a richer Growth kickoff instead of a generic overview.
+- If onboarding starts GA4/Stripe setup for a GROWING founder, the integrations detour now returns to Growth kickoff.
+- Pre-launch checklist locale handling and checklist-item task creation edge cases were fixed.
+- Agent suggestion preview is hardened against malformed payloads.
+- Agent panel refetch loop was removed to reduce browser churn when the panel is open.
 
 ### Recent shipped commits
 
+- `2dc2f428` — strengthen GROWING-stage onboarding kickoff with inline AARRR setup and Growth-first landing
+- `9f00908d` — fix checklist locale handling, checklist task creation edge cases, and products spacing
+- `e4f8c87a` — stop agent panel refetch loop
+- `8287d451` — harden agent suggestion preview against malformed payloads
+- `f2f3c6bf` — protect existing work during plan refresh
+- `58b950f6` — auto-login after email verification
+- `9fe09d82` — redesign password reset email to match the live brand system
+- `35c47500` — redesign transactional email templates to match tiramisup.app
+- `fb311038` — polish products page and wire product selector "view all" flow
+- `15e4ab3f` — improve authenticated app performance
+- `35213f9d` — reduce browser load on app surfaces
+- `6b61e53f` — speed up route transitions and interactions
+- `8fdd6b15` — tighten founder metric-to-growth flow
+- `0099dd75` — add admin ops panel and task lifecycle tracking
 - `e40b9cab` — harden agent/chat against missing AgentMessage table and DB timeouts
 - `a49a57ce` — return to onboarding after upgrade from products/new limit gate
-- `f87af053` — fix agent chat intermittent 500s by isolating non-critical DB writes
-- `53b5e694` — security cleanup: stop tracking local secrets and remove hardcoded production DB URLs from seed scripts
-- `72e598ba` — tighten free-form agent chat guidance and action defaults
-- `e3e5f79c` — make Board access visible across app surfaces
-- `beb5022e` — unify board task interactions with preview-first UX
-- `21dcae07` — improve agent suggestion quality and actions
-- `947d392c` — fix route boundary height in agent layouts
-- `e6d1954f` — fix agent shell scroll and metrics flow regressions
-- `5232e299` — fix agent layout content scrolling
-- `0f9fc76a` — fix growth goals and routing follow-ups
-- `9c3a1e58` — ship launch flow follow-up fixes
-- `27dfd71d` — allow chef admin access
-- `eded8530` — finish trust sprint 2 hardening and verification
-- `f8f56491` — handoff/docs refresh on top of the current production baseline
-- `eacecb50` — remove tagline from all logo instances (nav + all landing pages)
-- `3138ac6e` — dead code removal: prompts.ts, lib/ds.ts, lib/ai-advice.ts, getActiveProduct
-- `13ba0851` — fix overview agent: stage-aware context for launched/growing products
-- `93c8a82f` — agent panel all-task, remove ask intent
 
----
+### Local workspace state
 
-## Local Workspace State
+The app workspace should be treated as a production repo with recent follow-up work already merged. Earlier "three local fixes" are no longer pending; they shipped alongside later board, admin, performance, and auth changes.
 
-The app workspace is a **production repo with recent follow-up work already merged**. Earlier "three local fixes" are no longer pending; they shipped alongside later board, suggestion, and security work. `npx tsc --noEmit` has recently passed. The only local dirt seen at handoff time is outside app code:
+Local dirt seen at handoff time is outside app code:
 
 - `external/streamlined-solutions` is a nested repo and intentionally ignored for app work
-- `tmp/` contains local scratch artifacts and should not be committed
+- `.claude/worktrees/` contains local workspace artifacts and should not be committed
+- `tmp/` contains scratch artifacts and should not be committed
 
 ---
 
 ## Key Changes Since Previous Handoff
 
-### 1. Stage-aware navigation
+### 1. Internal admin ops panel shipped
 
-`components/DashboardNav.tsx`:
-- Pre-launch products: Overview + Launch
-- Launched/growing products: Overview + Metrics + Growth
-- Metrics is now a standalone nav item, not grouped under Growth
+- Routes now live under `/{locale}/admin/*`
+- Shared admin shell/nav for:
+  - overview
+  - users
+  - products
+  - billing
+  - ai-usage
+  - waitlist
+- Data is server-side and Prisma-backed; no public API layer was added for v1
+- Admin tree is protected from public indexing
 
-### 2. Growth intake gate on dashboard
+### 2. Task lifecycle timestamps shipped
 
-`app/[locale]/dashboard/page.tsx`:
-- If product is LAUNCHED or GROWING and `!hasGrowthCheckin` → `redirect(/${locale}/growth)`
-- `justLaunched=1` query param bypasses the gate (for the launch moment flow)
+- `Task.startedAt` and `Task.completedAt` are canonical
+- Status transitions now keep `startedAt` sticky and clear/rewrite `completedAt` correctly on reopen/complete
+- Board and task detail surfaces show `Started` / `Completed` timestamps
+- `TaskEvent` remains the audit trail
 
-### 3. Data-driven growth diagnosis
+### 3. Founder metric-to-growth flow tightened
 
-`lib/funnel-health.ts`:
-- Accepts `locale` parameter (EN/TR)
-- Turkish text now has correct diacritics throughout
-- `nextFocus` includes actual metric values: current, baseline, growth rate vs target
-- Stage labels are locale-aware (`STAGE_LABELS_EN` / `STAGE_LABELS_TR`)
+- Metric setup save path now resolves more cleanly
+- First baseline entry flows into Growth more reliably
+- Fallback recommendation cards prevent empty advisory states
+- Growing-state visibility in the dashboard/overview is stronger than before
 
-### 4. Localized checklist categories
+### 4. Authenticated app performance work shipped
 
-`components/GrowthChecklistSection.tsx`:
-- `CATEGORY_META_EN` and `CATEGORY_META_TR` replace single hardcoded English object
-- Turkish users see "Edinim & Dağıtım", "Aktivasyon & İlk Değer", etc.
+- Request-scoped auth/product cache added
+- Repeated route refreshes reduced
+- Agent panel defaults to closed and lazy-loads on demand
+- Authenticated app surfaces are visually lighter to reduce browser load
+- Targeted DB indexes added for common authenticated queries
+- Lightweight server perf logging added for slow authenticated routes
 
-### 5. Agent panel cards are all task-creation
+### 5. Products page and selector flow improved
 
-`components/AgentChatPanel.tsx` + `app/api/agent/suggestions/route.ts`:
-- All `intent: "ask"` cards removed
-- Every card is `intent: "create_task"` with an action-oriented label and payload
-- Clicking any card calls `createTaskFromSuggestion` → `POST /api/actions` → task created
-- Declining metric cards carry actual before/after numbers in the task title
+- `/{locale}/products` is now a stronger portfolio-style workspace
+- Product selector includes `Tümünü gör / View all products` and routes there directly
 
-### 6. Launch modal UX fix (Session 3 founder test)
+### 6. Email verification now leads straight into the app
 
-`components/LaunchButton.tsx`:
-- `reviewDone` is now computed outside `useMemo` so it can drive UI hints independently
-- When all 3 review toggles are checked but `confirmLive` is still unchecked, the confirmation section pulses with a teal ring and the action area shows a directional hint: "↑ Confirm the final step above to enable launch."
-- This resolves the P0 bug where users completed all toggles but the launch button stayed disabled with no visible cue
+- Verification route now creates a short-lived auto-login token
+- Login route consumes that token and signs the user in automatically
+- User no longer needs to re-enter email/password after clicking the verification link
 
-### 7. Route subtree isolation fix (Settings → Pre-launch regression)
+### 7. Transactional email templates were redesigned
 
-`app/[locale]/pre-launch/layout.tsx`, `app/[locale]/settings/layout.tsx`:
-- Added `key` props to `RouteScopedBoundary` in both layouts (`key="pre-launch"`, `key="settings"`)
-- Guarantees React unmounts and remounts the boundary on route change, preventing Settings form from leaking into Pre-launch subtree
+- Files:
+  - `lib/email.ts`
+  - `lib/email-verification.ts`
+  - `lib/password-reset.ts`
+- Preserve the current HTML structure and brand system unless there is a deliberate email-design change
+- `process.env.RESEND_FROM_EMAIL` remains the required sender source
 
-### 8. Agent panel suggestions auto-refresh on checklist change
+### 8. GROWING-stage onboarding got a new first-run path
 
-`components/PreLaunchWorkspace.tsx`, `components/AgentChatPanel.tsx`:
-- After a checklist item is toggled complete, `PreLaunchWorkspace` dispatches `CustomEvent('tiramisup:checklist-updated')`
-- `AgentChatPanel` listens for this event and re-fetches suggestions from `/api/agent/suggestions`
-- Fixes stale "PRODUCT is the weakest area (0%)" banner that persisted after category completion
-
-### 9. Funnel consistency warning in metric entry (non-blocking)
-
-`components/MetricEntryForm.tsx`:
-- On submit, values are checked against `FUNNEL_ORDER` (Awareness → Acquisition → Activation → Retention → Referral → Revenue)
-- If a downstream stage value exceeds its upstream stage, a yellow non-blocking warning card is shown before the save button
-- Submit still proceeds — warning is informational only, not a gate
-
-### 10. Growth follow-up fixes shipped
-
-`app/[locale]/growth/page.tsx`, `components/GoalsSection.tsx`, `app/[locale]/growth/layout.tsx`, `app/[locale]/dashboard/layout.tsx`, `components/GrowthChecklistSection.tsx`, `components/today/MetricSparklinePanel.tsx`:
-- `/growth#goals` now lands on a real goals section
-- empty goals state opens directly into the goal form instead of a dead shell
-- Growth got its own route remount boundary to reduce cross-route subtree reuse
-- dashboard remount key was tightened again for route isolation
-- trend delta now compares recent points instead of a misleading first-entry baseline
-- creating a recommended growth task can complete the corresponding growth checklist item
-
-### 11. Agent layout shell scroll fix shipped
-
-`components/AgentLayoutShell.tsx`:
-- added `min-h-0` through the flex chain so the right content pane scrolls correctly on Overview / Launch / Growth
+- Selecting `GROWING` in onboarding now requires one metric choice for each AARRR stage
+- The founder’s exact onboarding metric choices are persisted and saved into `MetricSetup`
+- The first landing target for that founder is now `/{locale}/growth?onboarding=1`
+- Growth kickoff explains what is already done, shows the chosen AARRR signals, and keeps the short check-in requirement
+- After that check-in, the founder should move naturally toward the first baseline instead of being bounced back through setup confusion
 
 ---
 
-## Current Open Findings From Founder Simulation
+## Current Open Findings
 
-These are not theoretical risks. They came from using the live app with a real upgraded test account as if we were a founder.
+### 1. Fresh product creation is still the biggest product risk
 
-### 1. ~~Free-form agent chat fails on user-written questions~~ FIXED
+- A portfolio-based production persona run succeeded across five founder personas on existing products
+- Earlier fresh-product attempts saw onboarding stall around the AARRR step and a `generate-plan` timeout at roughly 50 seconds
+- Because the `GROWING` onboarding flow changed again on 16 April, the full fresh-account path must be re-validated from zero
+- A late-16-April live run added a new hard blocker before that path can be trusted:
+  - browser signup stayed on `Hesap oluşturuluyor…`
+  - the signup page showed no visible reCAPTCHA iframe/widget in the run
+  - a separate direct probe to live `POST /api/auth/signup` returned `400` with `Lütfen reCAPTCHA doğrulamasını tamamla.`
+- Until a human/manual run proves otherwise, treat **signup reCAPTCHA behavior** as the first production blocker in founder continuity
 
-- Root cause: `AgentMessage` table was in the Prisma schema but had no migration and was never pushed to production DB. Every `listStoredAgentMessages` call threw "table does not exist".
-- Fix: `prisma db push` run against production + route hardened with independent try/catch around every non-critical DB operation.
-- Commits: `f87af053`, `e40b9cab`
+### 2. Metrics setup clarity still needs verification on fresh launched products
 
-### 2. Repeated browser-side `500` resource errors
+- The metrics → growth bridge is stronger than before, but a fresh launched product still needs to prove setup state is always legible
+- Required path: metric setup should feel distinct from first daily entry
 
-- Observed while visiting `/products/new`, `/growth`, and `/dashboard`
-- Seen in console during real founder simulation
-- Root cause still unknown; next team should reproduce with network capture and trace the failing request
+### 3. `/dashboard` and `/tasks` remain the slowest authenticated pages
 
-### 3. Onboarding does not close cleanly from the AARRR recommendation step
+- Performance improved materially on 14 April, but those two routes still feel heaviest
+- If users still report lag, continue with route/API timing and query profiling there first
 
-- The user flow repeatedly remained on the `Önerilen AARRR kurulumun` screen
-- Even when the product became accessible later, the onboarding exit felt unfinished and confusing
+### 4. Browser-side 500 resource errors were observed in founder simulation
 
-### 4. Metrics setup and metrics entry feel merged together
+- Previously seen on `/products/new`, `/growth`, and `/dashboard`
+- Root cause still unknown; reproduce with network capture before changing behavior blindly
+- A newer late-16-April `/products/new` run with an existing real account did **not** reproduce server `500` responses
+- That run only showed several route-transition `net::ERR_ABORTED` requests on `_rsc` / navigation fetches
+- So this issue remains open, but the evidence is now mixed and should be revalidated carefully before code changes
 
-- On the tested product, metric setup cards were absent
-- Daily numeric entry inputs were already visible and savable
-- This makes the user unsure whether setup is complete, skipped, or broken
+### 5. New Growth kickoff still needs a clean end-to-end proof
 
-### 5. First metric save does not fully propagate into Growth state
-
-- After entering and saving metric values, Growth still showed the equivalent of "metrics selected but no data yet"
-- This breaks the core loop of setup → first baseline → diagnosis
-
-### 6. Agent recommendation cards did not reliably appear in the launched-product journey
-
-- In the exercised path, the agent card count was `0`
-- The intended bridge from diagnosis to task creation still needs true end-to-end validation on a fresh product
+- The new kickoff is live, but it still needs explicit validation that:
+  - integrations return to Growth kickoff correctly
+  - check-in completion flows into baseline cleanly
+  - no stale metric-setup confusion appears after onboarding
+- A new-product wizard run on a real existing account reached:
+  - product name
+  - description
+  - category
+  - platform
+  - audience
+  - business model
+  - stage
+- That run intentionally used `/{locale}/products/new` so it would create a **new product** instead of advancing an existing one
+- It did not complete end-to-end yet because the temporary automation harness still needed wider option matching at later steps
+- This is useful evidence for the takeover team: new-product flow is traversable partway on a real account, but still not yet fully proven
 
 ---
 
 ## Current Operational Risks
 
-- **Billing is still fake.** Pricing UX is usable for testing, but real Stripe checkout is not wired.
-- **i18n gaps.** Some screens still carry hardcoded strings.
-- **Roadmap integrations.** Some integration surfaces are still UI-first placeholders.
-- **`Product.launchGoals` is legacy.** Do not build new core logic on top of it.
-- **Founder continuity still needs work.** The newly created launched-product journey has gaps between onboarding, metrics, growth, and agent surfaces.
-- **Email delivery latency.** `RESEND_FROM_EMAIL` must be set in Vercel to `Tiramisup <hello@tiramisup.app>`. If unset, fallback is `onboarding@resend.dev` which causes spam filter delays. `tiramisup.app` is already verified in Resend.
-- **Public repo secret history still matters.** Secret tracking has been stopped going forward, but previously exposed credentials must still be rotated outside the repo.
+- **Billing is still fake.** Pricing UX is good enough for testing, but real Stripe checkout is not wired.
+- **i18n gaps remain.** Some authenticated screens still carry hardcoded strings.
+- **Roadmap integrations are still UI-first in places.**
+- **`Product.launchGoals` is legacy.** Do not build new logic on top of it.
+- **Founder continuity still needs validation.** The onboarding → metrics → growth loop has improved, but still needs clean fresh-user proof.
+- **Email delivery latency still matters.** `RESEND_FROM_EMAIL` must be set to `Tiramisup <hello@tiramisup.app>`.
+- **Email template redesign is live.** Preserve the structure in the current mail helpers unless intentionally revisiting email design.
+- **Public repo secret history still matters.** Previously exposed credentials must still be treated as compromised outside the repo.
 
 ---
 
@@ -207,9 +217,10 @@ These are not theoretical risks. They came from using the live app with a real u
 - Local dev must run on `:3002`
 - `DATABASE_URL` must be PgBouncer (port 6543)
 - `DIRECT_URL` must be direct Postgres (port 5432)
-- `SUPABASE_SERVICE_ROLE_KEY` required for upload flow
-- The production DB is already aligned with the current code
-- `external/streamlined-solutions` is a nested repo — ignore for app work
+- `SUPABASE_SERVICE_ROLE_KEY` is required for file upload flow
+- Production DB is aligned with current code
+- `external/streamlined-solutions` is a nested repo; ignore for app work
+- If `npx tsc --noEmit` complains about missing `.next/types/*` files after route churn, regenerate `.next` first with `npx next build --no-lint` or clear `.next` and rerun
 
 ---
 
@@ -226,26 +237,33 @@ These are not theoretical risks. They came from using the live app with a real u
 
 ---
 
-## What To Test First
+## Suggested Reading Order For Takeover
 
-1. Local setup: `npm install && npx prisma generate && npx prisma db push`
-2. `npx tsc --noEmit` and `npx next build` pass clean
-3. `QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run` — non-waitlist tests pass
-4. Sign up → verify email → login
-5. Create a product through onboarding with file upload and a context URL
-6. Confirm plan generation completes
-7. Verify nav shows the right items for the product stage
-8. Confirm launched product without growth check-in redirects to `/growth`
-9. Complete growth check-in and confirm dashboard loads
-10. Click agent panel card — confirm task is created, not a chat message
-11. Language switch from settings — confirm route changes
-12. Pre-launch: open launch modal, check all 3 toggles → confirmation section should pulse + show hint; check confirmLive → button activates
-13. Navigate Settings → Pre-launch — Settings form must NOT appear in pre-launch route
-14. Pre-launch: complete a checklist item → agent panel "Launch Recommendations" banner should refresh within ~2s
-15. Metrics daily entry: enter Retention value higher than Acquisition → yellow warning card should appear; save should still work
-16. Real founder path: login with an upgraded account, create a fresh product, and finish onboarding end-to-end without getting stuck on the AARRR recommendation step
-17. Fresh launched product: verify `/metrics` shows a coherent setup state before daily entry inputs appear
-18. Save the first metric baseline and then open `/growth` — Growth must no longer say there is no data
-19. In the same founder flow, confirm agent recommendation cards appear and can create tasks
-20. Overview / Launch / Growth: confirm the right-side content pane scrolls independently of the left agent sidebar
-21. Overview / Launch / Growth: ask a free-form question and confirm `/api/agent/chat` returns a contextual answer instead of the generic retry copy
+1. Read `HANDOFF.md` for the production truth and current product contract
+2. Read this file as the engineering delta and open-findings layer
+3. Inspect the signup / verification / auto-login flow in code and note the reCAPTCHA mismatch evidence
+4. Inspect the `GROWING` onboarding, Growth kickoff, Metrics bridge, and task-creation path in code
+5. Review fake billing, admin ops, and authenticated-app performance work as the current baseline
+6. After the team shares the same mental model, decide what to validate or change next
+
+### Current production harness
+
+The latest handoff run used:
+
+```bash
+E2E_BASE_URL="https://tiramisup.app" \
+E2E_LOCALE="tr" \
+E2E_EMAIL="<verified-test-user-email>" \
+E2E_PASSWORD="<verified-test-user-password>" \
+node --env-file=.env.prod tmp/prod-new-founder-flow.mjs
+```
+
+Current behavior of this helper:
+
+- logs in with an existing verified user
+- opens `/{locale}/products/new`
+- attempts a truly new product flow instead of progressing the active product
+- saves screenshots and notes into `tmp/prod-new-founder-*`
+- continues into Growth / Metrics / task continuity only if product creation finishes
+
+This helper is recorded here for continuity only. It is not an instruction for the takeover team to run immediately.

@@ -1,5 +1,11 @@
 import { PlanTier, ProductStatus, SubStatus } from "@prisma/client";
 import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
+import {
+  hasGrowthDiagnosisData,
+  hasMetricSetupSelections,
+} from "@/lib/growth-readiness";
+
+export { hasMetricSetupSelections } from "@/lib/growth-readiness";
 
 export type GrowthReadinessState =
   | "missing_checkin"
@@ -31,16 +37,6 @@ export function resolveCurrentPlan(subscription: SubscriptionLike): PlanTier {
   return subscription.plan;
 }
 
-export function hasMetricSetupSelections(selections: unknown) {
-  if (!Array.isArray(selections)) return false;
-
-  return selections.some((item) => {
-    if (!item || typeof item !== "object") return false;
-    const selectedMetricKeys = (item as { selectedMetricKeys?: unknown }).selectedMetricKeys;
-    return Array.isArray(selectedMetricKeys) && selectedMetricKeys.length > 0;
-  });
-}
-
 export function getGrowthReadinessState(input: ProductGrowthInput): GrowthReadinessState | null {
   const isPostLaunch =
     input.status === ProductStatus.LAUNCHED || input.status === ProductStatus.GROWING;
@@ -56,7 +52,7 @@ export function getGrowthReadinessState(input: ProductGrowthInput): GrowthReadin
     return "missing_setup";
   }
 
-  if (input.metricEntryCount <= 0) {
+  if (!hasGrowthDiagnosisData(input.metricEntryCount)) {
     return "missing_baseline";
   }
 
@@ -124,7 +120,7 @@ export function formatGrowthStateLabel(
     return isEn ? "Missing metric setup" : "Metrik kurulumu eksik";
   }
   if (state === "missing_baseline") {
-    return isEn ? "Missing baseline entries" : "İlk metrik girişleri eksik";
+    return isEn ? "Baseline still building" : "Baz çizgisi hâlâ kuruluyor";
   }
   if (state === "diagnosis_ready") {
     return isEn ? "Diagnosis ready" : "Tanıya hazır";

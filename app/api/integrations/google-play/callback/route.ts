@@ -14,6 +14,8 @@ function buildReturnUrl(args: {
   const page =
     args.returnTo === "settings"
       ? `/${args.locale}/settings?section=sources`
+      : args.returnTo === "onboarding_growth"
+      ? `/${args.locale}/growth?onboarding=1&sourceSetup=1`
       : args.returnTo === "onboarding_overview"
       ? `/${args.locale}/dashboard`
       : `/${args.locale}/integrations`;
