@@ -36,8 +36,6 @@ export default function FirstRunOnboarding({ locale }: FirstRunOnboardingProps) 
         <p className="mt-3 text-[14px] leading-6 text-[#5e6678]">
           {copy.description}
         </p>
-        <p className="mt-4 text-[12px] text-[#9ca3af]">{copy.trustNote}</p>
-
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href={`/${locale}/onboarding`}

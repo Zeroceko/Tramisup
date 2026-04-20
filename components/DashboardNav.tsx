@@ -150,14 +150,16 @@ export default function DashboardNav({
         })}
       </nav>
 
-      {/* Settings icon */}
-      <Link
-        href={withLocale("/settings")}
-        className="p-2 rounded-lg text-[#8a8fa0] hover:text-[#0d0d12] hover:bg-[#f5f2ec] transition-colors"
-        title={labels.settings}
-      >
-        <Settings className="h-4 w-4" />
-      </Link>
+      {/* Settings icon — only when a product exists */}
+      {hasProducts && (
+        <Link
+          href={withLocale("/settings")}
+          className="p-2 rounded-lg text-[#8a8fa0] hover:text-[#0d0d12] hover:bg-[#f5f2ec] transition-colors"
+          title={labels.settings}
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -180,18 +182,11 @@ export default function DashboardNav({
           </Link>
         )}
 
-        <ProductSelector
-          products={products.map(({ id, name }) => ({ id, name }))}
-          activeProductId={activeProductId}
-        />
-
-        {!hasProducts && (
-          <Link
-            href={withLocale("/onboarding")}
-            className="hidden h-[34px] items-center rounded-full bg-[#ffd7ef] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4] sm:inline-flex"
-          >
-            {labels.newProduct}
-          </Link>
+        {hasProducts && (
+          <ProductSelector
+            products={products.map(({ id, name }) => ({ id, name }))}
+            activeProductId={activeProductId}
+          />
         )}
 
         <DropdownMenu>
