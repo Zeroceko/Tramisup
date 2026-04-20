@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: t.existingUser }, { status: 400 });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 8);
     const verificationToken = generateVerificationToken();
 
     const user = await withDbRetry(() =>

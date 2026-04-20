@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Choose a different password than your current one." }, { status: 400 });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 8);
 
     await prisma.user.update({
       where: { id: user.id },
