@@ -4,7 +4,9 @@ import { getAppBaseUrl } from "@/lib/app-urls";
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 60;
 
 function getSecret() {
-  return process.env.NEXTAUTH_SECRET || "tiramisup-reset-secret";
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) throw new Error("NEXTAUTH_SECRET is not configured");
+  return secret;
 }
 
 function base64UrlEncode(value: string) {

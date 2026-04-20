@@ -354,7 +354,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: `Failed to create product: ${error.message || "Unknown error"}` },
+      { error: "Failed to create product. Please try again." },
       { status: 500 }
     );
   }

@@ -90,7 +90,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         where: { id: syncJob.id },
         data: { status: "FAILED", completedAt: new Date(), error: String(syncError) }
       });
-      return NextResponse.json({ error: "Failed during provider data pull", details: String(syncError) }, { status: 500 });
+      return NextResponse.json({ error: "Failed during provider data pull" }, { status: 500 });
     }
   } catch (error) {
     console.error("Sync route error:", error);

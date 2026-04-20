@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { isStrongPassword } from "@/lib/password-rules";
 import { getRequestIp, verifyRecaptchaToken } from "@/lib/recaptcha";
 import { generateVerificationToken, sendUserVerificationEmail } from "@/lib/email-verification";
+import { checkRateLimit, getRequestIpFromHeaders } from "@/lib/rate-limit";
 
 function isPoolLimitError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -30,6 +31,15 @@ async function withDbRetry<T>(operation: () => Promise<T>, attempts = 3): Promis
 }
 
 export async function POST(request: Request) {
+  const ip = getRequestIpFromHeaders(request);
+  const rl = checkRateLimit(`signup:${ip}`, 5, 15 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
+
   let locale = "tr";
 
   try {

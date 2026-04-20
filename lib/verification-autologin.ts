@@ -3,7 +3,9 @@ import { createHmac, timingSafeEqual } from "crypto";
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 
 function getTokenSecret() {
-  return process.env.NEXTAUTH_SECRET || process.env.RECAPTCHA_SECRET_KEY || "";
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) throw new Error("NEXTAUTH_SECRET is not configured");
+  return secret;
 }
 
 function signPayload(payload: string) {
@@ -16,7 +18,6 @@ export function createVerificationAutoLoginToken(
   ttlMs = DEFAULT_TTL_MS,
 ) {
   const secret = getTokenSecret();
-  if (!secret) return null;
 
   const normalizedEmail = email.trim().toLowerCase();
   const exp = Date.now() + ttlMs;
@@ -31,8 +32,8 @@ export function verifyVerificationAutoLoginToken(
   email: string,
   userId: string,
 ) {
+  if (!token) return false;
   const secret = getTokenSecret();
-  if (!secret || !token) return false;
 
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf8");
