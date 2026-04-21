@@ -320,16 +320,12 @@ export default async function GrowthPage({
         : isEn ? "Growth focus" : "Growth odağı";
   const baselineJustSaved = resolvedSearch.baseline === "ready";
   const onboardingKickoff = resolvedSearch.onboarding === "1";
-  const sourceSetupJustFinished = resolvedSearch.sourceSetup === "1";
-  const selectedMetricSummary = selectedMetrics.map((metric) => ({
-    stage: metric.stage,
-    metricName: metric.metricName,
-  }));
+
   const pageHeaderDescription =
-    workspaceMode === "intake_needed" && onboardingKickoff && hasSetup
+    workspaceMode === "intake_needed" && onboardingKickoff
       ? isEn
-        ? "Your AARRR setup is already in place. Finish the short check-in so Growth can interpret those signals and open the baseline step."
-        : "AARRR setup'ın zaten hazır. Growth'ün bu sinyalleri doğru yorumlaması ve baseline adımını açması için kısa check-in'i tamamla."
+        ? "A few quick questions — that's it. Tiramisup uses these answers to interpret your signals in the right context."
+        : "Birkaç kısa soru — hepsi bu. Tiramisup bu cevapları sinyalleri doğru bağlamda yorumlamak için kullanır."
       : workspaceMode === "intake_needed"
       ? isEn
         ? "Before setup begins, answer a few focused questions so Growth can fit this product instead of falling back to a generic template."
@@ -435,6 +431,7 @@ export default async function GrowthPage({
         ) : null}
 
         {/* PRIMARY: one card that changes by workspace mode */}
+        {!(onboardingKickoff && workspaceMode === "intake_needed") && (
         <div id="coach" className="rounded-[18px] border border-[#e8e8e8] bg-white p-7">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">
             {workspaceMode === "diagnosis_ready"
@@ -463,94 +460,10 @@ export default async function GrowthPage({
             )}
           </div>
         </div>
+        )}
 
         {workspaceMode === "intake_needed" ? (
           <>
-            {onboardingKickoff && hasSetup ? (
-              <div className="rounded-[18px] border border-[#d7efef] bg-[#f4fcfc] p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="max-w-3xl">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1f6f6e]">
-                      {isEn ? "Growth kickoff" : "Growth başlangıcı"}
-                    </p>
-                    <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                      {isEn
-                        ? "Your growth workspace is almost ready"
-                        : "Growth workspace'in neredeyse hazır"}
-                    </h2>
-                    <p className="mt-2 text-[14px] leading-6 text-[#35596a]">
-                      {isEn
-                        ? "You already chose the six AARRR signals Growth will read. Finish this short check-in so Tiramisup can interpret those metrics in the right product context, then move directly into your first baseline."
-                        : "Growth'ün okuyacağı altı AARRR sinyalini zaten seçtin. Şimdi bu kısa değerlendirmeyi tamamla; Tiramisup metrikleri doğru ürün bağlamında yorumlasın ve seni doğrudan ilk baseline adımına taşısın."}
-                    </p>
-                  </div>
-                  <div className="rounded-[16px] border border-[#d9efee] bg-white px-4 py-3 text-left lg:max-w-[260px]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
-                      {isEn ? "Already done" : "Tamamlananlar"}
-                    </p>
-                    <ul className="mt-2 space-y-1.5 text-[12px] leading-5 text-[#0d0d12]">
-                      <li>{isEn ? "Product workspace created" : "Ürün workspace'i oluşturuldu"}</li>
-                      <li>{isEn ? "Growth-stage path selected" : "Growth aşaması seçildi"}</li>
-                      <li>{isEn ? "AARRR setup completed" : "AARRR kurulumu tamamlandı"}</li>
-                      {sourceSetupJustFinished || integrations.length > 0 ? (
-                        <li>{isEn ? "At least one source setup started" : "En az bir kaynak kurulumu başlatıldı"}</li>
-                      ) : null}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                  <div className="rounded-[16px] border border-[#d9efee] bg-white p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
-                      {isEn ? "Selected AARRR signals" : "Seçilen AARRR sinyalleri"}
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {selectedMetricSummary.map((item) => (
-                        <div key={item.stage} className="rounded-[14px] border border-[#edf2f7] bg-[#fafcfd] p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#7b8393]">
-                            {item.stage}
-                          </p>
-                          <p className="mt-1 text-[13px] font-semibold text-[#0d0d12]">
-                            {item.metricName}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[16px] border border-[#d9efee] bg-white p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
-                      {isEn ? "What happens next?" : "Sıradaki net adım"}
-                    </p>
-                    <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12]">
-                      {isEn ? "Finish the short check-in, then record your first baseline" : "Kısa check-in'i bitir, sonra ilk baseline'ı kaydet"}
-                    </h3>
-                    <p className="mt-2 text-[13px] leading-6 text-[#5e6678]">
-                      {isEn
-                        ? "You will not have to choose metrics again. The next screen after this check-in is your first real Growth baseline."
-                        : "Metrikleri yeniden seçmeyeceksin. Bu değerlendirmeden sonraki ekran doğrudan ilk gerçek Growth baseline adımın olacak."}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <a
-                        href="#growth-intake"
-                        className="inline-flex h-10 items-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#23252b]"
-                      >
-                        {isEn ? "Start the check-in" : "Check-in'i başlat"}
-                      </a>
-                      {(sourceSetupJustFinished || integrations.length > 0) ? (
-                        <a
-                          href={`/${locale}/integrations`}
-                          className="inline-flex h-10 items-center rounded-full border border-[#e5e7eb] px-4 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-white"
-                        >
-                          {isEn ? "Review sources" : "Kaynakları gözden geçir"}
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             <div id="growth-intake">
               <GrowthTransitionCheckin
                 productId={product.id}
@@ -568,6 +481,7 @@ export default async function GrowthPage({
               />
             </div>
 
+            {!onboardingKickoff && (
             <div className="rounded-[18px] border border-[#e8e8e8] bg-white p-6">
               <div className="flex items-start justify-between gap-6">
                 <div>
@@ -636,6 +550,7 @@ export default async function GrowthPage({
                 })}
               </div>
             </div>
+            )}
           </>
         ) : workspaceMode !== "diagnosis_ready" ? (
           <div className="rounded-[18px] border border-[#e8e8e8] bg-white p-6">
