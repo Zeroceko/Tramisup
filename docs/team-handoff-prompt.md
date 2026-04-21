@@ -1,203 +1,160 @@
 # New Team Handoff Prompt
 
-Use the prompt below as the default kickoff brief for any new engineering or product team taking over Tiramisup.
+Use the prompt below as the kickoff brief for the new product and engineering team taking over Tiramisup.
 
 ---
 
 ```text
-You are taking over the Tiramisup codebase and product from the founding team.
+Sen Tiramisup'ı kurucu ekipten devralıyorsun.
 
-Treat this as a live production system, not a prototype sandbox. Real users are already in the system or waiting to enter it. The job is to preserve the production baseline, validate the product with real users, and move the company toward paid usage.
+Tiramisup, erken aşama ürün ekipleri için bir kurucu işletim sistemidir. Kullanıcı lansman hazırlığını, growth metriklerini ve günlük execution'ı tek bir yerde takip eder. Her şey ürün bazlıdır: bir kullanıcının birden fazla ürünü olabilir, bir seferde biri aktiftir.
 
----
-
-FIRST: Read these documents in order before touching any code.
-
-1. HANDOFF.md
-2. CLAUDE.md
-3. docs/handoff.md
-4. docs/tiramisup-manifesto.md
-5. docs/ai-agent-system-playbook.md
-6. docs/product-intake-question-playbook.md
-7. docs/internal-growth-rules.md
-8. docs/growth-tactics-layer.md
-9. docs/growth-transition-checkin-spec.md
+Bunu canlı production sistemi olarak ele al — prototip sandbox değil. Gerçek kullanıcılar zaten sistemde veya sisteme girmeye hazır. İş şu: production baseline'ı koru, ürünü gerçek kullanıcılarla doğrula, şirketi ücretli kullanıma taşı.
 
 ---
 
-PRODUCTION STATE (as of 16 April 2026)
+ÖNCE: Herhangi bir kod değiştirmeden önce şu sırayla bu belgeleri oku.
+
+1. HANDOFF.md                                   — production durumu ve açık bulgular
+2. CLAUDE.md                                    — kod kuralları ve neyin bozulmaması gerektiği
+3. docs/handoff.md                              — mühendislik delta notları
+4. docs/ai-agent-system-playbook.md             — AI pipeline mimarisi
+5. docs/product-intake-question-playbook.md     — onboarding soru seti ve normalizasyon
+6. docs/growth-transition-checkin-spec.md       — growth check-in spec
+
+---
+
+PRODUCTION DURUMU (21 Nisan 2026 itibarıyla)
 
 - Production domain: https://tiramisup.app
-- Current active main line includes all commits through 2dc2f428
-- main auto-deploys to Vercel
-- Public landing remains waitlist-first unless explicitly changed by product decision
-- Signup requires email verification, but no early access code
-- Waitlist join also requires email verification
-- Verification links now auto-log the user into the app after successful verification
-- Late-16-April live evidence shows a new signup blocker: browser signup did not complete, no visible reCAPTCHA widget appeared in the run, and a separate direct probe to POST /api/auth/signup returned 400 with "Lütfen reCAPTCHA doğrulamasını tamamla."
-- Billing is still fake/demo checkout — not real Stripe commerce
-- Default locale is English; Turkish is secondary
-- Nav is stage-aware:
-    PRE_LAUNCH → Overview + Launch
-    LAUNCHED / GROWING → Overview + Metrics + Growth
-- Launched/growing products without a growth check-in are redirected from dashboard to /growth
-- Growth diagnosis is data-driven and locale-aware
-- Agent panel cards all create tasks; no "ask" cards remain
-- Board is reachable directly from the authenticated header
-- Admin ops panel is live under /{locale}/admin/* and is allowlist-protected
-- Admin routes are excluded from indexing
-- Task lifecycle timestamps are now canonical on Task.startedAt / Task.completedAt
-- Products page has been redesigned, and the product selector routes "View all products" to /{locale}/products
-- Authenticated app performance work has shipped: request-level caching, fewer refreshes, lazy/closed initial agent panel, lighter app surfaces, loading skeletons, and DB indexes
-- Transactional email templates were redesigned on 14 April and are already live
-- GROWING-stage onboarding now includes a real inline AARRR setup instead of a lightweight preview
-- After a GROWING onboarding, the founder lands in a richer Growth kickoff instead of a generic overview
-- If onboarding selected GA4/Stripe for a GROWING founder, the integrations detour now returns to Growth kickoff
-- Pre-launch checklist locale/task-creation fixes are live
-- Agent suggestion preview hardening and the agent-panel refetch-loop fix are live
+- main branch Vercel'e otomatik deploy edilir
+- Aktif main line: 0ec4162f commit'ine kadar tüm commit'leri içerir
+
+Çalışan şeyler:
+- Signup çalışıyor: step 1 (ad + email) → step 2 (şifre) → email doğrulama → auto-login
+- Email doğrulama linki kullanıcıyı otomatik app'e alır, tekrar giriş gerekmez
+- Auth hızlı: signup ~2.3s, login ~2.1s (bcrypt cost factor 8'e düşürüldü)
+- Rate limiting: signup 5/15dk, forgot-password 3/15dk (IP başına)
+- Onboarding animasyonlu adım geçişleri var
+- AARRR metrik adımı LIVE + GROWING aşamaları için görünür
+- Growth kickoff (?onboarding=1) sadece check-in formunu gösteriyor — eski banner/tracker/coach kart kaldırıldı
+- Empty state temiz: ürün yokken settings, ürün seçici ve "ekle" linkleri gizli
+- AI önerileri stage-aware ve kanıtsız spekülasyon yapmıyor
+- Admin panel /{locale}/admin/* altında canlı
+
+Bilinen UX sorunları (kod hatası değil, ürün kararı gerekir):
+- Landing sayfasından signup'a direkt yol yok — "Join waitlist" inline email formu, signup sayfasına götürmüyor
+- Email doğrulama duvarı: signup sonrası kullanıcı inbox'ını kontrol etmek zorunda, direkt app'e giremiyor
+- Nav linkleri (Growth, Metrics, Tasks) sadece ürün oluşturduktan sonra görünür
 
 ---
 
-LOCAL WORKSPACE STATE
+EN ÖNEMLİ AÇIK SORULAR
 
-Treat the current workspace as:
-  - production code with the latest critical bug fixes already merged
-  - a live repo where secret files must not be recommitted
-  - a codebase ready for product validation and controlled live improvements
+Bu soruların cevabı yok. Yeni ekibin öncelikli görevi bunları gerçek kullanıcılarla doğrulamak.
 
-Non-app dirt may exist locally:
-  - external/streamlined-solutions is a nested repo and should be ignored
-  - .claude/worktrees/ contains local workspace artifacts and should not be committed
-  - tmp/ contains scratch artifacts and should not be committed
+1. AI gerçekten yardımcı oluyor mu?
+   Founder Coach önerileri, gerçek kurucu olmayan gerçek kullanıcılarla, gerçek ürünler üzerinde test edilmedi.
+   Çıktı, jenerik startup tavsiyesinden anlamlı ölçüde daha iyi mi? Bilinmiyor.
 
-Before changing production behavior, understand the current baseline in code and docs first.
+2. Core loop sticky mi?
+   Ürün oluştur → metrik gir → teşhis al → task oluştur → tekrar et.
+   Kullanıcılar ilk oturumdan sonra geri dönüyor mu? Bilinmiyor.
 
-Note:
-  8 tests in __tests__/api/waitlist/admin.test.ts fail with 401. This is a pre-existing auth mock issue, not the current work.
+3. Onboarding'den değere yol çalışıyor mu?
+   Sıfır kullanıcı → onboarding → growth teşhisi akışı iyileşti ama fresh account'la temiz bir end-to-end doğrulama henüz yapılmadı.
+
+Bu üç soruyu çözene kadar büyük feature geliştirmeye başlama. Önce ürünün işe yarayıp yaramadığını öğren.
 
 ---
 
-LOCAL SETUP
+LOCAL KURULUM
 
   git clone <repo-url> && cd Tiramisup
   npm install
   npx prisma generate
   npx prisma db push
-  npm run dev               # runs on :3002
+  npm run dev               # :3002 üzerinde çalışır
 
-Verify:
+Doğrulama:
   npx tsc --noEmit
   npx next build
   QWEN_API_KEY=dummy DEEPSEEK_API_KEY=dummy GEMINI_API_KEY=dummy npx vitest run
 
-Important:
-  - Local dev must run on port 3002
-  - DATABASE_URL must point to PgBouncer (port 6543)
-  - DIRECT_URL must point to direct Postgres (port 5432)
-  - SUPABASE_SERVICE_ROLE_KEY is required for uploads
-  - If `npx tsc --noEmit` complains about missing `.next/types/*`, regenerate `.next` with `npx next build --no-lint` or clear `.next` and rerun
+Notlar:
+  - Local dev port 3002 — Google ve Stripe OAuth redirect'leri bu porta göre ayarlı
+  - DATABASE_URL PgBouncer'a işaret etmeli (port 6543)
+  - DIRECT_URL direkt Postgres'e işaret etmeli (port 5432)
+  - SUPABASE_SERVICE_ROLE_KEY upload flow için gerekli
+  - __tests__/api/waitlist/admin.test.ts içinde 8 test 401 ile fail ediyor — bu pre-existing mock sorunu, mevcut işle ilgisi yok
+
+Production E2E (gerçek kullanıcı yolculuğu testi):
+  E2E_BASE_URL="https://tiramisup.app" \
+  E2E_EMAIL="<doğrulanmış hesap>" \
+  E2E_PASSWORD="<şifre>" \
+  npx playwright test prod-real-user-journey --config playwright-prod.config.ts --headed
 
 ---
 
-ARCHITECTURE TRUTHS
+MİMARİ GERÇEKLER
 
-- AgentLayoutShell: left agent panel + right content — used for Dashboard, Pre-Launch, Growth
-- PlainPageShell: full-width — used for Settings, Metrics, Integrations
-- Product creation is two-phase:
-    POST /api/products
-    POST /api/products/[id]/generate-plan
+- AgentLayoutShell: sol agent panel + sağ içerik — Dashboard, Pre-Launch, Growth için kullanılır
+- PlainPageShell: full-width — Settings, Metrics, Integrations için
+- Ürün oluşturma iki aşamalı:
+    POST /api/products (hızlı create)
+    POST /api/products/[id]/generate-plan (async AI plan)
     poll /api/products/[id]/plan-status
-- Growth workspace modes:
+- Growth workspace modları:
     intake_needed → metric_setup_needed → baseline_needed → diagnosis_ready
-- Growth intake answers live in Product.additionalContext.growthCheckin
-- For GROWING onboarding specifically, metric setup now happens inline before the workspace opens
-- lib/funnel-health.ts builds data-driven diagnosis and accepts locale
-- Agent suggestion cards are all intent: "create_task"
-- AI provider chain must not change:
+- Growth intake cevapları Product.additionalContext.growthCheckin içinde saklanır
+- AI provider chain değiştirilmemeli:
     Qwen → DeepSeek → Gemini → Gemini backup → static fallback
-- MetricSetup and MetricEntry are database tables; Product.launchGoals is legacy
-- Task.startedAt / Task.completedAt are canonical lifecycle fields
+- MetricSetup ve MetricEntry veritabanı tabloları; Product.launchGoals legacy, üzerine yeni mantık kurma
+- bcrypt cost factor: 8 (Vercel serverless performansı için optimize edildi)
 
 ---
 
-OPEN PRODUCT / ENGINEERING QUESTIONS
+BOZULMAMASI GEREKENLER
 
-1. Does the AI actually help real founders?
-   The product still needs validation with real non-founder users. This is the most important product question.
-
-2. Is the onboarding → metrics → growth loop truly clean now?
-   Several fixes shipped on 14–16 April, including a new GROWING-stage onboarding path. The loop still needs a fresh-account end-to-end validation.
-
-3. Is signup currently blocked by a reCAPTCHA mismatch?
-   Late 16 April live evidence says yes, but this still needs careful confirmation by the takeover team after they understand the auth flow and current production wiring.
-
-4. Are dashboard and tasks now fast enough for daily use?
-   Performance is materially better, but those remain the heaviest authenticated surfaces and need continued profiling if users still feel lag.
-
-5. What caused the browser-side 500 resource errors seen in founder simulation?
-   This still needs reproduction with network capture and tracing.
-
-6. Is async plan generation reliable enough in production?
-   Earlier founder simulation attempts saw /api/products/[id]/generate-plan time out around 50 seconds. Reproduce and isolate if it still happens.
+1. Signup'ta sahte ürün oluşturulmamalı — ürün verisi sadece onboarding'den sonra başlar
+2. Yayındaki ürünler pre-launch dili veya nav'ı görmemeli
+3. Growth rehberliği teşhis-odaklı kalmalı — jenerik startup tavsiyesi değil
+4. Metrik girişi yapılandırılmış metriklere bağlı kalmalı
+5. AI kanıt yokken spekülasyon yapmamalı
+6. Kullanıcının yazdığı ürün açıklaması tüm AI çağrıları için merkezi bağlam olmaya devam etmeli
+7. İngilizce master locale'dir
+8. Agent panel kartları task oluşturmalı — chat mesajı göndermemeli
+9. Billing gerçek Stripe commerce olarak sunulmamalı
+10. HIGH öncelik sadece gerçek bir blocker anlamına gelir
+11. Canlı email şablonlarını kasıtsız yeniden yazma
+12. GROWING onboarding'i belirsiz AARRR preview'a geri döndürme
 
 ---
 
-RECOMMENDED FIRST FOCUS FOR THE NEW TEAM
+BİLİNEN TEKNIK BORÇ
 
-1. Read the codebase and docs until the team shares the same understanding of the live production contract
-2. Understand the auth flow, GROWING onboarding path, Growth kickoff, Metrics bridge, and task-creation surfaces before proposing changes
-3. Treat the current open findings as active unknowns, not as settled facts
-4. Preserve the current production baseline while deciding what to validate next
-5. Only after the system is understood, choose the next validation and product workstream deliberately
-
----
-
-KNOWN DEBT
-
-- Billing is still fake/demo checkout
-- Some authenticated strings are still hardcoded
-- Product.launchGoals is legacy — do not build new logic on it
-- Some integration surfaces are still UI-first placeholders
-- Dashboard first impression still needs product polish
-- RESEND_FROM_EMAIL must be set to: Tiramisup <hello@tiramisup.app>
-- Email templates were redesigned; preserve the current structure in:
-    lib/email.ts
-    lib/email-verification.ts
-    lib/password-reset.ts
-- Public repo secret history still matters; previously exposed credentials must still be treated as compromised outside the repo
+- Billing: hâlâ fake/demo activation
+- Landing → signup yolu: direkt link yok
+- i18n gaps: bazı authenticated ekranlarda hardcoded stringler var
+- Roadmap integrations: RevenueCat, App Store Connect, Google Play, reklam konnektörleri UI-first placeholder
+- Product.launchGoals: legacy field — üzerine yeni mantık kurma
+- Growth kickoff check-in'deki bazı sorular onboarding'de zaten soruluyor — deduplication eksik
+- RESEND_FROM_EMAIL Vercel env'de "Tiramisup <hello@tiramisup.app>" olarak set edilmeli
 
 ---
 
-RULES THAT MUST NOT REGRESS
+ERİŞİM DEVİR LİSTESİ
 
-1. No fake product created on signup
-2. Launched products must not see pre-launch language, nav, or UX
-3. Growth guidance must stay diagnosis-led, not generic startup advice
-4. Metric entry must remain tied to configured metrics
-5. AI must not speculate when evidence is weak
-6. User-written product description remains central context for AI
-7. English is the master locale
-8. Agent panel cards must create tasks, not send chat messages
-9. Billing must not be presented as complete Stripe commerce
-10. HIGH priority means a true blocker only
-11. Do not casually rewrite the live email templates
-12. Do not regress the new GROWING onboarding path back into a vague AARRR preview
+- GitHub repo erişimi
+- Vercel proje erişimi (zerocekos-projects/tramisup)
+- Supabase proje erişimi (ojecebxxcbxrofnbkaae, eu-west-3)
+- Google Cloud Console erişimi (OAuth)
+- Stripe Dashboard erişimi
+- Resend hesap erişimi
+- Domain / DNS erişimi (tiramisup.app)
+- Tüm Vercel production environment variables
 
 ---
 
-ACCESS TRANSFER CHECKLIST
-
-- GitHub repo access
-- Vercel project access
-- Supabase project access
-- Google Cloud Console access
-- Stripe Dashboard access
-- Resend account access
-- Domain / DNS access for tiramisup.app
-- All Vercel production environment variables
-- Explicit awareness that Vercel env is the production source of truth
-
----
-
-When in doubt: preserve production baseline, document the tradeoff, and change one surface at a time.
+Şüphe durumunda: production baseline'ı koru, tradeoff'u belgele, bir yüzeyi değiştir.
 ```
