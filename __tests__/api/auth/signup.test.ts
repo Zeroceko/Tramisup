@@ -28,6 +28,7 @@ vi.mock('@/lib/recaptcha', () => ({
 import { POST } from '@/app/api/auth/signup/route'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { resetRateLimitStore } from '@/lib/rate-limit'
 
 const mockPrismaUser = vi.mocked(prisma.user)
 const mockBcrypt     = vi.mocked(bcrypt)
@@ -43,6 +44,7 @@ function createRequest(body: Record<string, unknown>) {
 describe('POST /api/auth/signup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetRateLimitStore()
   })
 
   it('should return 400 if email is missing', async () => {
@@ -153,7 +155,7 @@ describe('POST /api/auth/signup', () => {
     expect(data.message).toBe('Hesap oluşturuldu')
     expect(data.userId).toBe('new-user-123')
 
-    expect(mockBcrypt.hash).toHaveBeenCalledWith('Password1!', 10)
+    expect(mockBcrypt.hash).toHaveBeenCalledWith('Password1!', 8)
 
     expect(mockPrismaUser.create).toHaveBeenCalledWith({
       data: {

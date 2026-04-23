@@ -105,7 +105,11 @@ describe("PATCH /api/checklist/[id]", () => {
     );
     expect(taskUpdateMock).toHaveBeenCalledWith({
       where: { id: "task-1" },
-      data: { status: "DONE" },
+      data: expect.objectContaining({
+        status: "DONE",
+        startedAt: expect.any(Date),
+        completedAt: expect.any(Date),
+      }),
     });
     expect(emitTaskLifecycleEventMock).toHaveBeenCalledWith({
       taskId: "task-1",

@@ -49,7 +49,7 @@ const mockContext = { params: Promise.resolve({ id: 'test-id' }) }
 
 function mockAdmin() {
   mockGetServerSession.mockResolvedValue({
-    user: { email: 'admin@tiramisup', name: 'Admin', id: 'admin-id' },
+    user: { email: 'chef@tiramisup.app', name: 'Admin', id: 'admin-id' },
     expires: '',
   })
 }

@@ -2,6 +2,10 @@ type RateLimitEntry = { count: number; resetAt: number };
 
 const store = new Map<string, RateLimitEntry>();
 
+export function resetRateLimitStore() {
+  store.clear();
+}
+
 export function checkRateLimit(
   key: string,
   maxRequests: number,

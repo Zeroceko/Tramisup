@@ -620,7 +620,7 @@ export default function SourceSetupWizard({
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-[#95dbda]" />
-            <span className="ml-2 text-[13px] text-[#666d80]">Property'ler yükleniyor…</span>
+            <span className="ml-2 text-[13px] text-[#666d80]">Property&apos;ler yükleniyor…</span>
           </div>
         ) : properties.length === 0 ? (
           <div className="rounded-[14px] border border-orange-100 bg-[#fff7ed] p-4">
@@ -660,7 +660,7 @@ export default function SourceSetupWizard({
 
             <div className="rounded-[12px] bg-[#f7f9fa] p-3">
               <p className="text-[12px] leading-5 text-[#666d80]">
-                <strong className="text-[#0d0d12]">Dikkat:</strong> DAU, retention ve funnel verisi bu property'den çekilir. Yanlış property seçilirse metrikler başka bir ürüne ait veri gösterir.
+                <strong className="text-[#0d0d12]">Dikkat:</strong> DAU, retention ve funnel verisi bu property&apos;den çekilir. Yanlış property seçilirse metrikler başka bir ürüne ait veri gösterir.
               </p>
             </div>
 
