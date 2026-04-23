@@ -94,6 +94,15 @@ export default async function MetricsPage({
     }
     perfProductId = product.id;
 
+    const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
+    const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
+    const hasGrowthCheckin = Boolean(storedAdditionalContext.growthCheckin?.completedAt);
+    const isLaunchedProduct = product.status === "LAUNCHED" || product.status === "GROWING";
+
+    if (isLaunchedProduct && !hasGrowthCheckin) {
+      redirect(`/${locale}/growth?onboarding=1`);
+    }
+
     const [connectedIntegrations, savedSetup] = await Promise.all([
       prisma.integration.findMany({
         where: {
@@ -103,12 +112,10 @@ export default async function MetricsPage({
         select: {
           provider: true,
         },
-      }),
+        }),
       getMetricSetup(product.id),
     ]);
   const connectedSourceCount = connectedIntegrations.length;
-  const storedAdditionalContext = readGrowthCheckinFromAdditionalContext(product.additionalContext);
-  const growthCheckinAnswers = storedAdditionalContext.growthCheckin?.answers ?? null;
   const growthSetupContext = summarizeGrowthCheckinForSetup({
     answers: growthCheckinAnswers,
     locale,
@@ -373,6 +380,16 @@ export default async function MetricsPage({
               <p className="text-[12px] font-semibold text-[#0d0d12]">{isEn ? "After 5 entries" : "5 giriş sonra"}</p>
               <p className="mt-1 text-[11px] leading-4 text-[#8a8fa0]">
                 {isEn ? "Trend chart and weak-link detection become visible." : "Trend grafiği ve zayıf halka tespiti görünür olur."}
+              </p>
+            </div>
+            <div className="rounded-[18px] border border-[#d7efef] bg-[#f7fcfc] p-4">
+              <p className="text-[12px] font-semibold text-[#0d0d12]">
+                {isEn ? "What happens after this save?" : "Bu kayıttan sonra ne olacak?"}
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-[#6a7283]">
+                {isEn
+                  ? "The first save opens Growth with your new baseline so the product can switch from setup mode into real diagnosis."
+                  : "İlk kayıt, yeni baz çizginle birlikte Growth'ü açar; ürün setup modundan gerçek teşhis moduna böyle geçer."}
               </p>
             </div>
             {connectedSourceCount === 0 && (

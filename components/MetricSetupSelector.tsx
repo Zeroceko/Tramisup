@@ -389,6 +389,9 @@ export default function MetricSetupSelector({
       return map;
     }
 
+    // In onboarding mode with no explicit selections, start empty — don't auto-fill
+    if (isOnboardingMode) return map;
+
     const hasSavedSelections = (initialSetup?.selections?.length ?? 0) > 0;
     if (hasSavedSelections) {
       for (const s of initialSetup?.selections ?? []) {
@@ -403,7 +406,7 @@ export default function MetricSetupSelector({
       }
     }
     return map;
-  }, [automationGuides, initialSelections, initialSetup]);
+  }, [automationGuides, initialSelections, initialSetup, isOnboardingMode]);
 
   const [selected, setSelected] = useState<MetricSelectionMap>(initialMap);
   const [saving, setSaving] = useState(false);
@@ -540,28 +543,73 @@ export default function MetricSetupSelector({
   }
 
   // --- Edit view ---
+
+  // Onboarding mode: simplified single-column layout matching wizard aesthetic
+  if (isOnboardingMode) {
+    return (
+      <section id="tracking-metrics">
+        {/* Inline progress pill */}
+        <div className="mb-5 flex items-center justify-between">
+          <p className="text-[13px] text-[#666d80]">
+            {isEn ? "One metric per stage" : "Her aşama için bir metrik"}
+          </p>
+          <span className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
+            allReady ? "bg-[#95dbda]/20 text-[#1c6b69]" : "bg-[#f6f6f6] text-[#8a8fa0]"
+          }`}>
+            {completedStages} / {plan.sections.length}
+          </span>
+        </div>
+
+        {/* Stage sections — single column */}
+        <div className="space-y-3">
+          {plan.sections.map((section, i) => (
+            <StageSection
+              key={section.stage}
+              section={section}
+              selectedKey={selected[section.stage]}
+              automation={{
+                supportedMetricKeys: automationMap.get(section.stage)?.supportedMetricKeys ?? [],
+                connectedProviders: automationMap.get(section.stage)?.connectedProviders ?? [],
+              }}
+              locale={locale}
+              onSelect={(key) => selectMetric(section.stage, key)}
+              stageIndex={i}
+            />
+          ))}
+        </div>
+
+        {/* Save bar */}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {error && <p className="text-[12px] text-[#b42318]">{error}</p>}
+          <button
+            type="button"
+            onClick={() => void saveSetup()}
+            disabled={saving || !allReady}
+            className="h-11 w-full rounded-full bg-[#0d0d12] px-6 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          >
+            {saving
+              ? (isEn ? "Saving…" : "Kaydediliyor…")
+              : isEn ? "Use this setup and continue" : "Bu kurulumu kullan ve devam et"}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="tracking-metrics">
       {/* Header */}
       <div className="mb-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">
-          {isOnboardingMode
-            ? isEn ? "Growth kickoff" : "Growth başlangıcı"
-            : isEn ? "Growth = what will we track?" : "Growth için neyi takip edeceğiz?"}
+          {isEn ? "Growth = what will we track?" : "Growth için neyi takip edeceğiz?"}
         </p>
         <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          {isOnboardingMode
-            ? isEn ? "Choose the six signals Growth should start with" : "Growth'ün başlayacağı 6 sinyali seç"
-            : isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
+          {isEn ? "Choose one core signal for each stage" : "Her aşama için tek bir ana sinyal seç"}
         </h2>
         <p className="mt-1.5 text-[13px] leading-5 text-[#666d80]">
-          {isOnboardingMode
-            ? isEn
-              ? <>You chose the <strong>Growing</strong> stage. Before the workspace opens, set one primary metric for every AARRR stage so Growth starts with a real measurement system.</>
-              : <>Ürünün için <strong>Büyüme</strong> aşamasını seçtin. Workspace açılmadan önce her AARRR aşaması için bir ana metrik belirle; böylece Growth gerçek bir ölçüm sistemiyle başlasın.</>
-            : isEn
-              ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
-              : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrics ekranında günlük veri girmeye geçiyoruz.</>}
+          {isEn
+            ? <>The goal is not optimization yet, it is clarity. Choose <strong>one</strong> metric for each stage, then we move into daily entry on the Metrics screen.</>
+            : <>Amacımız optimizasyon değil, netlik. Her aşama için <strong>bir</strong> metrik seç — kaydedince Metrikler ekranında günlük veri girmeye geçiyoruz.</>}
         </p>
         <p className="mt-2 max-w-3xl text-[12px] leading-6 text-[#7a8192]">
           {plan.summary}
@@ -609,7 +657,6 @@ export default function MetricSetupSelector({
 
       {/* Two-column layout */}
       <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
-        {/* Stage sections */}
         <div className="space-y-3">
           {plan.sections.map((section, i) => (
             <StageSection
@@ -626,8 +673,6 @@ export default function MetricSetupSelector({
             />
           ))}
         </div>
-
-        {/* Summary panel (sticky on desktop) */}
         <div className="xl:sticky xl:top-4 xl:self-start">
           <SummaryPanel plan={plan} selected={selected} locale={locale} />
         </div>
@@ -649,7 +694,7 @@ export default function MetricSetupSelector({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!isOnboardingMode && initialSetup?.selections?.length ? (
+            {initialSetup?.selections?.length ? (
               <button
                 type="button"
                 onClick={() => setEditing(false)}
@@ -667,11 +712,7 @@ export default function MetricSetupSelector({
             >
               {saving
                 ? (isEn ? "Saving…" : "Kaydediliyor…")
-                : isOnboardingMode
-                  ? (isEn ? "Use this setup and continue" : "Bu kurulumu kullan ve devam et")
-                  : isEn
-                    ? "Save and continue to metric entry"
-                    : "Kaydet ve metrik girişine geç"}
+                : isEn ? "Save and continue to metric entry" : "Kaydet ve metrik girişine geç"}
             </button>
           </div>
         </div>

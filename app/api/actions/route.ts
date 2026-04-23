@@ -12,6 +12,7 @@ type CreateTaskInput = {
   dueDate: string | null;
   priority: "LOW" | "MEDIUM" | "HIGH";
   category: string | null;
+  source: "MANUAL" | "FOUNDER_COACH" | "AGENT_CHAT";
 };
 
 export async function POST(request: Request) {
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
               ? item.priority
               : "MEDIUM",
           category: rawCategory || null,
+          source:
+            item?.source === "FOUNDER_COACH" || item?.source === "AGENT_CHAT"
+              ? item.source
+              : "MANUAL",
         };
       })
       .filter((item): item is CreateTaskInput => Boolean(item.productId && item.title));
@@ -103,7 +108,7 @@ export async function POST(request: Request) {
           dueDate: item.dueDate ? new Date(item.dueDate) : null,
           priority: item.priority,
           category: item.category,
-          source: "MANUAL",
+          source: item.source,
           locale: "en",
           skipValidation: true,
         });

@@ -24,6 +24,7 @@ export default async function AccountLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="account"
     >
       <PlainPageShell>{children}</PlainPageShell>
     </AppShell>

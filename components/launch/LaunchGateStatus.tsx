@@ -38,7 +38,7 @@ const GATE_CONFIG: Record<
     badgeBg: "bg-[#fef3c7]",
     badgeText: "text-[#92400e]",
     dotColor: "bg-[#f59e0b]",
-    headline: "Launch'a geçebilirsin, riskler var",
+    headline: "Yayına geçebilirsin, riskler var",
     headlineEn: "You can launch, but there are risks",
   },
   CLEAR: {
@@ -47,7 +47,7 @@ const GATE_CONFIG: Record<
     badgeBg: "bg-[#d1fae5]",
     badgeText: "text-[#065f46]",
     dotColor: "bg-[#34d399]",
-    headline: "Launch'a hazırsın",
+    headline: "Yayına hazırsın",
     headlineEn: "Ready to launch",
   },
 };
@@ -107,7 +107,7 @@ function GateSubline({
   }
   return isEn
     ? "All checklist items are complete. You're clear to launch."
-    : "Tüm checklist maddeleri tamamlandı. Launch'a hazırsın.";
+    : "Tüm checklist maddeleri tamamlandı. Yayına hazırsın.";
 }
 
 export default function LaunchGateStatus({

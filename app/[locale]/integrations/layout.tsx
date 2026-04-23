@@ -24,6 +24,7 @@ export default async function IntegrationsLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="integrations"
     >
       <PlainPageShell>{children}</PlainPageShell>
     </AppShell>

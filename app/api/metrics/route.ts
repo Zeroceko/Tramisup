@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { FunnelStageKey } from "@/lib/metric-setup";
 import { saveMetricEntry } from "@/lib/metric-setup";
+import { hasGrowthDiagnosisData } from "@/lib/growth-readiness";
+import { recordProductEvent } from "@/lib/product-events";
 
 const DECIMAL_METRIC_KEYS = new Set(["mrr", "arpu"]);
 
@@ -41,7 +43,17 @@ export async function POST(request: Request) {
     const setup = await prisma.metricSetup.findUnique({
       where: { productId },
       select: {
+        _count: {
+          select: {
+            entries: true,
+          },
+        },
         selections: true,
+        entries: {
+          where: { date: new Date(date) },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
     if (!setup) {
@@ -77,6 +89,31 @@ export async function POST(request: Request) {
     ) as Partial<Record<FunnelStageKey, number>>;
 
     await saveMetricEntry(productId, date, sanitizedValues);
+
+    const previousEntryCount = setup._count.entries;
+    const createdNewEntryForDate = setup.entries.length === 0;
+    const nextEntryCount = previousEntryCount + (createdNewEntryForDate ? 1 : 0);
+
+    if (previousEntryCount === 0 && createdNewEntryForDate) {
+      await recordProductEvent({
+        userId: session.user.id,
+        productId,
+        eventType: "FIRST_METRIC_ENTRY_CREATED",
+        metadata: { date },
+      });
+    }
+
+    if (!hasGrowthDiagnosisData(previousEntryCount) && hasGrowthDiagnosisData(nextEntryCount)) {
+      await recordProductEvent({
+        userId: session.user.id,
+        productId,
+        eventType: "GROWTH_DIAGNOSIS_READY",
+        metadata: {
+          entryCount: nextEntryCount,
+          date,
+        },
+      });
+    }
 
     for (const locale of ["en", "tr"]) {
       revalidatePath(`/${locale}/metrics`);

@@ -6,6 +6,7 @@ import {
   buildAdditionalContextWithGrowthCheckin,
   type GrowthCheckinAnswers,
 } from "@/lib/growth-transition-checkin";
+import { recordProductEvent } from "@/lib/product-events";
 
 function isValidAnswers(input: unknown): input is GrowthCheckinAnswers {
   if (!input || typeof input !== "object" || Array.isArray(input)) return false;
@@ -47,6 +48,15 @@ export async function PATCH(
     await prisma.product.update({
       where: { id },
       data: { additionalContext },
+    });
+
+    await recordProductEvent({
+      userId: session.user.id,
+      productId: id,
+      eventType: "GROWTH_CHECKIN_COMPLETED",
+      metadata: {
+        answerCount: Object.keys(answers).length,
+      },
     });
 
     return NextResponse.json({ success: true });

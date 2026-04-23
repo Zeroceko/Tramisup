@@ -91,7 +91,7 @@ function buildDefaultMessageActions(
 
     return [{
       type: "open_checklist",
-      label: locale === "en" ? "Open launch checklist" : "Launch checklist'ini aç",
+      label: locale === "en" ? "Open launch checklist" : "Yayın kontrol listesini aç",
     }];
   }
 
@@ -126,7 +126,7 @@ function buildDefaultMessageActions(
   if (agentType === "launch" || productStage === "PRE_LAUNCH") {
     return [{
       type: "open_checklist",
-      label: locale === "en" ? "Open launch checklist" : "Launch checklist'ini aç",
+      label: locale === "en" ? "Open launch checklist" : "Yayın kontrol listesini aç",
     }];
   }
 

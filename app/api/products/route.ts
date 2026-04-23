@@ -11,6 +11,7 @@ import {
   ensureCanonicalLaunchStageKey,
 } from "@/lib/launch-stage";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
+import { recordProductEvent } from "@/lib/product-events";
 
 async function resolveProductOwner(sessionUser: {
   id?: string | null;
@@ -333,6 +334,27 @@ export async function POST(request: Request) {
     response.cookies.set("activeProductId", product.id, {
       path: "/",
       sameSite: "lax",
+    });
+
+    await recordProductEvent({
+      userId: session.user.id,
+      productId: product.id,
+      eventType: "PRODUCT_CREATED",
+      metadata: {
+        status: product.status,
+        launchStatus: canonicalLaunchStage,
+      },
+    });
+
+    await recordProductEvent({
+      userId: session.user.id,
+      productId: product.id,
+      eventType: "ONBOARDING_COMPLETED",
+      metadata: {
+        status: product.status,
+        launchStatus: canonicalLaunchStage,
+        metricSetupSaved: initialMetricSetupSelections.length > 0,
+      },
     });
 
     return response;

@@ -1,10 +1,10 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 21 April 2026
+**Date:** 22 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current active `main` line:** includes all commits through `0ec4162f`
-**Status:** Production is live. The April 16 reCAPTCHA blocker is now resolved — fresh signup works end-to-end and was confirmed by automated testing on 21 April. The current active line includes security hardening, onboarding polish, and a simplified growth kickoff.
+**Current active `main` line:** includes all commits through `0ec4162f`, plus direct 22 April production deploys from the local worktree
+**Status:** Production is live. Founder continuity is better on existing accounts, but fresh-signup continuity is still not trustworthy enough to call solved.
 
 ---
 
@@ -32,12 +32,13 @@ Everything is product-scoped. A user can have multiple products, one active at a
 
 ## 2. Current Production Truth
 
-As of **21 April 2026**, these are true in production:
+As of **22 April 2026**, these are true in production:
 
 - `tiramisup.app` is live on the current `main` line.
-- Public landing is **waitlist-first** — "Join waitlist" is an inline email capture form, not a link to the signup page. A new user who wants to create an account must navigate directly to `/en/signup`. This is a known UX gap.
+- Production also includes 22 April direct Vercel deploys from the local worktree. Latest confirmed production deploy: `https://tramisup-obgi3s8wo-zerocekos-projects.vercel.app`, aliased to `https://tiramisup.app`.
+- Public root landing is intentionally **waitlist-first**. The self-serve marketing surface at `/{locale}` is for waitlist capture. The real landing experience lives at `/{locale}/yayinda`.
 - Signup requires email verification. No early access code is required.
-- Fresh signup confirmed working (21 April): name + product type + email (step 1) → password (step 2) → `/verify-email` screen → email link → auto-login into app.
+- Fresh signup cannot currently be treated as reliably working. On 22 April live validation, the signup form filled successfully but did not redirect to `/verify-email`, `/dashboard`, or `/onboarding` within the expected timeout after submit.
 - **Email verification auto-logs the user in**: clicking the link verifies the account and signs the user in without re-entering credentials.
 - Billing is still **fake/demo checkout** — not real Stripe commerce.
 - AI guidance remains **stage-aware** and must not invent advice when evidence is weak.
@@ -46,14 +47,18 @@ As of **21 April 2026**, these are true in production:
 - **Growth kickoff (`/growth?onboarding=1`) is now a single-focus screen**: only the check-in form is shown. The "tamamlananlar" banner, AARRR signal grid, progress tracker, and coach card are all hidden when `?onboarding=1` is present.
 - **Empty dashboard state is clean**: when no product exists, the settings gear, product selector, and "Add product" link are hidden. First-run screen no longer shows a "No fake data" trust note.
 - **Onboarding step transitions are animated**: directional slide-fade (forward/backward) when navigating between steps.
+- **EN/TR user-facing copy was cleaned up on authenticated surfaces**: a Turkish user should not see stray English labels, and an English user should not see stray Turkish labels, across the main app surfaces touched on 22 April.
+- **Google Ads tag is live globally** via `app/[locale]/layout.tsx`: `AW-18110097199`.
+- **Products page is intentionally minimal now**: when products exist, the route shows only the compact page header, header-level new-product action, and real product cards. The decorative "new workspace" card is gone. Empty state appears only when there are zero products.
 - **Auth security is hardened**: bcrypt cost factor is 8 (was 10, caused 5–10s signup latency on Vercel), rate limiting on signup (5/15min per IP) and forgot-password (3/15min per IP), NEXTAUTH_SECRET fallback removed (throws instead of silently using empty string), error messages sanitized.
-- **Agent panel cards are all task-creation**: every card creates a task when clicked. No "ask"-intent cards remain.
+- Agent panel behavior is inconsistent across surfaces. Launch can still produce context-aware answers, but Overview and Growth do not yet reliably expose reachable chat/task flows in live runs.
 - **Growth diagnosis is data-driven**: includes actual metric values and is locale-aware (EN/TR).
 - **Admin ops panel is live** under `/{locale}/admin/*` — overview, users, products, billing, AI usage, waitlist. Allowlist-protected and excluded from indexing.
 - **Free-form agent chat is live** and hardened after the 13 April AgentMessage table fix.
 - **Transactional email templates are live** — do not rewrite them without deliberate intent.
 
 Recent shipped commits:
+- 22 April local-worktree deploys — EN/TR surface cleanup, Google Ads tag install, products page simplification, removal of fake new-workspace card, tighter products spacing/header
 - `0ec4162f` — simplify growth kickoff for onboarding flow (remove banner/tracker/coach card)
 - `3bcc21c4` — add directional slide-fade animation to onboarding step transitions
 - `ea1b6ee8` — harden auth: remove fallback secrets, add rate limiting, sanitize error messages
@@ -69,28 +74,43 @@ Recent shipped commits:
 
 ### 1. The highest-priority unknowns are product questions, not code questions
 
-These remain unanswered as of 21 April:
+These remain unanswered as of 22 April:
 
 - **Does the AI actually help real founders?** Recommendations have not been tested with real non-founder users on real products. This is the most important open question.
 - **Is the core loop sticky?** Create product → enter metrics → receive diagnosis → create tasks → repeat. Whether users return after the first session is unknown.
 - **Does onboarding-to-value work?** Fresh user → onboarding → Growth diagnosis has been improved but not cleanly validated with a real first-time user.
 
-### 2. Signup works, but the path from landing is broken
+### 2. Signup and first-run continuity are still the biggest product risk
 
-Fresh signup itself is functional. The problem is discovery:
-- Landing "Join waitlist" doesn't go to `/signup` — it's an inline email form that stays on the landing page.
-- There is no nav link to `/signup` from the public landing.
-- A new user who wants to sign up must know the URL or find it from a shared link. This is a high-friction acquisition gap.
+Fresh signup itself is not yet stable enough to trust:
+- On 22 April live validation, signup submit did not redirect within 25s after password entry.
+- Existing-account product creation did complete, but the user was then sent back into setup: post-create summary → Growth check-in → Metrics setup, with no clear first value moment.
 
-### 3. Growth kickoff check-in form selector needs tuning
+### 3. Onboarding-to-value still feels like setup recursion
 
-Automated testing shows the check-in form text matcher (`acquisition|check.in|değerlendirme|how did|nasıl`) doesn't reliably detect the form. The form likely renders, but the test selector needs updating to match the actual copy in `GrowthTransitionCheckin`.
+Live founder testing on 22 April showed this sequence on a newly created launched product:
+- product created summary page
+- CTA into metric setup
+- Growth asks for a short check-in before setup can help
+- Metrics still starts at `0` selected metrics / `0` entries
+- Tasks remains empty
 
-### 4. Nav links only appear once a product exists
+This means the user still does not reach a concrete value moment quickly enough.
+
+### 4. AI/helpfulness and task creation are still not proven
+
+Live agent checks on 22 April showed:
+- Overview: no visible suggestion cards, no reachable chat input
+- Growth: suggestion cards visible, but clicking did not produce a confirmed task count increase
+- Launch: context-aware answer still works
+
+The product cannot yet claim that AI reliably helps or that suggestion cards reliably convert into execution.
+
+### 5. Nav links only appear once a product exists
 
 This is intentional behavior. The test confirmed: with no product, nav shows only "Overview". Growth, Metrics, Tasks, Pre-launch links appear only after a product is created. A new user's first session is essentially one-path: create product → onboarding.
 
-### 5. Dashboard and tasks remain the slowest authenticated surfaces
+### 6. Dashboard and tasks remain the slowest authenticated surfaces
 
 TTFB and load improved on 14 April, but `/dashboard` and `/tasks` are still the heaviest pages. Continue query profiling if users report lag.
 
@@ -116,14 +136,17 @@ TTFB and load improved on 14 April, but `/dashboard` and `/tasks` are still the 
 ## 5. Known Debt
 
 - **Billing**: still fake/demo activation
-- **Landing → signup path**: no direct link; acquisition is invisible
-- **i18n gaps**: some authenticated copy still has hardcoded strings
+- **Public root waitlist behavior**: `/{locale}` is intentionally waitlist-first. Do not treat the absence of a direct signup CTA there as a product bug. Use `/{locale}/yayinda` when evaluating the real landing surface.
+- **i18n gaps**: major authenticated-surface leaks were cleaned up on 22 April, but treat locale consistency as an active regression area and recheck any newly touched screen
 - **Roadmap integrations**: RevenueCat, App Store Connect, Google Play, ads connectors are UI-first only
 - **`Product.launchGoals`**: legacy field — do not build new logic on it
 - **Growth kickoff check-in**: `goalKey` from onboarding is already set, so the `growth_goal` question is skipped — but `acquisition_source` and similar questions still run even though some were asked during onboarding. Deduplication is pending.
 - **Dashboard first impression**: sharp enough to not confuse, but not yet sharp enough to delight
+- **Onboarding value moment**: product creation currently hands the user into another setup loop instead of a clear first payoff
+- **AI/task bridge**: launch is stronger than overview/growth; surface consistency is still weak
 - **Email delivery**: `RESEND_FROM_EMAIL` must be `Tiramisup <hello@tiramisup.app>` in Vercel env
 - **Public repo secret history**: previously exposed credentials (Gemini, OpenAI keys) must still be treated as compromised
+- **Notion release logging is now mandatory for every production version.** Update the canonical handoff page before release signoff: `https://www.notion.so/34ba251bad488125b83cd2dbc5d0a1c3`
 
 ---
 

@@ -1,6 +1,7 @@
 import { Manrope, Outfit } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import GoogleAnalyticsScript from "@/components/analytics/GoogleAnalyticsScript";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default async function LocaleLayout({
     <html lang={locale} className={`${manrope.variable} ${outfit.variable}`}>
       <body className="font-manrope bg-[#f8f5f1] text-[#0d0d12] antialiased">
         <NextIntlClientProvider messages={messages}>
+          <GoogleAnalyticsScript measurementId="AW-18110097199" />
           {children}
           <Toaster />
         </NextIntlClientProvider>

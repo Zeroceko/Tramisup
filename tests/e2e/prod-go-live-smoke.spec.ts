@@ -127,9 +127,9 @@ test.describe("Production go-live smoke", () => {
           await page.getByRole("link", { name: /Growth kurulumuna devam et|Growth setup'a git/i }).click();
         }
       } else if (locale === "en") {
-        await expect(page.getByText("Open Growth and choose your metrics")).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText("Open Metrics and choose your metrics")).toBeVisible({ timeout: 30_000 });
       } else {
-        await expect(page.getByText("Growth'a geç ve metriklerini seç")).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText("Metrics'e geç ve metriklerini seç")).toBeVisible({ timeout: 30_000 });
       }
 
       await page.waitForURL(new RegExp(`/${locale}/growth`), { timeout: 30_000 });
@@ -147,9 +147,9 @@ test.describe("Production go-live smoke", () => {
       await page.waitForLoadState("networkidle");
 
       if (locale === "en") {
-        await expect(page.getByText("Choose one core signal for each stage")).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText("Select metrics to start tracking")).toBeVisible({ timeout: 30_000 });
       } else {
-        await expect(page.getByText("Her aşama için tek bir ana sinyal seç")).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText("Takip etmek için metrik seç")).toBeVisible({ timeout: 30_000 });
       }
     });
   }

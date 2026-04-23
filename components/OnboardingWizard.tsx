@@ -107,7 +107,7 @@ const STAGES = [
   },
   {
     value: "PREPARING",
-    label: "Launch hazırlığındayım",
+    label: "Yayın hazırlığındayım",
     sub: "Yakında yayına çıkıyorum",
   },
   { value: "LIVE", label: "Yayındayım", sub: "Gerçek kullanıcılarım var" },
@@ -487,16 +487,26 @@ function MetricsStep({
 
   if (editable) {
     return (
-      <MetricSetupSelector
-        mode="onboarding"
-        plan={plan}
-        initialSetup={null}
-        initialSelections={selectedMetrics ?? autoMetrics}
-        locale={locale}
-        connectedProviders={[]}
-        onSelectionChange={onMetricSelectionChange}
-        onSave={() => onAccept()}
-      />
+      <div>
+        <h1 className="text-center text-[22px] font-semibold tracking-[-0.02em] text-[#0d0d12] sm:text-[26px]">
+          {isEn ? "Choose your growth signals" : "Büyüme sinyallerini seç"}
+        </h1>
+        <p className="mx-auto mb-8 mt-2 max-w-xl text-center text-[13px] leading-[1.55] text-[#666d80]">
+          {isEn
+            ? "One metric per AARRR stage. These become the backbone of your Growth workspace."
+            : "Her AARRR aşaması için bir metrik. Bunlar Growth çalışma alanının omurgasını oluşturacak."}
+        </p>
+        <MetricSetupSelector
+          mode="onboarding"
+          plan={plan}
+          initialSetup={null}
+          initialSelections={selectedMetrics ?? null}
+          locale={locale}
+          connectedProviders={[]}
+          onSelectionChange={onMetricSelectionChange}
+          onSave={() => onAccept()}
+        />
+      </div>
     );
   }
 
@@ -1446,15 +1456,6 @@ export default function OnboardingWizard({ locale }: { locale: string }) {
                           <Link2 className="h-4 w-4" />
                         </span>
                         {isEn ? "Define URL" : "URL Tanımla"}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] border border-[#e5e5e8] bg-[#ececee] text-[13px] font-medium text-[#666d80] transition hover:bg-white"
-                      >
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f2e8dc] text-[#8c6d43]">
-                          <Plus className="h-4 w-4" />
-                        </span>
-                        {isEn ? "Extra note" : "Ek Not"}
                       </button>
                     </div>
 

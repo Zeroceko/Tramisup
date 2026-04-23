@@ -299,7 +299,7 @@ export default function IntegrationCard({
             <p className="text-[12px] leading-5 text-[#c2410c]">
               {isEn
                 ? "Choose which GA4 property to pull data from. Sync cannot run until this is set."
-                : "Hangi GA4 property&apos;den veri çekeceğimizi belirle — bu adım olmadan sync çalışmaz."}
+                : "Hangi GA4 property'den veri çekeceğimizi belirle — bu adım olmadan senkronizasyon çalışmaz."}
             </p>
           </div>
         )}
@@ -310,7 +310,7 @@ export default function IntegrationCard({
             <p className="text-[12px] leading-5 text-[#c2410c]">
               {isEn
                 ? "Connection is ready. Start the first sync to bring revenue data in."
-                : "Bağlantı kuruldu. İlk sync&apos;i başlatarak gelir verisini içeri al."}
+                : "Bağlantı kuruldu. İlk senkronizasyonu başlatarak gelir verisini içeri al."}
             </p>
           </div>
         )}

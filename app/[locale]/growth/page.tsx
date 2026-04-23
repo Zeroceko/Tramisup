@@ -10,6 +10,7 @@ import GrowthChecklistSection from "@/components/GrowthChecklistSection";
 import GrowthTacticsPanel from "@/components/GrowthTacticsPanel";
 import GrowthTransitionCheckin from "@/components/GrowthTransitionCheckin";
 import CollapsibleSection from "@/components/CollapsibleSection";
+import AIActionHintCard from "@/components/AIActionHintCard";
 import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendations";
 import { getGrowthTacticsPlan } from "@/lib/growth-tactics";
 import { getGrowthWorkspaceStep } from "@/lib/growth-workspace-step";
@@ -375,7 +376,7 @@ export default async function GrowthPage({
       title: isEn ? "Diagnosis & execution" : "Teşhis ve aksiyon",
       description: isEn
         ? "See the weak link, open the checklist, and turn insight into work."
-        : "Zayıf halkayı gör, checklist'i aç ve içgörüyü işe çevir.",
+        : "Zayıf halkayı gör, kontrol listesini aç ve içgörüyü işe çevir.",
       state: hasGrowthCheckin && hasSetup && hasDiagnosisData ? "active" : "locked",
     },
   ] as const;
@@ -401,7 +402,7 @@ export default async function GrowthPage({
             href={`/${locale}/pre-launch`}
             className="mt-5 inline-flex h-10 items-center rounded-full bg-[#ffd7ef] px-5 text-[13px] font-semibold text-[#0d0d12] transition hover:bg-[#f5c8e4]"
           >
-            {isEn ? "Go to Launch" : "Launch sayfasına git"}
+            {isEn ? "Go to Launch" : "Yayın hazırlığı sayfasına git"}
           </a>
         </div>
       </div>
@@ -462,6 +463,35 @@ export default async function GrowthPage({
         </div>
         )}
 
+        {(workspaceMode === "baseline_needed" || workspaceMode === "diagnosis_ready") && (
+          <AIActionHintCard
+            locale={locale}
+            title={
+              isEn
+                ? "Use AI here for diagnosis, not generic advice"
+                : "AI'ı burada genel tavsiye için değil, teşhis için kullan"
+            }
+            description={
+              isEn
+                ? "Growth AI becomes useful once check-in, metrics, and baseline exist. This is where it should identify the weak link and suggest the next focused move."
+                : "Growth AI, check-in, metrikler ve baseline oluştuktan sonra anlamlı hale gelir. Burada zayıf halkayı bulup bir sonraki odaklı hamleyi önermeli."
+            }
+            bullets={
+              isEn
+                ? [
+                    "Ask which funnel stage is weakest right now and why.",
+                    "Ask for one focused action instead of a broad growth plan.",
+                    "Turn that recommendation into a task only after the diagnosis sounds believable.",
+                  ]
+                : [
+                    "Şu an en zayıf funnel aşamasının hangisi olduğunu ve nedenini sor.",
+                    "Geniş growth planı yerine tek odaklı aksiyon iste.",
+                    "Öneri ikna ediciyse ancak o zaman göreve çevir.",
+                  ]
+            }
+          />
+        )}
+
         {workspaceMode === "intake_needed" ? (
           <>
             <div id="growth-intake">
@@ -472,12 +502,13 @@ export default async function GrowthPage({
                 initialAnswers={storedAdditionalContext.growthCheckin?.answers ?? {}}
                 nextHref={
                   hasSetup
-                    ? onboardingKickoff
-                      ? `/${locale}/growth?onboarding=1`
-                      : `/${locale}/growth`
+                    ? hasMetricEntries
+                      ? `/${locale}/growth`
+                      : `/${locale}/metrics`
                     : `/${locale}/metrics`
                 }
                 setupAlreadyComplete={hasSetup}
+                continueTo={hasSetup && hasMetricEntries ? "growth" : "metrics"}
               />
             </div>
 

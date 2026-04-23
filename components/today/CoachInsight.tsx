@@ -214,6 +214,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
             title: task.title,
             description: task.description,
             priority: task.priority,
+            source: "FOUNDER_COACH",
           })),
         }),
       });
@@ -360,7 +361,7 @@ export default function CoachInsight({ productId, stage, locale }: CoachInsightP
           <p className="text-[11px] text-[#8b93a6]">
             {isEn
               ? "We'll answer from your current product context, checklists, tasks, and metrics."
-              : "Yanıt ürün bağlamına, checklist'lerine, görevlerine ve metriklerine göre üretilir."}
+              : "Yanıt ürün bağlamına, kontrol listelerine, görevlerine ve metriklerine göre üretilir."}
           </p>
           <button
             type="button"

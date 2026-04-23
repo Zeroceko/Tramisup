@@ -25,6 +25,7 @@ export default async function GrowthLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="growth"
     >
       <RouteScopedBoundary key="growth" scope="growth">
         {effectiveActiveProductId ? (

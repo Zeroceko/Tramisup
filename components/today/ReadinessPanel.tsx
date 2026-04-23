@@ -46,7 +46,7 @@ export default function ReadinessPanel({ phase, readinessScore, daysUntilLaunch,
             href={`/${locale}/pre-launch`}
             className="mt-3 inline-block text-[12px] font-medium text-[#2a8a89] hover:underline"
           >
-            {isEn ? "View launch checklist →" : "Launch listesini gör →"}
+            {isEn ? "View launch checklist →" : "Yayın kontrol listesini gör →"}
           </Link>
         </div>
       </div>

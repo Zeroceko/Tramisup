@@ -33,6 +33,7 @@
 .gsd/runtime/
 .gsd/worktrees/
 .bg-shell/
+.claude/worktrees/
 
 # debug
 npm-debug.log*

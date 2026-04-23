@@ -299,7 +299,7 @@ export default function SettingsForm({
           mismatch: "Yeni şifreler eşleşmiyor.",
         },
         statusOptions: {
-          PRE_LAUNCH: "Launch hazırlığında",
+          PRE_LAUNCH: "Yayın hazırlığında",
           LAUNCHED: "Yayında",
           GROWING: "Büyüme aşamasında",
         },
@@ -319,7 +319,7 @@ export default function SettingsForm({
         regeneratePlan: "Planı güncel ürün bağlamıyla tazele",
         regeneratePlanDesc: "Ürün açıklaması, linkler ve aşama bilgisinin en güncel halini kullanarak yeni öneriler ekle. Mevcut emeği silme.",
         regeneratePlanKeepsCompleted: "Tamamladığın checklist maddeleri aynen korunur.",
-        regeneratePlanKeepsTasks: "Mevcut görevler board'da kalır; yalnızca duplicate olmayan yeni öneriler eklenir.",
+        regeneratePlanKeepsTasks: "Mevcut görevler panoda kalır; yalnızca tekrar etmeyen yeni öneriler eklenir.",
         regeneratePlanUsesDraft: "Yukarıda ürün tanımını değiştirdiysen, Tiramisup önce onu kaydeder sonra planı tazeler.",
         regeneratePlanBtn: "Kaydet ve planı tazele",
         regeneratePlanRunning: "Yenileniyor…",
@@ -841,7 +841,7 @@ export default function SettingsForm({
             </div>
             <div className="rounded-[16px] border border-[#ebe7df] bg-white/80 px-4 py-3">
               <p className="text-[12px] font-semibold text-[#0d0d12]">
-                {isEn ? "Board stays stable" : "Board düzeni korunur"}
+                {isEn ? "Board stays stable" : "Pano düzeni korunur"}
               </p>
               <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
                 {copy.regeneratePlanKeepsTasks}

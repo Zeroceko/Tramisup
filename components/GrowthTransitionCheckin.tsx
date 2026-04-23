@@ -14,6 +14,7 @@ export default function GrowthTransitionCheckin({
   initialAnswers,
   nextHref,
   setupAlreadyComplete = false,
+  continueTo = "metrics",
 }: {
   productId: string;
   locale: string;
@@ -21,6 +22,7 @@ export default function GrowthTransitionCheckin({
   initialAnswers: GrowthCheckinAnswers;
   nextHref: string;
   setupAlreadyComplete?: boolean;
+  continueTo?: "metrics" | "growth";
 }) {
   const router = useRouter();
   const isEn = locale === "en";
@@ -142,9 +144,13 @@ export default function GrowthTransitionCheckin({
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[12px] text-[#667085]">
           {setupAlreadyComplete
-            ? isEn
-              ? "After this, Growth will open your baseline step instead of sending you back through setup."
-              : "Bundan sonra seni yeniden setup'a göndermeden doğrudan baseline adımına geçeceğiz."
+            ? continueTo === "growth"
+              ? isEn
+                ? "After this, Growth will open without the onboarding detour so you can continue from the right workspace state."
+                : "Bundan sonra Growth onboarding detour'u olmadan açılacak; doğru workspace durumundan devam edeceksin."
+              : isEn
+                ? "After this, we move straight into your first metric entry instead of looping back through setup."
+                : "Bundan sonra setup döngüsüne geri dönmeden doğrudan ilk metrik girişine geçeceğiz."
             : isEn
               ? "After this, we move straight into metric setup."
               : "Bundan sonra doğrudan Metrics tarafındaki metric setup akışına geçeceğiz."}
@@ -159,11 +165,15 @@ export default function GrowthTransitionCheckin({
             ? "..."
             : isEn
               ? setupAlreadyComplete
-                ? "Save and continue to Growth"
+                ? continueTo === "growth"
+                  ? "Save and continue to Growth"
+                  : "Save and continue to Metrics"
                 : "Save and continue to Metrics"
               : setupAlreadyComplete
-                ? "Kaydet ve Growth'e geç"
-                : "Kaydet ve Metrics'e geç"}
+                ? continueTo === "growth"
+                  ? "Kaydet ve Growth'e geç"
+                  : "Kaydet ve Metrikler'e geç"
+                : "Kaydet ve Metrikler'e geç"}
         </button>
       </div>
     </div>

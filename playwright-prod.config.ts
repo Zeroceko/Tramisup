@@ -6,7 +6,7 @@
  */
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL ?? 'https://tramisup.vercel.app';
+const baseURL = process.env.E2E_BASE_URL ?? 'https://tiramisup.app';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -27,4 +27,3 @@ export default defineConfig({
     },
   ],
 });
-

@@ -64,13 +64,53 @@ function toOptionalGrowthState(value?: string | null) {
     : "";
 }
 
+function getRollingWindowStart(days: number, now = new Date()) {
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+}
+
+function minDate(values: Array<Date | null | undefined>) {
+  return values.reduce<Date | null>((earliest, value) => {
+    if (!value) return earliest;
+    if (!earliest || value.getTime() < earliest.getTime()) return value;
+    return earliest;
+  }, null);
+}
+
+const PRODUCT_FUNNEL_EVENT_TYPES = [
+  "PRODUCT_CREATED",
+  "ONBOARDING_COMPLETED",
+  "APP_SESSION",
+  "GROWTH_CHECKIN_COMPLETED",
+  "METRIC_SETUP_COMPLETED",
+  "FIRST_METRIC_ENTRY_CREATED",
+  "GROWTH_DIAGNOSIS_READY",
+] as const;
+
+const AI_BRIDGE_EVENT_TYPES = [
+  "AI_SUGGESTIONS_SHOWN",
+  "AI_SUGGESTION_TASK_ACTIVATED",
+] as const;
+
+type ProductFunnelEventType = (typeof PRODUCT_FUNNEL_EVENT_TYPES)[number];
+type AiSurfaceKey = "overview" | "launch" | "growth";
+
+function createAiSurfaceBreakdown() {
+  return {
+    overview: { loads: 0, activations: 0 },
+    launch: { loads: 0, activations: 0 },
+    growth: { loads: 0, activations: 0 },
+  } as Record<AiSurfaceKey, { loads: number; activations: number }>;
+}
+
 export async function getAdminOverviewData() {
   const monthStart = getCurrentMonthStart();
+  const cohortStart = getRollingWindowStart(30);
 
-  const [users, products, subscriptionCounts, usageCounts, waitlistCounts] = await Promise.all([
+  const [users, products, subscriptionCounts, usageCounts, waitlistCounts, aiTasks, productEvents, aiBridgeEvents] = await Promise.all([
     prisma.user.findMany({
       select: {
         id: true,
+        createdAt: true,
         emailVerified: true,
         subscription: {
           select: {
@@ -83,6 +123,9 @@ export async function getAdminOverviewData() {
     prisma.product.findMany({
       select: {
         id: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
         status: true,
         additionalContext: true,
         metricSetup: {
@@ -93,6 +136,7 @@ export async function getAdminOverviewData() {
         _count: {
           select: {
             metricEntries: true,
+            tasks: true,
           },
         },
       },
@@ -109,6 +153,46 @@ export async function getAdminOverviewData() {
     prisma.waitlist.groupBy({
       by: ["status"],
       _count: { _all: true },
+    }),
+    prisma.task.findMany({
+      where: {
+        source: {
+          in: ["AI_PLAN", "AGENT_CHAT", "FOUNDER_COACH"],
+        },
+      },
+      select: {
+        id: true,
+        source: true,
+        events: {
+          select: {
+            eventType: true,
+          },
+        },
+      },
+    }),
+    prisma.productEvent.findMany({
+      where: {
+        createdAt: { gte: cohortStart },
+        eventType: { in: [...PRODUCT_FUNNEL_EVENT_TYPES] },
+      },
+      select: {
+        productId: true,
+        userId: true,
+        eventType: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.productEvent.findMany({
+      where: {
+        createdAt: { gte: cohortStart },
+        eventType: { in: [...AI_BRIDGE_EVENT_TYPES] },
+      },
+      select: {
+        eventType: true,
+        metadata: true,
+      },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -175,6 +259,160 @@ export async function getAdminOverviewData() {
     if (row.status === "REJECTED") waitlist.rejected = row._count._all;
   }
 
+  const recentProducts = products.filter((product) => product.createdAt >= cohortStart);
+  const recentProductIds = new Set(recentProducts.map((product) => product.id));
+  const recentUserIds = new Set(recentProducts.map((product) => product.userId));
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
+  const returningCohortUsers = Array.from(recentUserIds).filter((userId) => {
+    const user = usersById.get(userId);
+    if (!user) return false;
+
+    const userProducts = recentProducts.filter((product) => product.userId === userId);
+    const firstProductAt = minDate(userProducts.map((product) => product.createdAt));
+    const latestProductActivity = maxDate(userProducts.map((product) => product.updatedAt));
+
+    if (!firstProductAt || !latestProductActivity) return false;
+    return latestProductActivity.getTime() - firstProductAt.getTime() >= 24 * 60 * 60 * 1000;
+  });
+
+  const funnelEventsByProduct = new Map<
+    string,
+    Partial<Record<ProductFunnelEventType, Date>>
+  >();
+  const onboardingEventByProduct = new Map<string, { userId: string; createdAt: Date }>();
+  const appSessionsByProduct = new Map<string, Date[]>();
+  for (const event of productEvents) {
+    const productEventsForProduct = funnelEventsByProduct.get(event.productId) ?? {};
+    const typedEventType = event.eventType as ProductFunnelEventType;
+    const currentEventAt = productEventsForProduct[typedEventType];
+    if (!currentEventAt || event.createdAt.getTime() < currentEventAt.getTime()) {
+      productEventsForProduct[typedEventType] = event.createdAt;
+      funnelEventsByProduct.set(event.productId, productEventsForProduct);
+    }
+
+    if (event.eventType === "ONBOARDING_COMPLETED" && !onboardingEventByProduct.has(event.productId)) {
+      onboardingEventByProduct.set(event.productId, {
+        userId: event.userId,
+        createdAt: event.createdAt,
+      });
+    }
+    if (event.eventType === "APP_SESSION") {
+      const current = appSessionsByProduct.get(event.productId) ?? [];
+      current.push(event.createdAt);
+      appSessionsByProduct.set(event.productId, current);
+    }
+  }
+
+  const eventCohort = Array.from(onboardingEventByProduct.entries());
+  const returnedEventUsers = new Set<string>();
+  for (const [productId, onboardingEvent] of eventCohort) {
+    const sessions = appSessionsByProduct.get(productId) ?? [];
+    const hasReturned = sessions.some(
+      (sessionAt) => sessionAt.getTime() - onboardingEvent.createdAt.getTime() >= 24 * 60 * 60 * 1000,
+    );
+    if (hasReturned) {
+      returnedEventUsers.add(onboardingEvent.userId);
+    }
+  }
+
+  const onboardingToValue = {
+    created: recentProducts.length,
+    growthCheckin: 0,
+    metricSetup: 0,
+    firstMetricEntry: 0,
+    diagnosisReady: 0,
+    mode: "event" as "event" | "hybrid",
+  };
+
+  for (const product of recentProducts) {
+    const readiness = getGrowthReadinessState({
+      status: product.status,
+      additionalContext: product.additionalContext,
+      selections: product.metricSetup?.selections,
+      metricEntryCount: product._count.metricEntries,
+    });
+
+    const funnelEvents = funnelEventsByProduct.get(product.id);
+
+    const inferredHasCheckin = readiness !== null && readiness !== "missing_checkin";
+    const inferredHasSetup = readiness === "missing_baseline" || readiness === "diagnosis_ready";
+    const inferredHasFirstMetricEntry = product._count.metricEntries > 0;
+    const inferredHasDiagnosis = readiness === "diagnosis_ready";
+
+    const hasCheckin = !!funnelEvents?.GROWTH_CHECKIN_COMPLETED || inferredHasCheckin;
+    const hasSetup = !!funnelEvents?.METRIC_SETUP_COMPLETED || inferredHasSetup;
+    const hasFirstMetricEntry =
+      !!funnelEvents?.FIRST_METRIC_ENTRY_CREATED || inferredHasFirstMetricEntry;
+    const hasDiagnosis =
+      !!funnelEvents?.GROWTH_DIAGNOSIS_READY || inferredHasDiagnosis;
+
+    if (
+      !funnelEvents?.GROWTH_CHECKIN_COMPLETED ||
+      !funnelEvents?.METRIC_SETUP_COMPLETED ||
+      !funnelEvents?.FIRST_METRIC_ENTRY_CREATED ||
+      !funnelEvents?.GROWTH_DIAGNOSIS_READY
+    ) {
+      onboardingToValue.mode = "hybrid";
+    }
+
+    if (hasCheckin) onboardingToValue.growthCheckin += 1;
+    if (hasSetup) onboardingToValue.metricSetup += 1;
+    if (hasFirstMetricEntry) onboardingToValue.firstMetricEntry += 1;
+    if (hasDiagnosis) onboardingToValue.diagnosisReady += 1;
+  }
+
+  const aiEffectiveness = {
+    totalAiTasks: aiTasks.length,
+    coachTasks: aiTasks.filter((task) => task.source === "FOUNDER_COACH").length,
+    actedOnTasks: 0,
+    completedTasks: 0,
+    suggestionLoads: 0,
+    suggestionActivations: 0,
+    suggestionDedupedActivations: 0,
+    bySurface: createAiSurfaceBreakdown(),
+  };
+
+  for (const task of aiTasks) {
+    const eventTypes = new Set(task.events.map((event) => event.eventType));
+    if (eventTypes.has("STARTED") || eventTypes.has("COMPLETED")) {
+      aiEffectiveness.actedOnTasks += 1;
+    }
+    if (eventTypes.has("COMPLETED")) {
+      aiEffectiveness.completedTasks += 1;
+    }
+  }
+
+  for (const event of aiBridgeEvents) {
+    let surface: AiSurfaceKey | null = null;
+    try {
+      const metadata =
+        typeof event.metadata === "string" && event.metadata
+          ? JSON.parse(event.metadata) as { deduped?: boolean; agentType?: AiSurfaceKey }
+          : null;
+      if (metadata?.agentType === "overview" || metadata?.agentType === "launch" || metadata?.agentType === "growth") {
+        surface = metadata.agentType;
+      }
+
+      if (event.eventType === "AI_SUGGESTION_TASK_ACTIVATED" && metadata?.deduped) {
+        aiEffectiveness.suggestionDedupedActivations += 1;
+      }
+    } catch {
+      // Ignore malformed metadata; admin should still see aggregate counts.
+    }
+
+    if (event.eventType === "AI_SUGGESTIONS_SHOWN") {
+      aiEffectiveness.suggestionLoads += 1;
+      if (surface) aiEffectiveness.bySurface[surface].loads += 1;
+      continue;
+    }
+
+    if (event.eventType === "AI_SUGGESTION_TASK_ACTIVATED") {
+      aiEffectiveness.suggestionActivations += 1;
+      if (surface) aiEffectiveness.bySurface[surface].activations += 1;
+    }
+  }
+
   return {
     users: {
       total: users.length,
@@ -189,6 +427,55 @@ export async function getAdminOverviewData() {
     subscriptions: subscriptionStatusCounts,
     usageTotals,
     waitlist,
+    aiEffectiveness: {
+      ...aiEffectiveness,
+      actedOnRate:
+        aiEffectiveness.totalAiTasks > 0
+          ? aiEffectiveness.actedOnTasks / aiEffectiveness.totalAiTasks
+          : 0,
+      completedRate:
+        aiEffectiveness.totalAiTasks > 0
+          ? aiEffectiveness.completedTasks / aiEffectiveness.totalAiTasks
+          : 0,
+      suggestionActivationRate:
+        aiEffectiveness.suggestionLoads > 0
+          ? aiEffectiveness.suggestionActivations / aiEffectiveness.suggestionLoads
+          : 0,
+      bySurface: Object.fromEntries(
+        Object.entries(aiEffectiveness.bySurface).map(([surface, stats]) => [
+          surface,
+          {
+            ...stats,
+            activationRate: stats.loads > 0 ? stats.activations / stats.loads : 0,
+          },
+        ]),
+      ) as Record<AiSurfaceKey, { loads: number; activations: number; activationRate: number }>,
+    },
+    founderReturn:
+      eventCohort.length > 0
+        ? {
+            cohortUsers: new Set(eventCohort.map(([, event]) => event.userId)).size,
+            returnedUsers: returnedEventUsers.size,
+            returnedRate:
+              eventCohort.length > 0
+                ? returnedEventUsers.size / new Set(eventCohort.map(([, event]) => event.userId)).size
+                : 0,
+            windowDays: 30,
+            mode: "event" as const,
+          }
+        : {
+            cohortUsers: recentUserIds.size,
+            returnedUsers: returningCohortUsers.length,
+            returnedRate:
+              recentUserIds.size > 0 ? returningCohortUsers.length / recentUserIds.size : 0,
+            windowDays: 30,
+            mode: "proxy" as const,
+          },
+    onboardingToValue: {
+      ...onboardingToValue,
+      windowDays: 30,
+      trackedProducts: recentProductIds.size,
+    },
   };
 }
 

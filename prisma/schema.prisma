@@ -19,6 +19,7 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   products          Product[]
+  productEvents     ProductEvent[]
   agentMessages     AgentMessage[]
   aiConnections     AIConnection[]
   subscription      Subscription?
@@ -103,8 +104,26 @@ model Product {
   metricSetup       MetricSetup?
   metricEntries     MetricEntry[]
   agentMessages     AgentMessage[]
+  productEvents     ProductEvent[]
 
   @@index([userId])
+}
+
+model ProductEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  /// PRODUCT_CREATED | ONBOARDING_COMPLETED | APP_SESSION |
+  /// GROWTH_CHECKIN_COMPLETED | METRIC_SETUP_COMPLETED |
+  /// FIRST_METRIC_ENTRY_CREATED | GROWTH_DIAGNOSIS_READY
+  eventType String
+  metadata  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventType, createdAt])
+  @@index([productId, eventType, createdAt])
 }
 
 model AIConnection {

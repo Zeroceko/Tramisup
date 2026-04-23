@@ -233,7 +233,7 @@ const LANDING_COPY = {
       titleTop: "KAOSTAN",
       connector: "",
       titleBottom: "BÜYÜMEYE",
-      subtitle: "Launch checklist, canlı metrikler, büyüme rutinleri ve planlama — ürün ekipleri için tek çalışma alanı.",
+      subtitle: "Yayın kontrol listesi, canlı metrikler, büyüme rutinleri ve planlama — ürün ekipleri için tek çalışma alanı.",
       emailPlaceholder: "sen@ornek.com",
       cta: "Ücretsiz başla →",
       note: "Kredi kartı yok · Kurulum 2 dakika",
@@ -309,7 +309,7 @@ const LANDING_COPY = {
         {
           num: "01",
           title: "Çalışma alanını kur",
-          desc: "Ücretsiz kaydol, ürününe isim ver; Tiramisup launch checklist'ini çıkarır.",
+          desc: "Ücretsiz kaydol, ürününe isim ver; Tiramisup yayın kontrol listesini çıkarır.",
         },
         {
           num: "02",
@@ -350,7 +350,7 @@ const LANDING_COPY = {
             "50'ye kadar launch görevi",
             "1 çalışma alanı",
             "Temel büyüme rutinleri",
-            "Launch hazırlık skoru",
+            "Yayın hazırlık skoru",
           ],
         },
         {

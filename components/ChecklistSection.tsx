@@ -182,7 +182,7 @@ export default function ChecklistSection({
         <p className="mt-1 text-[13px] text-[#666d80]">
           {isEn
             ? "Checklist items will appear once Tiramisup generates your launch plan."
-            : "Bu ürün için launch checklist maddeleri henüz üretilemedi. Tiramisup önerileri hazırlanabildiğinde burada gerçek maddeler görünür."}
+            : "Bu ürün için yayın kontrol listesi maddeleri henüz üretilemedi. Tiramisup önerileri hazırlanabildiğinde burada gerçek maddeler görünür."}
         </p>
       </div>
     );

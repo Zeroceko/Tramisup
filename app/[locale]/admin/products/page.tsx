@@ -149,7 +149,7 @@ export default async function AdminProductsPage({
                       </p>
                     </td>
                     <td className="px-4 py-4 text-[13px] leading-6 text-[#5e6678]">
-                      <div>{isEn ? "Growth check-in" : "Growth check-in"}: {yesNo(row.hasGrowthCheckin, locale)}</div>
+                      <div>{isEn ? "Growth check-in" : "Büyüme değerlendirmesi"}: {yesNo(row.hasGrowthCheckin, locale)}</div>
                       <div>{isEn ? "Metric setup" : "Metrik kurulumu"}: {yesNo(row.hasMetricSetup, locale)}</div>
                       <div>{isEn ? "Diagnosis ready" : "Tanıya hazır"}: {yesNo(row.diagnosisReady, locale)}</div>
                     </td>

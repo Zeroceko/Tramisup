@@ -104,7 +104,7 @@ export default function LaunchButton({
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              {isEn ? "Launch the product" : "Ürünü launch et"}
+              {isEn ? "Launch the product" : "Ürünü yayına al"}
             </>
           ) : (
             <>
@@ -112,7 +112,7 @@ export default function LaunchButton({
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              {isEn ? "Resolve blockers to launch" : "Blokajları kapat, launch et"}
+              {isEn ? "Resolve blockers to launch" : "Önce blokajları kapat"}
             </>
           )}
         </button>
@@ -120,7 +120,7 @@ export default function LaunchButton({
           <p className="text-[11px] text-[#94a3b8]">
             {isEn
               ? "Launch gate is locked while critical blockers remain"
-              : "Kritik blokajlar kapanana kadar launch gate kilitli"}
+              : "Kritik blokajlar kapanana kadar yayın kapısı kilitli"}
           </p>
         )}
       </div>
@@ -134,10 +134,10 @@ export default function LaunchButton({
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666d80]">
-                  {isEn ? "Final launch check" : "Son launch kontrolü"}
+                  {isEn ? "Final launch check" : "Son yayın kontrolü"}
                 </p>
                 <h3 className="mt-2 text-[26px] font-bold tracking-[-0.03em] text-[#0d0d12]">
-                  {isEn ? "One last check before launch" : "Launch öncesi son bir tur"}
+                  {isEn ? "One last check before launch" : "Yayın öncesi son bir tur"}
                 </h3>
                 {(nonCriticalRemaining > 0 || hasIgnoredRisks) && (
                   <p className="mt-1.5 text-[13px] leading-6 text-[#666d80]">
@@ -239,12 +239,12 @@ export default function LaunchButton({
                   <p className="text-[13px] font-semibold text-[#0d0d12]">
                     {isEn
                       ? "I acknowledge the ignored risks and choose to launch anyway"
-                      : "Yoksaydığım risklerin farkındayım, yine de launch etmeyi seçiyorum"}
+                      : "Yoksaydığım risklerin farkındayım, yine de yayına almayı seçiyorum"}
                   </p>
                   <p className="mt-0.5 text-[12px] leading-5 text-[#94a3b8]">
                     {isEn
                       ? "You can fix these after launch from the Launch Readiness page."
-                      : "Bu maddeleri launch sonrası Launch Readiness sayfasından tamamlayabilirsin."}
+                      : "Bu maddeleri yayından sonra Yayın Hazırlığı sayfasından tamamlayabilirsin."}
                   </p>
                 </div>
               </label>
@@ -266,43 +266,43 @@ export default function LaunchButton({
                 <p className="text-[13px] font-semibold text-[#0d0d12]">
                   {isEn
                     ? "Yes, I want to mark this product as launched"
-                    : "Evet, bu ürünü launch edildi olarak işaretlemek istiyorum"}
+                    : "Evet, bu ürünü yayına alınmış olarak işaretlemek istiyorum"}
                 </p>
                 <p className="mt-0.5 text-[12px] leading-5 text-[#666d80]">
                   {isEn
                     ? "Pre-launch phase closes. Your operating rhythm shifts to growth."
-                    : "Pre-launch aşaması kapanır. Çalışma ritmi growth tarafına geçer."}
+                    : "Yayın öncesi aşama kapanır. Çalışma ritmi Growth tarafına geçer."}
                 </p>
               </div>
             </label>
 
             {/* Actions */}
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[11px] leading-5 text-[#94a3b8] max-w-xs">
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <p className="max-w-md text-[11px] leading-5 text-[#94a3b8]">
                 {reviewDone && !confirmLive
-                  ? (isEn ? "↑ Confirm the final step above to enable launch." : "↑ Son adımı onayladıktan sonra launch yapabilirsin.")
+                  ? (isEn ? "↑ Confirm the final step above to enable launch." : "↑ Yayına almak için önce yukarıdaki son adımı onayla.")
                   : (isEn
                     ? "Non-critical open items stay visible on the Launch Readiness page after launch."
-                    : "Kritik olmayan açık maddeler launch sonrası Launch Readiness sayfasında görünmeye devam eder.")}
+                    : "Kritik olmayan açık maddeler yayından sonra Yayın Hazırlığı sayfasında görünmeye devam eder.")}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={loading}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#e8e8e8] px-4 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#e8e8e8] px-5 text-[13px] font-medium text-[#0d0d12] transition hover:bg-[#f6f6f6] disabled:opacity-50 sm:whitespace-nowrap"
                 >
-                  {isEn ? "Not yet" : "Biraz daha bakayım"}
+                  {isEn ? "Not yet" : "Biraz daha kontrol edeyim"}
                 </button>
                 <button
                   type="button"
                   onClick={handleLaunch}
                   disabled={!readyForLaunch || loading}
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-11 items-center justify-center rounded-full bg-[#0d0d12] px-6 text-[13px] font-semibold text-white transition hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-40 sm:whitespace-nowrap"
                 >
                   {loading
-                    ? (isEn ? "Launching..." : "Launch ediliyor...")
-                    : (isEn ? "Mark as launched →" : "Launch edildi, growth'a geç →")}
+                    ? (isEn ? "Launching..." : "Yayına alınıyor...")
+                    : (isEn ? "Mark as launched →" : "Yayına al ve Growth'a geç →")}
                 </button>
               </div>
             </div>

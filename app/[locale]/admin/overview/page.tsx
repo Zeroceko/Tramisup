@@ -10,6 +10,10 @@ import {
   type GrowthReadinessState,
 } from "@/lib/admin/insights";
 
+function formatPercent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
 export default async function AdminOverviewPage({
   params,
 }: {
@@ -62,14 +66,140 @@ export default async function AdminOverviewPage({
           tone="pink"
         />
         <AdminStatCard
-          label={isEn ? "AI suggestions" : "AI önerisi"}
-          value={data.usageTotals.aiSuggestions}
-          hint={isEn ? "Current month" : "Bu ay"}
+          label={isEn ? "Founder return" : "Geri dönen kurucu"}
+          value={formatPercent(data.founderReturn.returnedRate)}
+          hint={isEn ? `Proxy, last ${data.founderReturn.windowDays} days` : `Proxy, son ${data.founderReturn.windowDays} gün`}
           tone="teal"
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
+        <section className="rounded-[24px] border border-[#e8e4de] bg-white p-6">
+          <h3 className="text-[18px] font-semibold text-[#0d0d12]">
+            {isEn ? "Is AI helping?" : "AI gerçekten yardım ediyor mu?"}
+          </h3>
+          <p className="mt-1 text-[13px] text-[#5e6678]">
+            {isEn
+              ? "Proxy: do AI-created tasks turn into real action?"
+              : "Proxy: AI'dan gelen görevler gerçekten harekete dönüşüyor mu?"}
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <AdminStatCard label={isEn ? "AI tasks" : "AI görevi"} value={data.aiEffectiveness.totalAiTasks} tone="teal" />
+            <AdminStatCard label={isEn ? "Coach tasks" : "Coach görevi"} value={data.aiEffectiveness.coachTasks} tone="yellow" />
+            <AdminStatCard
+              label={isEn ? "Suggestion loads" : "Öneri yüklenmesi"}
+              value={data.aiEffectiveness.suggestionLoads}
+              hint={isEn ? "Agent panels with visible suggestions" : "Öneri görünen agent panelleri"}
+              tone="teal"
+            />
+            <AdminStatCard
+              label={isEn ? "Suggestion -> task" : "Öneriden göreve"}
+              value={formatPercent(data.aiEffectiveness.suggestionActivationRate)}
+              hint={`${data.aiEffectiveness.suggestionActivations}/${data.aiEffectiveness.suggestionLoads}`}
+              tone="green"
+            />
+            <AdminStatCard
+              label={isEn ? "Acted on" : "Aksiyona dönen"}
+              value={formatPercent(data.aiEffectiveness.actedOnRate)}
+              hint={`${data.aiEffectiveness.actedOnTasks}/${data.aiEffectiveness.totalAiTasks}`}
+              tone="green"
+            />
+            <AdminStatCard
+              label={isEn ? "Completed" : "Tamamlanan"}
+              value={formatPercent(data.aiEffectiveness.completedRate)}
+              hint={
+                data.aiEffectiveness.suggestionDedupedActivations > 0
+                  ? `${data.aiEffectiveness.completedTasks}/${data.aiEffectiveness.totalAiTasks} · ${data.aiEffectiveness.suggestionDedupedActivations} deduped`
+                  : `${data.aiEffectiveness.completedTasks}/${data.aiEffectiveness.totalAiTasks}`
+              }
+              tone="pink"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-[#e8e4de] bg-white p-6">
+          <h3 className="text-[18px] font-semibold text-[#0d0d12]">
+            {isEn ? "Where does AI convert?" : "AI en çok nerede dönüyor?"}
+          </h3>
+          <p className="mt-1 text-[13px] text-[#5e6678]">
+            {isEn
+              ? "Suggestion-to-task conversion by product surface."
+              : "Öneriden göreve dönüşümün ürün yüzeyine göre dağılımı."}
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <AdminStatCard
+              label={isEn ? "Overview" : "Genel Bakış"}
+              value={formatPercent(data.aiEffectiveness.bySurface.overview.activationRate)}
+              hint={`${data.aiEffectiveness.bySurface.overview.activations}/${data.aiEffectiveness.bySurface.overview.loads}`}
+              tone="teal"
+            />
+            <AdminStatCard
+              label={isEn ? "Launch" : "Yayın Hazırlığı"}
+              value={formatPercent(data.aiEffectiveness.bySurface.launch.activationRate)}
+              hint={`${data.aiEffectiveness.bySurface.launch.activations}/${data.aiEffectiveness.bySurface.launch.loads}`}
+              tone="yellow"
+            />
+            <AdminStatCard
+              label={isEn ? "Growth" : "Büyüme"}
+              value={formatPercent(data.aiEffectiveness.bySurface.growth.activationRate)}
+              hint={`${data.aiEffectiveness.bySurface.growth.activations}/${data.aiEffectiveness.bySurface.growth.loads}`}
+              tone="green"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-[#e8e4de] bg-white p-6">
+          <h3 className="text-[18px] font-semibold text-[#0d0d12]">
+            {isEn ? "Do founders return?" : "Kurucular geri dönüyor mu?"}
+          </h3>
+          <p className="mt-1 text-[13px] text-[#5e6678]">
+            {isEn
+              ? `Current proxy on founders with a new product in the last ${data.founderReturn.windowDays} days.`
+              : `Son ${data.founderReturn.windowDays} günde yeni ürün oluşturan kurucular için mevcut proxy.`}
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <AdminStatCard label={isEn ? "Cohort" : "Kohort"} value={data.founderReturn.cohortUsers} tone="teal" />
+            <AdminStatCard label={isEn ? "Returned" : "Geri dönen"} value={data.founderReturn.returnedUsers} tone="green" />
+            <AdminStatCard
+              label={isEn ? "Return rate" : "Dönüş oranı"}
+              value={formatPercent(data.founderReturn.returnedRate)}
+              hint={
+                data.founderReturn.mode === "event"
+                  ? isEn ? "Measured from onboarding + app-session events" : "Onboarding + app-session event'lerinden ölçülüyor"
+                  : isEn ? "Proxy until app-session event cohort fills in" : "App-session event kohortu dolana kadar proxy"
+              }
+              tone="yellow"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-[#e8e4de] bg-white p-6 xl:col-span-2">
+          <h3 className="text-[18px] font-semibold text-[#0d0d12]">
+            {isEn ? "Onboarding to value" : "Onboarding'den değere gidiş"}
+          </h3>
+          <p className="mt-1 text-[13px] text-[#5e6678]">
+            {isEn
+              ? `Current-state funnel for products created in the last ${data.onboardingToValue.windowDays} days.`
+              : `Son ${data.onboardingToValue.windowDays} günde oluşturulan ürünler için mevcut durum funnel'ı.`}
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-5">
+            <AdminStatCard label={isEn ? "Created" : "Oluşturulan"} value={data.onboardingToValue.created} tone="teal" />
+            <AdminStatCard label={isEn ? "Check-in" : "Check-in"} value={data.onboardingToValue.growthCheckin} tone="yellow" />
+            <AdminStatCard label={isEn ? "Metric setup" : "Metric setup"} value={data.onboardingToValue.metricSetup} tone="green" />
+            <AdminStatCard label={isEn ? "First entry" : "İlk veri girişi"} value={data.onboardingToValue.firstMetricEntry} tone="pink" />
+            <AdminStatCard
+              label={isEn ? "Diagnosis ready" : "Tanıya hazır"}
+              value={data.onboardingToValue.diagnosisReady}
+              hint={
+                data.onboardingToValue.mode === "event"
+                  ? isEn ? "Pure event funnel" : "Tam event funnel"
+                  : isEn ? "Hybrid: event + current-state fallback" : "Hibrit: event + mevcut durum fallback"
+              }
+              tone="teal"
+            />
+          </div>
+        </section>
+
         <section className="rounded-[24px] border border-[#e8e4de] bg-white p-6">
           <div className="flex items-center justify-between gap-3">
             <div>

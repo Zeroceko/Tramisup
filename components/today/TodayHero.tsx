@@ -5,7 +5,7 @@ const PHASE_CONFIG: Record<
   { label: string; labelEn: string; bg: string; dot: string }
 > = {
   "pre-launch": {
-    label: "Launch hazırlığı",
+    label: "Yayın hazırlığı",
     labelEn: "Pre-launch",
     bg: "bg-[#fff8e1]",
     dot: "bg-[#f6c342]",

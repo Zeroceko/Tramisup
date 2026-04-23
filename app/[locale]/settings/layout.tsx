@@ -25,6 +25,7 @@ export default async function SettingsLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="settings"
     >
       <RouteScopedBoundary key="settings" scope="settings">
         <PlainPageShell>{children}</PlainPageShell>

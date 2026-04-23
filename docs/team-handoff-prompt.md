@@ -16,11 +16,12 @@ Bunu canlı production sistemi olarak ele al — prototip sandbox değil. Gerçe
 ÖNCE: Herhangi bir kod değiştirmeden önce şu sırayla bu belgeleri oku.
 
 1. HANDOFF.md                                   — production durumu ve açık bulgular
-2. CLAUDE.md                                    — kod kuralları ve neyin bozulmaması gerektiği
-3. docs/handoff.md                              — mühendislik delta notları
-4. docs/ai-agent-system-playbook.md             — AI pipeline mimarisi
-5. docs/product-intake-question-playbook.md     — onboarding soru seti ve normalizasyon
-6. docs/growth-transition-checkin-spec.md       — growth check-in spec
+2. Notion canonical release log                  — https://www.notion.so/34ba251bad488125b83cd2dbc5d0a1c3
+3. CLAUDE.md                                     — kod kuralları ve neyin bozulmaması gerektiği
+4. docs/handoff.md                               — mühendislik delta notları
+5. docs/ai-agent-system-playbook.md              — AI pipeline mimarisi
+6. docs/product-intake-question-playbook.md      — onboarding soru seti ve normalizasyon
+7. docs/growth-transition-checkin-spec.md        — growth check-in spec
 
 ---
 
@@ -134,7 +135,7 @@ BOZULMAMASI GEREKENLER
 BİLİNEN TEKNIK BORÇ
 
 - Billing: hâlâ fake/demo activation
-- Landing → signup yolu: direkt link yok
+- Root landing bilinçli olarak waitlist-first çalışır; bunu signup discoverability bug'ı gibi ele alma. Gerçek landing yüzeyi `/{locale}/yayinda` altındadır.
 - i18n gaps: bazı authenticated ekranlarda hardcoded stringler var
 - Roadmap integrations: RevenueCat, App Store Connect, Google Play, reklam konnektörleri UI-first placeholder
 - Product.launchGoals: legacy field — üzerine yeni mantık kurma

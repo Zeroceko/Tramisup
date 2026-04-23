@@ -26,6 +26,7 @@ export default async function DashboardLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="dashboard"
     >
       <RouteScopedBoundary key="dashboard" scope="dashboard">
         {effectiveActiveProductId ? (

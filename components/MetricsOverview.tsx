@@ -2,6 +2,7 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
+import { useLocale } from "next-intl";
 
 interface Metric {
   id: string;
@@ -15,6 +16,8 @@ interface Metric {
 }
 
 export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
+  const locale = useLocale() === "tr" ? "tr" : "en";
+  const isEn = locale === "en";
   const chartData = metrics.map((m) => ({
     date: format(new Date(m.date), "d MMM"),
     DAU: m.dau || 0,
@@ -25,10 +28,16 @@ export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
   if (metrics.length === 0) {
     return (
       <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
-        <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-4">Metrik Trendi</h2>
+        <h2 className="text-[16px] font-semibold text-[#0d0d12] mb-4">
+          {isEn ? "Metric trend" : "Metrik Trendi"}
+        </h2>
         <div className="text-center py-16">
-          <p className="text-[14px] text-[#666d80]">Henüz metrik verisi yok</p>
-          <p className="mt-1 text-[13px] text-[#9ca3af]">İlk metriğini girerek başla →</p>
+          <p className="text-[14px] text-[#666d80]">
+            {isEn ? "No metric data yet" : "Henüz metrik verisi yok"}
+          </p>
+          <p className="mt-1 text-[13px] text-[#9ca3af]">
+            {isEn ? "Enter your first metric to get started ->" : "İlk metriğini girerek başla ->"}
+          </p>
         </div>
       </div>
     );
@@ -45,8 +54,12 @@ export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Kullanıcılar</p>
-        <h3 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Günlük & Aylık Aktif Kullanıcı</h3>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">
+          {isEn ? "Users" : "Kullanıcılar"}
+        </p>
+        <h3 className="text-[16px] font-semibold text-[#0d0d12] mb-5">
+          {isEn ? "Daily & monthly active users" : "Günlük & Aylık Aktif Kullanıcı"}
+        </h3>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -60,8 +73,12 @@ export default function MetricsOverview({ metrics }: { metrics: Metric[] }) {
       </div>
 
       <div className="bg-white rounded-[15px] border border-[#e8e8e8] p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">Gelir</p>
-        <h3 className="text-[16px] font-semibold text-[#0d0d12] mb-5">Monthly Recurring Revenue</h3>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-1">
+          {isEn ? "Revenue" : "Gelir"}
+        </p>
+        <h3 className="text-[16px] font-semibold text-[#0d0d12] mb-5">
+          {isEn ? "Monthly recurring revenue" : "Aylık yinelenen gelir"}
+        </h3>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />

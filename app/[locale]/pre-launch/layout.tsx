@@ -26,6 +26,7 @@ export default async function PreLaunchLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="pre-launch"
     >
       <RouteScopedBoundary key="pre-launch" scope="pre-launch">
         {effectiveActiveProductId ? (

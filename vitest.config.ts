@@ -9,10 +9,10 @@ export default defineConfig({
       GEMINI_API_KEY: 'dummy-gemini-key',
     },
     include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
-    exclude: ['node_modules', 'dist', 'tests/e2e/**', 'Landing Page/**', 'external/**'],
+    exclude: ['node_modules', 'dist', 'tests/e2e/**', 'Landing Page/**', 'external/**', '.claude/**'],
     coverage: {
       provider: 'v8',
-      exclude: ['node_modules/', 'tests/e2e/'],
+      exclude: ['node_modules/', 'tests/e2e/', '.claude/'],
     },
   },
   resolve: {

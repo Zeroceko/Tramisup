@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current active main line: through `2dc2f428`
-- Last docs refresh: `16 April 2026`
+- Current active main line: through `2dc2f428`, plus 22 April direct production deploys from the local worktree
+- Last docs refresh: `22 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -18,6 +18,7 @@
 ### Production behavior
 
 - `main` is live on Vercel and auto-deploys on push.
+- Production also includes direct Vercel deploys from the local worktree on 22 April. Latest confirmed deploy: `https://tramisup-obgi3s8wo-zerocekos-projects.vercel.app`, aliased to `https://tiramisup.app`.
 - Signup no longer uses an early access code.
 - Signup and waitlist both require email verification.
 - Clicking the verification link now auto-logs the user into the app; re-entering credentials is no longer required after verification.
@@ -29,7 +30,7 @@
 - Nav is stage-aware: pre-launch shows Launch, launched/growing shows Metrics + Growth.
 - Launched/growing products without a growth check-in are gated at the dashboard and redirected to `/growth`.
 - Growth diagnosis includes actual metric values and is locale-aware.
-- Agent panel cards all create tasks; no "ask" cards remain.
+- Agent surfaces are still inconsistent in live production checks: Launch remains useful, but Overview and Growth do not yet reliably expose reachable chat/task flows.
 - Board is directly reachable from the authenticated header.
 - Board rows and agent suggestion rows use a shared preview-first interaction model.
 - Overview / Launch / Growth keep the agent column fixed while the right content pane scrolls independently.
@@ -48,9 +49,13 @@
 - Pre-launch checklist locale handling and checklist-item task creation edge cases were fixed.
 - Agent suggestion preview is hardened against malformed payloads.
 - Agent panel refetch loop was removed to reduce browser churn when the panel is open.
+- Main authenticated surfaces received EN/TR cleanup on 22 April so mixed-language leakage should no longer be treated as expected behavior.
+- Google Ads tag `AW-18110097199` is live globally from `app/[locale]/layout.tsx`.
+- `/{locale}/products` is no longer a storytelling/portfolio surface. If products exist, it should render a compact header, a header-level "new product" action, and only real product cards. The fake "new workspace" card was removed. Empty state should appear only when the account has zero products.
 
 ### Recent shipped commits
 
+- 22 April local-worktree deploys — clean EN/TR leaks on app surfaces, install Google Ads tag, simplify products page, remove fake new-workspace card, tighten products header spacing
 - `2dc2f428` — strengthen GROWING-stage onboarding kickoff with inline AARRR setup and Growth-first landing
 - `9f00908d` — fix checklist locale handling, checklist task creation edge cases, and products spacing
 - `e4f8c87a` — stop agent panel refetch loop
@@ -118,10 +123,12 @@ Local dirt seen at handoff time is outside app code:
 - Targeted DB indexes added for common authenticated queries
 - Lightweight server perf logging added for slow authenticated routes
 
-### 5. Products page and selector flow improved
+### 5. Products page behavior was corrected
 
-- `/{locale}/products` is now a stronger portfolio-style workspace
+- `/{locale}/products` should now behave like a plain product index, not a portfolio-style workspace
 - Product selector includes `Tümünü gör / View all products` and routes there directly
+- If products exist, show only real product cards plus the compact header action
+- If no products exist, show a single empty-state card
 
 ### 6. Email verification now leads straight into the app
 
@@ -150,21 +157,23 @@ Local dirt seen at handoff time is outside app code:
 
 ## Current Open Findings
 
-### 1. Fresh product creation is still the biggest product risk
+### 1. Fresh founder continuity is still the biggest product risk
 
 - A portfolio-based production persona run succeeded across five founder personas on existing products
-- Earlier fresh-product attempts saw onboarding stall around the AARRR step and a `generate-plan` timeout at roughly 50 seconds
-- Because the `GROWING` onboarding flow changed again on 16 April, the full fresh-account path must be re-validated from zero
-- A late-16-April live run added a new hard blocker before that path can be trusted:
-  - browser signup stayed on `Hesap oluşturuluyor…`
-  - the signup page showed no visible reCAPTCHA iframe/widget in the run
-  - a separate direct probe to live `POST /api/auth/signup` returned `400` with `Lütfen reCAPTCHA doğrulamasını tamamla.`
-- Until a human/manual run proves otherwise, treat **signup reCAPTCHA behavior** as the first production blocker in founder continuity
+- A 22-April live new-user run still failed at signup submit: the page did not redirect to `/verify-email`, `/dashboard`, or `/onboarding` within the timeout after password entry
+- A 21-April handoff stated the reCAPTCHA blocker was resolved, but current production evidence is mixed enough that takeover should treat fresh signup as **unproven**, not fixed
+- Existing-account product creation now completes through the UI, but the user still lands in a setup loop instead of an obvious first value moment
 
 ### 2. Metrics setup clarity still needs verification on fresh launched products
 
 - The metrics → growth bridge is stronger than before, but a fresh launched product still needs to prove setup state is always legible
-- Required path: metric setup should feel distinct from first daily entry
+- On 22 April, a real existing account created a launched product and saw:
+  - product created summary
+  - CTA into metric setup
+  - Growth asking for a short check-in before setup can help
+  - Metrics still showing `0` selected metrics and `0` entries
+  - Tasks still empty
+- Required path: metric setup should feel distinct from first daily entry, and the user should hit a real payoff before being asked for more setup
 
 ### 3. `/dashboard` and `/tasks` remain the slowest authenticated pages
 
@@ -179,7 +188,15 @@ Local dirt seen at handoff time is outside app code:
 - That run only showed several route-transition `net::ERR_ABORTED` requests on `_rsc` / navigation fetches
 - So this issue remains open, but the evidence is now mixed and should be revalidated carefully before code changes
 
-### 5. New Growth kickoff still needs a clean end-to-end proof
+### 5. AI helpfulness and task creation are still not proven
+
+- A focused live agent run on 21 April produced this split:
+  - Overview: no visible suggestion cards and no reachable chat input
+  - Growth: cards visible, but clicking did not produce a confirmed task count increase
+  - Launch: context-aware answer still worked
+- This means the product still cannot claim that AI reliably helps first-session users or that suggestion cards reliably convert into execution
+
+### 6. New Growth kickoff still needs a clean end-to-end proof
 
 - The new kickoff is live, but it still needs explicit validation that:
   - integrations return to Growth kickoff correctly
@@ -202,13 +219,16 @@ Local dirt seen at handoff time is outside app code:
 ## Current Operational Risks
 
 - **Billing is still fake.** Pricing UX is good enough for testing, but real Stripe checkout is not wired.
-- **i18n gaps remain.** Some authenticated screens still carry hardcoded strings.
+- **i18n regressions remain possible.** Major authenticated-surface EN/TR leaks were cleaned up on 22 April, but any new screen work should be checked in both locales before shipping.
 - **Roadmap integrations are still UI-first in places.**
 - **`Product.launchGoals` is legacy.** Do not build new logic on top of it.
 - **Founder continuity still needs validation.** The onboarding → metrics → growth loop has improved, but still needs clean fresh-user proof.
+- **Signup status is contradictory across docs and runs.** Treat fresh-signup reliability as an open incident until a clean live run proves otherwise.
+- **AI/task bridge still needs proof.** Useful launch answers exist, but the overview/growth execution bridge is not yet dependable.
 - **Email delivery latency still matters.** `RESEND_FROM_EMAIL` must be set to `Tiramisup <hello@tiramisup.app>`.
 - **Email template redesign is live.** Preserve the structure in the current mail helpers unless intentionally revisiting email design.
 - **Public repo secret history still matters.** Previously exposed credentials must still be treated as compromised outside the repo.
+- **Notion release logging is part of release signoff now.** Every production version must update the canonical handoff page first: `https://www.notion.so/34ba251bad488125b83cd2dbc5d0a1c3`
 
 ---
 

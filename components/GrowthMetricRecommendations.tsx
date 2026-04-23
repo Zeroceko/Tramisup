@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import type { GrowthMetricPlan } from "@/lib/growth-metric-recommendations";
 
 const STAGE_COLORS: Record<string, string> = {
@@ -10,12 +11,15 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function GrowthMetricRecommendations({ plan }: { plan: GrowthMetricPlan }) {
+  const locale = useLocale() === "tr" ? "tr" : "en";
+  const isEn = locale === "en";
+
   return (
     <section className="rounded-[15px] border border-[#e8e8e8] bg-white p-6">
       <div className="mb-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#666d80]">Tiramisup</p>
         <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.01em] text-[#0d0d12]">
-          Growth takibi için önerilen funnel metrikleri
+          {isEn ? "Recommended funnel metrics for growth tracking" : "Growth takibi için önerilen funnel metrikleri"}
         </h2>
         <p className="mt-2 max-w-3xl text-[13px] leading-6 text-[#666d80]">{plan.summary}</p>
       </div>
@@ -35,7 +39,9 @@ export default function GrowthMetricRecommendations({ plan }: { plan: GrowthMetr
                 <div key={metric.key} className="rounded-[12px] bg-[#fafafa] p-4">
                   <p className="text-[13px] font-semibold text-[#0d0d12]">{metric.name}</p>
                   <p className="mt-1 text-[12px] leading-5 text-[#666d80]">{metric.description}</p>
-                  <p className="mt-3 text-[11px] font-medium text-[#8a8fa0]">Ne zaman mantıklı?</p>
+                  <p className="mt-3 text-[11px] font-medium text-[#8a8fa0]">
+                    {isEn ? "When does this make sense?" : "Ne zaman mantıklı?"}
+                  </p>
                   <p className="mt-1 text-[12px] leading-5 text-[#666d80]">{metric.whenToUse}</p>
                 </div>
               ))}

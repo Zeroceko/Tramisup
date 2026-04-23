@@ -111,7 +111,7 @@ const EARLY_ACCESS_COPY = {
       connector: "",
       titleBottom: "BÜYÜMEYE",
       subtitle:
-        "Launch checklist, canlı metrikler, büyüme rutinleri ve planlama; ürün ekipleri için tek çalışma alanında.",
+        "Yayın kontrol listesi, canlı metrikler, büyüme rutinleri ve planlama; ürün ekipleri için tek çalışma alanında.",
       emailPlaceholder: "sen@ornek.com",
       cta: "Listeye katıl →",
     },

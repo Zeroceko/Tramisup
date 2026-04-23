@@ -25,7 +25,7 @@ export default function LaunchReviewSummary({
         {/* Left: Score */}
         <div className="flex-1">
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#666d80] mb-2">
-            Launch hazırlık skoru
+            Yayın hazırlık skoru
           </p>
           <div className="flex items-baseline gap-2">
             <span className="text-[56px] font-bold text-[#95dbda]">

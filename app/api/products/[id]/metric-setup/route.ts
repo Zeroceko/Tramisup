@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { FunnelMetricSelection } from "@/lib/metric-setup";
 import { saveMetricSelections } from "@/lib/metric-setup";
+import { recordProductEvent } from "@/lib/product-events";
 
 function isValidSelections(input: unknown): input is FunnelMetricSelection[] {
   if (!Array.isArray(input)) return false;
@@ -44,6 +45,15 @@ export async function PATCH(
     }
 
     await saveMetricSelections(id, selections);
+
+    await recordProductEvent({
+      userId: session.user.id,
+      productId: id,
+      eventType: "METRIC_SETUP_COMPLETED",
+      metadata: {
+        stageCount: selections.length,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

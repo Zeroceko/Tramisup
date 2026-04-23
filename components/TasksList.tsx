@@ -920,7 +920,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
           <p className="mt-2 text-[13px] text-[#666d80]">
             {isEn
               ? "Add tasks to build your execution queue. Tasks linked from your launch checklist will appear here automatically."
-              : "Görev ekleyerek çalışma yüzeyini oluştur. Launch checklist'inden bağlanan görevler burada otomatik görünür."}
+              : "Görev ekleyerek çalışma yüzeyini oluştur. Yayın kontrol listesinden bağlanan görevler burada otomatik görünür."}
           </p>
           <button
             type="button"
@@ -1029,7 +1029,7 @@ export default function TasksList({ tasks, productId, locale, taskLimit }: Tasks
             <div className="flex min-h-full flex-col">
               <SheetHeader className="border-b border-[#f0f0f0] px-6 py-5">
                 <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#8a8fa0]">
-                  {isEn ? "Board / Task preview" : "Board / Görev önizleme"}
+                  {isEn ? "Board / Task preview" : "Pano / Görev önizleme"}
                 </p>
                 <SheetTitle className="pr-10 text-[24px] font-bold leading-tight tracking-[-0.02em] text-[#0d0d12]">
                   {normalizeTurkishText(detailTask.title)}

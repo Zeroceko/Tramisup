@@ -20,6 +20,7 @@ import LaunchMomentBanner from "@/components/today/LaunchMomentBanner";
 import TaskProgressChart, { type TaskChartDay } from "@/components/today/TaskProgressChart";
 import MetricSparklinePanel from "@/components/today/MetricSparklinePanel";
 import ReadinessPanel from "@/components/today/ReadinessPanel";
+import AIActionHintCard from "@/components/AIActionHintCard";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -103,7 +104,7 @@ function buildStatusLine(
     if (blockerCount > 0 && daysUntilLaunch != null && daysUntilLaunch > 0) {
       return isEn
         ? `${daysUntilLaunch} days to launch. ${blockerCount} blocker${blockerCount > 1 ? "s" : ""} remaining.`
-        : `Launch'a ${daysUntilLaunch} gün kaldı. ${blockerCount} kritik blokaj kaldı.`;
+        : `Yayına ${daysUntilLaunch} gün kaldı. ${blockerCount} kritik blokaj kaldı.`;
     }
     if (blockerCount > 0) {
       return isEn
@@ -111,29 +112,29 @@ function buildStatusLine(
         : `%${readinessScore} hazır. ${blockerCount} kritik blokaj dikkatini bekliyor.`;
     }
     if (readinessScore >= 100) {
-      return isEn ? "All checklist items complete. Ready to launch." : "Tüm hazırlık maddeleri tamam. Launch'a hazırsın.";
+      return isEn ? "All checklist items complete. Ready to launch." : "Tüm hazırlık maddeleri tamam. Yayına hazırsın.";
     }
     // Sub-phase nuance from launchStatus
     if (launchStageKey === "BUILDING") {
       return isEn
         ? `Building phase — ${readinessScore}% of launch checklist done.`
-        : `Geliştirme aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;
+        : `Geliştirme aşaması — yayın kontrol listesinin %${readinessScore}'i tamamlandı.`;
     }
     if (launchStageKey === "TESTING") {
       return isEn
         ? `Testing phase — ${readinessScore}% of launch checklist done.`
-        : `Test aşaması — launch checklist'in %${readinessScore}'i tamamlandı.`;
+        : `Test aşaması — yayın kontrol listesinin %${readinessScore}'i tamamlandı.`;
     }
     return isEn
       ? `${readinessScore}% of launch preparation complete.`
-      : `Launch hazırlığının %${readinessScore}'i tamamlandı.`;
+      : `Yayın hazırlığının %${readinessScore}'i tamamlandı.`;
   }
 
   if (phase === "launched") {
     if (selectedMetricCount === 0) {
       return isEn
-        ? "Launched! Set up your metrics to start tracking growth."
-        : "Yayında! Büyüme takibini başlatmak için metrik setup'ını tamamla.";
+        ? "Growth check-in is done. Set up your metrics to start tracking real usage."
+        : "Büyüme değerlendirmesi tamam. Gerçek kullanımı takip etmek için şimdi metrik kurulumunu tamamla.";
     }
     if (!enteredToday) {
       return isEn
@@ -181,24 +182,24 @@ function buildPrimaryAction(
   if (phase === "pre-launch") {
     if (opts.readinessScore >= 100) {
       return {
-        title: isEn ? "Ready to launch" : "Launch'a hazırsın",
+        title: isEn ? "Ready to launch" : "Yayına hazırsın",
         description: isEn
           ? "All critical items are done. Review your final checklist and press launch."
-          : "Tüm kritik maddeler tamamlandı. Son kontrolleri yap ve launch butonuna bas.",
+          : "Tüm kritik maddeler tamamlandı. Son kontrolleri yap ve yayına alma butonuna bas.",
         why: isEn ? "All blockers cleared" : "Tüm blokajlar kapandı",
-        cta: isEn ? "Go to launch review" : "Launch kontrolüne git →",
+        cta: isEn ? "Go to launch review" : "Yayın kontrolüne git →",
         href: `/${locale}/pre-launch`,
         accent: "teal" as const,
         progress: 100,
       };
     }
     return {
-      title: isEn ? "Complete your launch preparation" : "Launch hazırlığını tamamla",
+      title: isEn ? "Complete your launch preparation" : "Yayın hazırlığını tamamla",
       description: isEn
         ? `${opts.launchCompleted}/${opts.launchTotal} items done. ${opts.blockerCount > 0 ? `${opts.blockerCount} critical blocker${opts.blockerCount > 1 ? "s" : ""} need resolution.` : "Keep going."}`
         : `${opts.launchCompleted}/${opts.launchTotal} madde tamamlandı. ${opts.blockerCount > 0 ? `${opts.blockerCount} kritik blokaj çözülmeli.` : "Devam et."}`,
-      why: isEn ? "Next step toward launch" : "Launch'a giden bir sonraki adım",
-      cta: isEn ? "Go to launch checklist" : "Launch checklist'e git →",
+      why: isEn ? "Next step toward launch" : "Yayına giden bir sonraki adım",
+      cta: isEn ? "Go to launch checklist" : "Yayın kontrol listesine git →",
       href: `/${locale}/pre-launch`,
       accent: "amber" as const,
       progress: opts.readinessScore,
@@ -207,13 +208,13 @@ function buildPrimaryAction(
 
   if (opts.selectedMetricCount === 0) {
     return {
-      title: isEn ? "Open Growth and choose your metrics" : "Growth'a geç ve metriklerini seç",
+      title: isEn ? "Open Metrics and choose your metrics" : "Metrikler'e geç ve metriklerini seç",
       description: isEn
-        ? "Growth should point you to Metrics first. Select one key metric per AARRR stage so the system knows what to read."
-        : "Önce Growth tarafına geç, sonra Metrics ekranında her AARRR aşaması için 1 ana metrik seç. Sistem neyi okuyacağını böyle anlar.",
-      why: isEn ? "First step after launch" : "Launch sonrası ilk adım",
-      cta: isEn ? "Open Growth" : "Growth'a git →",
-      href: `/${locale}/growth`,
+        ? "Growth check-in is complete. Now select one key metric per AARRR stage so the system knows what to read."
+        : "Büyüme değerlendirmesi tamam. Şimdi Metrikler ekranında her AARRR aşaması için 1 ana metrik seç; sistem neyi okuyacağını böyle anlar.",
+      why: isEn ? "First step after launch" : "Yayın sonrası ilk adım",
+      cta: isEn ? "Open Metrics" : "Metrikler'e git →",
+      href: `/${locale}/metrics`,
       accent: "teal" as const,
     };
   }
@@ -246,12 +247,12 @@ function buildPrimaryAction(
 
   if (opts.growthTotal > 0 && opts.growthCompleted < opts.growthTotal) {
     return {
-      title: isEn ? "Advance your growth checklist" : "Growth checklist'ini ilerlet",
+      title: isEn ? "Advance your growth checklist" : "Büyüme kontrol listesini ilerlet",
       description: isEn
         ? `${opts.growthCompleted}/${opts.growthTotal} growth items done. Keep pushing the metrics.`
         : `${opts.growthCompleted}/${opts.growthTotal} growth maddesi tamamlandı. Metrikleri hareket ettirecek işlere devam et.`,
       why: isEn ? "Structured growth execution" : "Yapılandırılmış büyüme uygulaması",
-      cta: isEn ? "Go to growth checklist" : "Growth checklist'e git →",
+      cta: isEn ? "Go to growth checklist" : "Büyüme kontrol listesine git →",
       href: `/${locale}/growth#growth-checklist`,
       accent: "teal" as const,
       progress: opts.growthTotal > 0 ? Math.round((opts.growthCompleted / opts.growthTotal) * 100) : undefined,
@@ -280,12 +281,13 @@ export default async function DashboardPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ justLaunched?: string }>;
+  searchParams?: Promise<{ justLaunched?: string; metrics?: string }>;
 }) {
   const perf = startServerTiming("dashboard-page");
   const { locale } = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const justLaunched = resolvedSearch.justLaunched === "1";
+  const metricsActivated = resolvedSearch.metrics === "activated";
   const [session, activeId] = await Promise.all([
     getRequestSession(),
     getRequestActiveProductId(),
@@ -489,6 +491,8 @@ export default async function DashboardPage({
   }
   const chartTotalCreated = taskChartData.reduce((s, d) => s + d.created, 0);
   const chartTotalCompleted = taskChartData.reduce((s, d) => s + d.completed, 0);
+  const activeTaskChartWeeks = taskChartData.filter((d) => d.created > 0 || d.completed > 0).length;
+  const shouldShowTaskProgressChart = activeTaskChartWeeks >= 2;
 
   type SparkEntry = { date: string; value: number };
   let metricSparkData: SparkEntry[] = [];
@@ -588,7 +592,7 @@ export default async function DashboardPage({
     ? (isEn ? "Growing" : "Büyüyor")
     : isEn
       ? (phase === "launched" ? "Launched" : "Pre-launch")
-      : (phase === "launched" ? "Yayında" : "Launch hazırlığı");
+      : (phase === "launched" ? "Yayında" : "Yayın hazırlığı");
   const phaseDot = product.status === ProductStatus.GROWING
     ? "bg-[#10b981]"
     : phase === "launched"
@@ -625,6 +629,19 @@ export default async function DashboardPage({
         <LaunchMomentBanner locale={uiLocale} productName={product.name} />
       )}
 
+      {metricsActivated && (
+        <div className="rounded-[18px] border border-[#d7efdf] bg-[#f5fcf7] px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#166534]">
+            {isEn ? "Growth signal active" : "Growth sinyali aktif"}
+          </p>
+          <p className="mt-2 text-[14px] leading-6 text-[#0d0d12]">
+            {isEn
+              ? "You now have enough entries for dashboard trend visibility. Use Growth to spot the weak link, then come back here to keep the daily rhythm."
+              : "Dashboard trend görünürlüğü için artık yeterli giriş var. Zayıf halkayı görmek için Growth'a geç, sonra günlük ritmi korumak için buraya dön."}
+          </p>
+        </div>
+      )}
+
       {/* 3. Stat cards — prominent numbers first */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
@@ -648,9 +665,9 @@ export default async function DashboardPage({
       </div>
 
       {/* 4. Chart row — only show if meaningful data exists */}
-      {(chartTotalCreated + chartTotalCompleted >= 3 || metricSparkData.length >= 2) && (
-        <div className={`grid gap-4 ${chartTotalCreated + chartTotalCompleted >= 3 && metricSparkData.length >= 2 ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
-          {chartTotalCreated + chartTotalCompleted >= 3 && (
+      {(shouldShowTaskProgressChart || metricSparkData.length >= 2) && (
+        <div className={`grid gap-4 ${shouldShowTaskProgressChart && metricSparkData.length >= 2 ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
+          {shouldShowTaskProgressChart && (
             <TaskProgressChart
               data={taskChartData}
               locale={uiLocale}
@@ -707,6 +724,32 @@ export default async function DashboardPage({
               enteredToday={enteredToday}
               locale={uiLocale}
             />
+            <AIActionHintCard
+              locale={uiLocale}
+              title={
+                isEn
+                  ? "Use AI here to turn signal into the next task"
+                  : "Sinyali bir sonraki göreve çevirmek için AI'ı burada kullan"
+              }
+              description={
+                isEn
+                  ? "Dashboard AI is most useful after metrics exist. It should help you decide what to do next, not explain setup again."
+                  : "Dashboard AI en çok metrikler oluştuktan sonra işe yarar. Setup'ı tekrar anlatmaktan çok sıradaki işi netleştirmeli."
+              }
+              bullets={
+                isEn
+                  ? [
+                      "Ask what should move this week based on the latest metric state.",
+                      "Turn the weak signal into a concrete task on the board.",
+                      "Use Growth when you need diagnosis; use Dashboard when you need the next action.",
+                    ]
+                  : [
+                      "Son metrik durumuna göre bu hafta neyin hareket etmesi gerektiğini sor.",
+                      "Zayıf sinyali panoda somut göreve çevirt.",
+                      "Teşhis için Growth'u, sıradaki aksiyon için Dashboard'u kullan.",
+                    ]
+              }
+            />
           </div>
         )}
       </div>
@@ -754,7 +797,7 @@ function buildIndicators(
       label: isEn ? "Readiness" : "Hazırlık",
       value: `%${opts.readinessScore}`,
       status: opts.readinessScore >= 100 ? "healthy" : opts.readinessScore >= 60 ? "neutral" : "warning",
-      hint: isEn ? "Launch checklist" : "Launch checklist",
+      hint: isEn ? "Launch checklist" : "Yayın kontrol listesi",
       href: `/${locale}/pre-launch`,
     });
 
@@ -784,7 +827,7 @@ function buildIndicators(
       label: isEn ? "Growth" : "Büyüme",
       value: `%${opts.growthScore}`,
       status: opts.growthScore >= 80 ? "healthy" : opts.growthScore >= 40 ? "neutral" : "warning",
-      hint: isEn ? "Growth checklist" : "Growth checklist",
+      hint: isEn ? "Growth checklist" : "Büyüme kontrol listesi",
       href: `/${locale}/growth`,
     });
 

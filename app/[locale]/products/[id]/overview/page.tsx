@@ -5,6 +5,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductStatus } from "@prisma/client";
 import { getLaunchStageLabel, getProductStatusLabel } from "@/lib/launch-stage";
+import { readGrowthCheckinFromAdditionalContext } from "@/lib/growth-transition-checkin";
+import ProductFeedbackCard from "@/components/ProductFeedbackCard";
+import { readFeedbackFromAdditionalContext } from "@/lib/product-feedback";
+
+type FounderSummary = {
+  headline?: string;
+  summary?: string;
+  nextStep?: string;
+  strengths?: string[];
+  focusAreas?: string[];
+};
 
 function displayValue(locale: string, value: string | null | undefined) {
   if (!value || locale !== "en") return value ?? "—";
@@ -41,6 +52,30 @@ function displayValue(locale: string, value: string | null | undefined) {
     .join(", ");
 }
 
+function readFounderSummary(value: unknown): FounderSummary | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return {
+    headline: typeof candidate.headline === "string" ? candidate.headline : undefined,
+    summary: typeof candidate.summary === "string" ? candidate.summary : undefined,
+    nextStep: typeof candidate.nextStep === "string" ? candidate.nextStep : undefined,
+    strengths: Array.isArray(candidate.strengths)
+      ? candidate.strengths.filter((item): item is string => typeof item === "string")
+      : undefined,
+    focusAreas: Array.isArray(candidate.focusAreas)
+      ? candidate.focusAreas.filter((item): item is string => typeof item === "string")
+      : undefined,
+  };
+}
+
+function hasMetricSelections(value: unknown) {
+  return Array.isArray(value) && value.length > 0;
+}
+
 export default async function ProductOverviewPage({
   params,
   searchParams,
@@ -57,7 +92,14 @@ export default async function ProductOverviewPage({
   const product = await prisma.product.findFirst({
     where: { id, userId: session.user.id },
     include: {
-      metricSetup: true,
+      metricSetup: {
+        include: {
+          entries: {
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
       _count: {
         select: {
           launchChecklists: true,
@@ -71,26 +113,37 @@ export default async function ProductOverviewPage({
   if (!product) redirect(`/${locale}/dashboard`);
 
   const isLaunched = product.status === ProductStatus.LAUNCHED || product.status === ProductStatus.GROWING;
-  const founderSummary = product.metricSetup?.founderSummary as {
-    headline?: string;
-    summary?: string;
-    nextStep?: string;
-    strengths?: string[];
-    focusAreas?: string[];
-  } | null;
+  const founderSummary = readFounderSummary(product.metricSetup?.founderSummary);
+
+  const hasGrowthCheckin = Boolean(
+    readGrowthCheckinFromAdditionalContext(product.additionalContext).growthCheckin?.completedAt
+  );
+  const hasMetricSetup = hasMetricSelections(product.metricSetup?.selections);
+  const hasMetricEntries = Boolean(product.metricSetup?.entries?.length);
+  const feedbackEntries = readFeedbackFromAdditionalContext(product.additionalContext);
 
   const nextHref = isLaunched
-    ? `/${locale}/metrics`
+    ? !hasGrowthCheckin
+      ? `/${locale}/growth?onboarding=1`
+      : !hasMetricSetup || !hasMetricEntries
+        ? `/${locale}/metrics`
+        : `/${locale}/growth`
     : `/${locale}/pre-launch`;
 
   const nextLabel = isLaunched
-    ? isEn ? "Set up measurement" : "Ölçüm sistemini kur"
-    : isEn ? "Go to Launch prep" : "Launch hazırlığına git";
+    ? !hasGrowthCheckin
+      ? isEn ? "Start Growth check-in" : "Büyüme değerlendirmesiyle başla"
+      : !hasMetricSetup
+        ? isEn ? "Set up measurement" : "Ölçüm sistemini kur"
+        : !hasMetricEntries
+          ? isEn ? "Enter your first metrics" : "İlk metriklerini gir"
+          : isEn ? "Open Growth workspace" : "Growth alanını aç"
+    : isEn ? "Go to Launch prep" : "Yayın hazırlığına git";
   const showContinueOnboarding = resolvedSearch.onboarding === "continue";
   const preparedItems = isLaunched ? product._count.growthChecklists : product._count.launchChecklists;
   const preparedLabel = isLaunched
-    ? isEn ? "Growth checklist items" : "Growth checklist maddesi"
-    : isEn ? "Launch prep items" : "Launch hazırlık maddesi";
+    ? isEn ? "Growth checklist items" : "Büyüme kontrol listesi maddesi"
+    : isEn ? "Launch prep items" : "Yayın hazırlık maddesi";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
@@ -133,9 +186,7 @@ export default async function ProductOverviewPage({
                 href={nextHref}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[14px] font-semibold text-white transition hover:bg-[#1a1a24]"
               >
-                {isLaunched
-                  ? isEn ? "Continue with metric setup" : "Metrik kurulumuna devam et"
-                  : isEn ? "Continue with Launch prep" : "Launch hazırlığına devam et"}
+                {nextLabel}
               </Link>
               <Link
                 href={`/${locale}/integrations`}
@@ -200,6 +251,12 @@ export default async function ProductOverviewPage({
             </div>
           </div>
         </div>
+
+        <ProductFeedbackCard
+          productId={product.id}
+          locale={locale}
+          initialEntries={feedbackEntries}
+        />
 
         {/* Next step */}
         {founderSummary?.nextStep && (

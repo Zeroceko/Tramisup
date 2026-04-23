@@ -7,6 +7,7 @@ import { checkLimit } from "@/lib/plan-limits";
 import { createTaskWithGuards, TaskCreationError } from "@/lib/task-create";
 import type { Locale } from "@/lib/task-validator";
 import { generateAgentSuggestions, type AgentSuggestionBrief } from "@/lib/agent-suggestions";
+import { recordProductEvent } from "@/lib/product-events";
 
 const VALID_AGENT_TYPES: AgentType[] = ["overview", "launch", "growth"];
 
@@ -95,6 +96,19 @@ export async function GET(request: Request) {
       })),
     });
 
+    if (suggestions.length > 0) {
+      await recordProductEvent({
+        userId: session.user.id,
+        productId,
+        eventType: "AI_SUGGESTIONS_SHOWN",
+        metadata: {
+          agentType,
+          locale,
+          suggestionCount: suggestions.length,
+        },
+      });
+    }
+
     return NextResponse.json({ suggestions });
   } catch (error) {
     console.error("[agent/suggestions] Error:", error);
@@ -113,10 +127,16 @@ export async function POST(request: Request) {
       productId?: string;
       suggestion?: Partial<AgentSuggestionBrief>;
       locale?: string;
+      agentType?: AgentType;
+      suggestionId?: string;
     };
 
     const productId = typeof body.productId === "string" ? body.productId : "";
     const locale = (body.locale === "tr" ? "tr" : "en") as Locale;
+    const agentType = VALID_AGENT_TYPES.includes(body.agentType as AgentType)
+      ? (body.agentType as AgentType)
+      : null;
+    const suggestionId = typeof body.suggestionId === "string" ? body.suggestionId : null;
     const suggestion = body.suggestion ?? {};
 
     if (!productId || typeof suggestion.title !== "string") {
@@ -155,6 +175,19 @@ export async function POST(request: Request) {
         priority: suggestion.priority === "HIGH" || suggestion.priority === "LOW" ? suggestion.priority : "MEDIUM",
         source: "AGENT_CHAT",
         locale,
+      });
+
+      await recordProductEvent({
+        userId: session.user.id,
+        productId,
+        eventType: "AI_SUGGESTION_TASK_ACTIVATED",
+        metadata: {
+          agentType,
+          locale,
+          suggestionId,
+          deduped: result.deduped,
+          taskId: result.task.id,
+        },
       });
 
       return NextResponse.json({

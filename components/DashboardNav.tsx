@@ -72,7 +72,7 @@ export default function DashboardNav({
       }
     : {
         overview: "Genel Bakış",
-        launch: "Launch",
+        launch: "Yayın Hazırlığı",
         metrics: "Metrikler",
         growth: "Büyüme",
         newProduct: "+ Ürün ekle",
@@ -80,7 +80,7 @@ export default function DashboardNav({
         account: "Hesap",
         accountSettings: "Hesap ayarları",
         signOut: "Çıkış yap",
-        board: "Board",
+        board: "Pano",
       };
 
   const withLocale = (href: string) => `/${locale}${href}`;

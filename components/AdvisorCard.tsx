@@ -60,10 +60,17 @@ const PRIORITY_DOT: Record<string, string> = {
   low: "bg-white/35",
 };
 
-const CONFIDENCE_LABEL: Record<string, string> = {
-  high: "Yüksek güven",
-  medium: "Orta güven",
-  low: "Düşük güven",
+const CONFIDENCE_LABEL: Record<"en" | "tr", Record<string, string>> = {
+  en: {
+    high: "High confidence",
+    medium: "Medium confidence",
+    low: "Low confidence",
+  },
+  tr: {
+    high: "Yüksek güven",
+    medium: "Orta güven",
+    low: "Düşük güven",
+  },
 };
 
 export default function AdvisorCard({
@@ -210,7 +217,7 @@ export default function AdvisorCard({
         </span>
         {suggestionPrimary?.confidence && (
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
-            {CONFIDENCE_LABEL[suggestionPrimary.confidence] ?? suggestionPrimary.confidence}
+            {CONFIDENCE_LABEL[locale][suggestionPrimary.confidence] ?? suggestionPrimary.confidence}
           </span>
         )}
       </div>
@@ -294,7 +301,7 @@ export default function AdvisorCard({
               <p className="text-[16px] font-semibold text-white">{answer.primary_recommendation.title}</p>
               {answer.primary_recommendation.confidence && (
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/60">
-                  {CONFIDENCE_LABEL[answer.primary_recommendation.confidence] ?? answer.primary_recommendation.confidence}
+                  {CONFIDENCE_LABEL[locale][answer.primary_recommendation.confidence] ?? answer.primary_recommendation.confidence}
                 </span>
               )}
             </div>

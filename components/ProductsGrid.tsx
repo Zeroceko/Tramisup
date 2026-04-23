@@ -16,35 +16,6 @@ type ProductItem = {
   growthPct: number;
 };
 
-function CircleProgress({
-  value,
-  color,
-  size = 44,
-}: {
-  value: number;
-  color: string;
-  size?: number;
-}) {
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const filled = circ * (value / 100);
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f0f0f0" strokeWidth="3" />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeDasharray={`${filled} ${circ}`}
-      />
-    </svg>
-  );
-}
-
 function statusBadge(status: string | null) {
   const s = (status ?? "").toUpperCase();
   if (s === "LAUNCHED")
@@ -58,9 +29,9 @@ function statusBadge(status: string | null) {
 
 function stageAccent(status: string | null) {
   const normalized = (status ?? "").toUpperCase();
-  if (normalized === "GROWING") return "from-[#e8fff1] to-[#f8fffb] border-[#ccefd8]";
-  if (normalized === "LAUNCHED") return "from-[#effcfc] to-[#fbffff] border-[#cceceb]";
-  return "from-[#fff8fb] to-[#fffdfd] border-[#f0dbe7]";
+  if (normalized === "GROWING") return "bg-[#daf4df]";
+  if (normalized === "LAUNCHED") return "bg-[#d8f2f1]";
+  return "bg-[#f7d8e7]";
 }
 
 export default function ProductsGrid({
@@ -97,30 +68,25 @@ export default function ProductsGrid({
 
   return (
     <>
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {/* New product card */}
+      {products.length === 0 ? (
         <Link
           href={`/${locale}/products/new`}
-          className="group flex min-h-[318px] flex-col justify-between overflow-hidden rounded-[26px] border border-dashed border-[#f2bfd9] bg-[radial-gradient(circle_at_top,_rgba(255,215,239,0.7),_transparent_35%),linear-gradient(180deg,_#fff9fc_0%,_#ffffff_100%)] p-6 transition hover:-translate-y-0.5 hover:border-[#e6a8cb] hover:shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
+          className="flex min-h-[280px] flex-col items-center justify-center rounded-[32px] border border-dashed border-[#d9d0c5] bg-white text-center shadow-[0_18px_40px_rgba(23,20,31,0.04)] transition hover:-translate-y-0.5 hover:border-[#cbbfb0] hover:shadow-[0_22px_44px_rgba(23,20,31,0.07)]"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#f0bfd8] bg-white text-[28px] font-light text-[#c581a8] shadow-[0_10px_24px_rgba(23,20,31,0.06)]">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#e7ddd0] bg-[#f8f4ee] text-[32px] font-light text-[#7d7465]">
             +
           </div>
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85e88]">
-              {locale === "en" ? "New workspace" : "Yeni workspace"}
-            </p>
-            <p className="text-[22px] font-semibold tracking-[-0.03em] text-[#0d0d12]">
-              {locale === "en" ? "Create another product" : "Yeni bir ürün oluştur"}
-            </p>
-            <p className="text-[14px] leading-6 text-[#5e6678]">
-              {locale === "en"
-                ? "Open a fresh founder workspace for a new idea, launch, or growth bet."
-                : "Yeni bir fikir, launch ya da growth denemesi için temiz bir founder workspace aç."}
-            </p>
-          </div>
+          <p className="mt-6 text-[24px] font-semibold tracking-[-0.04em] text-[#111017]">
+            {locale === "en" ? "Create your first product" : "İlk ürününü oluştur"}
+          </p>
+          <p className="mt-2 max-w-[28ch] text-[14px] leading-7 text-[#666d80]">
+            {locale === "en"
+              ? "Start with one product and make it your active workspace."
+              : "Bir ürünle başla ve onu aktif çalışma alanın yap."}
+          </p>
         </Link>
-
+      ) : (
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {products.map((product) => {
           const isActive = activeProductId === product.id;
           const menuOpen = openMenuId === product.id;
@@ -128,24 +94,24 @@ export default function ProductsGrid({
           return (
             <div
               key={product.id}
-              className={`relative flex min-h-[318px] flex-col overflow-hidden rounded-[26px] border bg-white p-5 transition ${
+              className={`relative flex min-h-[320px] flex-col overflow-hidden rounded-[28px] border bg-white p-6 transition ${
                 isActive
-                  ? "border-[#95dbda] shadow-[0_18px_40px_rgba(23,20,31,0.08)]"
-                  : "border-[#e8e8e8] hover:-translate-y-0.5 hover:border-[#d9d2c8] hover:shadow-[0_18px_40px_rgba(23,20,31,0.06)]"
+                  ? "border-[#9fd9d7] shadow-[0_22px_48px_rgba(23,20,31,0.08)]"
+                  : "border-[#e8e1d8] hover:-translate-y-0.5 hover:border-[#d8cec2] hover:shadow-[0_18px_40px_rgba(23,20,31,0.06)]"
               }`}
             >
               <div
-                className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${stageAccent(product.status)}`}
+                className={`absolute inset-x-0 top-0 h-2 ${stageAccent(product.status)}`}
                 aria-hidden="true"
               />
 
               {/* Header row */}
-              <div className="relative mb-4 flex items-start justify-between gap-3">
+              <div className="relative mb-5 flex items-start justify-between gap-3 pt-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[18px] font-semibold tracking-[-0.02em] text-[#0d0d12] truncate">
+                  <p className="text-[24px] font-semibold leading-tight tracking-[-0.04em] text-[#111017]">
                     {product.name}
                   </p>
-                  <p className="mt-2 text-[13px] leading-6 text-[#5e6678] line-clamp-3">
+                  <p className="mt-3 text-[14px] leading-7 text-[#5e6678] line-clamp-2">
                     {product.description || product.category || "—"}
                   </p>
                 </div>
@@ -157,7 +123,7 @@ export default function ProductsGrid({
                     type="button"
                     onClick={() => router.push(`/${locale}/products/${product.id}/overview`)}
                     className="flex h-6 w-6 items-center justify-center rounded-md text-[#b0b8c8] transition hover:text-[#5e6678] hover:bg-[#f6f6f6]"
-                    title="Ürünü görüntüle"
+                    title={locale === "en" ? "Open product" : "Ürünü aç"}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M7 17L17 7M17 7H7M17 7v10" />
@@ -169,7 +135,7 @@ export default function ProductsGrid({
                     type="button"
                     onClick={() => setOpenMenuId(menuOpen ? null : product.id)}
                     className="flex h-6 w-6 items-center justify-center rounded-md text-[#b0b8c8] transition hover:text-[#5e6678] hover:bg-[#f6f6f6]"
-                    title="Seçenekler"
+                    title={locale === "en" ? "Options" : "Seçenekler"}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
@@ -222,67 +188,75 @@ export default function ProductsGrid({
                 )}
               </div>
 
-              {/* Circular progress row */}
-              <div className="relative mt-auto rounded-[20px] border border-[#f1eee8] bg-[#fcfbf9] p-4">
+              {/* Meter row */}
+              <div className="relative mt-auto rounded-[20px] border border-[#f0e8de] bg-[#fbf8f3] p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8fa0]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8a8fa0]">
                     {locale === "en" ? "Execution readiness" : "Execution hazırlığı"}
                   </p>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex items-center gap-3 rounded-[16px] bg-white/80 px-3 py-3">
-                    <div className="relative shrink-0">
-                      <CircleProgress value={product.launchPct} color="#ffd7ef" />
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
-                        {product.launchPct}%
+
+                {[
+                  {
+                    label: "Launch",
+                    value: product.launchPct,
+                    color: "bg-[#f0a8c8]",
+                  },
+                  {
+                    label: "Growth",
+                    value: product.growthPct,
+                    color: "bg-[#7dd5d4]",
+                  },
+                ].map((meter) => (
+                  <div key={meter.label} className="mb-3 last:mb-0">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[13px] font-semibold text-[#111017]">{meter.label}</p>
+                      <span className="text-[16px] font-semibold tracking-[-0.03em] text-[#111017]">
+                        {meter.value}%
                       </span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-semibold text-[#0d0d12]">Launch</p>
-                      <p className="text-[11px] leading-5 text-[#8a8fa0]">
-                        {locale === "en" ? "Preparation depth" : "Hazırlık derinliği"}
-                      </p>
+                    <div className="h-2.5 rounded-full bg-white">
+                      <div
+                        className={`h-2.5 rounded-full ${meter.color}`}
+                        style={{ width: `${meter.value}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 rounded-[16px] bg-white/80 px-3 py-3">
-                    <div className="relative shrink-0">
-                      <CircleProgress value={product.growthPct} color="#95dbda" />
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-[#0d0d12]">
-                        {product.growthPct}%
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-semibold text-[#0d0d12]">Growth</p>
-                      <p className="text-[11px] leading-5 text-[#8a8fa0]">
-                        {locale === "en" ? "Operating rhythm" : "İşletim ritmi"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* Activate / overview button */}
-              <button
-                type="button"
-                onClick={() => handleActivate(product.id)}
-                className={`mt-4 h-11 w-full rounded-full text-[13px] font-semibold transition ${
-                  isActive
-                    ? "bg-[#95dbda] text-[#0d0d12]"
-                    : "bg-[#f6f6f6] text-[#4f5668] hover:bg-[#ffd7ef] hover:text-[#0d0d12]"
-                }`}
-              >
-                {isActive
-                  ? locale === "en"
-                    ? "Active product"
-                    : "Aktif ürün"
-                  : locale === "en"
-                    ? "Make active and open overview"
-                    : "Aktif yap ve overview aç"}
-              </button>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleActivate(product.id)}
+                  className={`h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition ${
+                    isActive
+                      ? "bg-[#111017] text-white"
+                      : "bg-[#f2eee8] text-[#3f4657] hover:bg-[#111017] hover:text-white"
+                  }`}
+                >
+                  {isActive
+                    ? locale === "en"
+                      ? "Currently active"
+                      : "Şu an aktif"
+                    : locale === "en"
+                      ? "Focus here"
+                      : "Buraya odaklan"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${locale}/products/${product.id}/overview`)}
+                  className="h-11 rounded-full border border-[#e1d8cc] px-4 text-[13px] font-semibold text-[#5e6678] transition hover:border-[#cfc4b7] hover:bg-[#f8f4ee] hover:text-[#111017]"
+                >
+                  {locale === "en" ? "Overview" : "Genel bakış"}
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
+      )}
 
       {/* Delete modal */}
       {deleteTarget && (

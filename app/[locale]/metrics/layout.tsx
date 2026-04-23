@@ -24,6 +24,7 @@ export default async function MetricsLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="metrics"
     >
       <PlainPageShell>{children}</PlainPageShell>
     </AppShell>

@@ -23,6 +23,7 @@ export default async function TasksLayout({
       products={products}
       activeProductId={effectiveActiveProductId}
       userName={session.user.name ?? undefined}
+      analyticsSurface="tasks"
     >
       {/* Tasks/Board fills full height */}
       <div className="h-full overflow-hidden p-3">

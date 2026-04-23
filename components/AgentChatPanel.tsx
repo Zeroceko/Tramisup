@@ -426,7 +426,7 @@ export default function AgentChatPanel({
           role: "assistant",
           content: isEn
             ? `That work is already on the board as "${suggestion.existingTaskTitle ?? suggestion.title ?? suggestion.label}".`
-            : `Bu iş zaten board'da: "${suggestion.existingTaskTitle ?? suggestion.title ?? suggestion.label}".`,
+            : `Bu iş zaten panoda: "${suggestion.existingTaskTitle ?? suggestion.title ?? suggestion.label}".`,
         },
       ]);
       router.push(`/${locale}/tasks`);
@@ -442,6 +442,8 @@ export default function AgentChatPanel({
         body: JSON.stringify({
           productId,
           locale,
+          agentType,
+          suggestionId: suggestion.id ?? null,
           suggestion: {
             title: suggestion.title ?? suggestion.payload?.title ?? suggestion.label,
             description: suggestion.description ?? suggestion.payload?.description ?? null,
@@ -475,7 +477,7 @@ export default function AgentChatPanel({
             data?.deduped
               ? isEn
                 ? `Already on the board: ${data.dedupedAgainst ?? title}`
-                : `Zaten board'da: ${data.dedupedAgainst ?? title}`
+                : `Zaten panoda: ${data.dedupedAgainst ?? title}`
               : copy.taskAdded(title),
         },
       ]);
@@ -601,7 +603,7 @@ export default function AgentChatPanel({
                 {previewSuggestion.existingTaskTitle ? (
                   <div className="rounded-[14px] border border-[#d7efdf] bg-[#f5fcf7] px-4 py-3">
                     <p className="text-[12px] font-semibold text-[#166534]">
-                      {isEn ? "Already on the board" : "Zaten board'da"}
+                      {isEn ? "Already on the board" : "Zaten panoda"}
                     </p>
                     <p className="mt-1 text-[12px] leading-5 text-[#166534]">
                       {previewSuggestion.existingTaskTitle}
@@ -648,7 +650,7 @@ export default function AgentChatPanel({
                   className="inline-flex h-10 items-center justify-center rounded-full bg-[#0d0d12] px-5 text-[13px] font-semibold text-white transition hover:bg-[#1a1a24] disabled:opacity-50"
                 >
                   {previewSuggestion.existingTaskId
-                    ? isEn ? "Open board" : "Board'u aç"
+                    ? isEn ? "Open board" : "Panoyu aç"
                     : isEn ? "Create task" : "Görev oluştur"}
                 </button>
               </div>
@@ -705,10 +707,10 @@ export default function AgentChatPanel({
                   onClick={() => void createTaskFromSuggestion(suggestion)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0d0d12] text-white transition hover:bg-[#1a1a24]"
                   aria-label={suggestion.existingTaskId
-                    ? isEn ? "Open existing task on board" : "Var olan görevi board'da aç"
+                    ? isEn ? "Open existing task on board" : "Mevcut görevi panoda aç"
                     : isEn ? "Create task" : "Görev oluştur"}
                   title={suggestion.existingTaskId
-                    ? isEn ? "Open board" : "Board'u aç"
+                    ? isEn ? "Open board" : "Panoyu aç"
                     : isEn ? "Create task" : "Görev oluştur"}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
