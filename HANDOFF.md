@@ -1,10 +1,10 @@
 # Tiramisup - Team Handoff Document
 
-**Date:** 22 April 2026
+**Date:** 25 April 2026
 **Production:** `https://tiramisup.app`
 **Repo:** GitHub (`main` auto-deploys to Vercel)
-**Current active `main` line:** includes all commits through `0ec4162f`, plus direct 22 April production deploys from the local worktree
-**Status:** Production is live. Founder continuity is better on existing accounts, but fresh-signup continuity is still not trustworthy enough to call solved.
+**Current active `main` line:** includes all commits through `0516fa56`; the 25 April Metrics founder-view release is being pushed as the next production version.
+**Status:** Production is live. The latest focus is removing founder confusion in Metrics after GA4 is connected: automatic source coverage now hides unnecessary manual entry and turns Metrics into a tracking view.
 
 ---
 
@@ -20,7 +20,7 @@ Core product surfaces:
 - **Dashboard**: answers "what should I do next?"
 - **Tasks / Board**: execution queue
 - **Pre-Launch**: checklist, blockers, readiness — only visible to pre-launch products
-- **Metrics**: AARRR setup, manual entry, source-backed trend tracking — standalone nav item for launched products
+- **Metrics**: AARRR setup, source-backed founder tracking, and manual entry only for metrics that connected sources do not cover — standalone nav item for launched products
 - **Growth**: diagnosis-led growth workflow for launched products
 - **Integrations**: GA4 / Stripe source connection setup
 - **Settings / Account**: profile, locale, product context, billing, security
@@ -32,10 +32,10 @@ Everything is product-scoped. A user can have multiple products, one active at a
 
 ## 2. Current Production Truth
 
-As of **22 April 2026**, these are true in production:
+As of **25 April 2026**, these are true in production:
 
-- `tiramisup.app` is live on the current `main` line.
-- Production also includes 22 April direct Vercel deploys from the local worktree. Latest confirmed production deploy: `https://tramisup-obgi3s8wo-zerocekos-projects.vercel.app`, aliased to `https://tiramisup.app`.
+- `tiramisup.app` is live on `main`; pushing `main` auto-deploys through Vercel.
+- The previous confirmed line is `0516fa56` (`Fix release signoff regressions`). The next release contains the Metrics founder-view cleanup.
 - Public root landing is intentionally **waitlist-first**. The self-serve marketing surface at `/{locale}` is for waitlist capture. The real landing experience lives at `/{locale}/yayinda`.
 - Signup requires email verification. No early access code is required.
 - Fresh signup cannot currently be treated as reliably working. On 22 April live validation, the signup form filled successfully but did not redirect to `/verify-email`, `/dashboard`, or `/onboarding` within the expected timeout after submit.
@@ -44,6 +44,8 @@ As of **22 April 2026**, these are true in production:
 - AI guidance remains **stage-aware** and must not invent advice when evidence is weak.
 - **Nav is stage-aware**: pre-launch → Overview + Launch; launched/growing → Overview + Metrics + Growth.
 - **AARRR metrics step in onboarding** is shown for LIVE and GROWING stages (not just GROWING). This was tightened on 21 April.
+- **Metrics is now source-aware for founders**: if GA4/Stripe-covered selected metrics are connected, the manual entry form is hidden for those metrics. If every selected metric is covered, Metrics becomes a mostly read-only tracking surface with automatic/manual coverage summary.
+- **Metrics top copy is founder-oriented**: the old setup-heavy stat cards and "current workflow" copy were replaced by a compact "Founder view" summary showing tracked, automatic, and manual metric counts.
 - **Growth kickoff (`/growth?onboarding=1`) is now a single-focus screen**: only the check-in form is shown. The "tamamlananlar" banner, AARRR signal grid, progress tracker, and coach card are all hidden when `?onboarding=1` is present.
 - **Empty dashboard state is clean**: when no product exists, the settings gear, product selector, and "Add product" link are hidden. First-run screen no longer shows a "No fake data" trust note.
 - **Onboarding step transitions are animated**: directional slide-fade (forward/backward) when navigating between steps.
@@ -58,6 +60,9 @@ As of **22 April 2026**, these are true in production:
 - **Transactional email templates are live** — do not rewrite them without deliberate intent.
 
 Recent shipped commits:
+- 25 April Metrics founder-view release — GA4/Stripe source-aware manual-entry hiding, automatic/manual coverage summary, and cleaner founder tracking copy
+- `0516fa56` — fix release signoff regressions
+- `edd82acb` — prepare release hardening and handoff updates
 - 22 April local-worktree deploys — EN/TR surface cleanup, Google Ads tag install, products page simplification, removal of fake new-workspace card, tighter products spacing/header
 - `0ec4162f` — simplify growth kickoff for onboarding flow (remove banner/tracker/coach card)
 - `3bcc21c4` — add directional slide-fade animation to onboarding step transitions
@@ -86,7 +91,17 @@ Fresh signup itself is not yet stable enough to trust:
 - On 22 April live validation, signup submit did not redirect within 25s after password entry.
 - Existing-account product creation did complete, but the user was then sent back into setup: post-create summary → Growth check-in → Metrics setup, with no clear first value moment.
 
-### 3. Onboarding-to-value still feels like setup recursion
+### 3. Metrics is cleaner after GA4, but source-sync freshness still needs live proof
+
+The 25 April change fixes the UI expectation: if GA4 is connected and selected metrics are covered by real auto-sync support, founders should not be asked to enter the same metrics manually.
+
+What still needs proof:
+- GA4 sync freshness in production after connection
+- whether selected metrics match the current auto-sync coverage map
+- whether the founder understands the automatic/manual split without explanation
+- whether Growth receives enough recent values to produce useful diagnosis
+
+### 4. Onboarding-to-value still feels like setup recursion
 
 Live founder testing on 22 April showed this sequence on a newly created launched product:
 - product created summary page
@@ -97,7 +112,7 @@ Live founder testing on 22 April showed this sequence on a newly created launche
 
 This means the user still does not reach a concrete value moment quickly enough.
 
-### 4. AI/helpfulness and task creation are still not proven
+### 5. AI/helpfulness and task creation are still not proven
 
 Live agent checks on 22 April showed:
 - Overview: no visible suggestion cards, no reachable chat input
@@ -106,11 +121,11 @@ Live agent checks on 22 April showed:
 
 The product cannot yet claim that AI reliably helps or that suggestion cards reliably convert into execution.
 
-### 5. Nav links only appear once a product exists
+### 6. Nav links only appear once a product exists
 
 This is intentional behavior. The test confirmed: with no product, nav shows only "Overview". Growth, Metrics, Tasks, Pre-launch links appear only after a product is created. A new user's first session is essentially one-path: create product → onboarding.
 
-### 6. Dashboard and tasks remain the slowest authenticated surfaces
+### 7. Dashboard and tasks remain the slowest authenticated surfaces
 
 TTFB and load improved on 14 April, but `/dashboard` and `/tasks` are still the heaviest pages. Continue query profiling if users report lag.
 
@@ -130,6 +145,7 @@ TTFB and load improved on 14 April, but `/dashboard` and `/tasks` are still the 
 10. `HIGH` priority means a true blocker only
 11. Do not rewrite live email templates without intent
 12. Do not regress the GROWING onboarding path back into a vague AARRR preview
+13. Do not show manual metric entry for metrics already covered by a connected, supported source
 
 ---
 
@@ -142,6 +158,7 @@ TTFB and load improved on 14 April, but `/dashboard` and `/tasks` are still the 
 - **`Product.launchGoals`**: legacy field — do not build new logic on it
 - **Growth kickoff check-in**: `goalKey` from onboarding is already set, so the `growth_goal` question is skipped — but `acquisition_source` and similar questions still run even though some were asked during onboarding. Deduplication is pending.
 - **Dashboard first impression**: sharp enough to not confuse, but not yet sharp enough to delight
+- **Metrics source coverage**: UI now hides covered manual fields, but live GA4 freshness and exact coverage should still be checked with production data after each connector change
 - **Onboarding value moment**: product creation currently hands the user into another setup loop instead of a clear first payoff
 - **AI/task bridge**: launch is stronger than overview/growth; surface consistency is still weak
 - **Email delivery**: `RESEND_FROM_EMAIL` must be `Tiramisup <hello@tiramisup.app>` in Vercel env

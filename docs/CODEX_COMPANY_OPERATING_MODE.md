@@ -32,6 +32,7 @@ Primary operating pages in Notion:
 
 - Every production version must update the canonical Notion release/takeover log before release signoff is considered complete.
 - New teams should start from the canonical Notion release/takeover log before reading deeper repo docs.
+- For a clean new Codex chat start, use `docs/next-chat-handoff-prompt-2026-04-25.md` as the kickoff prompt.
 
 ## Role model
 

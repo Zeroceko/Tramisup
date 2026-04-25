@@ -9,6 +9,7 @@ import { getGrowthMetricRecommendations } from "@/lib/growth-metric-recommendati
 import { getMetricSetup } from "@/lib/metric-setup";
 import type { FunnelStageKey } from "@/lib/metric-setup";
 import { getRecommendedIntegrationsForSetup } from "@/lib/integration-recommendations";
+import { getStageAutomationGuides } from "@/lib/integration-recommendations";
 import {
   readGrowthCheckinFromAdditionalContext,
   summarizeGrowthCheckinForSetup,
@@ -144,6 +145,25 @@ export default async function MetricsPage({
         metricName: metric.name,
       }));
   });
+
+  const automationGuides = getStageAutomationGuides({
+    plan: metricPlan,
+    connectedProviders: connectedIntegrations.map((integration) => integration.provider),
+  });
+  const automationGuideByStage = new Map(automationGuides.map((guide) => [guide.stage, guide]));
+  const autoTrackedMetrics = selectedMetrics.filter((metric) => {
+    const guide = automationGuideByStage.get(metric.stage);
+    return !!guide && guide.connectedProviders.length > 0 && guide.supportedMetricKeys.includes(metric.metricKey);
+  });
+  const manualMetrics = selectedMetrics.filter((metric) => {
+    const guide = automationGuideByStage.get(metric.stage);
+    return !guide || guide.connectedProviders.length === 0 || !guide.supportedMetricKeys.includes(metric.metricKey);
+  });
+  const autoTrackedMetricLabels = autoTrackedMetrics.map((metric) => `${metric.stage} · ${metric.metricName}`);
+  const manualMetricLabels = manualMetrics.map((metric) => `${metric.stage} · ${metric.metricName}`);
+  const hasAutoCoverage = autoTrackedMetrics.length > 0;
+  const hasManualEntryNeed = manualMetrics.length > 0;
+  const isFullyAutomated = selectedMetrics.length > 0 && manualMetrics.length === 0;
 
   const entryCount = savedSetup?.entries.length ?? 0;
   const latestEntry = savedSetup?.entries.at(-1) ?? null;
@@ -285,56 +305,87 @@ export default async function MetricsPage({
         </div>
       ) : null}
 
-      {/* 2. Stat cards — numbers first */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
-          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
-            {isEn ? "Metrics" : "Metrikler"}
-          </p>
-          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
-            {selectedMetrics.length}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className={`h-1 w-6 rounded-full ${selectedMetrics.length > 0 ? "bg-[#95dbda]" : "bg-[#d1d5db]"}`} />
-            <p className="text-[11px] text-[#98a0ae]">{isEn ? "tracked" : "takipte"}</p>
-          </div>
-        </div>
-        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
-          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
-            {isEn ? "Sources" : "Kaynaklar"}
-          </p>
-          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
-            {connectedSourceCount}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className={`h-1 w-6 rounded-full ${connectedSourceCount > 0 ? "bg-[#34d399]" : "bg-[#d1d5db]"}`} />
-            <p className="text-[11px] text-[#98a0ae]">{isEn ? "connected" : "bağlı"}</p>
-          </div>
-        </div>
-        <div className="rounded-[18px] border border-[#e8e4de] bg-white px-4 py-4">
-          <p className="text-[11px] font-medium text-[#737988] uppercase tracking-[0.08em]">
-            {isEn ? "Entries" : "Giriş"}
-          </p>
-          <p className="mt-2 text-[32px] font-bold tracking-[-0.03em] leading-none text-[#0d0d12]">
-            {entryCount}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className={`h-1 w-6 rounded-full ${entryCount > 0 ? "bg-[#fbbf24]" : "bg-[#d1d5db]"}`} />
-            <p className="text-[11px] text-[#98a0ae]">{isEn ? "recorded" : "kaydedildi"}</p>
-          </div>
-        </div>
-      </div>
-
       <div className={`rounded-[18px] border px-5 py-4 ${workflowToneClass}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6f7482]">
-          {isEn ? "Current workflow" : "Mevcut akış"}
-        </p>
-        <p className="mt-1 text-[15px] font-semibold text-[#0d0d12]">
-          {workflowTitle}
-        </p>
-        <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
-          {workflowDescription}
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6f7482]">
+              {isEn ? "Founder view" : "Founder görünümü"}
+            </p>
+            <p className="mt-1 text-[18px] font-semibold text-[#0d0d12]">
+              {isFullyAutomated
+                ? isEn
+                  ? "Your metrics are flowing automatically."
+                  : "Metriklerin otomatik olarak akıyor."
+                : hasAutoCoverage
+                ? isEn
+                  ? `${autoTrackedMetrics.length} metric is automatic, ${manualMetrics.length} still needs manual care.`
+                  : `${autoTrackedMetrics.length} metrik otomatik akıyor, ${manualMetrics.length} metrik hâlâ manuel takip istiyor.`
+                : workflowTitle}
+            </p>
+            <p className="mt-1 text-[13px] leading-5 text-[#666d80]">
+              {isFullyAutomated
+                ? isEn
+                  ? "This page should now help you read the signal, not re-enter numbers. Use the trend and recent entry sections to track what changed."
+                  : "Bu ekran artık sayı girdiğin değil, sinyali okuduğun yer olmalı. Değişen şeyi trend ve son girişler alanından takip et."
+                : hasAutoCoverage
+                ? isEn
+                  ? "Keep only the uncovered metrics manual. Everything else should come from your connected sources."
+                  : "Sadece kapsanmayan metrikleri manuel takip et. Diğer metrikler bağlı kaynaklarından gelmeli."
+                : workflowDescription}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 lg:min-w-[280px]">
+            <div className="rounded-[14px] border border-white/70 bg-white/75 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
+                {isEn ? "Tracked" : "Takip"}
+              </p>
+              <p className="mt-1 text-[24px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
+                {selectedMetrics.length}
+              </p>
+            </div>
+            <div className="rounded-[14px] border border-white/70 bg-white/75 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
+                {isEn ? "Auto" : "Otomatik"}
+              </p>
+              <p className="mt-1 text-[24px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
+                {autoTrackedMetrics.length}
+              </p>
+            </div>
+            <div className="rounded-[14px] border border-white/70 bg-white/75 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8fa0]">
+                {isEn ? "Manual" : "Manuel"}
+              </p>
+              <p className="mt-1 text-[24px] font-bold leading-none tracking-[-0.03em] text-[#0d0d12]">
+                {manualMetrics.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {(hasAutoCoverage || hasManualEntryNeed) && (
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {hasAutoCoverage && (
+              <div className="rounded-[14px] border border-[#d7efdf] bg-white/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#166534]">
+                  {isEn ? "Automatic sources" : "Otomatik gelenler"}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-[#0d0d12]">
+                  {autoTrackedMetricLabels.join(" · ")}
+                </p>
+              </div>
+            )}
+            {hasManualEntryNeed && (
+              <div className="rounded-[14px] border border-[#efe6d7] bg-white/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9a3412]">
+                  {isEn ? "Still manual" : "Hâlâ manuel"}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-[#0d0d12]">
+                  {manualMetricLabels.join(" · ")}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <MetricSetupSelector
@@ -369,12 +420,28 @@ export default async function MetricsPage({
       {/* first_entry state: form + compact hint */}
       {dataState === "first_entry" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-          <MetricEntryForm
-            productId={product.id}
-            selectedMetrics={selectedMetrics}
-            latestEntry={latestEntry}
-            locale={locale}
-          />
+          {hasManualEntryNeed ? (
+            <MetricEntryForm
+              productId={product.id}
+              selectedMetrics={manualMetrics}
+              latestEntry={latestEntry}
+              locale={locale}
+            />
+          ) : (
+            <div className="rounded-[18px] border border-[#d7efdf] bg-[#f5fcf7] p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#166534]">
+                {isEn ? "Automatic flow" : "Otomatik akış"}
+              </p>
+              <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+                {isEn ? "Manual entry is no longer needed here." : "Bu ekranda artık manuel giriş gerekmiyor."}
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#5f6b7a]">
+                {isEn
+                  ? "Your connected sources should bring the selected metrics in automatically. Wait for the first synced values or review the source connection."
+                  : "Bağlı kaynakların seçili metrikleri otomatik getirmeli. İlk senkronize değerleri bekle ya da kaynak bağlantını gözden geçir."}
+              </p>
+            </div>
+          )}
           <div className="space-y-3">
             <div className="rounded-[18px] border border-[#e8e4de] bg-white p-4">
               <p className="text-[12px] font-semibold text-[#0d0d12]">{isEn ? "After 5 entries" : "5 giriş sonra"}</p>
@@ -458,13 +525,29 @@ export default async function MetricsPage({
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <MetricEntryForm
-              productId={product.id}
-              selectedMetrics={selectedMetrics}
-              latestEntry={latestEntry}
-              locale={locale}
-              entryCount={entryCount}
-            />
+            {hasManualEntryNeed ? (
+              <MetricEntryForm
+                productId={product.id}
+                selectedMetrics={manualMetrics}
+                latestEntry={latestEntry}
+                locale={locale}
+                entryCount={entryCount}
+              />
+            ) : (
+              <div className="rounded-[16px] border border-[#d7efdf] bg-[#f5fcf7] p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#166534]">
+                  {isEn ? "Automatic flow" : "Otomatik akış"}
+                </p>
+                <p className="mt-1 text-[16px] font-semibold text-[#0d0d12]">
+                  {isEn ? "Sources are building the baseline for you." : "Kaynaklar baz çizgisini senin yerine oluşturuyor."}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-[#5f6b7a]">
+                  {isEn
+                    ? "Keep an eye on the recent entries and trend sections. You should only come back to manual entry if a selected metric is not covered by a source."
+                    : "Son girişler ve trend alanını takip et. Sadece seçili bir metrik kaynak tarafından kapsanmıyorsa manuel girişe dönmen gerekir."}
+                </p>
+              </div>
+            )}
             {recentEntries.length > 0 && (
               <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-5">
                 <p className="mb-3 text-[13px] font-semibold text-[#0d0d12]">{isEn ? "Recent entries" : "Son girişler"}</p>
@@ -633,12 +716,28 @@ export default async function MetricsPage({
 
             {/* Sticky sidebar: entry form + coach summary */}
             <div className="lg:sticky lg:top-6 lg:self-start space-y-4">
-              <MetricEntryForm
-                productId={product.id}
-                selectedMetrics={selectedMetrics}
-                latestEntry={latestEntry}
-                locale={locale}
-              />
+              {hasManualEntryNeed ? (
+                <MetricEntryForm
+                  productId={product.id}
+                  selectedMetrics={manualMetrics}
+                  latestEntry={latestEntry}
+                  locale={locale}
+                />
+              ) : (
+                <div className="rounded-[16px] border border-[#d7efdf] bg-[#f5fcf7] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#166534]">
+                    {isEn ? "Automatic tracking" : "Otomatik takip"}
+                  </p>
+                  <p className="mt-2 text-[13px] font-semibold text-[#0d0d12]">
+                    {isEn ? "This founder view is now mostly read-only." : "Bu founder görünümü artık ağırlıkla takip odaklı."}
+                  </p>
+                  <p className="mt-1 text-[12px] leading-5 text-[#666d80]">
+                    {isEn
+                      ? "Your connected sources cover all selected metrics. Use this page to read movement, and use Growth when a weak link appears."
+                      : "Bağlı kaynakların seçili metriklerin tamamını kapsıyor. Bu sayfayı hareketi okumak için, Growth'ü ise zayıf halka çıktığında kullan."}
+                  </p>
+                </div>
+              )}
               {funnelHealth && (
                 <div className="rounded-[16px] border border-[#e8e8e8] bg-white p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#666d80]">

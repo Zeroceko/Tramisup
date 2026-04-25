@@ -25,19 +25,21 @@ Bunu canlı production sistemi olarak ele al — prototip sandbox değil. Gerçe
 
 ---
 
-PRODUCTION DURUMU (21 Nisan 2026 itibarıyla)
+PRODUCTION DURUMU (25 Nisan 2026 itibarıyla)
 
 - Production domain: https://tiramisup.app
 - main branch Vercel'e otomatik deploy edilir
-- Aktif main line: 0ec4162f commit'ine kadar tüm commit'leri içerir
+- Aktif main line: 0516fa56 commit'ine kadar tüm commit'leri içerir; 25 Nisan Metrics founder-view release'i bunun üzerine gelir
 
 Çalışan şeyler:
-- Signup çalışıyor: step 1 (ad + email) → step 2 (şifre) → email doğrulama → auto-login
+- Existing-account founder workflow çalışıyor; fresh signup güvenilirliği hâlâ production'da yeniden kanıtlanmalı
 - Email doğrulama linki kullanıcıyı otomatik app'e alır, tekrar giriş gerekmez
 - Auth hızlı: signup ~2.3s, login ~2.1s (bcrypt cost factor 8'e düşürüldü)
 - Rate limiting: signup 5/15dk, forgot-password 3/15dk (IP başına)
 - Onboarding animasyonlu adım geçişleri var
 - AARRR metrik adımı LIVE + GROWING aşamaları için görünür
+- Metrics ekranı artık kaynak farkındadır: GA4/Stripe gibi bağlı kaynakların otomatik kapsadığı seçili metrikler için manuel giriş formu gösterilmez
+- Metrics üst alanı founder takibi için sadeleştirildi: takip edilen, otomatik akan ve hâlâ manuel kalan metrikler net görünür
 - Growth kickoff (?onboarding=1) sadece check-in formunu gösteriyor — eski banner/tracker/coach kart kaldırıldı
 - Empty state temiz: ürün yokken settings, ürün seçici ve "ekle" linkleri gizli
 - AI önerileri stage-aware ve kanıtsız spekülasyon yapmıyor
@@ -65,7 +67,10 @@ Bu soruların cevabı yok. Yeni ekibin öncelikli görevi bunları gerçek kulla
 3. Onboarding'den değere yol çalışıyor mu?
    Sıfır kullanıcı → onboarding → growth teşhisi akışı iyileşti ama fresh account'la temiz bir end-to-end doğrulama henüz yapılmadı.
 
-Bu üç soruyu çözene kadar büyük feature geliştirmeye başlama. Önce ürünün işe yarayıp yaramadığını öğren.
+4. GA4 bağlandıktan sonra Metrics gerçekten founder'a güven veriyor mu?
+   Kullanıcı manuel giriş görmemeli, otomatik gelenleri anlamalı, trendi okuyabilmeli ve Growth'e ne zaman geçeceğini sezmelidir.
+
+Bu soruları çözene kadar büyük feature geliştirmeye başlama. Önce ürünün işe yarayıp yaramadığını öğren.
 
 ---
 
@@ -108,6 +113,7 @@ MİMARİ GERÇEKLER
 - Growth workspace modları:
     intake_needed → metric_setup_needed → baseline_needed → diagnosis_ready
 - Growth intake cevapları Product.additionalContext.growthCheckin içinde saklanır
+- Metrics kaynak kapsaması `lib/integration-recommendations.ts` içindeki auto-sync coverage mantığına dayanır; öneri kataloğu ile gerçek auto-sync kapsamı aynı şey değildir
 - AI provider chain değiştirilmemeli:
     Qwen → DeepSeek → Gemini → Gemini backup → static fallback
 - MetricSetup ve MetricEntry veritabanı tabloları; Product.launchGoals legacy, üzerine yeni mantık kurma
@@ -129,6 +135,7 @@ BOZULMAMASI GEREKENLER
 10. HIGH öncelik sadece gerçek bir blocker anlamına gelir
 11. Canlı email şablonlarını kasıtsız yeniden yazma
 12. GROWING onboarding'i belirsiz AARRR preview'a geri döndürme
+13. Bağlı kaynağın otomatik kapsadığı metrikler için kullanıcıya manuel giriş yaptırma
 
 ---
 
@@ -140,6 +147,7 @@ BİLİNEN TEKNIK BORÇ
 - Roadmap integrations: RevenueCat, App Store Connect, Google Play, reklam konnektörleri UI-first placeholder
 - Product.launchGoals: legacy field — üzerine yeni mantık kurma
 - Growth kickoff check-in'deki bazı sorular onboarding'de zaten soruluyor — deduplication eksik
+- Metrics auto coverage: UI tarafı düzeldi, fakat GA4 sync freshness ve seçili metriklerin gerçek veriyle dolması production'da düzenli doğrulanmalı
 - RESEND_FROM_EMAIL Vercel env'de "Tiramisup <hello@tiramisup.app>" olarak set edilmeli
 
 ---

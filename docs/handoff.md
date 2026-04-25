@@ -3,8 +3,8 @@
 ## Snapshot
 
 - Production domain: `https://tiramisup.app`
-- Current active main line: through `2dc2f428`, plus 22 April direct production deploys from the local worktree
-- Last docs refresh: `22 April 2026`
+- Current active main line: through `0516fa56`; the next pushed release contains the 25 April Metrics founder-view cleanup
+- Last docs refresh: `25 April 2026`
 - Default locale: English
 - Secondary locale: Turkish
 - Public positioning: waitlist-first
@@ -18,7 +18,7 @@
 ### Production behavior
 
 - `main` is live on Vercel and auto-deploys on push.
-- Production also includes direct Vercel deploys from the local worktree on 22 April. Latest confirmed deploy: `https://tramisup-obgi3s8wo-zerocekos-projects.vercel.app`, aliased to `https://tiramisup.app`.
+- The latest pre-release main commit is `0516fa56`; the 25 April release adds source-aware Metrics behavior for GA4/Stripe-connected founders.
 - Signup no longer uses an early access code.
 - Signup and waitlist both require email verification.
 - Clicking the verification link now auto-logs the user into the app; re-entering credentials is no longer required after verification.
@@ -28,6 +28,8 @@
 - Settings/account language switching redirects to the chosen locale route.
 - Billing remains demo/fake checkout behavior.
 - Nav is stage-aware: pre-launch shows Launch, launched/growing shows Metrics + Growth.
+- Metrics is source-aware: selected metrics covered by connected GA4/Stripe auto-sync support are removed from manual entry, and fully covered setups show a read-only founder tracking message instead of a daily input form.
+- Metrics top-of-page copy now speaks to a founder trying to track signal: tracked / automatic / manual counts replace the old setup-heavy cards.
 - Launched/growing products without a growth check-in are gated at the dashboard and redirected to `/growth`.
 - Growth diagnosis includes actual metric values and is locale-aware.
 - Agent surfaces are still inconsistent in live production checks: Launch remains useful, but Overview and Growth do not yet reliably expose reachable chat/task flows.
@@ -55,6 +57,9 @@
 
 ### Recent shipped commits
 
+- 25 April Metrics founder-view release — hide unnecessary manual metric entry for covered sources and clean the founder summary
+- `0516fa56` — fix release signoff regressions
+- `edd82acb` — prepare release hardening and handoff updates
 - 22 April local-worktree deploys — clean EN/TR leaks on app surfaces, install Google Ads tag, simplify products page, remove fake new-workspace card, tighten products header spacing
 - `2dc2f428` — strengthen GROWING-stage onboarding kickoff with inline AARRR setup and Growth-first landing
 - `9f00908d` — fix checklist locale handling, checklist task creation edge cases, and products spacing
@@ -75,7 +80,7 @@
 
 ### Local workspace state
 
-The app workspace should be treated as a production repo with recent follow-up work already merged. Earlier "three local fixes" are no longer pending; they shipped alongside later board, admin, performance, and auth changes.
+The app workspace should be treated as a production repo with recent follow-up work already merged. The only expected local dirt after the 25 April release should be unrelated nested-repo noise under `external/streamlined-solutions`.
 
 Local dirt seen at handoff time is outside app code:
 
@@ -113,6 +118,8 @@ Local dirt seen at handoff time is outside app code:
 - First baseline entry flows into Growth more reliably
 - Fallback recommendation cards prevent empty advisory states
 - Growing-state visibility in the dashboard/overview is stronger than before
+- Metrics now distinguishes source-covered metrics from manual-only metrics, so GA4-connected founders are not asked to manually enter values the app can already sync
+- Fully source-covered setups should read as a tracking dashboard, not a data-entry chore
 
 ### 4. Authenticated app performance work shipped
 
@@ -164,9 +171,10 @@ Local dirt seen at handoff time is outside app code:
 - A 21-April handoff stated the reCAPTCHA blocker was resolved, but current production evidence is mixed enough that takeover should treat fresh signup as **unproven**, not fixed
 - Existing-account product creation now completes through the UI, but the user still lands in a setup loop instead of an obvious first value moment
 
-### 2. Metrics setup clarity still needs verification on fresh launched products
+### 2. Metrics source-aware founder view needs production freshness validation
 
-- The metrics → growth bridge is stronger than before, but a fresh launched product still needs to prove setup state is always legible
+- The metrics → growth bridge is stronger than before, and the 25 April release removes unnecessary manual entry when selected metrics are covered by connected sources
+- A fresh launched product still needs to prove setup state is always legible and that GA4 sync data appears quickly enough after connection
 - On 22 April, a real existing account created a launched product and saw:
   - product created summary
   - CTA into metric setup
@@ -174,6 +182,7 @@ Local dirt seen at handoff time is outside app code:
   - Metrics still showing `0` selected metrics and `0` entries
   - Tasks still empty
 - Required path: metric setup should feel distinct from first daily entry, and the user should hit a real payoff before being asked for more setup
+- Required path now: GA4-connected founders should see automatic coverage, recent entries, and trends without being asked to retype GA4-derived numbers
 
 ### 3. `/dashboard` and `/tasks` remain the slowest authenticated pages
 
