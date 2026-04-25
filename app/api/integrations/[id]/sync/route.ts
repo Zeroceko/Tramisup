@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { syncStripe } from "@/BrandLib/sync/stripe";
-import { syncGa4 } from "@/BrandLib/sync/ga4";
-import { syncAppStoreConnect } from "@/BrandLib/sync/app-store-connect";
-import { syncGooglePlay } from "@/BrandLib/sync/google-play";
+import { executeIntegrationSync } from "@/lib/integration-sync";
 import type { MetricSyncMode } from "@/lib/sync-to-metric-entry";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -50,48 +47,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // No body provided
     }
 
-    const syncJob = await prisma.syncJob.create({
-      data: {
-        integrationId: integration.id,
-        status: "RUNNING",
-      }
-    });
-
-    let recordsSynced = 0;
-
-    try {
-      if (integration.provider === "STRIPE") {
-        recordsSynced = await syncStripe(integration.productId, integration.config);
-      } else if (integration.provider === "GA4") {
-        recordsSynced = await syncGa4(integration.productId, integration.config, syncMode, historyDays);
-      } else if (integration.provider === "APP_STORE_CONNECT") {
-        recordsSynced = await syncAppStoreConnect(integration.productId, integration.config);
-      } else if (integration.provider === "GOOGLE_PLAY") {
-        recordsSynced = await syncGooglePlay(integration.productId, integration.config);
-      } else {
-        throw new Error(`Provider sync not implemented for: ${integration.provider}`);
-      }
-
-      await prisma.syncJob.update({
-        where: { id: syncJob.id },
-        data: { status: "SUCCESS", completedAt: new Date(), recordsSynced }
-      });
-
-      await prisma.integration.update({
-        where: { id: integration.id },
-        data: { lastSyncAt: new Date() }
-      });
-
-      return NextResponse.json({ success: true, recordsSynced });
-    } catch (syncError) {
-      console.error("Provider sync execution error: ", syncError);
-      
-      await prisma.syncJob.update({
-        where: { id: syncJob.id },
-        data: { status: "FAILED", completedAt: new Date(), error: String(syncError) }
-      });
-      return NextResponse.json({ error: "Failed during provider data pull" }, { status: 500 });
+    const result = await executeIntegrationSync(integration, { syncMode, historyDays });
+    if (!result.success) {
+      return NextResponse.json({ error: "Failed during provider data pull", details: result.error }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, recordsSynced: result.recordsSynced });
   } catch (error) {
     console.error("Sync route error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
