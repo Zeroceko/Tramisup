@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     "Privacy Policy for PawBreak, a digital wellbeing app for short breaks after selected app or phone usage.",
   alternates: {
-    canonical: "https://tiramsiup.app/pawbreak/privacy-policy",
+    canonical: "https://tiramisup.app/pawbreak/privacy-policy",
   },
 };
 
